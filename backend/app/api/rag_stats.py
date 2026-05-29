@@ -9,7 +9,7 @@ from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
 from ..cache.redis_client import get_redis
-from ..exceptions import RedisUnavailableError, VectorStoreError
+from ..exceptions import AureonException, RedisUnavailableError, VectorStoreError
 from ..rag.vector_store import get_collection_stats
 
 logger = logging.getLogger(__name__)
@@ -133,11 +133,11 @@ async def get_stats():
         cache_misses = int(await redis.get(f"{STATS_PREFIX}:cache_misses") or 0)
         total = cache_hits + cache_misses
         hit_rate = cache_hits / total if total > 0 else 0.0
-    except RedisUnavailableError:
-        raise
     except Exception as e:
+        if isinstance(e, AureonException):
+            raise
         logger.warning("get_stats redis_read_failed: %s", e)
-        raise RedisUnavailableError(f"Redis operation failed: {e}")
+        raise RedisUnavailableError(detail=str(e))
 
     # Real collection stats from Chroma
     try:
@@ -174,11 +174,11 @@ async def get_recent_queries(limit: int = Query(5, ge=1, le=50)):
                     latency_ms=float(parts[3]),
                     timestamp=parts[0],
                 ))
-    except RedisUnavailableError:
-        raise
     except Exception as e:
+        if isinstance(e, AureonException):
+            raise
         logger.warning("get_recent_queries redis_read_failed: %s", e)
-        raise RedisUnavailableError(f"Redis operation failed: {e}")
+        raise RedisUnavailableError(detail=str(e))
 
     return {"queries": queries}
 
@@ -229,8 +229,8 @@ async def get_documents():
         ]
         return {"documents": [d.model_dump() for d in documents],
                 "total_docs": len(documents), "total_chunks": total}
-    except VectorStoreError:
-        raise
     except Exception as e:
+        if isinstance(e, VectorStoreError):
+            raise
         logger.warning("get_documents failed: %s", e)
-        raise VectorStoreError(f"Vector store error: {e}")
+        raise VectorStoreError(detail=str(e))

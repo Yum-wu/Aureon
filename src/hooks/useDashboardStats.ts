@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { StatsResponse, RecentQuery } from "../types/dashboard";
 
 interface DashboardData {
@@ -19,7 +19,7 @@ export function useDashboardStats(): DashboardData {
   const [recentQueries, setRecentQueries] = useState<RecentQuery[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
+  const retryCountRef = useRef(0);
   const [trigger, setTrigger] = useState(0);
 
   const refetch = useCallback(() => {
@@ -56,20 +56,20 @@ export function useDashboardStats(): DashboardData {
           setStats(statsData);
           setRecentQueries(recentData.queries ?? []);
           setError(null);
-          setRetryCount(0);
+          retryCountRef.current = 0;
         }
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : String(err));
-          setRetryCount((prev) => prev + 1);
+          retryCountRef.current += 1;
         }
       } finally {
         if (!cancelled) {
           setLoading(false);
           // Exponential backoff on failure, fixed interval on success
           const delay =
-            retryCount > 0
-              ? Math.min(BASE_INTERVAL * Math.pow(2, retryCount), MAX_INTERVAL)
+            retryCountRef.current > 0
+              ? Math.min(BASE_INTERVAL * Math.pow(2, retryCountRef.current), MAX_INTERVAL)
               : BASE_INTERVAL;
           timeoutId = setTimeout(fetchAll, delay);
         }
@@ -81,7 +81,7 @@ export function useDashboardStats(): DashboardData {
       cancelled = true;
       clearTimeout(timeoutId);
     };
-  }, [trigger, retryCount]);
+  }, [trigger]);
 
   return { stats, recentQueries, loading, error, refetch };
 }
