@@ -11,6 +11,14 @@ from unittest.mock import patch, AsyncMock
 from httpx import AsyncClient, ASGITransport
 
 from app.main import app
+from app.dependencies import get_redis_or_none
+
+
+@pytest.fixture(autouse=True)
+def _clear_overrides():
+    """Clear dependency overrides after each test."""
+    yield
+    app.dependency_overrides.clear()
 
 
 # ── Custom exception class tests ──
@@ -19,7 +27,9 @@ from app.main import app
 @pytest.mark.asyncio
 async def test_redis_unavailable_error():
     """When Redis is None, get_stats returns 503 with structured error JSON."""
-    with patch("app.api.rag_stats.get_redis", return_value=None):
+    app.dependency_overrides[get_redis_or_none] = lambda: None
+
+    with patch("app.cache.redis_client._get_redis", return_value=None):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             resp = await ac.get("/api/rag/stats")
@@ -37,7 +47,9 @@ async def test_vector_store_error():
     mock_redis.get = AsyncMock(return_value=None)
     mock_redis.zrangebyscore = AsyncMock(return_value=[])
 
-    with patch("app.api.rag_stats.get_redis", return_value=mock_redis), \
+    app.dependency_overrides[get_redis_or_none] = lambda: mock_redis
+
+    with patch("app.cache.redis_client._get_redis", return_value=mock_redis), \
          patch("app.api.rag_stats.get_collection_stats", side_effect=Exception("Chroma corrupted")):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -55,7 +67,9 @@ async def test_redis_operation_error():
     mock_redis = AsyncMock()
     mock_redis.get = AsyncMock(side_effect=Exception("Connection reset"))
 
-    with patch("app.api.rag_stats.get_redis", return_value=mock_redis):
+    app.dependency_overrides[get_redis_or_none] = lambda: mock_redis
+
+    with patch("app.cache.redis_client._get_redis", return_value=mock_redis):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             resp = await ac.get("/api/rag/stats")

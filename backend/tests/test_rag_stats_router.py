@@ -1,20 +1,36 @@
 """Tests for /api/rag/stats endpoint."""
 
 import pytest
-from unittest.mock import patch, AsyncMock, MagicMock
+from unittest.mock import patch, AsyncMock
 from httpx import AsyncClient, ASGITransport
 from app.main import app
+from app.dependencies import get_redis_or_none
+
+
+@pytest.fixture(autouse=True)
+def _clear_overrides():
+    """Clear dependency overrides after each test."""
+    yield
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def mock_redis():
+    """Provide a mock Redis client that also patches direct _get_redis calls."""
+    client = AsyncMock()
+    with patch("app.cache.redis_client._get_redis", return_value=client):
+        yield client
 
 
 @pytest.mark.asyncio
-async def test_get_stats_returns_expected_fields():
+async def test_get_stats_returns_expected_fields(mock_redis):
     """Stats endpoint returns all required fields with correct types."""
-    mock_redis = AsyncMock()
     mock_redis.get = AsyncMock(return_value=None)
     mock_redis.zrangebyscore = AsyncMock(return_value=["100", "200"])
 
-    with patch("app.api.rag_stats.get_redis", return_value=mock_redis), \
-         patch("app.api.rag_stats.get_collection_stats", return_value=(5, 120)):
+    app.dependency_overrides[get_redis_or_none] = lambda: mock_redis
+
+    with patch("app.api.rag_stats.get_collection_stats", return_value=(5, 120)):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             resp = await ac.get("/api/rag/stats")
@@ -50,7 +66,9 @@ async def test_get_stats_returns_expected_fields():
 @pytest.mark.asyncio
 async def test_get_stats_with_redis_unavailable():
     """When Redis is unavailable, endpoint raises 503 error."""
-    with patch("app.api.rag_stats.get_redis", return_value=None):
+    app.dependency_overrides[get_redis_or_none] = lambda: None
+
+    with patch("app.cache.redis_client._get_redis", return_value=None):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             resp = await ac.get("/api/rag/stats")
@@ -64,18 +82,18 @@ async def test_get_stats_with_redis_unavailable():
 
 
 @pytest.mark.asyncio
-async def test_get_recent_queries_returns_list():
+async def test_get_recent_queries_returns_list(mock_redis):
     """Recent queries endpoint returns a queries list when Redis has data."""
-    mock_redis = AsyncMock()
     mock_redis.lrange = AsyncMock(return_value=[
         "2026-05-29T10:00:00+00:00|什么是 RAG?|3|120.5",
         "2026-05-29T09:58:00+00:00|如何部署?|2|85.0",
     ])
 
-    with patch("app.api.rag_stats.get_redis", return_value=mock_redis):
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as ac:
-            resp = await ac.get("/api/rag/queries/recent")
+    app.dependency_overrides[get_redis_or_none] = lambda: mock_redis
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        resp = await ac.get("/api/rag/queries/recent")
 
     assert resp.status_code == 200
     data = resp.json()
@@ -85,17 +103,17 @@ async def test_get_recent_queries_returns_list():
 
 
 @pytest.mark.asyncio
-async def test_get_recent_queries_with_limit():
+async def test_get_recent_queries_with_limit(mock_redis):
     """Limit parameter controls the number of returned queries."""
-    mock_redis = AsyncMock()
     mock_redis.lrange = AsyncMock(return_value=[
         "2026-05-29T10:00:00+00:00|q1|1|50.0",
     ])
 
-    with patch("app.api.rag_stats.get_redis", return_value=mock_redis):
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as ac:
-            resp = await ac.get("/api/rag/queries/recent", params={"limit": 1})
+    app.dependency_overrides[get_redis_or_none] = lambda: mock_redis
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        resp = await ac.get("/api/rag/queries/recent", params={"limit": 1})
 
     assert resp.status_code == 200
     data = resp.json()
@@ -108,17 +126,17 @@ async def test_get_recent_queries_with_limit():
 
 
 @pytest.mark.asyncio
-async def test_recent_query_structure():
+async def test_recent_query_structure(mock_redis):
     """Each query entry has the correct fields and types."""
-    mock_redis = AsyncMock()
     mock_redis.lrange = AsyncMock(return_value=[
         "2026-05-29T10:00:00+00:00|什么是 RAG?|3|120.5",
     ])
 
-    with patch("app.api.rag_stats.get_redis", return_value=mock_redis):
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as ac:
-            resp = await ac.get("/api/rag/queries/recent")
+    app.dependency_overrides[get_redis_or_none] = lambda: mock_redis
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        resp = await ac.get("/api/rag/queries/recent")
 
     assert resp.status_code == 200
     query = resp.json()["queries"][0]
@@ -133,7 +151,9 @@ async def test_recent_query_structure():
 @pytest.mark.asyncio
 async def test_recent_queries_redis_unavailable():
     """When Redis is unavailable, returns 503 error instead of empty list."""
-    with patch("app.api.rag_stats.get_redis", return_value=None):
+    app.dependency_overrides[get_redis_or_none] = lambda: None
+
+    with patch("app.cache.redis_client._get_redis", return_value=None):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             resp = await ac.get("/api/rag/queries/recent")
