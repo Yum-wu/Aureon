@@ -80,7 +80,7 @@ describe('Search', () => {
   });
 
   it('shows error from stream callback', async () => {
-    mockStreamRAGQuery.mockImplementation(async (_q: string, opts: Record<string, Function>) => {
+    mockStreamRAGQuery.mockImplementation(async (_q: string, opts: { onError: (msg: string) => void }) => {
       opts.onError('Server error occurred');
     });
 
@@ -95,7 +95,7 @@ describe('Search', () => {
   });
 
   it('clears error when typing new query', async () => {
-    mockStreamRAGQuery.mockImplementation(async (_q: string, opts: Record<string, Function>) => {
+    mockStreamRAGQuery.mockImplementation(async (_q: string, opts: { onError: (msg: string) => void }) => {
       opts.onError('Error!');
     });
 
@@ -112,7 +112,7 @@ describe('Search', () => {
   });
 
   it('shows answer area after search', async () => {
-    mockStreamRAGQuery.mockImplementation(async (_q: string, opts: Record<string, Function>) => {
+    mockStreamRAGQuery.mockImplementation(async (_q: string, opts: { onToken: (token: string) => void }) => {
       opts.onToken('Hello ');
       opts.onToken('world');
     });

@@ -25,10 +25,9 @@ export function useDocuments(): DocumentsData {
   const [totalChunks, setTotalChunks] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [trigger, setTrigger] = useState(0);
 
   const fetchDocs = useCallback(async (signal?: AbortSignal) => {
-    setLoading(true);
-    setError(null);
     try {
       const res = await fetch(DOCS_URL, { signal });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -36,10 +35,11 @@ export function useDocuments(): DocumentsData {
       setDocuments(data.documents ?? []);
       setTotalDocs(data.total_docs ?? 0);
       setTotalChunks(data.total_chunks ?? 0);
+      setError(null);
+      setLoading(false);
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return;
       setError(err instanceof Error ? err.message : String(err));
-    } finally {
       setLoading(false);
     }
   }, []);
@@ -48,7 +48,12 @@ export function useDocuments(): DocumentsData {
     const controller = new AbortController();
     fetchDocs(controller.signal);
     return () => controller.abort();
-  }, [fetchDocs]);
+  }, [fetchDocs, trigger]);
 
-  return { documents, totalDocs, totalChunks, loading, error, refetch: () => fetchDocs() };
+  const refetch = useCallback(() => {
+    setLoading(true);
+    setTrigger(prev => prev + 1);
+  }, []);
+
+  return { documents, totalDocs, totalChunks, loading, error, refetch };
 }
