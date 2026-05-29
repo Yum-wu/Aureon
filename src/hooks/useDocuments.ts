@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 interface DocumentItem {
   title: string;
@@ -14,6 +14,7 @@ interface DocumentsData {
   totalChunks: number;
   loading: boolean;
   error: string | null;
+  refetch: () => void;
 }
 
 const DOCS_URL = "/api/rag/documents";
@@ -25,10 +26,26 @@ export function useDocuments(): DocumentsData {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const fetchDocs = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(DOCS_URL);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setDocuments(data.documents ?? []);
+      setTotalDocs(data.total_docs ?? 0);
+      setTotalChunks(data.total_chunks ?? 0);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
-
-    async function fetchDocs() {
+    async function load() {
       try {
         const res = await fetch(DOCS_URL);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -45,9 +62,9 @@ export function useDocuments(): DocumentsData {
       }
     }
 
-    fetchDocs();
+    load();
     return () => { cancelled = true; };
   }, []);
 
-  return { documents, totalDocs, totalChunks, loading, error };
+  return { documents, totalDocs, totalChunks, loading, error, refetch: fetchDocs };
 }

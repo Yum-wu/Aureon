@@ -113,7 +113,18 @@
     "empty": "No indexed documents",
     "total_docs": "Total Documents",
     "total_chunks": "Total Chunks",
-    "search_placeholder": "Search documents..."
+    "search_placeholder": "Search documents...",
+    "upload": {
+      "button": "Upload Document",
+      "drop_text": "Drag and drop a file here, or click to select",
+      "supported_formats": "Supports .md and .txt formats",
+      "uploading": "Uploading and indexing...",
+      "success": "{{filename}} uploaded successfully, {{chunks}} chunks created",
+      "upload_another": "Upload another",
+      "retry": "Retry",
+      "upload_failed": "Upload failed",
+      "unsupported_format": "Unsupported format: {{ext}}"
+    }
   },
   "analytics": {
     "title": "Analytics",
