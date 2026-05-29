@@ -1,49 +1,29 @@
-# Chatbot Local Dev Stack
-# Usage: docker compose up --build
-#        docker compose down
-
 services:
-  backend:
-    build:
-      context: ./Chatbot
-      dockerfile: backend/Dockerfile
-    container_name: chatbot-backend
+  redis:
+    image: redis:7-alpine
     ports:
-      - "8000:8000"
-    env_file:
-      - ./Chatbot/backend/.env
-    volumes:
-      - ./Chatbot/backend:/app
-      - chatbot-data:/data
+      - "6379:6379"
     healthcheck:
-      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')\""]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
 
-  frontend:
+  app:
     build:
-      context: ./Chatbot
-      dockerfile: frontend.Dockerfile
-    container_name: chatbot-frontend
-    ports:
-      - "5173:5173"
-    depends_on:
-      backend:
-        condition: service_started
-    volumes:
-      - ./Chatbot/src:/app/src
-
-  crew-generator:
-    build:
-      context: ./Chatbot/crew
+      context: .
       dockerfile: Dockerfile
-    container_name: crew-generator
     ports:
-      - "8001:8001"
+      - "80:80"
     env_file:
-      - ./Chatbot/backend/.env
-
-volumes:
-  chatbot-data:
+      - backend/.env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./offloads:/app/offloads
+      - ./data:/app/data
+    restart: unless-stopped
