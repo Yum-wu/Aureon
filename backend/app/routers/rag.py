@@ -51,6 +51,11 @@ logger = structlog.get_logger()
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
+# Module constants for data paths
+BASE_DATA_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+ARTICLES_DIR = os.path.join(BASE_DATA_DIR, "data", "articles")
+UPLOADS_DIR = os.path.join(ARTICLES_DIR, "uploads")
+
 
 @router.post("/api/rag/query", response_model=RAGQueryResponse)
 @limiter.limit("2/second")
@@ -176,10 +181,7 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
 @limiter.limit("1/second")
 async def rag_index_endpoint(request: Request):
     """Re-index all articles into Chroma."""
-    articles_dir = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "articles"
-    )
-    result = run_index_pipeline(articles_dir)
+    result = run_index_pipeline(ARTICLES_DIR)
     return result
 
 
@@ -188,9 +190,20 @@ async def rag_upload_endpoint(file: UploadFile = File(...)):
     """Upload a .md or .txt file and incrementally index it."""
     import shutil
 
+    # Validate filename
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No filename")
+
+    # Security: prevent path traversal
+    if ".." in file.filename or "/" in file.filename or "\\" in file.filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    # Sanitize filename
+    safe_filename = os.path.basename(file.filename)
+
     # Validate extension
     allowed = {".md", ".txt"}
-    ext = os.path.splitext(file.filename or "")[1].lower()
+    ext = os.path.splitext(safe_filename)[1].lower()
     if ext not in allowed:
         raise HTTPException(
             status_code=400,
@@ -198,12 +211,8 @@ async def rag_upload_endpoint(file: UploadFile = File(...)):
         )
 
     # Save to uploads directory
-    upload_dir = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-        "data", "articles", "uploads",
-    )
-    os.makedirs(upload_dir, exist_ok=True)
-    dest = os.path.join(upload_dir, file.filename)
+    os.makedirs(UPLOADS_DIR, exist_ok=True)
+    dest = os.path.join(UPLOADS_DIR, safe_filename)
 
     try:
         content = await file.read()
@@ -225,20 +234,16 @@ async def rag_upload_endpoint(file: UploadFile = File(...)):
 @router.get("/api/rag/uploads")
 async def rag_list_uploads():
     """List all uploaded files in the uploads directory."""
-    upload_dir = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-        "data", "articles", "uploads",
-    )
-    if not os.path.isdir(upload_dir):
+    if not os.path.isdir(UPLOADS_DIR):
         return {"files": []}
     files = sorted(
         (
             {
                 "filename": f,
-                "size": os.path.getsize(os.path.join(upload_dir, f)),
+                "size": os.path.getsize(os.path.join(UPLOADS_DIR, f)),
             }
-            for f in os.listdir(upload_dir)
-            if os.path.isfile(os.path.join(upload_dir, f))
+            for f in os.listdir(UPLOADS_DIR)
+            if os.path.isfile(os.path.join(UPLOADS_DIR, f))
         ),
         key=lambda x: x["filename"],
     )
@@ -252,11 +257,7 @@ async def rag_delete_upload(filename: str):
     if ".." in filename or "/" in filename:
         raise HTTPException(status_code=400, detail="Invalid filename")
 
-    upload_dir = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-        "data", "articles", "uploads",
-    )
-    filepath = os.path.join(upload_dir, filename)
+    filepath = os.path.join(UPLOADS_DIR, filename)
 
     # 1. Remove from Chroma index
     from app.rag.vector_store import delete_from_index
