@@ -505,3 +505,26 @@ def get_bm25_stats() -> dict:
         "terms": len(_kw_idf),
         "avgdl": round(_kw_avgdl, 1) if _kw_avgdl else 0,
     }
+
+
+def get_collection_stats() -> tuple[int, int]:
+    """Return (total_docs, total_chunks) from Chroma collection.
+
+    Counts unique source documents and total chunks.
+    Returns (0, 0) if collection is empty or unavailable.
+    """
+    try:
+        client = _get_chroma()
+        collection = _get_collection(client)
+        total_chunks = collection.count()
+        if total_chunks > 0:
+            all_meta = collection.get(include=["metadatas"])
+            unique_docs = set()
+            for meta in all_meta.get("metadatas", []):
+                if meta and isinstance(meta, dict):
+                    src = meta.get("source") or meta.get("title", "unknown")
+                    unique_docs.add(src)
+            return len(unique_docs), total_chunks
+        return 0, 0
+    except Exception:
+        return 0, 0

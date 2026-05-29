@@ -7,6 +7,7 @@ from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
 from ..cache.redis_client import _get_redis
+from ..rag.vector_store import get_collection_stats
 
 router = APIRouter()
 
@@ -22,27 +23,6 @@ class StatsResponse(BaseModel):
     avg_retrieval_latency_ms: float
     total_indexed_docs: int
     total_chunks: int
-
-def _get_collection_stats() -> tuple[int, int]:
-    """Return (total_docs, total_chunks) from Chroma collection."""
-    try:
-        from ..rag.vector_store import _get_collection, _get_chroma
-        client = _get_chroma()
-        # Count unique source files from collection metadata
-        collection = _get_collection()
-        total_chunks = collection.count()
-        # Get unique source documents
-        if total_chunks > 0:
-            all_meta = collection.get(include=["metadatas"])
-            unique_docs = set()
-            for meta in all_meta.get("metadatas", []):
-                if meta and isinstance(meta, dict):
-                    src = meta.get("source") or meta.get("title", "unknown")
-                    unique_docs.add(src)
-            return len(unique_docs), total_chunks
-        return 0, 0
-    except Exception:
-        return 0, 0
 
 
 STATS_PREFIX = "aureon:stats"
@@ -122,19 +102,27 @@ async def get_stats():
     hit_rate = 0.0
 
     if redis:
-        count = int(await redis.get(f"{STATS_PREFIX}:count_24h") or 0)
+        try:
+            count = int(await redis.get(f"{STATS_PREFIX}:count_24h") or 0)
 
-        latencies = await redis.lrange(f"{STATS_PREFIX}:latencies", 0, -1)
-        latencies = [int(l) for l in latencies]
-        avg_latency = sum(latencies) / len(latencies) if latencies else 0.0
+            # Latencies stored as sorted set by record_query via zadd
+            now = datetime.now(timezone.utc)
+            cutoff = now.timestamp() - 86400
+            latencies = await redis.zrangebyscore(
+                f"{STATS_PREFIX}:latencies:z", min=cutoff, max="+inf"
+            )
+            latencies = [int(l) for l in latencies]
+            avg_latency = sum(latencies) / len(latencies) if latencies else 0.0
 
-        cache_hits = int(await redis.get(f"{STATS_PREFIX}:cache_hits") or 0)
-        cache_misses = int(await redis.get(f"{STATS_PREFIX}:cache_misses") or 1)
-        total = cache_hits + cache_misses
-        hit_rate = cache_hits / total if total > 0 else 0.0
+            cache_hits = int(await redis.get(f"{STATS_PREFIX}:cache_hits") or 0)
+            cache_misses = int(await redis.get(f"{STATS_PREFIX}:cache_misses") or 0)
+            total = cache_hits + cache_misses
+            hit_rate = cache_hits / total if total > 0 else 0.0
+        except Exception:
+            pass  # Redis read failed, keep defaults
 
     # Real collection stats from Chroma
-    doc_count, chunk_count = _get_collection_stats()
+    doc_count, chunk_count = get_collection_stats()
 
     return StatsResponse(
         cache_hit_rate=round(hit_rate, 4),
