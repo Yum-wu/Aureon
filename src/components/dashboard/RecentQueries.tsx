@@ -1,11 +1,10 @@
 import { Card } from '../ui/Card';
 
 interface Query {
-  id: string;
   query: string;
-  latency: number;
+  sources_count: number;
+  latency_ms: number;
   timestamp: string;
-  status: 'success' | 'error' | 'timeout';
 }
 
 interface RecentQueriesProps {
@@ -13,34 +12,32 @@ interface RecentQueriesProps {
 }
 
 export function RecentQueries({ queries }: RecentQueriesProps) {
-  const statusColors = {
-    success: 'text-[var(--success)]',
-    error: 'text-[var(--error)]',
-    timeout: 'text-[var(--warning)]',
-  };
-
   return (
     <Card>
       <h3 className="text-lg font-semibold mb-4">Recent Queries</h3>
-      <div className="space-y-3">
-        {queries.map((query) => (
-          <div key={query.id}
-               className="flex items-center justify-between p-3 bg-[var(--bg-tertiary)] rounded-lg">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-[var(--text-primary)] truncate">{query.query}</p>
-              <p className="text-xs text-[var(--text-tertiary)]">
-                {new Date(query.timestamp).toLocaleString()}
-              </p>
+      {queries.length === 0 ? (
+        <p className="text-sm text-[var(--text-tertiary)]">No recent queries</p>
+      ) : (
+        <div className="space-y-3">
+          {queries.map((q, index) => (
+            <div key={index}
+                 className="flex items-center justify-between p-3 bg-[var(--bg-tertiary)] rounded-lg">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-[var(--text-primary)] truncate">{q.query}</p>
+                <p className="text-xs text-[var(--text-tertiary)]">
+                  {new Date(q.timestamp).toLocaleString()}
+                </p>
+              </div>
+              <div className="flex items-center gap-4 ml-4">
+                <span className="text-xs text-[var(--text-secondary)]">
+                  {q.sources_count} sources
+                </span>
+                <span className="text-sm font-mono">{Math.round(q.latency_ms)}ms</span>
+              </div>
             </div>
-            <div className="flex items-center gap-4 ml-4">
-              <span className="text-sm font-mono">{query.latency}ms</span>
-              <span className={`text-xs font-medium ${statusColors[query.status]}`}>
-                {query.status}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </Card>
   );
 }
