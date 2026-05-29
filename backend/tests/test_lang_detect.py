@@ -105,8 +105,8 @@ def test_generate_node_imports():
 
 
 def test_main_detect_import():
-    """Verify main.py can import detect_language."""
-    from app.main import _get_agent
+    """Verify chat router can import _get_agent."""
+    from app.routers.chat import _get_agent
     # Just check the function accepts a lang parameter
     import inspect
     sig = inspect.signature(_get_agent)
