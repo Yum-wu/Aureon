@@ -35,7 +35,7 @@ STATS_PREFIX = "aureon:stats"
 async def record_query(
     query: str,
     sources_count: int,
-    latency_ms: int,
+    latency_ms: float,
     input_tokens: int = 0,
     output_tokens: int = 0,
 ) -> None:
@@ -63,8 +63,8 @@ async def record_query(
 
             # 最近查询列表（保留最近 50 条）
             entry = f"{timestamp}|{query}|{sources_count}|{latency_ms}"
-            pipe.lpush(f"{STATS_PREFIX}:recent", entry)
-            pipe.ltrim(f"{STATS_PREFIX}:recent", 0, 49)
+            pipe.lpush("aureon:queries:recent", entry)
+            pipe.ltrim("aureon:queries:recent", 0, 99)
 
             # 延迟聚合（用于计算 avg/p95/p99）
             pipe.zadd(f"{STATS_PREFIX}:latencies:z", {member: latency_ms})
@@ -151,7 +151,7 @@ async def get_recent_queries(limit: int = Query(5, ge=1, le=50)):
 
     if redis:
         try:
-            entries = await redis.lrange(f"{STATS_PREFIX}:recent", 0, limit - 1)
+            entries = await redis.lrange("aureon:queries:recent", 0, limit - 1)
             for entry in entries:
                 parts = entry.split("|", 3)
                 if len(parts) == 4:
