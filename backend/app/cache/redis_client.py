@@ -123,6 +123,11 @@ async def set_cached(query: str, response: str, ttl: int = 3600):
         logger.debug("Cache write error: %s", e)
 
 
+def get_redis():
+    """Public interface for getting Redis client."""
+    return _get_redis()
+
+
 async def close_redis():
     """Close Redis connection on application shutdown."""
     global _redis
