@@ -1,9 +1,11 @@
 """Analytics API endpoints for usage, latency, and token tracking."""
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from datetime import datetime, timedelta
 from typing import Optional
 import structlog
+
+from app.dependencies import get_redis_or_none
 
 logger = structlog.get_logger()
 router = APIRouter(prefix="/api/rag/analytics", tags=["analytics"])
@@ -13,7 +15,8 @@ STATS_PREFIX = "aureon:stats"
 
 @router.get("/usage")
 async def get_usage_analytics(
-    time_range: Optional[str] = Query("24h", description="Time range: 24h, 7d, 30d")
+    time_range: Optional[str] = Query("24h", description="Time range: 24h, 7d, 30d"),
+    redis=Depends(get_redis_or_none),
 ):
     """
     Get query usage analytics.
@@ -23,9 +26,6 @@ async def get_usage_analytics(
         - Query distribution by intent
         - Queries per hour
     """
-    from app.cache.redis_client import _get_redis
-
-    redis = _get_redis()
     if not redis:
         return {
             "timeRange": time_range,
@@ -70,7 +70,8 @@ async def get_usage_analytics(
 
 @router.get("/latency")
 async def get_latency_analytics(
-    time_range: Optional[str] = Query("24h", description="Time range: 24h, 7d, 30d")
+    time_range: Optional[str] = Query("24h", description="Time range: 24h, 7d, 30d"),
+    redis=Depends(get_redis_or_none),
 ):
     """
     Get latency analytics.
@@ -80,10 +81,8 @@ async def get_latency_analytics(
         - Retrieval vs LLM breakdown
         - Latency trend over time
     """
-    from app.cache.redis_client import _get_redis
     from statistics import mean, quantiles
 
-    redis = _get_redis()
     if not redis:
         return {
             "timeRange": time_range,
@@ -145,7 +144,8 @@ async def get_latency_analytics(
 
 @router.get("/tokens")
 async def get_token_analytics(
-    time_range: Optional[str] = Query("24h", description="Time range: 24h, 7d, 30d")
+    time_range: Optional[str] = Query("24h", description="Time range: 24h, 7d, 30d"),
+    redis=Depends(get_redis_or_none),
 ):
     """
     Get token usage analytics.
@@ -155,9 +155,6 @@ async def get_token_analytics(
         - Estimated cost
         - Cost per query
     """
-    from app.cache.redis_client import _get_redis
-
-    redis = _get_redis()
     if not redis:
         return {
             "timeRange": time_range,
@@ -217,7 +214,7 @@ async def get_token_analytics(
 
 
 @router.get("/cache")
-async def get_cache_analytics():
+async def get_cache_analytics(redis=Depends(get_redis_or_none)):
     """
     Get cache performance analytics.
 
@@ -226,9 +223,6 @@ async def get_cache_analytics():
         - Queries saved
         - Latency reduction
     """
-    from app.cache.redis_client import _get_redis
-
-    redis = _get_redis()
     if not redis:
         return {
             "hitRate": 0,

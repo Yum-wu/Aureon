@@ -5,10 +5,10 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 
-from ..cache.redis_client import get_redis
+from ..dependencies import get_redis_or_none
 from ..exceptions import AureonException, RedisUnavailableError, VectorStoreError
 from ..rag.vector_store import get_collection_stats
 
@@ -53,7 +53,7 @@ async def record_query(
         input_tokens: 输入 token 数
         output_tokens: 输出 token 数
     """
-    redis = get_redis()
+    redis = get_redis_or_none()
     if not redis:
         return
     now = datetime.now(timezone.utc)
@@ -111,9 +111,7 @@ def _classify_intent(query: str) -> str:
 
 
 @router.get("/api/rag/stats", response_model=StatsResponse)
-async def get_stats():
-    redis = get_redis()
-
+async def get_stats(redis=Depends(get_redis_or_none)):
     if not redis:
         raise RedisUnavailableError("Redis is not configured or unavailable")
 
@@ -156,8 +154,7 @@ async def get_stats():
 
 
 @router.get("/api/rag/queries/recent", response_model=RecentQueriesResponse)
-async def get_recent_queries(limit: int = Query(5, ge=1, le=50)):
-    redis = get_redis()
+async def get_recent_queries(limit: int = Query(5, ge=1, le=50), redis=Depends(get_redis_or_none)):
     queries = []
 
     if not redis:
