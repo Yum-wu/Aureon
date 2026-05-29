@@ -4,7 +4,6 @@ import os
 import sys
 import time
 import uuid
-from typing import Any
 
 from fastapi import FastAPI, Request, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,23 +15,21 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 import structlog
 
-from app.api.models import ChatRequest, SessionListResponse, StatusResponse
+from app.api.models import StatusResponse
 from app.api.rag_stats import router as stats_router, record_query
 from app.api.analytics import router as analytics_router
+from app.routers import chat as chat_router
 from app.agent.llm import create_llm
-from app.agent.agent import create_chat_agent
-from app.agent.executor import stream_agent_with_memory
 from app.tools import ALL_TOOLS
 from app.memory.db import init_db
 from app.memory.manager import manager as memory_manager
 from app.config import settings
 from app.rag.models import RAGQueryRequest, RAGQueryResponse, RAGIndexResponse, RAGUploadResponse
-from app.rag.qa_chain import rag_query, rag_query_with_cache, rag_query_astream, run_index_pipeline, run_incremental_index
+from app.rag.qa_chain import rag_query_with_cache, rag_query_astream, run_index_pipeline, run_incremental_index
 from app.rag.evaluator import run_full_evaluation
 from app.rag.prompt_experiment import run_experiment, STRATEGIES
 from app.rag.test_data import TEST_QA_PAIRS
 from app.rag.vector_store import retrieve
-from app.utils.lang_detect import detect_language
 from app.cache.redis_client import close_redis
 
 # ── CrewAI (merged, lazy-imported in route handlers) ──
@@ -74,9 +71,6 @@ app.add_middleware(
 # ── Prometheus metrics ──
 Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
-_agents: dict[str, Any] = {}
-_agent_lock = asyncio.Lock()
-
 
 @app.middleware("http")
 async def logging_middleware(request: Request, call_next):
@@ -99,17 +93,6 @@ async def logging_middleware(request: Request, call_next):
     return response
 
 
-async def _get_agent(lang: str = "zh"):
-    """Get or create a chat agent for the given language."""
-    global _agents
-    if lang not in _agents:
-        async with _agent_lock:
-            if lang not in _agents:
-                llm = create_llm()
-                _agents[lang] = create_chat_agent(llm, lang=lang)
-    return _agents[lang]
-
-
 @app.on_event("startup")
 async def startup():
     if not settings.llm_api_key and not settings.fallback_api_key:
@@ -126,72 +109,6 @@ async def startup():
 async def shutdown():
     memory_manager.flush_all_scenarios()
     await close_redis()
-
-
-@app.post("/api/chat/stream")
-@limiter.limit("5/second")
-async def chat_stream(req: ChatRequest, request: Request):
-    lang = detect_language(req.message)
-    agent = await _get_agent(lang)
-    return StreamingResponse(
-        stream_agent_with_memory(
-            agent,
-            req.message,
-            req.session_id or "",
-            memory_manager=memory_manager,
-        ),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
-    )
-
-
-@app.post("/api/chat/enhanced/stream")
-@limiter.limit("5/second")
-async def chat_enhanced_stream(req: ChatRequest, request: Request):
-    """Enhanced chat with automatic RAG integration via LangGraph intent routing."""
-    import json
-    from app.langgraph.streaming import stream_workflow
-    from app.agent.llm import create_llm
-
-    llm = create_llm()
-
-    async def event_stream():
-        try:
-            async for event in stream_workflow(
-                query=req.message,
-                llm=llm,
-                session_id=req.session_id or "",
-            ):
-                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
-        except Exception as e:
-            yield f"data: {json.dumps({'type': 'error', 'content': str(e)}, ensure_ascii=False)}\n\n"
-
-    return StreamingResponse(
-        event_stream(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
-    )
-
-
-@app.get("/api/sessions", response_model=SessionListResponse)
-async def list_sessions():
-    sessions = memory_manager.get_active_sessions()
-    return SessionListResponse(sessions=sessions, count=len(sessions))
-
-
-@app.delete("/api/sessions/{session_id}", response_model=StatusResponse)
-async def delete_session(session_id: str):
-    memory_manager.finalize_scenario(session_id, summary="用户手动清除会话")
-    memory_manager.clear_session(session_id)
-    return StatusResponse(status="deleted", session_id=session_id)
 
 
 @app.post("/api/rag/query", response_model=RAGQueryResponse)
@@ -621,6 +538,7 @@ async def health():
     }
 
 
+app.include_router(chat_router.router)
 app.include_router(stats_router)
 app.include_router(analytics_router)
 
