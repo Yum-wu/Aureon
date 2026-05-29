@@ -33,6 +33,13 @@ Thumbs.db
 # Logs
 *.log
 
+# Database files
+*.db
+*.db-shm
+*.db-wal
+backend/offloads/memory.db*
+backend/data/vectors/
+
 # Testing
 .coverage
 htmlcov/
