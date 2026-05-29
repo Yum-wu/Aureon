@@ -9,6 +9,7 @@ from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
 from ..cache.redis_client import get_redis
+from ..exceptions import RedisUnavailableError, VectorStoreError
 from ..rag.vector_store import get_collection_stats
 
 logger = logging.getLogger(__name__)
@@ -112,32 +113,38 @@ def _classify_intent(query: str) -> str:
 @router.get("/api/rag/stats", response_model=StatsResponse)
 async def get_stats():
     redis = get_redis()
-    count = 0
-    avg_latency = 0.0
-    hit_rate = 0.0
 
-    if redis:
-        try:
-            count = int(await redis.get(f"{STATS_PREFIX}:count_24h") or 0)
+    if not redis:
+        raise RedisUnavailableError("Redis is not configured or unavailable")
 
-            # Latencies stored as sorted set by record_query via zadd
-            now = datetime.now(timezone.utc)
-            cutoff = now.timestamp() - 86400
-            latencies = await redis.zrangebyscore(
-                f"{STATS_PREFIX}:latencies:z", min=cutoff, max="+inf"
-            )
-            latencies = [float(l) for l in latencies]
-            avg_latency = sum(latencies) / len(latencies) if latencies else 0.0
+    try:
+        count = int(await redis.get(f"{STATS_PREFIX}:count_24h") or 0)
 
-            cache_hits = int(await redis.get(f"{STATS_PREFIX}:cache_hits") or 0)
-            cache_misses = int(await redis.get(f"{STATS_PREFIX}:cache_misses") or 0)
-            total = cache_hits + cache_misses
-            hit_rate = cache_hits / total if total > 0 else 0.0
-        except Exception as e:
-            logger.warning("get_stats redis_read_failed: %s", e)
+        # Latencies stored as sorted set by record_query via zadd
+        now = datetime.now(timezone.utc)
+        cutoff = now.timestamp() - 86400
+        latencies = await redis.zrangebyscore(
+            f"{STATS_PREFIX}:latencies:z", min=cutoff, max="+inf"
+        )
+        latencies = [float(l) for l in latencies]
+        avg_latency = sum(latencies) / len(latencies) if latencies else 0.0
+
+        cache_hits = int(await redis.get(f"{STATS_PREFIX}:cache_hits") or 0)
+        cache_misses = int(await redis.get(f"{STATS_PREFIX}:cache_misses") or 0)
+        total = cache_hits + cache_misses
+        hit_rate = cache_hits / total if total > 0 else 0.0
+    except RedisUnavailableError:
+        raise
+    except Exception as e:
+        logger.warning("get_stats redis_read_failed: %s", e)
+        raise RedisUnavailableError(f"Redis operation failed: {e}")
 
     # Real collection stats from Chroma
-    doc_count, chunk_count = get_collection_stats()
+    try:
+        doc_count, chunk_count = get_collection_stats()
+    except Exception as e:
+        logger.warning("get_stats vector_store_failed: %s", e)
+        raise VectorStoreError(f"Vector store error: {e}")
 
     return StatsResponse(
         cache_hit_rate=round(hit_rate, 4),
@@ -153,20 +160,25 @@ async def get_recent_queries(limit: int = Query(5, ge=1, le=50)):
     redis = get_redis()
     queries = []
 
-    if redis:
-        try:
-            entries = await redis.lrange("aureon:queries:recent", 0, limit - 1)
-            for entry in entries:
-                parts = entry.split("|", 3)
-                if len(parts) == 4:
-                    queries.append(RecentQuery(
-                        query=parts[1],
-                        sources_count=int(parts[2]),
-                        latency_ms=float(parts[3]),
-                        timestamp=parts[0],
-                    ))
-        except Exception as e:
-            logger.warning("get_recent_queries redis_read_failed: %s", e)
+    if not redis:
+        raise RedisUnavailableError("Redis is not configured or unavailable")
+
+    try:
+        entries = await redis.lrange("aureon:queries:recent", 0, limit - 1)
+        for entry in entries:
+            parts = entry.split("|", 3)
+            if len(parts) == 4:
+                queries.append(RecentQuery(
+                    query=parts[1],
+                    sources_count=int(parts[2]),
+                    latency_ms=float(parts[3]),
+                    timestamp=parts[0],
+                ))
+    except RedisUnavailableError:
+        raise
+    except Exception as e:
+        logger.warning("get_recent_queries redis_read_failed: %s", e)
+        raise RedisUnavailableError(f"Redis operation failed: {e}")
 
     return {"queries": queries}
 
@@ -217,6 +229,8 @@ async def get_documents():
         ]
         return {"documents": [d.model_dump() for d in documents],
                 "total_docs": len(documents), "total_chunks": total}
+    except VectorStoreError:
+        raise
     except Exception as e:
         logger.warning("get_documents failed: %s", e)
-        return {"documents": [], "total_docs": 0, "total_chunks": 0}
+        raise VectorStoreError(f"Vector store error: {e}")

@@ -18,6 +18,7 @@ import structlog
 from app.api.models import StatusResponse
 from app.api.rag_stats import router as stats_router
 from app.api.analytics import router as analytics_router
+from app.exceptions import AureonException
 from app.routers import chat as chat_router
 from app.routers import rag as rag_router
 from app.agent.llm import create_llm
@@ -65,6 +66,22 @@ app.add_middleware(
 
 # ── Prometheus metrics ──
 Instrumentator().instrument(app).expose(app, endpoint="/metrics")
+
+
+# ── Custom exception handler (structured JSON) ──
+from fastapi.responses import JSONResponse
+
+
+@app.exception_handler(AureonException)
+async def aureon_exception_handler(request: Request, exc: AureonException):
+    """Return structured JSON for all Aureon-specific exceptions."""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": exc.error_type,
+            "detail": str(exc.detail),
+        },
+    )
 
 
 @app.middleware("http")
