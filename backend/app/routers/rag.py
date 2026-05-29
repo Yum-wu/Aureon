@@ -62,6 +62,14 @@ UPLOADS_DIR = os.path.join(ARTICLES_DIR, "uploads")
 async def rag_query_endpoint(req: RAGQueryRequest, request: Request):
     """RAG query: retrieve context + generate answer (with Redis cache)."""
     from app.agent.llm import create_llm
+    from app.config import settings
+
+    # Check if LLM API key is configured
+    if not settings.llm_api_key and not settings.fallback_api_key:
+        raise HTTPException(
+            status_code=503,
+            detail="LLM API key not configured. Please set LLM_API_KEY or FALLBACK_API_KEY environment variable."
+        )
 
     llm = create_llm()
 
@@ -85,6 +93,14 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
     """Streaming RAG: buffered SSE + Redis cache layer."""
     from app.agent.llm import create_llm
     from app.cache.redis_client import get_cached, set_cached
+    from app.config import settings
+
+    # Check if LLM API key is configured
+    if not settings.llm_api_key and not settings.fallback_api_key:
+        raise HTTPException(
+            status_code=503,
+            detail="LLM API key not configured. Please set LLM_API_KEY or FALLBACK_API_KEY environment variable."
+        )
 
     llm = create_llm()
 

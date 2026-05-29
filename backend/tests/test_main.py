@@ -84,6 +84,7 @@ async def test_crew_generate_import_error():
 
 @pytest.mark.asyncio
 async def test_aureon_exception_handler():
+    """When Redis is unavailable, get_stats returns 200 with default values (graceful degradation)."""
     from app.exceptions import RedisUnavailableError
     app.dependency_overrides[get_redis_or_none] = lambda: None
 
@@ -92,10 +93,16 @@ async def test_aureon_exception_handler():
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             resp = await ac.get("/api/rag/stats")
 
-    assert resp.status_code == 503
+    # Graceful degradation: return 200 with default values
+    assert resp.status_code == 200
     data = resp.json()
-    assert "error" in data
-    assert "detail" in data
+    # Redis-dependent values should be zero
+    assert data["query_count_24h"] == 0
+    assert data["cache_hit_rate"] == 0.0
+    assert data["avg_retrieval_latency_ms"] == 0.0
+    # Document counts should still come from vector store
+    assert "total_indexed_docs" in data
+    assert "total_chunks" in data
 
 
 # ── Middleware ──

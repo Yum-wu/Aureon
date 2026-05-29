@@ -112,37 +112,39 @@ def _classify_intent(query: str) -> str:
 
 @router.get("/api/rag/stats", response_model=StatsResponse)
 async def get_stats(redis=Depends(get_redis_or_none)):
-    if not redis:
-        raise RedisUnavailableError("Redis is not configured or unavailable")
+    count = 0
+    avg_latency = 0.0
+    hit_rate = 0.0
 
-    try:
-        count = int(await redis.get(f"{STATS_PREFIX}:count_24h") or 0)
+    if redis:
+        try:
+            count = int(await redis.get(f"{STATS_PREFIX}:count_24h") or 0)
 
-        # Latencies stored as sorted set by record_query via zadd
-        now = datetime.now(timezone.utc)
-        cutoff = now.timestamp() - 86400
-        latencies = await redis.zrangebyscore(
-            f"{STATS_PREFIX}:latencies:z", min=cutoff, max="+inf"
-        )
-        latencies = [float(l) for l in latencies]
-        avg_latency = sum(latencies) / len(latencies) if latencies else 0.0
+            # Latencies stored as sorted set by record_query via zadd
+            now = datetime.now(timezone.utc)
+            cutoff = now.timestamp() - 86400
+            latencies = await redis.zrangebyscore(
+                f"{STATS_PREFIX}:latencies:z", min=cutoff, max="+inf"
+            )
+            latencies = [float(l) for l in latencies]
+            avg_latency = sum(latencies) / len(latencies) if latencies else 0.0
 
-        cache_hits = int(await redis.get(f"{STATS_PREFIX}:cache_hits") or 0)
-        cache_misses = int(await redis.get(f"{STATS_PREFIX}:cache_misses") or 0)
-        total = cache_hits + cache_misses
-        hit_rate = cache_hits / total if total > 0 else 0.0
-    except Exception as e:
-        if isinstance(e, AureonException):
-            raise
-        logger.warning("get_stats redis_read_failed: %s", e)
-        raise RedisUnavailableError(detail=str(e))
+            cache_hits = int(await redis.get(f"{STATS_PREFIX}:cache_hits") or 0)
+            cache_misses = int(await redis.get(f"{STATS_PREFIX}:cache_misses") or 0)
+            total = cache_hits + cache_misses
+            hit_rate = cache_hits / total if total > 0 else 0.0
+        except Exception as e:
+            if isinstance(e, AureonException):
+                raise
+            logger.warning("get_stats redis_read_failed: %s", e)
 
     # Real collection stats from Chroma
+    doc_count = 0
+    chunk_count = 0
     try:
         doc_count, chunk_count = get_collection_stats()
     except Exception as e:
         logger.warning("get_stats vector_store_failed: %s", e)
-        raise VectorStoreError(f"Vector store error: {e}")
 
     return StatsResponse(
         cache_hit_rate=round(hit_rate, 4),
@@ -158,7 +160,8 @@ async def get_recent_queries(limit: int = Query(5, ge=1, le=50), redis=Depends(g
     queries = []
 
     if not redis:
-        raise RedisUnavailableError("Redis is not configured or unavailable")
+        # No Redis available, return empty list (graceful degradation)
+        return {"queries": queries}
 
     try:
         entries = await redis.lrange("aureon:queries:recent", 0, limit - 1)
@@ -175,7 +178,6 @@ async def get_recent_queries(limit: int = Query(5, ge=1, le=50), redis=Depends(g
         if isinstance(e, AureonException):
             raise
         logger.warning("get_recent_queries redis_read_failed: %s", e)
-        raise RedisUnavailableError(detail=str(e))
 
     return {"queries": queries}
 
@@ -230,4 +232,4 @@ async def get_documents():
         if isinstance(e, VectorStoreError):
             raise
         logger.warning("get_documents failed: %s", e)
-        raise VectorStoreError(detail=str(e))
+        raise VectorStoreError(detail=f"Failed to fetch documents: {str(e)}")
