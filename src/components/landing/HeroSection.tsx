@@ -1,7 +1,10 @@
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 
 export function HeroSection() {
+  const navigate = useNavigate();
+
   return (
     <section className="py-24 px-4 text-center">
       <Badge variant="success">Production Ready</Badge>
@@ -33,8 +36,12 @@ export function HeroSection() {
       </div>
 
       <div className="flex gap-4 justify-center">
-        <Button size="lg">Start Searching</Button>
-        <Button variant="secondary" size="lg">View Architecture</Button>
+        <Button size="lg" onClick={() => navigate('/search')}>
+          Start Searching
+        </Button>
+        <Button variant="secondary" size="lg" onClick={() => navigate('/architecture')}>
+          View Architecture
+        </Button>
       </div>
     </section>
   );

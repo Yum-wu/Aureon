@@ -102,7 +102,7 @@ function AppLayout() {
         </nav>
       )}
 
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-auto">
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
