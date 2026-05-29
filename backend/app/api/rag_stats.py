@@ -1,4 +1,6 @@
 """RAG 系统统计 + 文档管理 API — Dashboard / Documents 数据源"""
+import logging
+import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Optional
@@ -6,8 +8,10 @@ from typing import Optional
 from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
-from ..cache.redis_client import _get_redis
+from ..cache.redis_client import get_redis
 from ..rag.vector_store import get_collection_stats
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -44,43 +48,50 @@ async def record_query(
         input_tokens: 输入 token 数
         output_tokens: 输出 token 数
     """
-    redis = _get_redis()
+    redis = get_redis()
     if not redis:
         return
     now = datetime.now(timezone.utc)
     timestamp = now.isoformat()
+    member = f"{timestamp}:{uuid.uuid4().hex[:8]}"
 
-    # 查询计数（24h 过期）
-    await redis.incr(f"{STATS_PREFIX}:count_24h")
-    await redis.expire(f"{STATS_PREFIX}:count_24h", 86400)
+    try:
+        async with redis.pipeline(transaction=False) as pipe:
+            # 查询计数（24h 过期）
+            pipe.incr(f"{STATS_PREFIX}:count_24h")
+            pipe.expire(f"{STATS_PREFIX}:count_24h", 86400)
 
-    # 最近查询列表（保留最近 50 条）
-    entry = f"{timestamp}|{query}|{sources_count}|{latency_ms}"
-    await redis.lpush(f"{STATS_PREFIX}:recent", entry)
-    await redis.ltrim(f"{STATS_PREFIX}:recent", 0, 49)
+            # 最近查询列表（保留最近 50 条）
+            entry = f"{timestamp}|{query}|{sources_count}|{latency_ms}"
+            pipe.lpush(f"{STATS_PREFIX}:recent", entry)
+            pipe.ltrim(f"{STATS_PREFIX}:recent", 0, 49)
 
-    # 延迟聚合（用于计算 avg/p95/p99）
-    await redis.zadd(f"{STATS_PREFIX}:latencies:z", {timestamp: latency_ms})
-    # 保留最近 24h 的数据
-    cutoff = (now.timestamp() - 86400)
-    await redis.zremrangebyscore(f"{STATS_PREFIX}:latencies:z", 0, cutoff)
+            # 延迟聚合（用于计算 avg/p95/p99）
+            pipe.zadd(f"{STATS_PREFIX}:latencies:z", {member: latency_ms})
+            # 保留最近 24h 的数据
+            cutoff = (now.timestamp() - 86400)
+            pipe.zremrangebyscore(f"{STATS_PREFIX}:latencies:z", 0, cutoff)
 
-    # Token 使用统计
-    if input_tokens > 0 or output_tokens > 0:
-        date_key = now.strftime("%Y-%m-%d")
-        await redis.hincrby(f"{STATS_PREFIX}:tokens:{date_key}", "input", input_tokens)
-        await redis.hincrby(f"{STATS_PREFIX}:tokens:{date_key}", "output", output_tokens)
-        await redis.hincrby(f"{STATS_PREFIX}:tokens:{date_key}", "queries", 1)
-        await redis.expire(f"{STATS_PREFIX}:tokens:{date_key}", 86400 * 7)  # 保留 7 天
+            # Token 使用统计
+            if input_tokens > 0 or output_tokens > 0:
+                date_key = now.strftime("%Y-%m-%d")
+                pipe.hincrby(f"{STATS_PREFIX}:tokens:{date_key}", "input", input_tokens)
+                pipe.hincrby(f"{STATS_PREFIX}:tokens:{date_key}", "output", output_tokens)
+                pipe.hincrby(f"{STATS_PREFIX}:tokens:{date_key}", "queries", 1)
+                pipe.expire(f"{STATS_PREFIX}:tokens:{date_key}", 86400 * 7)  # 保留 7 天
 
-    # 按小时统计查询量
-    hour_key = now.strftime("%Y-%m-%d-%H")
-    await redis.incr(f"{STATS_PREFIX}:hourly:{hour_key}")
-    await redis.expire(f"{STATS_PREFIX}:hourly:{hour_key}", 86400 * 2)  # 保留 2 天
+            # 按小时统计查询量
+            hour_key = now.strftime("%Y-%m-%d-%H")
+            pipe.incr(f"{STATS_PREFIX}:hourly:{hour_key}")
+            pipe.expire(f"{STATS_PREFIX}:hourly:{hour_key}", 86400 * 2)  # 保留 2 天
 
-    # 按意图分类统计（简化版：基于关键词）
-    intent = _classify_intent(query)
-    await redis.hincrby(f"{STATS_PREFIX}:intents", intent, 1)
+            # 按意图分类统计
+            intent = _classify_intent(query)
+            pipe.hincrby(f"{STATS_PREFIX}:intents", intent, 1)
+
+            await pipe.execute()
+    except Exception as e:
+        logger.warning("record_query pipeline failed: %s", e)
 
 
 def _classify_intent(query: str) -> str:
@@ -96,7 +107,7 @@ def _classify_intent(query: str) -> str:
 
 @router.get("/api/rag/stats", response_model=StatsResponse)
 async def get_stats():
-    redis = _get_redis()
+    redis = get_redis()
     count = 0
     avg_latency = 0.0
     hit_rate = 0.0
@@ -118,8 +129,8 @@ async def get_stats():
             cache_misses = int(await redis.get(f"{STATS_PREFIX}:cache_misses") or 0)
             total = cache_hits + cache_misses
             hit_rate = cache_hits / total if total > 0 else 0.0
-        except Exception:
-            pass  # Redis read failed, keep defaults
+        except Exception as e:
+            logger.warning("get_stats redis_read_failed: %s", e)
 
     # Real collection stats from Chroma
     doc_count, chunk_count = get_collection_stats()
@@ -135,7 +146,7 @@ async def get_stats():
 
 @router.get("/api/rag/queries/recent")
 async def get_recent_queries(limit: int = Query(5, ge=1, le=50)):
-    redis = _get_redis()
+    redis = get_redis()
     queries = []
 
     if redis:
@@ -199,5 +210,6 @@ async def get_documents():
         ]
         return {"documents": [d.model_dump() for d in documents],
                 "total_docs": len(documents), "total_chunks": total}
-    except Exception:
+    except Exception as e:
+        logger.warning("get_documents failed: %s", e)
         return {"documents": [], "total_docs": 0, "total_chunks": 0}

@@ -13,7 +13,7 @@ async def test_get_stats_returns_expected_fields():
     mock_redis.get = AsyncMock(return_value=None)
     mock_redis.zrangebyscore = AsyncMock(return_value=["100", "200"])
 
-    with patch("app.api.rag_stats._get_redis", return_value=mock_redis), \
+    with patch("app.api.rag_stats.get_redis", return_value=mock_redis), \
          patch("app.api.rag_stats.get_collection_stats", return_value=(5, 120)):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -50,7 +50,7 @@ async def test_get_stats_returns_expected_fields():
 @pytest.mark.asyncio
 async def test_get_stats_with_redis_unavailable():
     """When Redis is unavailable, endpoint returns default values without crashing."""
-    with patch("app.api.rag_stats._get_redis", return_value=None), \
+    with patch("app.api.rag_stats.get_redis", return_value=None), \
          patch("app.api.rag_stats.get_collection_stats", return_value=(0, 0)):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:

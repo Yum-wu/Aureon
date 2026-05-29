@@ -518,6 +518,7 @@ def get_collection_stats() -> tuple[int, int]:
         collection = _get_collection(client)
         total_chunks = collection.count()
         if total_chunks > 0:
+            # TODO: Optimize for large collections - consider maintaining counters
             all_meta = collection.get(include=["metadatas"])
             unique_docs = set()
             for meta in all_meta.get("metadatas", []):
