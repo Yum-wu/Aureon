@@ -42,6 +42,21 @@
   },
   "dashboard": {
     "title": "系统总览",
+    "subtitle": "实时指标与系统健康监控",
+    "loading": "加载中",
+    "error_loading": "加载失败",
+    "retry": "重试",
+    "total_queries": "查询总量",
+    "avg_latency": "平均延迟",
+    "cache_hit_rate": "缓存命中率",
+    "indexed_docs": "已索引文档",
+    "system_health": "系统健康",
+    "api_server": "API 服务",
+    "database": "数据库",
+    "cache": "缓存",
+    "healthy": "正常",
+    "connected": "已连接",
+    "active": "活跃",
     "metrics": {
       "retrieval_latency": "检索延迟",
       "ttft": "首字延迟",
@@ -103,6 +118,28 @@
   "analytics": {
     "title": "分析",
     "subtitle": "系统性能与使用分析",
+    "refresh": "刷新数据",
+    "retry": "重试",
+    "error_loading": "加载分析数据失败",
+    "avg_latency": "平均延迟",
+    "token_usage": "Token 消耗",
+    "total_queries": "查询总量",
+    "cache_hit_rate": "缓存命中率",
+    "output": "输出",
+    "cost": "成本",
+    "avg_per_hour": "平均 {count}/小时",
+    "saves": "节省 {count} 次查询",
+    "no_data": "暂无数据",
+    "intent": {
+      "document_query": "文档查询",
+      "code_search": "代码搜索",
+      "general_qa": "通用问答"
+    },
+    "time_range": {
+      "24h": "最近 24 小时",
+      "7d": "最近 7 天",
+      "30d": "最近 30 天"
+    },
     "latency": {
       "title": "延迟分布",
       "avg": "平均",
@@ -110,11 +147,11 @@
       "p99": "P99"
     },
     "tokens": {
-      "title": "Token 使用",
+      "title": "Token 使用详情",
       "input": "输入 Token",
       "output": "输出 Token",
       "cost": "预估成本",
-      "per_query": "~$0.001/查询"
+      "per_query": "~${cost}/查询"
     },
     "queries": {
       "title": "查询分布",

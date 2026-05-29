@@ -41,7 +41,22 @@
     }
   },
   "dashboard": {
-    "title": "System Overview",
+    "title": "System Dashboard",
+    "subtitle": "Real-time metrics and system health monitoring",
+    "loading": "Loading",
+    "error_loading": "Failed to load",
+    "retry": "Retry",
+    "total_queries": "Total Queries",
+    "avg_latency": "Avg Latency",
+    "cache_hit_rate": "Cache Hit Rate",
+    "indexed_docs": "Indexed Docs",
+    "system_health": "System Health",
+    "api_server": "API Server",
+    "database": "Database",
+    "cache": "Cache",
+    "healthy": "Healthy",
+    "connected": "Connected",
+    "active": "Active",
     "metrics": {
       "retrieval_latency": "Retrieval Latency",
       "ttft": "TTFT",
@@ -103,6 +118,28 @@
   "analytics": {
     "title": "Analytics",
     "subtitle": "System performance and usage analytics",
+    "refresh": "Refresh data",
+    "retry": "Retry",
+    "error_loading": "Failed to load analytics data",
+    "avg_latency": "Avg Latency",
+    "token_usage": "Token Usage",
+    "total_queries": "Total Queries",
+    "cache_hit_rate": "Cache Hit Rate",
+    "output": "Output",
+    "cost": "Cost",
+    "avg_per_hour": "avg {count}/hour",
+    "saves": "{count} queries saved",
+    "no_data": "No data available",
+    "intent": {
+      "document_query": "Document Query",
+      "code_search": "Code Search",
+      "general_qa": "General Q&A"
+    },
+    "time_range": {
+      "24h": "Last 24 hours",
+      "7d": "Last 7 days",
+      "30d": "Last 30 days"
+    },
     "latency": {
       "title": "Latency Distribution",
       "avg": "Avg",
@@ -110,11 +147,11 @@
       "p99": "P99"
     },
     "tokens": {
-      "title": "Token Usage",
+      "title": "Token Usage Details",
       "input": "Input Tokens",
       "output": "Output Tokens",
       "cost": "Estimated Cost",
-      "per_query": "~$0.001/query"
+      "per_query": "~${cost}/query"
     },
     "queries": {
       "title": "Query Distribution",
