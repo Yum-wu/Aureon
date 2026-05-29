@@ -38,11 +38,15 @@ export function useDashboardStats(): DashboardData {
         ]);
 
         if (!statsRes.ok) {
-          throw new Error(`Stats request failed: ${statsRes.status}`);
+          const errBody = await statsRes.json().catch(() => null);
+          const msg = errBody?.detail || `Stats request failed: ${statsRes.status}`;
+          throw new Error(msg);
         }
 
         if (!recentRes.ok) {
-          throw new Error(`Recent queries request failed: ${recentRes.status}`);
+          const errBody = await recentRes.json().catch(() => null);
+          const msg = errBody?.detail || `Recent queries request failed: ${recentRes.status}`;
+          throw new Error(msg);
         }
 
         const statsData: StatsResponse = await statsRes.json();

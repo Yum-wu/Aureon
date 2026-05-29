@@ -49,21 +49,15 @@ async def test_get_stats_returns_expected_fields():
 
 @pytest.mark.asyncio
 async def test_get_stats_with_redis_unavailable():
-    """When Redis is unavailable, endpoint returns default values without crashing."""
-    with patch("app.api.rag_stats.get_redis", return_value=None), \
-         patch("app.api.rag_stats.get_collection_stats", return_value=(0, 0)):
+    """When Redis is unavailable, endpoint raises 503 error."""
+    with patch("app.api.rag_stats.get_redis", return_value=None):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             resp = await ac.get("/api/rag/stats")
 
-    assert resp.status_code == 200
+    assert resp.status_code == 503
     data = resp.json()
-
-    assert data["cache_hit_rate"] == 0.0
-    assert data["query_count_24h"] == 0
-    assert data["avg_retrieval_latency_ms"] == 0.0
-    assert data["total_indexed_docs"] == 0
-    assert data["total_chunks"] == 0
+    assert data["error"] == "RedisUnavailableError"
 
 
 # ── /api/rag/queries/recent ──
@@ -138,12 +132,12 @@ async def test_recent_query_structure():
 
 @pytest.mark.asyncio
 async def test_recent_queries_redis_unavailable():
-    """When Redis is unavailable, returns empty queries list without crashing."""
+    """When Redis is unavailable, returns 503 error instead of empty list."""
     with patch("app.api.rag_stats.get_redis", return_value=None):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             resp = await ac.get("/api/rag/queries/recent")
 
-    assert resp.status_code == 200
+    assert resp.status_code == 503
     data = resp.json()
-    assert data["queries"] == []
+    assert data["error"] == "RedisUnavailableError"
