@@ -1,7 +1,7 @@
 """Analytics API endpoints for usage, latency, and token tracking."""
 
 from fastapi import APIRouter, Depends, Query
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 import structlog
 
@@ -44,7 +44,7 @@ async def get_usage_analytics(
         by_intent = {k: int(v) for k, v in intents_raw.items()} if intents_raw else {}
 
         # 计算每小时平均查询量
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         per_hour = round(total / 24, 1) if total > 0 else 0
 
         return {
@@ -95,7 +95,7 @@ async def get_latency_analytics(
 
     try:
         # 从 sorted set 获取延迟数据
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         cutoff = now.timestamp() - 86400  # 24h
 
         latencies = await redis.zrangebyscore(f"{STATS_PREFIX}:latencies:z", cutoff, "+inf")
@@ -169,7 +169,7 @@ async def get_token_analytics(
 
     try:
         # 获取今天的 token 使用
-        date_key = datetime.utcnow().strftime("%Y-%m-%d")
+        date_key = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         token_data = await redis.hgetall(f"{STATS_PREFIX}:tokens:{date_key}")
 
         input_tokens = int(token_data.get("input", 0)) if token_data else 0
