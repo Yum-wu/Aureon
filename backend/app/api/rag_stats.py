@@ -29,6 +29,10 @@ class StatsResponse(BaseModel):
     total_chunks: int
 
 
+class RecentQueriesResponse(BaseModel):
+    queries: list[RecentQuery]
+
+
 STATS_PREFIX = "aureon:stats"
 
 
@@ -61,7 +65,7 @@ async def record_query(
             pipe.incr(f"{STATS_PREFIX}:count_24h")
             pipe.expire(f"{STATS_PREFIX}:count_24h", 86400)
 
-            # 最近查询列表（保留最近 50 条）
+            # 最近查询列表（保留最近 100 条）
             entry = f"{timestamp}|{query}|{sources_count}|{latency_ms}"
             pipe.lpush("aureon:queries:recent", entry)
             pipe.ltrim("aureon:queries:recent", 0, 99)
@@ -122,7 +126,7 @@ async def get_stats():
             latencies = await redis.zrangebyscore(
                 f"{STATS_PREFIX}:latencies:z", min=cutoff, max="+inf"
             )
-            latencies = [int(l) for l in latencies]
+            latencies = [float(l) for l in latencies]
             avg_latency = sum(latencies) / len(latencies) if latencies else 0.0
 
             cache_hits = int(await redis.get(f"{STATS_PREFIX}:cache_hits") or 0)
@@ -144,7 +148,7 @@ async def get_stats():
     )
 
 
-@router.get("/api/rag/queries/recent")
+@router.get("/api/rag/queries/recent", response_model=RecentQueriesResponse)
 async def get_recent_queries(limit: int = Query(5, ge=1, le=50)):
     redis = get_redis()
     queries = []
