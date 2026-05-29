@@ -134,6 +134,7 @@ async def test_get_documents_error():
 
 @pytest.mark.asyncio
 async def test_get_stats_vector_store_error():
+    """When vector store fails, returns 200 with zero document counts (graceful degradation)."""
     mock_redis = AsyncMock()
     mock_redis.get = AsyncMock(return_value="10")
     mock_redis.zrangebyscore = AsyncMock(return_value=["100"])
@@ -145,11 +146,19 @@ async def test_get_stats_vector_store_error():
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             resp = await ac.get("/api/rag/stats")
 
-    assert resp.status_code == 500
+    # Graceful degradation: return 200 with zero document counts
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total_indexed_docs"] == 0
+    assert data["total_chunks"] == 0
+    # Redis-dependent values should still be available
+    assert data["query_count_24h"] == 10
+    assert data["avg_retrieval_latency_ms"] == 100.0
 
 
 @pytest.mark.asyncio
 async def test_get_stats_redis_read_error():
+    """When Redis raises an exception, returns 200 with default values (graceful degradation)."""
     mock_redis = AsyncMock()
     mock_redis.get = AsyncMock(side_effect=ConnectionError("timeout"))
 
@@ -159,11 +168,20 @@ async def test_get_stats_redis_read_error():
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         resp = await ac.get("/api/rag/stats")
 
-    assert resp.status_code == 503
+    # Graceful degradation: return 200 with default values
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["query_count_24h"] == 0
+    assert data["cache_hit_rate"] == 0.0
+    assert data["avg_retrieval_latency_ms"] == 0.0
+    # Document counts should come from vector store
+    assert "total_indexed_docs" in data
+    assert "total_chunks" in data
 
 
 @pytest.mark.asyncio
 async def test_get_recent_queries_redis_error():
+    """When Redis raises an exception, returns 200 with empty list (graceful degradation)."""
     mock_redis = AsyncMock()
     mock_redis.lrange = AsyncMock(side_effect=ConnectionError("timeout"))
 
@@ -173,4 +191,8 @@ async def test_get_recent_queries_redis_error():
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         resp = await ac.get("/api/rag/queries/recent")
 
-    assert resp.status_code == 503
+    # Graceful degradation: return 200 with empty list
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "queries" in data
+    assert data["queries"] == []

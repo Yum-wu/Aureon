@@ -65,7 +65,7 @@ async def test_get_stats_returns_expected_fields(mock_redis):
 
 @pytest.mark.asyncio
 async def test_get_stats_with_redis_unavailable():
-    """When Redis is unavailable, endpoint raises 503 error."""
+    """When Redis is unavailable, endpoint returns 200 with default values (graceful degradation)."""
     app.dependency_overrides[get_redis_or_none] = lambda: None
 
     with patch("app.cache.redis_client._get_redis", return_value=None):
@@ -73,9 +73,14 @@ async def test_get_stats_with_redis_unavailable():
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             resp = await ac.get("/api/rag/stats")
 
-    assert resp.status_code == 503
+    # Graceful degradation: return 200 with default values
+    assert resp.status_code == 200
     data = resp.json()
-    assert data["error"] == "RedisUnavailableError"
+    assert data["query_count_24h"] == 0
+    assert data["cache_hit_rate"] == 0.0
+    assert data["avg_retrieval_latency_ms"] == 0.0
+    assert "total_indexed_docs" in data
+    assert "total_chunks" in data
 
 
 # ── /api/rag/queries/recent ──
@@ -150,7 +155,7 @@ async def test_recent_query_structure(mock_redis):
 
 @pytest.mark.asyncio
 async def test_recent_queries_redis_unavailable():
-    """When Redis is unavailable, returns 503 error instead of empty list."""
+    """When Redis is unavailable, returns 200 with empty list (graceful degradation)."""
     app.dependency_overrides[get_redis_or_none] = lambda: None
 
     with patch("app.cache.redis_client._get_redis", return_value=None):
@@ -158,6 +163,8 @@ async def test_recent_queries_redis_unavailable():
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             resp = await ac.get("/api/rag/queries/recent")
 
-    assert resp.status_code == 503
+    # Graceful degradation: return 200 with empty list
+    assert resp.status_code == 200
     data = resp.json()
-    assert data["error"] == "RedisUnavailableError"
+    assert "queries" in data
+    assert data["queries"] == []
