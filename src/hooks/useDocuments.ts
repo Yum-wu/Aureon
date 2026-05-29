@@ -26,17 +26,18 @@ export function useDocuments(): DocumentsData {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchDocs = useCallback(async () => {
+  const fetchDocs = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(DOCS_URL);
+      const res = await fetch(DOCS_URL, { signal });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setDocuments(data.documents ?? []);
       setTotalDocs(data.total_docs ?? 0);
       setTotalChunks(data.total_chunks ?? 0);
     } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
@@ -44,27 +45,10 @@ export function useDocuments(): DocumentsData {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const res = await fetch(DOCS_URL);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        if (!cancelled) {
-          setDocuments(data.documents ?? []);
-          setTotalDocs(data.total_docs ?? 0);
-          setTotalChunks(data.total_chunks ?? 0);
-        }
-      } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
+    const controller = new AbortController();
+    fetchDocs(controller.signal);
+    return () => controller.abort();
+  }, [fetchDocs]);
 
-    load();
-    return () => { cancelled = true; };
-  }, []);
-
-  return { documents, totalDocs, totalChunks, loading, error, refetch: fetchDocs };
+  return { documents, totalDocs, totalChunks, loading, error, refetch: () => fetchDocs() };
 }

@@ -14,6 +14,7 @@ interface DocumentUploadProps {
 }
 
 const ALLOWED_EXTENSIONS = new Set([".md", ".txt"]);
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 export function DocumentUpload({ onUploadSuccess }: DocumentUploadProps) {
   const { t } = useTranslation();
@@ -31,6 +32,13 @@ export function DocumentUpload({ onUploadSuccess }: DocumentUploadProps) {
 
   const uploadFile = useCallback(
     async (file: File) => {
+      // Check file size
+      if (file.size > MAX_FILE_SIZE) {
+        setStatus("error");
+        setErrorMsg(t("documents.upload.file_too_large"));
+        return;
+      }
+
       // Validate extension
       const ext = "." + file.name.split(".").pop()?.toLowerCase();
       if (!ALLOWED_EXTENSIONS.has(ext)) {
