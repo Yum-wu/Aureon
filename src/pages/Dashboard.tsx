@@ -50,7 +50,7 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
 }
 
 export function Dashboard() {
-  const { stats, recentQueries, loading, error } = useDashboardStats();
+  const { stats, recentQueries, loading, error, refetch } = useDashboardStats();
 
   const metrics = stats
     ? [
@@ -74,7 +74,7 @@ export function Dashboard() {
         {loading && <LoadingSkeleton />}
 
         {error && !loading && (
-          <ErrorState message={error} onRetry={() => window.location.reload()} />
+          <ErrorState message={error} onRetry={refetch} />
         )}
 
         {!loading && !error && stats && (

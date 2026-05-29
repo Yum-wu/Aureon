@@ -1,38 +1,34 @@
-import { useState, useEffect } from "react";
-
-interface StatsResponse {
-  cache_hit_rate: number;
-  query_count_24h: number;
-  avg_retrieval_latency_ms: number;
-  total_indexed_docs: number;
-  total_chunks: number;
-}
-
-interface RecentQuery {
-  query: string;
-  sources_count: number;
-  latency_ms: number;
-  timestamp: string;
-}
+import { useState, useEffect, useCallback } from "react";
+import type { StatsResponse, RecentQuery } from "../types/dashboard";
 
 interface DashboardData {
   stats: StatsResponse | null;
   recentQueries: RecentQuery[];
   loading: boolean;
   error: string | null;
+  refetch: () => void;
 }
 
 const STATS_URL = "/api/rag/stats";
 const RECENT_URL = "/api/rag/queries/recent?limit=5";
+const BASE_INTERVAL = 30_000;
+const MAX_INTERVAL = 300_000;
 
 export function useDashboardStats(): DashboardData {
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [recentQueries, setRecentQueries] = useState<RecentQuery[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [trigger, setTrigger] = useState(0);
+
+  const refetch = useCallback(() => {
+    setTrigger((prev) => prev + 1);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout>;
 
     async function fetchAll() {
       try {
@@ -41,29 +37,47 @@ export function useDashboardStats(): DashboardData {
           fetch(RECENT_URL),
         ]);
 
-        if (statsRes.ok) {
-          const statsData: StatsResponse = await statsRes.json();
-          if (!cancelled) setStats(statsData);
+        if (!statsRes.ok) {
+          throw new Error(`Stats request failed: ${statsRes.status}`);
         }
 
-        if (recentRes.ok) {
-          const recentData = await recentRes.json();
-          if (!cancelled) setRecentQueries(recentData.queries ?? []);
+        if (!recentRes.ok) {
+          throw new Error(`Recent queries request failed: ${recentRes.status}`);
+        }
+
+        const statsData: StatsResponse = await statsRes.json();
+        const recentData = await recentRes.json();
+
+        if (!cancelled) {
+          setStats(statsData);
+          setRecentQueries(recentData.queries ?? []);
+          setError(null);
+          setRetryCount(0);
         }
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : String(err));
+          setRetryCount((prev) => prev + 1);
+        }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          // Exponential backoff on failure, fixed interval on success
+          const delay =
+            retryCount > 0
+              ? Math.min(BASE_INTERVAL * Math.pow(2, retryCount), MAX_INTERVAL)
+              : BASE_INTERVAL;
+          timeoutId = setTimeout(fetchAll, delay);
+        }
       }
     }
 
     fetchAll();
-    const interval = setInterval(fetchAll, 30_000);
     return () => {
       cancelled = true;
-      clearInterval(interval);
+      clearTimeout(timeoutId);
     };
-  }, []);
+  }, [trigger, retryCount]);
 
-  return { stats, recentQueries, loading, error };
+  return { stats, recentQueries, loading, error, refetch };
 }
