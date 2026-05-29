@@ -1,14 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { SearchBar } from '../components/search/SearchBar';
 import { StreamingAnswer } from '../components/search/StreamingAnswer';
 import { CitationList } from '../components/search/CitationList';
-
-interface Citation {
-  id: number;
-  title: string;
-  snippet: string;
-  url?: string;
-}
+import { streamRAGQuery, type Citation } from '../services/rag';
 
 export function Search() {
   const [query, setQuery] = useState('');
@@ -16,58 +10,35 @@ export function Search() {
   const [citations, setCitations] = useState<Citation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const handleSearch = async () => {
     if (!query.trim()) return;
 
+    // 取消上一次未完成的请求
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setIsLoading(true);
+    setIsStreaming(false);
     setAnswer('');
     setCitations([]);
+    setError(null);
 
-    try {
-      const response = await fetch('/api/rag/query/stream', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: query }),
-      });
+    await streamRAGQuery(query, {
+      signal: controller.signal,
+      onToken: (token) => {
+        setIsStreaming(true);
+        setAnswer(prev => prev + token);
+      },
+      onCitations: (cits) => setCitations(cits),
+      onError: (msg) => setError(msg),
+    });
 
-      if (!response.ok) throw new Error('Search failed');
-
-      const reader = response.body?.getReader();
-      if (!reader) return;
-
-      setIsStreaming(true);
-      const decoder = new TextDecoder();
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              if (data.type === 'token') {
-                setAnswer(prev => prev + data.content);
-              } else if (data.type === 'citations') {
-                setCitations(data.citations);
-              }
-            } catch {
-              // Skip invalid JSON
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Search error:', error);
-      setAnswer('Error: Failed to fetch answer. Please try again.');
-    } finally {
-      setIsLoading(false);
-      setIsStreaming(false);
-    }
+    setIsLoading(false);
+    setIsStreaming(false);
   };
 
   return (
@@ -88,6 +59,12 @@ export function Search() {
             isLoading={isLoading}
           />
         </div>
+
+        {error && (
+          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
+            {error}
+          </div>
+        )}
 
         {(answer || isLoading) && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
