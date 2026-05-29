@@ -25,6 +25,7 @@ describe('Dashboard', () => {
       recentQueries: [],
       loading: true,
       error: null,
+      refetch: vi.fn(),
     });
 
     render(<Dashboard />);
@@ -41,6 +42,7 @@ describe('Dashboard', () => {
       recentQueries: [],
       loading: false,
       error: 'Network error',
+      refetch: vi.fn(),
     });
 
     render(<Dashboard />);
@@ -65,6 +67,7 @@ describe('Dashboard', () => {
       ],
       loading: false,
       error: null,
+      refetch: vi.fn(),
     });
 
     render(<Dashboard />);

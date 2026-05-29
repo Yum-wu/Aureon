@@ -1,14 +1,8 @@
 import { Card } from '../ui/Card';
-
-interface Query {
-  query: string;
-  sources_count: number;
-  latency_ms: number;
-  timestamp: string;
-}
+import type { RecentQuery } from '../../types/dashboard';
 
 interface RecentQueriesProps {
-  queries: Query[];
+  queries: RecentQuery[];
 }
 
 export function RecentQueries({ queries }: RecentQueriesProps) {
@@ -19,8 +13,8 @@ export function RecentQueries({ queries }: RecentQueriesProps) {
         <p className="text-sm text-[var(--text-tertiary)]">No recent queries</p>
       ) : (
         <div className="space-y-3">
-          {queries.map((q, index) => (
-            <div key={index}
+          {queries.map((q, i) => (
+            <div key={`${q.timestamp}-${q.query}-${i}`}
                  className="flex items-center justify-between p-3 bg-[var(--bg-tertiary)] rounded-lg">
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-[var(--text-primary)] truncate">{q.query}</p>
