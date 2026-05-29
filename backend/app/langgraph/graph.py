@@ -31,7 +31,7 @@ def create_llm_call_fn():
 
 def route_intent(state: AgentState) -> str:
     """Conditional edge: route based on intent classification."""
-    intent = state.get("intent", "chat")
+    intent = state.get("intent") or "chat"  # Handle empty string and None
     logger.info(f"[LangGraph] Intent: {intent} (confidence: {state.get('intent_confidence', 0):.2f})")
 
     if state.get("human_approval_needed") and state.get("human_approved") is False:
