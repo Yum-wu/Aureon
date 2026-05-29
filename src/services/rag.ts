@@ -9,6 +9,26 @@ export interface Citation {
   url?: string;
 }
 
+/**
+ * Parse a single SSE data line and return typed event or null.
+ */
+function parseSSELine(line: string): { type: string; content?: string; citations?: Citation[] } | null {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith("data:")) return null;
+
+  try {
+    const event = JSON.parse(trimmed.slice(5).trim());
+    if (event.type === "token") {
+      return { type: "token", content: event.content };
+    } else if (event.type === "citations") {
+      return { type: "citations", citations: event.citations };
+    }
+  } catch {
+    // Skip invalid JSON
+  }
+  return null;
+}
+
 /** streamRAGQuery 回调选项 */
 export interface RAGStreamOptions {
   onToken: (token: string) => void;
@@ -60,37 +80,22 @@ export async function streamRAGQuery(
       buffer = lines.pop() || "";
 
       for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed || !trimmed.startsWith("data:")) continue;
-
-        const data = trimmed.slice(5).trim();
-        try {
-          const event = JSON.parse(data);
-          if (event.type === "token") {
-            onToken(event.content);
-          } else if (event.type === "citations") {
-            onCitations(event.citations);
-          }
-        } catch {
-          // Skip invalid JSON
+        const parsed = parseSSELine(line);
+        if (parsed?.type === "token") {
+          onToken(parsed.content!);
+        } else if (parsed?.type === "citations") {
+          onCitations(parsed.citations!);
         }
       }
     }
 
-    // 处理 buffer 中剩余的最后一个事件
+    // Process remaining event in buffer
     if (buffer.trim()) {
-      const trimmed = buffer.trim();
-      if (trimmed.startsWith("data:")) {
-        try {
-          const event = JSON.parse(trimmed.slice(5).trim());
-          if (event.type === "token") {
-            onToken(event.content);
-          } else if (event.type === "citations") {
-            onCitations(event.citations);
-          }
-        } catch {
-          // Skip invalid final event
-        }
+      const parsed = parseSSELine(buffer);
+      if (parsed?.type === "token") {
+        onToken(parsed.content!);
+      } else if (parsed?.type === "citations") {
+        onCitations(parsed.citations!);
       }
     }
   } catch (err: unknown) {

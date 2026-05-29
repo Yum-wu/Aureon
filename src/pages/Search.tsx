@@ -22,7 +22,7 @@ export function Search() {
     abortRef.current = controller;
 
     setIsLoading(true);
-    setIsStreaming(false);
+    setIsStreaming(true);
     setAnswer('');
     setCitations([]);
     setError(null);
@@ -30,7 +30,6 @@ export function Search() {
     await streamRAGQuery(query, {
       signal: controller.signal,
       onToken: (token) => {
-        setIsStreaming(true);
         setAnswer(prev => prev + token);
       },
       onCitations: (cits) => setCitations(cits),
