@@ -13,8 +13,6 @@ from typing import Any
 
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 import structlog
 
 from app.api.models import ChatRequest, SessionListResponse, StatusResponse
@@ -25,9 +23,6 @@ from app.memory.manager import manager as memory_manager
 from app.utils.lang_detect import detect_language
 
 logger = structlog.get_logger()
-
-# ── Rate limiter (shared instance) ──
-limiter = Limiter(key_func=get_remote_address)
 
 # ── Agent cache ──
 _agents: dict[str, Any] = {}
@@ -48,7 +43,6 @@ async def _get_agent(lang: str = "zh"):
 
 
 @router.post("/api/chat/stream")
-@limiter.limit("5/second")
 async def chat_stream(req: ChatRequest, request: Request):
     lang = detect_language(req.message)
     agent = await _get_agent(lang)
@@ -69,7 +63,6 @@ async def chat_stream(req: ChatRequest, request: Request):
 
 
 @router.post("/api/chat/enhanced/stream")
-@limiter.limit("5/second")
 async def chat_enhanced_stream(req: ChatRequest, request: Request):
     """Enhanced chat with automatic RAG integration via LangGraph intent routing."""
     from app.langgraph.streaming import stream_workflow
