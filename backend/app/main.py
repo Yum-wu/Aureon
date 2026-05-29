@@ -514,7 +514,10 @@ class CrewGenerateRequest(BaseModel):
 async def crew_generate(req: CrewGenerateRequest):
     """Generate article via 3-agent crew (synchronous)."""
     import time
-    from app.crew.crew_setup import generate_article
+    try:
+        from app.crew.crew_setup import generate_article
+    except ImportError as e:
+        raise HTTPException(status_code=503, detail=f"CrewAI not installed: {str(e)}")
 
     try:
         # litellm (used by crewai 0.80+) needs standard OpenAI env vars
@@ -542,8 +545,15 @@ async def crew_generate(req: CrewGenerateRequest):
 @app.post("/api/crew/generate/stream")
 async def crew_generate_stream(req: CrewGenerateRequest, request: Request):
     """Generate article with real-time agent progress via SSE."""
-    from app.crew.crew_setup import generate_article
-    from app.crew.main_events import EventCollector
+    try:
+        from app.crew.crew_setup import generate_article
+        from app.crew.main_events import EventCollector
+    except ImportError as e:
+        return StreamingResponse(
+            iter([f'data: {{"type": "error", "message": "CrewAI not installed: {str(e)}"}}\n\n']),
+            media_type="text/event-stream",
+            status_code=503,
+        )
 
     # litellm (used by crewai 0.80+) needs standard OpenAI env vars
     os.environ.setdefault("OPENAI_API_KEY", settings.llm_api_key)
