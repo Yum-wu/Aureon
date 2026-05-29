@@ -305,6 +305,9 @@ def embed_texts_llm(texts: List[str], batch_size: int = 20) -> Optional[np.ndarr
 class ZhipuEmbeddingFn(EmbeddingFunction):
     """ChromaDB-compatible embedding function wrapping Zhipu AI API."""
 
+    def name(self) -> str:
+        return "zhipu"
+
     def __call__(self, input):
         texts = input if isinstance(input, list) else [input]
         embeddings = embed_texts_llm(texts)
@@ -312,6 +315,15 @@ class ZhipuEmbeddingFn(EmbeddingFunction):
             dim = 768
             return [[0.0] * dim] * len(texts)
         return embeddings.tolist()
+
+    def embed_query(self, input):
+        return self(input)
+
+    def supported_spaces(self):
+        return ["l2", "ip", "cosine"]
+
+    def default_space(self):
+        return "cosine"
 
 
 # ── Public API ──
