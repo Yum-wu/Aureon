@@ -2,14 +2,28 @@
 Pydantic models for RAG API.
 """
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional
 
 
 class RAGQueryRequest(BaseModel):
-    query: str
-    top_k: int = 3
+    query: str = Field(
+        ...,
+        min_length=1,
+        max_length=1000,
+        description="RAG 查询内容",
+    )
+    top_k: int = Field(default=3, ge=1, le=20)
     use_mmr: bool = True
+
+    @field_validator("query")
+    @classmethod
+    def sanitize_query(cls, v: str) -> str:
+        """Strip whitespace and reject whitespace-only input."""
+        v = v.strip()
+        if not v:
+            raise ValueError("查询内容不能为空")
+        return v
 
 
 class SourceItem(BaseModel):

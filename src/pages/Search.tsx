@@ -4,6 +4,8 @@ import { StreamingAnswer } from '../components/search/StreamingAnswer';
 import { CitationList } from '../components/search/CitationList';
 import { streamRAGQuery, type Citation } from '../services/rag';
 
+const MAX_QUERY_LENGTH = 1000;
+
 export function Search() {
   const [query, setQuery] = useState('');
   const [answer, setAnswer] = useState('');
@@ -14,9 +16,16 @@ export function Search() {
   const abortRef = useRef<AbortController | null>(null);
 
   const handleSearch = async () => {
-    if (!query.trim()) return;
+    const trimmed = query.trim();
+    if (!trimmed) return;
 
-    // 取消上一次未完成的请求
+    // Frontend input length validation
+    if (trimmed.length > MAX_QUERY_LENGTH) {
+      setError(`查询内容不能超过 ${MAX_QUERY_LENGTH} 个字符（当前 ${trimmed.length} 个）`);
+      return;
+    }
+
+    // Cancel previous in-flight request
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -53,14 +62,20 @@ export function Search() {
         <div className="mb-8">
           <SearchBar
             value={query}
-            onChange={setQuery}
+            onChange={(val) => {
+              setQuery(val);
+              if (error) setError(null);
+            }}
             onSearch={handleSearch}
             isLoading={isLoading}
           />
+          <p className="mt-1 text-xs text-[var(--text-secondary)] text-center">
+            {query.length}/{MAX_QUERY_LENGTH}
+          </p>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
+          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm" role="alert">
             {error}
           </div>
         )}
