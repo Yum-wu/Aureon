@@ -14,9 +14,13 @@ async def test_rag_query_returns_response():
     mock_result.answer = "This is a test answer"
     mock_result.sources = []
 
+    # Mock the actual settings module that the endpoint imports
     with patch("app.routers.rag.rag_query_with_cache", new_callable=AsyncMock, return_value=mock_result), \
          patch("app.agent.llm.create_llm", return_value=MagicMock()), \
-         patch("app.routers.rag.record_query", new_callable=AsyncMock):
+         patch("app.routers.rag.record_query", new_callable=AsyncMock), \
+         patch("app.config.settings") as mock_settings:
+        mock_settings.llm_api_key = "test-key"
+        mock_settings.fallback_api_key = None
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             resp = await ac.post(
@@ -39,11 +43,15 @@ async def test_rag_query_stream_returns_sse():
         yield {"type": "text", "content": "streamed answer"}
         yield {"type": "done"}
 
+    # Mock the actual settings module that the endpoint imports
     with patch("app.routers.rag.rag_query_astream", side_effect=fake_astream), \
          patch("app.agent.llm.create_llm", return_value=MagicMock()), \
          patch("app.routers.rag.record_query", new_callable=AsyncMock), \
          patch("app.cache.redis_client.get_cached", new_callable=AsyncMock, return_value=None), \
-         patch("app.cache.redis_client.set_cached", new_callable=AsyncMock):
+         patch("app.cache.redis_client.set_cached", new_callable=AsyncMock), \
+         patch("app.config.settings") as mock_settings:
+        mock_settings.llm_api_key = "test-key"
+        mock_settings.fallback_api_key = None
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             resp = await ac.post(
