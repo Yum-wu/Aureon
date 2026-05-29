@@ -11,7 +11,7 @@ const TYPE_BADGE: Record<string, string> = {
 
 export function Documents() {
   const { t } = useTranslation();
-  const { documents, totalDocs, totalChunks, loading, refetch } = useDocuments();
+  const { documents, totalDocs, totalChunks, loading, error, refetch } = useDocuments();
   const [filter, setFilter] = useState("");
   const [showUpload, setShowUpload] = useState(false);
 
@@ -22,6 +22,30 @@ export function Documents() {
           d.source.toLowerCase().includes(filter.toLowerCase())
       )
     : documents;
+
+  // Error state
+  if (error) {
+    return (
+      <div className="h-full overflow-y-auto px-4 md:px-6 py-4 md:py-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 md:mb-6 gap-4">
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900">{t("documents.title")}</h1>
+            <p className="text-sm text-gray-500 mt-1">{t("documents.subtitle")}</p>
+          </div>
+        </div>
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+          <p className="text-red-600 mb-4">{t("documents.error_loading")}</p>
+          <p className="text-sm text-gray-500 mb-4">{error}</p>
+          <button
+            onClick={refetch}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            {t("documents.retry")}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full overflow-y-auto px-4 md:px-6 py-4 md:py-6">
@@ -107,7 +131,7 @@ export function Documents() {
               <tbody>
                 {filtered.map((doc, i) => (
                   <tr
-                    key={i}
+                    key={`${doc.source}-${doc.title}-${i}`}
                     className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors"
                   >
                     <td className="px-5 py-3.5">
@@ -141,7 +165,7 @@ export function Documents() {
           {/* Mobile: Cards */}
           <div className="md:hidden space-y-3">
             {filtered.map((doc, i) => (
-              <div key={i} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+              <div key={`${doc.source}-${doc.title}-${i}`} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="text-lg shrink-0">{doc.file_type === "pdf" ? "📄" : "📝"}</span>

@@ -100,6 +100,8 @@
   "documents": {
     "title": "Documents",
     "subtitle": "Indexed knowledge base documents",
+    "error_loading": "Failed to load documents",
+    "retry": "Retry",
     "table": {
       "name": "Document",
       "source": "Source",
@@ -123,7 +125,8 @@
       "upload_another": "Upload another",
       "retry": "Retry",
       "upload_failed": "Upload failed",
-      "unsupported_format": "Unsupported format: {{ext}}"
+      "unsupported_format": "Unsupported format: {{ext}}",
+      "file_too_large": "File size exceeds 10MB limit"
     }
   },
   "analytics": {
