@@ -541,3 +541,4 @@ def get_collection_stats() -> tuple[int, int]:
         return 0, 0
     except Exception:
         return 0, 0
+
