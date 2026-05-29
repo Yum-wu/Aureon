@@ -113,7 +113,18 @@
     "empty": "暂无索引文档",
     "total_docs": "文档总数",
     "total_chunks": "文档片段",
-    "search_placeholder": "搜索文档..."
+    "search_placeholder": "搜索文档...",
+    "upload": {
+      "button": "上传文档",
+      "drop_text": "拖拽文件到此处，或点击选择",
+      "supported_formats": "支持 .md 和 .txt 格式",
+      "uploading": "正在上传并索引...",
+      "success": "{{filename}} 上传成功，已创建 {{chunks}} 个片段",
+      "upload_another": "继续上传",
+      "retry": "重试",
+      "upload_failed": "上传失败",
+      "unsupported_format": "不支持的格式: {{ext}}"
+    }
   },
   "analytics": {
     "title": "分析",

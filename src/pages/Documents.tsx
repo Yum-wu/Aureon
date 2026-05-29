@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDocuments } from "../hooks/useDocuments";
+import { DocumentUpload } from "../components/documents/DocumentUpload";
 
 const TYPE_BADGE: Record<string, string> = {
   md: "bg-green-100 text-green-700",
@@ -10,8 +11,9 @@ const TYPE_BADGE: Record<string, string> = {
 
 export function Documents() {
   const { t } = useTranslation();
-  const { documents, totalDocs, totalChunks, loading } = useDocuments();
+  const { documents, totalDocs, totalChunks, loading, refetch } = useDocuments();
   const [filter, setFilter] = useState("");
+  const [showUpload, setShowUpload] = useState(false);
 
   const filtered = filter
     ? documents.filter(
@@ -30,6 +32,12 @@ export function Documents() {
           <p className="text-sm text-gray-500 mt-1">{t("documents.subtitle")}</p>
         </div>
         <div className="flex items-center gap-4">
+          <button
+            onClick={() => setShowUpload((v) => !v)}
+            className="px-4 py-2 rounded-lg bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 transition-colors"
+          >
+            {showUpload ? t("documents.upload.upload_another") : t("documents.upload.button")}
+          </button>
           <div className="text-right">
             <p className="text-xs text-gray-500">{t("documents.total_docs")}</p>
             <p className="text-xl font-bold text-gray-800">{totalDocs}</p>
@@ -51,6 +59,13 @@ export function Documents() {
           className="w-full px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
       </div>
+
+      {/* Upload area */}
+      {showUpload && (
+        <div className="mb-4">
+          <DocumentUpload onUploadSuccess={refetch} />
+        </div>
+      )}
 
       {/* Content */}
       {loading ? (
