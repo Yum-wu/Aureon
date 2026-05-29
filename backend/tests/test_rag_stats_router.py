@@ -64,3 +64,86 @@ async def test_get_stats_with_redis_unavailable():
     assert data["avg_retrieval_latency_ms"] == 0.0
     assert data["total_indexed_docs"] == 0
     assert data["total_chunks"] == 0
+
+
+# ── /api/rag/queries/recent ──
+
+
+@pytest.mark.asyncio
+async def test_get_recent_queries_returns_list():
+    """Recent queries endpoint returns a queries list when Redis has data."""
+    mock_redis = AsyncMock()
+    mock_redis.lrange = AsyncMock(return_value=[
+        "2026-05-29T10:00:00+00:00|什么是 RAG?|3|120.5",
+        "2026-05-29T09:58:00+00:00|如何部署?|2|85.0",
+    ])
+
+    with patch("app.api.rag_stats.get_redis", return_value=mock_redis):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.get("/api/rag/queries/recent")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "queries" in data
+    assert isinstance(data["queries"], list)
+    assert len(data["queries"]) == 2
+
+
+@pytest.mark.asyncio
+async def test_get_recent_queries_with_limit():
+    """Limit parameter controls the number of returned queries."""
+    mock_redis = AsyncMock()
+    mock_redis.lrange = AsyncMock(return_value=[
+        "2026-05-29T10:00:00+00:00|q1|1|50.0",
+    ])
+
+    with patch("app.api.rag_stats.get_redis", return_value=mock_redis):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.get("/api/rag/queries/recent", params={"limit": 1})
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["queries"]) <= 1
+
+    # Verify lrange was called with limit-1 as stop index
+    mock_redis.lrange.assert_called_once()
+    call_args = mock_redis.lrange.call_args
+    assert call_args[0][2] == 0  # start
+
+
+@pytest.mark.asyncio
+async def test_recent_query_structure():
+    """Each query entry has the correct fields and types."""
+    mock_redis = AsyncMock()
+    mock_redis.lrange = AsyncMock(return_value=[
+        "2026-05-29T10:00:00+00:00|什么是 RAG?|3|120.5",
+    ])
+
+    with patch("app.api.rag_stats.get_redis", return_value=mock_redis):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.get("/api/rag/queries/recent")
+
+    assert resp.status_code == 200
+    query = resp.json()["queries"][0]
+
+    assert query["query"] == "什么是 RAG?"
+    assert query["sources_count"] == 3
+    assert isinstance(query["latency_ms"], float)
+    assert query["latency_ms"] == 120.5
+    assert query["timestamp"] == "2026-05-29T10:00:00+00:00"
+
+
+@pytest.mark.asyncio
+async def test_recent_queries_redis_unavailable():
+    """When Redis is unavailable, returns empty queries list without crashing."""
+    with patch("app.api.rag_stats.get_redis", return_value=None):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.get("/api/rag/queries/recent")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["queries"] == []

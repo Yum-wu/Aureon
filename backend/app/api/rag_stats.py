@@ -18,7 +18,7 @@ router = APIRouter()
 class RecentQuery(BaseModel):
     query: str
     sources_count: int
-    latency_ms: int
+    latency_ms: float
     timestamp: str
 
 class StatsResponse(BaseModel):
@@ -150,16 +150,19 @@ async def get_recent_queries(limit: int = Query(5, ge=1, le=50)):
     queries = []
 
     if redis:
-        entries = await redis.lrange(f"{STATS_PREFIX}:recent", 0, limit - 1)
-        for entry in entries:
-            parts = entry.split("|", 3)
-            if len(parts) == 4:
-                queries.append(RecentQuery(
-                    query=parts[1],
-                    sources_count=int(parts[2]),
-                    latency_ms=int(parts[3]),
-                    timestamp=parts[0],
-                ))
+        try:
+            entries = await redis.lrange(f"{STATS_PREFIX}:recent", 0, limit - 1)
+            for entry in entries:
+                parts = entry.split("|", 3)
+                if len(parts) == 4:
+                    queries.append(RecentQuery(
+                        query=parts[1],
+                        sources_count=int(parts[2]),
+                        latency_ms=float(parts[3]),
+                        timestamp=parts[0],
+                    ))
+        except Exception as e:
+            logger.warning("get_recent_queries redis_read_failed: %s", e)
 
     return {"queries": queries}
 
