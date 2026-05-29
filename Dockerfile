@@ -29,6 +29,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# CrewAI (local wheel)
+COPY backend/crewai-0.11.2-py3-none-any.whl /tmp/
+RUN pip install --no-cache-dir /tmp/crewai-0.11.2-py3-none-any.whl && rm /tmp/crewai-0.11.2-py3-none-any.whl
+
 # 后端代码
 COPY backend/ .
 
