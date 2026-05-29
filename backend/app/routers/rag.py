@@ -1,0 +1,353 @@
+"""RAG router -- extracted from main.py.
+
+Routes:
+  POST /api/rag/query           -- RAG query with Redis cache
+  POST /api/rag/query/stream    -- Streaming RAG query (SSE)
+  POST /api/rag/index           -- Re-index all articles
+  POST /api/rag/upload          -- Upload document and index
+  GET  /api/rag/uploads         -- List uploaded files
+  DELETE /api/rag/upload/{fn}   -- Delete uploaded file
+  POST /api/rag/evaluate        -- Run RAG evaluation
+  POST /api/rag/experiment      -- Run prompt experiment
+  GET  /api/rag/health          -- RAG health check
+  GET  /api/rag/benchmark       -- Benchmark results
+"""
+
+import asyncio
+import json
+import logging
+import os
+import sys
+import time
+
+from fastapi import APIRouter, Request, UploadFile, File, HTTPException
+from fastapi.responses import StreamingResponse
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+import structlog
+
+from app.api.models import StatusResponse
+from app.api.rag_stats import record_query
+from app.config import settings
+from app.rag.models import (
+    RAGQueryRequest,
+    RAGQueryResponse,
+    RAGIndexResponse,
+    RAGUploadResponse,
+)
+from app.rag.qa_chain import (
+    rag_query_with_cache,
+    rag_query_astream,
+    run_index_pipeline,
+    run_incremental_index,
+)
+from app.rag.evaluator import run_full_evaluation
+from app.rag.prompt_experiment import run_experiment, STRATEGIES
+from app.rag.test_data import TEST_QA_PAIRS
+from app.rag.vector_store import retrieve
+
+logger = structlog.get_logger()
+
+router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
+
+
+@router.post("/api/rag/query", response_model=RAGQueryResponse)
+@limiter.limit("2/second")
+async def rag_query_endpoint(req: RAGQueryRequest, request: Request):
+    """RAG query: retrieve context + generate answer (with Redis cache)."""
+    from app.agent.llm import create_llm
+
+    llm = create_llm()
+
+    def _llm_call(messages):
+        response = llm.invoke(messages)
+        return response.content
+
+    start_time = time.time()
+    result = await rag_query_with_cache(
+        req.query, _llm_call, top_k=req.top_k, use_mmr=req.use_mmr
+    )
+    latency_ms = int((time.time() - start_time) * 1000)
+    # Record query for Dashboard stats (fire-and-forget)
+    asyncio.create_task(record_query(req.query, len(result.sources), latency_ms))
+    return result
+
+
+@router.post("/api/rag/query/stream")
+@limiter.limit("2/second")
+async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
+    """Streaming RAG: buffered SSE + Redis cache layer."""
+    from app.agent.llm import create_llm
+    from app.cache.redis_client import get_cached, set_cached
+
+    llm = create_llm()
+
+    async def _buffer_events(generator, flush_interval=0.05, max_chars=200):
+        """Buffer text events, flush at interval or max_chars.
+
+        - First text event: flush immediately (zero TTFT impact)
+        - Subsequent: buffer at 50ms / 200 chars for smooth streaming
+        - Non-text events: flush pending text first, pass through
+        """
+        buf = ""
+        last_flush = 0.0
+        is_first = True
+        async for event in generator:
+            if event.get("type") == "text":
+                buf += event["content"]
+                now = time.monotonic()
+                if not last_flush:
+                    last_flush = now
+                # Flush first event immediately to keep TTFT low
+                if is_first:
+                    is_first = False
+                    yield {"type": "text", "content": buf}
+                    buf = ""
+                    last_flush = now
+                elif (now - last_flush) >= flush_interval or len(buf) >= max_chars:
+                    yield {"type": "text", "content": buf}
+                    buf = ""
+                    last_flush = now
+            else:
+                if buf:
+                    yield {"type": "text", "content": buf}
+                    buf = ""
+                    last_flush = 0.0
+                yield event
+        if buf:
+            yield {"type": "text", "content": buf}
+
+    async def event_stream():
+        start_time = time.time()
+        sources_count = 0
+        input_tokens = 0
+        output_tokens = 0
+        # 1. Try Redis cache hit
+        cached = await get_cached(req.query)
+        if cached is not None:
+            yield f"data: {json.dumps({'type': 'sources', 'sources': []}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'text', 'content': cached}, ensure_ascii=False)}\n\n"
+            yield 'data: {"type": "cache_hit"}\n\n'
+            latency_ms = int((time.time() - start_time) * 1000)
+            asyncio.create_task(record_query(req.query, 0, latency_ms))
+            return
+
+        # 2. Stream with buffering, auto-cache full answer on completion
+        full_text = ""
+        try:
+            raw_gen = rag_query_astream(
+                req.query, llm, top_k=req.top_k, use_mmr=req.use_mmr
+            )
+            async for event in _buffer_events(raw_gen):
+                if event.get("type") == "text":
+                    full_text += event["content"]
+                    output_tokens = len(full_text) // 2
+                elif event.get("type") == "sources":
+                    sources_count = len(event.get("sources", []))
+                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'content': str(e)}, ensure_ascii=False)}\n\n"
+        finally:
+            # 3. Cache full answer (fire-and-forget, non-blocking)
+            if full_text:
+                asyncio.create_task(set_cached(req.query, full_text))
+            # 4. Record query for Dashboard stats
+            latency_ms = int((time.time() - start_time) * 1000)
+            input_tokens = len(req.query) + 500
+            asyncio.create_task(record_query(
+                req.query, sources_count, latency_ms,
+                input_tokens=input_tokens, output_tokens=output_tokens
+            ))
+            yield 'data: {"type": "done"}\n\n'
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@router.post("/api/rag/index", response_model=RAGIndexResponse)
+@limiter.limit("1/second")
+async def rag_index_endpoint(request: Request):
+    """Re-index all articles into Chroma."""
+    articles_dir = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "articles"
+    )
+    result = run_index_pipeline(articles_dir)
+    return result
+
+
+@router.post("/api/rag/upload", response_model=RAGUploadResponse)
+async def rag_upload_endpoint(file: UploadFile = File(...)):
+    """Upload a .md or .txt file and incrementally index it."""
+    import shutil
+
+    # Validate extension
+    allowed = {".md", ".txt"}
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if ext not in allowed:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported format: {ext}, only {', '.join(allowed)}",
+        )
+
+    # Save to uploads directory
+    upload_dir = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+        "data", "articles", "uploads",
+    )
+    os.makedirs(upload_dir, exist_ok=True)
+    dest = os.path.join(upload_dir, file.filename)
+
+    try:
+        content = await file.read()
+        with open(dest, "wb") as f:
+            f.write(content)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"File save failed: {str(e)}")
+
+    # Incremental index
+    result = run_incremental_index(dest)
+    if result["status"] == "error":
+        raise HTTPException(
+            status_code=500, detail=result.get("message", "Index failed")
+        )
+
+    return result
+
+
+@router.get("/api/rag/uploads")
+async def rag_list_uploads():
+    """List all uploaded files in the uploads directory."""
+    upload_dir = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+        "data", "articles", "uploads",
+    )
+    if not os.path.isdir(upload_dir):
+        return {"files": []}
+    files = sorted(
+        (
+            {
+                "filename": f,
+                "size": os.path.getsize(os.path.join(upload_dir, f)),
+            }
+            for f in os.listdir(upload_dir)
+            if os.path.isfile(os.path.join(upload_dir, f))
+        ),
+        key=lambda x: x["filename"],
+    )
+    return {"files": files}
+
+
+@router.delete("/api/rag/upload/{filename}", response_model=StatusResponse)
+async def rag_delete_upload(filename: str):
+    """Delete an uploaded file and its chunks from the index."""
+    # Security: prevent path traversal
+    if ".." in filename or "/" in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    upload_dir = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+        "data", "articles", "uploads",
+    )
+    filepath = os.path.join(upload_dir, filename)
+
+    # 1. Remove from Chroma index
+    from app.rag.vector_store import delete_from_index
+
+    delete_from_index(filename)
+
+    # 2. Delete physical file
+    if os.path.isfile(filepath):
+        os.remove(filepath)
+        logger.info("Deleted uploaded file", path=filepath)
+    else:
+        logger.warning("File not found on disk (already deleted)", path=filepath)
+
+    return StatusResponse(status="deleted", session_id=filename)
+
+
+@router.post("/api/rag/evaluate")
+async def rag_evaluate_endpoint():
+    """Run full RAG evaluation: Recall@k, Faithfulness, Latency."""
+    from app.agent.llm import create_llm
+
+    llm = create_llm(streaming=False)
+
+    def _retrieve(q: str, top_k: int = 3):
+        return retrieve(q, top_k=top_k)
+
+    def _rag_query(q: str):
+        from app.rag.qa_chain import rag_query as rq
+
+        def llm_call(messages):
+            return llm.invoke(messages).content
+
+        return rq(q, llm_call)
+
+    result = run_full_evaluation(_retrieve, _rag_query, llm)
+    return result
+
+
+@router.post("/api/rag/experiment")
+async def rag_experiment_endpoint():
+    """Run prompt strategy experiment on test dataset."""
+    from app.agent.llm import create_llm
+
+    llm = create_llm(streaming=False)
+
+    def _rag_query(q: str):
+        from app.rag.qa_chain import rag_query as rq
+
+        def llm_call(messages):
+            return llm.invoke(messages).content
+
+        return rq(q, llm_call)
+
+    result = run_experiment(TEST_QA_PAIRS, _rag_query, llm)
+    return result
+
+
+@router.get("/api/rag/health")
+async def rag_health():
+    """RAG system health + live service status."""
+    from app.rag.vector_store import get_bm25_stats
+
+    bm25 = get_bm25_stats()
+    return {
+        "status": "ok",
+        "llm_configured": bool(settings.llm_api_key),
+        "model": settings.llm_model,
+        "fallback_configured": bool(settings.fallback_api_key),
+        "index_status": "ok" if os.path.isdir(
+            os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "data", "vectors"))
+        ) else "not_initialized",
+        "test_qa_pairs": len(TEST_QA_PAIRS),
+        "streaming_retrieval": "BM25 keyword (in-memory)",
+        "bm25_docs": bm25["docs"],
+        "bm25_terms": bm25["terms"],
+        "sync_retrieval": "Chroma dense (BGE local embedding)",
+        "hybrid_search_enabled": True,
+        "guardrails_enabled": True,
+        "langsmith_enabled": bool(
+            settings.langchain_api_key or os.getenv("LANGCHAIN_API_KEY")
+        ),
+    }
+
+
+@router.get("/api/rag/benchmark")
+async def rag_benchmark():
+    """Latest RAG evaluation benchmark results."""
+    benchmark_path = os.path.join(
+        os.path.dirname(__file__), "..", "..", "data", "benchmark_results.json"
+    )
+    if not os.path.isfile(benchmark_path):
+        return {"metrics": [], "services": {}, "timestamp": None}
+    with open(benchmark_path, encoding="utf-8") as f:
+        return json.load(f)
