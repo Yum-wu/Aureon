@@ -52,7 +52,7 @@ export async function streamRAGQuery(
     const response = await fetch(RAG_STREAM_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question }),
+      body: JSON.stringify({ query: question }),
       signal,
     });
 

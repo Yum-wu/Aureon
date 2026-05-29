@@ -36,7 +36,7 @@ export function Search() {
     setCitations([]);
     setError(null);
 
-    await streamRAGQuery(query, {
+    await streamRAGQuery(trimmed, {
       signal: controller.signal,
       onToken: (token) => {
         setAnswer(prev => prev + token);

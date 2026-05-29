@@ -21,7 +21,7 @@ describe('streamRAGQuery', () => {
     vi.clearAllMocks();
   });
 
-  it('calls correct endpoint with question and processes token events', async () => {
+  it('calls correct endpoint with query and processes token events', async () => {
     const ssePayload =
       'data: {"type":"token","content":"Hello"}\n' +
       'data: {"type":"token","content":" World"}\n' +
@@ -48,7 +48,7 @@ describe('streamRAGQuery', () => {
       expect.objectContaining({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: 'test question' }),
+        body: JSON.stringify({ query: 'test question' }),
       }),
     );
 
