@@ -18,8 +18,8 @@ class AureonException(HTTPException):
 
     error_type: str = "AureonException"
 
-    def __init__(self, detail: str = "Internal server error"):
-        super().__init__(status_code=500, detail=detail)
+    def __init__(self, status_code: int = 500, detail: str = "Internal server error"):
+        super().__init__(status_code=status_code, detail=detail)
 
 
 class RedisUnavailableError(AureonException):
@@ -28,8 +28,7 @@ class RedisUnavailableError(AureonException):
     error_type = "RedisUnavailableError"
 
     def __init__(self, detail: str = "Redis service unavailable"):
-        super().__init__(detail=detail)
-        self.status_code = 503
+        super().__init__(status_code=503, detail=detail)
 
 
 class VectorStoreError(AureonException):
@@ -38,5 +37,4 @@ class VectorStoreError(AureonException):
     error_type = "VectorStoreError"
 
     def __init__(self, detail: str = "Vector store error"):
-        super().__init__(detail=detail)
-        self.status_code = 500
+        super().__init__(status_code=500, detail=detail)
