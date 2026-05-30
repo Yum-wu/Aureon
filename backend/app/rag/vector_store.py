@@ -69,7 +69,7 @@ _kw_docs: List[Dict] = []
 _kw_idf: Dict[str, float] = {}
 _kw_avgdl: float = 0.0
 _KW_MIN_RAW_SCORE = 1.5  # minimum raw BM25 score before normalization
-_KW_MIN_IDF = 0.5  # require at least one query term with meaningful IDF
+_KW_MIN_IDF = 1.5  # require at least one query term with IDF >= 1.5 (df < 50%)
 
 
 def _get_chroma(path: str = None) -> chromadb.PersistentClient:
