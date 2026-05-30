@@ -104,3 +104,73 @@ async def test_rag_benchmark():
     assert "metrics" in data
     assert data["metrics"] == []
     assert data["timestamp"] is None
+
+
+@pytest.mark.asyncio
+async def test_upload_requires_api_key_when_configured():
+    """When BLOG_SYNC_API_KEY is set, upload requires valid API key."""
+    import io
+    import os
+
+    # Mock file upload
+    mock_file = MagicMock()
+    mock_file.filename = "test.md"
+    mock_file.read = AsyncMock(return_value=b"# Test content")
+
+    # Mock the actual settings module
+    with patch("app.config.settings") as mock_settings, \
+         patch("app.routers.rag.run_incremental_index") as mock_index, \
+         patch("app.routers.rag.os.makedirs"), \
+         patch("app.routers.rag.os.path.join", return_value="/tmp/test.md"), \
+         patch("builtins.open", MagicMock()):
+        mock_settings.llm_api_key = "test-key"
+        mock_index.return_value = {
+            "status": "ok",
+            "chunks_created": 1,
+            "filename": "test.md",
+            "elapsed_seconds": 0.5,
+        }
+
+        transport = ASGITransport(app=app)
+
+        # Test 1: No API key when required → 401
+        with patch.dict("os.environ", {"BLOG_SYNC_API_KEY": "secret-key"}):
+            async with AsyncClient(transport=transport, base_url="http://test") as ac:
+                resp = await ac.post(
+                    "/api/rag/upload",
+                    files={"file": ("test.md", b"# Test", "text/markdown")},
+                    data={"language": "en", "title": "Test"},
+                )
+            assert resp.status_code == 401
+            assert "Invalid API key" in resp.json()["detail"]
+
+        # Test 2: Wrong API key → 401
+        with patch.dict("os.environ", {"BLOG_SYNC_API_KEY": "secret-key"}):
+            async with AsyncClient(transport=transport, base_url="http://test") as ac:
+                resp = await ac.post(
+                    "/api/rag/upload",
+                    files={"file": ("test.md", b"# Test", "text/markdown")},
+                    data={"language": "en", "title": "Test", "api_key": "wrong-key"},
+                )
+            assert resp.status_code == 401
+
+        # Test 3: Correct API key → 200
+        with patch.dict("os.environ", {"BLOG_SYNC_API_KEY": "secret-key"}):
+            async with AsyncClient(transport=transport, base_url="http://test") as ac:
+                resp = await ac.post(
+                    "/api/rag/upload",
+                    files={"file": ("test.md", b"# Test", "text/markdown")},
+                    data={"language": "en", "title": "Test", "api_key": "secret-key"},
+                )
+            assert resp.status_code == 200
+
+        # Test 4: No API key required → 200 (backward compatible)
+        with patch.dict("os.environ", {}, clear=True):
+            os.environ.pop("BLOG_SYNC_API_KEY", None)
+            async with AsyncClient(transport=transport, base_url="http://test") as ac:
+                resp = await ac.post(
+                    "/api/rag/upload",
+                    files={"file": ("test.md", b"# Test", "text/markdown")},
+                    data={"language": "en", "title": "Test"},
+                )
+            assert resp.status_code == 200

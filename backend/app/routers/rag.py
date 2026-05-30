@@ -206,6 +206,7 @@ async def rag_upload_endpoint(
     file: UploadFile = File(...),
     language: str = Form(None),
     title: str = Form(None),
+    api_key: str = Form(None),
 ):
     """Upload a .md or .txt file and incrementally index it.
 
@@ -213,7 +214,16 @@ async def rag_upload_endpoint(
         file: 上传的文件
         language: 文档语言（"zh" 或 "en"），可选
         title: 文档标题，可选
+        api_key: API Key（用于博客同步认证），可选
     """
+    # 验证 API Key（如果配置了）
+    expected_key = os.getenv("BLOG_SYNC_API_KEY")
+    if expected_key and api_key != expected_key:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid API key"
+        )
+
     import shutil
 
     # Validate filename
