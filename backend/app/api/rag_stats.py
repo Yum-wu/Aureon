@@ -36,6 +36,12 @@ class RecentQueriesResponse(BaseModel):
 
 STATS_PREFIX = "aureon:stats"
 
+# In-memory fallback when Redis is unavailable
+_mem_queries: list[dict] = []
+_mem_count: int = 0
+_mem_latencies: list[float] = []
+_MEM_MAX = 100
+
 
 async def record_query(
     query: str,
@@ -46,6 +52,8 @@ async def record_query(
 ) -> None:
     """记录一次查询（由 RAG API 调用）
 
+    优先 Redis，无 Redis 时降级到内存缓存。
+
     Args:
         query: 用户查询
         sources_count: 引用源数量
@@ -54,7 +62,21 @@ async def record_query(
         output_tokens: 输出 token 数
     """
     redis = get_redis_or_none()
+    now = datetime.now(timezone.utc)
+    timestamp = now.isoformat()
+
+    # In-memory fallback when Redis is unavailable
     if not redis:
+        global _mem_count, _mem_queries, _mem_latencies
+        _mem_count += 1
+        _mem_queries.insert(0, {
+            "query": query, "sources_count": sources_count,
+            "latency_ms": latency_ms, "timestamp": timestamp,
+        })
+        _mem_queries = _mem_queries[:_MEM_MAX]
+        _mem_latencies.append(latency_ms)
+        if len(_mem_latencies) > _MEM_MAX:
+            _mem_latencies = _mem_latencies[-_MEM_MAX:]
         return
     now = datetime.now(timezone.utc)
     timestamp = now.isoformat()
@@ -137,6 +159,10 @@ async def get_stats(redis=Depends(get_redis_or_none)):
             if isinstance(e, AureonException):
                 raise
             logger.warning("get_stats redis_read_failed: %s", e)
+    else:
+        # In-memory fallback
+        count = _mem_count
+        avg_latency = sum(_mem_latencies) / len(_mem_latencies) if _mem_latencies else 0.0
 
     # Real collection stats from Chroma
     doc_count = 0
@@ -160,7 +186,9 @@ async def get_recent_queries(limit: int = Query(5, ge=1, le=50), redis=Depends(g
     queries = []
 
     if not redis:
-        # No Redis available, return empty list (graceful degradation)
+        # In-memory fallback
+        for q in _mem_queries[:limit]:
+            queries.append(RecentQuery(**q))
         return {"queries": queries}
 
     try:
