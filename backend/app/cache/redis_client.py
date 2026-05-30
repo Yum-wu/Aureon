@@ -22,7 +22,7 @@ _MEM_TTL = 3600  # 1 hour, same as Redis TTL
 
 
 # Bump to invalidate all cached RAG responses (e.g. after retrieval logic changes)
-_CACHE_VERSION = "v7"  # v7: BM25 priority in RRF + startup warmup
+_CACHE_VERSION = "v8"  # v8: healthcheck waits for BM25 ready
 
 
 def _mem_cache_key(key: str) -> str:
