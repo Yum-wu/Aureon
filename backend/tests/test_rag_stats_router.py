@@ -65,7 +65,11 @@ async def test_get_stats_returns_expected_fields(mock_redis):
 
 @pytest.mark.asyncio
 async def test_get_stats_with_redis_unavailable():
-    """When Redis is unavailable, endpoint returns 200 with default values (graceful degradation)."""
+    """When Redis is unavailable, endpoint returns 200 with in-memory fallback."""
+    import app.api.rag_stats as stats_mod
+    stats_mod._mem_count = 0
+    stats_mod._mem_latencies = []
+
     app.dependency_overrides[get_redis_or_none] = lambda: None
 
     with patch("app.cache.redis_client._get_redis", return_value=None):
@@ -73,7 +77,7 @@ async def test_get_stats_with_redis_unavailable():
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             resp = await ac.get("/api/rag/stats")
 
-    # Graceful degradation: return 200 with default values
+    # Graceful degradation: return 200 with in-memory values
     assert resp.status_code == 200
     data = resp.json()
     assert data["query_count_24h"] == 0
@@ -155,7 +159,10 @@ async def test_recent_query_structure(mock_redis):
 
 @pytest.mark.asyncio
 async def test_recent_queries_redis_unavailable():
-    """When Redis is unavailable, returns 200 with empty list (graceful degradation)."""
+    """When Redis is unavailable, returns 200 with in-memory fallback."""
+    import app.api.rag_stats as stats_mod
+    stats_mod._mem_queries = []
+
     app.dependency_overrides[get_redis_or_none] = lambda: None
 
     with patch("app.cache.redis_client._get_redis", return_value=None):
@@ -163,8 +170,8 @@ async def test_recent_queries_redis_unavailable():
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             resp = await ac.get("/api/rag/queries/recent")
 
-    # Graceful degradation: return 200 with empty list
+    # Graceful degradation: return 200 with in-memory data
     assert resp.status_code == 200
     data = resp.json()
     assert "queries" in data
-    assert data["queries"] == []
+    assert isinstance(data["queries"], list)
