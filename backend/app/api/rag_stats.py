@@ -65,6 +65,13 @@ async def record_query(
     now = datetime.now(timezone.utc)
     timestamp = now.isoformat()
 
+    # Verify Redis is actually connected before using it
+    if redis:
+        try:
+            await redis.ping()
+        except Exception:
+            redis = None  # Not connected, use in-memory
+
     # In-memory fallback when Redis is unavailable
     if not redis:
         logger.info("record_query: using in-memory fallback (redis=%s)", redis)
