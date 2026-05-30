@@ -99,11 +99,10 @@ async def record_query(
             pipe.lpush("aureon:queries:recent", entry)
             pipe.ltrim("aureon:queries:recent", 0, 99)
 
-            # 延迟聚合（用于计算 avg/p95/p99）
+            # 延迟聚合（score = latency_ms, member = timestamp:uuid）
             pipe.zadd(f"{STATS_PREFIX}:latencies:z", {member: latency_ms})
-            # 保留最近 24h 的数据
-            cutoff = (now.timestamp() - 86400)
-            pipe.zremrangebyscore(f"{STATS_PREFIX}:latencies:z", 0, cutoff)
+            # Keep only last 500 latency entries by trimming oldest
+            pipe.zremrangebyrank(f"{STATS_PREFIX}:latencies:z", 0, -501)
 
             # Token 使用统计
             if input_tokens > 0 or output_tokens > 0:
