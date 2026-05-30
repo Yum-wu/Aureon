@@ -4,7 +4,7 @@ import {
   featureFlagsApi,
   type FeatureFlag,
   type FeatureFlagCreate,
-} from "../services/featureFlags";
+} from "../../services/featureFlags";
 
 export default function FeatureFlags() {
   const { t } = useTranslation();
