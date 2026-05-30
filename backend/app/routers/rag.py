@@ -81,13 +81,23 @@ async def rag_query_endpoint(req: RAGQueryRequest, request: Request):
     llm = create_llm()
 
     def _llm_call(messages):
-        response = llm.invoke(messages)
-        return response.content
+        try:
+            response = llm.invoke(messages)
+            return response.content
+        except Exception as e:
+            logger.error("LLM invoke failed: %s", e)
+            raise HTTPException(status_code=502, detail=f"LLM service error: {str(e)[:100]}")
 
     start_time = time.time()
-    result = await rag_query_with_cache(
-        req.query, _llm_call, top_k=req.top_k, use_mmr=req.use_mmr
-    )
+    try:
+        result = await rag_query_with_cache(
+            req.query, _llm_call, top_k=req.top_k, use_mmr=req.use_mmr
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("rag_query_with_cache failed: %s", e)
+        raise HTTPException(status_code=500, detail=f"Query processing error: {str(e)[:100]}")
     latency_ms = int((time.time() - start_time) * 1000)
     # Record query for Dashboard stats (fire-and-forget)
     asyncio.create_task(record_query(req.query, len(result.sources), latency_ms))
