@@ -9,6 +9,15 @@ export interface Citation {
   url?: string;
 }
 
+/** Backend source object from SSE events */
+interface BackendSource {
+  index?: number;
+  title?: string;
+  slug?: string;
+  chunk?: string;
+  snippet?: string;
+}
+
 /**
  * Parse a single SSE data line and return typed event or null.
  */
@@ -27,7 +36,7 @@ function parseSSELine(line: string): { type: string; content?: string; citations
       const sources = event.sources || event.citations || [];
       return {
         type: "sources",
-        citations: sources.map((s: any, i: number) => {
+        citations: sources.map((s: BackendSource, i: number) => {
           const citation: Citation = {
             id: s.index || i + 1,
             title: s.title || "",
