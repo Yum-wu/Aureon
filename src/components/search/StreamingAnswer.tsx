@@ -21,7 +21,7 @@ export function StreamingAnswer({ content, isStreaming }: StreamingAnswerProps) 
   }, [content]);
 
   return (
-    <div className="prose prose-invert max-w-none">
+    <div className="prose max-w-none">
       <ReactMarkdown remarkPlugins={[remarkGfm]}>
         {processedContent}
       </ReactMarkdown>
