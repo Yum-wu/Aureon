@@ -12,6 +12,65 @@ from app.rag.vector_store import retrieve, retrieve_keyword, format_context, sav
 from app.rag.models import RAGQueryResponse, SourceItem
 from app.utils.lang_detect import detect_language, lang_instruction
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+_RRF_K = 60  # RRF constant (standard value from literature)
+
+
+def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List[Dict[str, Any]]:
+    """Hybrid retrieval: BM25 keyword + vector search, fused via RRF.
+
+    Runs both retrievers and combines results using Reciprocal Rank Fusion.
+    BM25 handles exact keyword matches; vector handles semantic similarity.
+
+    Args:
+        query: 查询文本
+        top_k: 返回结果数量
+        lang_filter: 语言过滤（"zh" 或 "en"）
+    """
+    bm25_results = retrieve_keyword(query, top_k=top_k * 2, lang_filter=lang_filter)
+    vector_results = retrieve(query, top_k=top_k * 2, use_mmr=False, lang_filter=lang_filter)
+
+    # If only one retriever has results, use it directly
+    if not bm25_results and not vector_results:
+        return []
+    if not vector_results:
+        return bm25_results[:top_k]
+    if not bm25_results:
+        return vector_results[:top_k]
+
+    # RRF fusion: score each doc by 1/(k + rank) from each retriever
+    rrf_scores: Dict[str, float] = {}
+    doc_map: Dict[str, Dict] = {}
+
+    def _doc_key(doc: Dict) -> str:
+        """Unique key for deduplication."""
+        return doc.get("metadata", {}).get("slug", "") or doc.get("text", "")[:50]
+
+    for rank, doc in enumerate(bm25_results, 1):
+        key = _doc_key(doc)
+        rrf_scores[key] = rrf_scores.get(key, 0) + 1.0 / (_RRF_K + rank)
+        doc_map[key] = doc
+
+    for rank, doc in enumerate(vector_results, 1):
+        key = _doc_key(doc)
+        rrf_scores[key] = rrf_scores.get(key, 0) + 1.0 / (_RRF_K + rank)
+        if key not in doc_map:
+            doc_map[key] = doc
+
+    # Sort by RRF score descending
+    ranked = sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)
+    results = []
+    for key, score in ranked[:top_k]:
+        doc = doc_map[key].copy()
+        doc["score"] = score
+        results.append(doc)
+
+    logger.info("Hybrid RRF: bm25=%d vector=%d fused=%d", len(bm25_results), len(vector_results), len(results))
+    return results
+
 
 QA_SYSTEM_PROMPT = """你是知识库问答助手。基于提供的参考文档回答用户问题。
 
@@ -84,12 +143,8 @@ def rag_query(
     if lang is None:
         lang = detect_language(query)
 
-    # 1. Retrieve with language filter (Chroma dense → BM25 fallback)
-    chunks = retrieve(query, top_k=top_k, use_mmr=use_mmr, lang_filter=filter_lang)
-
-    if not chunks:
-        # Fallback: BM25 keyword retrieval (no embedding API needed)
-        chunks = retrieve_keyword(query, top_k=top_k, lang_filter=filter_lang)
+    # 1. Hybrid retrieval: BM25 keyword + vector search, RRF fusion
+    chunks = hybrid_retrieve(query, top_k=top_k, lang_filter=filter_lang)
 
     if not chunks:
         no_result_msg = (
@@ -148,8 +203,8 @@ async def rag_query_astream(
     if lang is None:
         lang = detect_language(query)
 
-    # 1. Fast keyword retrieval with language filter
-    chunks = retrieve_keyword(query, top_k=top_k, lang_filter=filter_lang)
+    # 1. Hybrid retrieval: BM25 keyword + vector search, RRF fusion
+    chunks = hybrid_retrieve(query, top_k=top_k, lang_filter=filter_lang)
 
     if not chunks:
         no_result_msg = (
