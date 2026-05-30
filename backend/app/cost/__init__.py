@@ -1,5 +1,5 @@
 """Cost Governance - 成本追踪和 Budget 管理"""
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 from pydantic import BaseModel, Field
 import structlog
@@ -154,7 +154,7 @@ def get_workspace_cost(workspace_id: str, days: int = 30) -> dict:
     from app.memory.db import get_db
 
     conn = get_db()
-    since = (datetime.utcnow() - timedelta(days=days)).isoformat()
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
 
     row = conn.execute(
         """
@@ -189,7 +189,7 @@ def get_user_cost(user_id: str, days: int = 30) -> dict:
     from app.memory.db import get_db
 
     conn = get_db()
-    since = (datetime.utcnow() - timedelta(days=days)).isoformat()
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
 
     row = conn.execute(
         """
@@ -215,7 +215,7 @@ def get_top_users(workspace_id: str, limit: int = 10, days: int = 30) -> list[di
     from app.memory.db import get_db
 
     conn = get_db()
-    since = (datetime.utcnow() - timedelta(days=days)).isoformat()
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
 
     rows = conn.execute(
         """
@@ -246,7 +246,7 @@ def create_budget(budget: BudgetConfig) -> BudgetConfig:
     from app.memory.db import get_db
 
     conn = get_db()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     cursor = conn.execute(
         """
@@ -310,7 +310,7 @@ def update_budget(workspace_id: str, update: dict) -> Optional[BudgetConfig]:
     from app.memory.db import get_db
 
     conn = get_db()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     updates = []
     params = []
@@ -349,7 +349,7 @@ def check_budget_alerts(workspace_id: str) -> Optional[CostAlert]:
 
     # 获取本月成本
     conn = get_db()
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
 
     row = conn.execute(

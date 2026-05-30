@@ -58,9 +58,9 @@ def finalize_scenario(session_id: str, summary: str = ""):
 
     try:
         filepath.write_text(content, encoding="utf-8")
-        logger.info(f"L2 scenario saved: {filename}")
+        logger.info("L2 scenario saved: %s", filename)
     except Exception as e:
-        logger.error(f"L2 save failed: {e}")
+        logger.error("L2 save failed: %s", e)
 
     _cleanup_old_scenarios()
 

@@ -49,9 +49,10 @@ async def test_langgraph_run_missing_query():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         resp = await ac.post("/api/langgraph/run", json={})
-    assert resp.status_code == 200
+    # Pydantic validation rejects empty query with 422
+    assert resp.status_code == 422
     data = resp.json()
-    assert "error" in data
+    assert "detail" in data
 
 
 @pytest.mark.asyncio

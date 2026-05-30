@@ -27,6 +27,15 @@
 - **System Dashboard** — Real-time metrics, health monitoring, usage analytics
 - **Analytics** — Latency, token usage, cache performance, query distribution
 - **Architecture & Performance** — Interactive architecture diagram, optimization metrics
+- **Enterprise Admin** — Workspace management, RBAC, audit logs
+- **Feature Flags** — Gradual rollout, lifecycle management
+- **Observability** — Query tracing, performance monitoring
+- **Security** — PII detection, SSO, rate limiting
+- **Cost Governance** — Per-workspace cost tracking, budget management
+- **Reliability** — Backup, incident management, SLO, circuit breaker
+- **Knowledge Intelligence** — Document version control, export
+- **AI Platform** — Multi-LLM router, confidence scoring, session memory
+- **Integration** — Enterprise connectors (Google Drive/SharePoint), IM bots
 
 ## Architecture
 

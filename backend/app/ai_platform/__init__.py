@@ -1,10 +1,18 @@
 """AI Platform Layer - Multi-LLM Router & Confidence Scoring"""
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from pydantic import BaseModel, Field
 import structlog
 
 logger = structlog.get_logger()
+
+
+def _mask_secret(value: str | None, show_chars: int = 4) -> str | None:
+    if not value:
+        return value
+    if len(value) <= show_chars:
+        return "****"
+    return value[:show_chars] + "****"
 
 
 class LLMProvider(BaseModel):
@@ -165,7 +173,7 @@ def create_llm_provider(provider: LLMProvider) -> LLMProvider:
     from app.memory.db import get_db
 
     conn = get_db()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     cursor = conn.execute(
         """
@@ -216,7 +224,7 @@ def list_llm_providers() -> list[LLMProvider]:
             id=row["id"],
             name=row["name"],
             provider_type=row["provider_type"],
-            api_key=row["api_key"],
+            api_key=_mask_secret(row["api_key"]),
             base_url=row["base_url"],
             model_name=row["model_name"],
             enabled=bool(row["enabled"]),
@@ -227,6 +235,34 @@ def list_llm_providers() -> list[LLMProvider]:
         )
         for row in rows
     ]
+
+
+def get_llm_provider(name: str) -> Optional[LLMProvider]:
+    """获取单个 LLM 提供商（api_key 脱敏）"""
+    from app.memory.db import get_db
+
+    conn = get_db()
+    row = conn.execute(
+        "SELECT * FROM llm_providers WHERE name = ?",
+        (name,),
+    ).fetchone()
+
+    if row is None:
+        return None
+
+    return LLMProvider(
+        id=row["id"],
+        name=row["name"],
+        provider_type=row["provider_type"],
+        api_key=_mask_secret(row["api_key"]),
+        base_url=row["base_url"],
+        model_name=row["model_name"],
+        enabled=bool(row["enabled"]),
+        priority=row["priority"],
+        max_tokens=row["max_tokens"],
+        temperature=row["temperature"],
+        created_at=row["created_at"],
+    )
 
 
 def delete_llm_provider(name: str) -> bool:
@@ -282,7 +318,7 @@ def save_confidence_score(score: ConfidenceScore) -> int:
     from app.memory.db import get_db
 
     conn = get_db()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     cursor = conn.execute(
         """
@@ -313,7 +349,7 @@ def create_conversation_session(session: ConversationSession) -> ConversationSes
     from app.memory.db import get_db
 
     conn = get_db()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     cursor = conn.execute(
         """
@@ -351,7 +387,7 @@ def add_conversation_message(message: ConversationMessage) -> int:
     from app.memory.db import get_db
 
     conn = get_db()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     cursor = conn.execute(
         """

@@ -1,7 +1,7 @@
 """Observability Layer - Query Trace 和 Distributed Tracing"""
 import time
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from pydantic import BaseModel, Field
 import structlog
@@ -121,7 +121,7 @@ class QueryTracer:
             cited_documents=self.cited_documents,
             confidence_score=self.confidence_score,
             status="completed",
-            created_at=datetime.utcnow().isoformat(),
+            created_at=datetime.now(timezone.utc).isoformat(),
         )
 
 

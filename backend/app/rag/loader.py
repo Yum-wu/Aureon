@@ -8,22 +8,17 @@ import re
 from typing import List, Dict, Any
 from pathlib import Path
 
+from app.utils.lang_detect import detect_language as _detect_text_language
+
 
 def detect_doc_language(content: str, frontmatter_lang: str = None) -> str:
-    """检测文档语言，优先使用 frontmatter lang，否则自动检测。
+    """Detect document language, preferring frontmatter over auto-detection.
 
-    Args:
-        content: 文档正文内容
-        frontmatter_lang: frontmatter 中的 lang 字段值
-
-    Returns:
-        "zh" 或 "en"
+    Uses the shared lang_detect utility for consistent detection logic.
     """
     if frontmatter_lang in ("zh", "en"):
         return frontmatter_lang
-    # 自动检测：检查前 500 字符中 CJK 字符比例
-    cjk_count = len(re.findall(r"[一-鿿]", content[:500]))
-    return "zh" if cjk_count > 20 else "en"
+    return _detect_text_language(content[:500])
 
 
 def parse_frontmatter(content: str) -> tuple[Dict[str, Any], str]:

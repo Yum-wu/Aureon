@@ -1,7 +1,8 @@
 """Feature Flag System - 数据库模型和 API"""
+import hashlib
 import sqlite3
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 from pydantic import BaseModel, Field
@@ -87,7 +88,7 @@ def create_flag(flag: FeatureFlagCreate) -> FeatureFlagResponse:
     from app.memory.db import get_db
 
     conn = get_db()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     cursor = conn.execute(
         """
@@ -181,7 +182,7 @@ def update_flag(name: str, update: FeatureFlagUpdate) -> Optional[FeatureFlagRes
     from app.memory.db import get_db
 
     conn = get_db()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     # 构建更新字段
     updates = []
@@ -247,7 +248,7 @@ def evaluate_flag(name: str, user_id: Optional[str] = None, workspace_id: Option
     if flag.percentage < 100:
         # 使用用户 ID 或 workspace ID 作为哈希种子
         seed = user_id or workspace_id or name
-        hash_value = hash(seed) % 100
+        hash_value = int(hashlib.md5(seed.encode()).hexdigest(), 16) % 100
         if hash_value >= flag.percentage:
             return False
 

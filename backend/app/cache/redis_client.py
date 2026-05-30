@@ -131,7 +131,7 @@ def get_redis():
 async def close_redis():
     """Close Redis connection on application shutdown."""
     global _redis
-    if _redis and _redis is not True and _redis is not False:
+    if _redis:
         try:
             await _redis.close()
         except Exception:

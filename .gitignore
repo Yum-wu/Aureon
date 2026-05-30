@@ -22,6 +22,7 @@ build/
 # IDE
 .vscode/
 .idea/
+.trae/
 *.swp
 *.swo
 *~
@@ -37,8 +38,17 @@ Thumbs.db
 *.db
 *.db-shm
 *.db-wal
+
+# Runtime data
+backend/offloads/refs/
+backend/offloads/scenarios/
 backend/offloads/memory.db*
 backend/data/vectors/
+
+# Generated
+coverage/
+*.original.md
+click.js
 
 # Testing
 .coverage

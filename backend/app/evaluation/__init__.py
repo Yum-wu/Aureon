@@ -1,5 +1,5 @@
 """Evaluation Dashboard - RAG 质量评估展示"""
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 from pydantic import BaseModel, Field
 import structlog
@@ -90,7 +90,7 @@ def save_evaluation_metric(metric: EvaluationMetric) -> int:
     from app.memory.db import get_db
 
     conn = get_db()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     cursor = conn.execute(
         """
@@ -149,7 +149,7 @@ def save_benchmark_run(run: BenchmarkRun) -> int:
     from app.memory.db import get_db
 
     conn = get_db()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     cursor = conn.execute(
         """

@@ -7,6 +7,14 @@ import structlog
 logger = structlog.get_logger()
 
 
+def _mask_secret(value: str | None, show_chars: int = 4) -> str | None:
+    if not value:
+        return value
+    if len(value) <= show_chars:
+        return "****"
+    return value[:show_chars] + "****"
+
+
 # ── PII Detection ──
 
 class PIIDetector:
@@ -181,10 +189,10 @@ def init_sso_providers_table():
 def create_sso_provider(provider: SSOProvider) -> SSOProvider:
     """创建 SSO 提供商"""
     from app.memory.db import get_db
-    from datetime import datetime
+    from datetime import datetime, timezone
 
     conn = get_db()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     cursor = conn.execute(
         """
@@ -228,13 +236,38 @@ def list_sso_providers() -> list[SSOProvider]:
             name=row["name"],
             provider_type=row["provider_type"],
             client_id=row["client_id"],
-            client_secret=row["client_secret"],
+            client_secret=_mask_secret(row["client_secret"]),
             metadata_url=row["metadata_url"],
             enabled=bool(row["enabled"]),
             created_at=row["created_at"],
         )
         for row in rows
     ]
+
+
+def get_sso_provider(name: str) -> Optional[SSOProvider]:
+    """获取单个 SSO 提供商（client_secret 脱敏）"""
+    from app.memory.db import get_db
+
+    conn = get_db()
+    row = conn.execute(
+        "SELECT * FROM sso_providers WHERE name = ?",
+        (name,),
+    ).fetchone()
+
+    if row is None:
+        return None
+
+    return SSOProvider(
+        id=row["id"],
+        name=row["name"],
+        provider_type=row["provider_type"],
+        client_id=row["client_id"],
+        client_secret=_mask_secret(row["client_secret"]),
+        metadata_url=row["metadata_url"],
+        enabled=bool(row["enabled"]),
+        created_at=row["created_at"],
+    )
 
 
 def delete_sso_provider(name: str) -> bool:

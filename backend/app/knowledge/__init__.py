@@ -1,5 +1,5 @@
 """Knowledge Intelligence - Document Version Control & Export"""
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from pydantic import BaseModel, Field
 import structlog
@@ -81,7 +81,7 @@ def create_document_version(version: DocumentVersion) -> int:
     from app.memory.db import get_db
 
     conn = get_db()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     cursor = conn.execute(
         """
@@ -168,7 +168,7 @@ def create_export_record(record: ExportRecord) -> int:
     from app.memory.db import get_db
 
     conn = get_db()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     cursor = conn.execute(
         """
@@ -195,7 +195,7 @@ def complete_export(record_id: int, status: str = "completed", file_path: str = 
     from app.memory.db import get_db
 
     conn = get_db()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     conn.execute(
         """

@@ -1,10 +1,18 @@
 """Integration Ecosystem - Enterprise Connectors & IM Bot"""
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from pydantic import BaseModel, Field
 import structlog
 
 logger = structlog.get_logger()
+
+
+def _mask_secret(value: str | None, show_chars: int = 4) -> str | None:
+    if not value:
+        return value
+    if len(value) <= show_chars:
+        return "****"
+    return value[:show_chars] + "****"
 
 
 class IntegrationConnector(BaseModel):
@@ -107,7 +115,7 @@ def create_connector(connector: IntegrationConnector) -> IntegrationConnector:
     from app.memory.db import get_db
 
     conn = get_db()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     cursor = conn.execute(
         """
@@ -205,7 +213,7 @@ def update_connector_status(name: str, status: str, error_message: str = None):
     from app.memory.db import get_db
 
     conn = get_db()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     conn.execute(
         """
@@ -225,7 +233,7 @@ def create_sync_log(log: IntegrationSyncLog) -> int:
     from app.memory.db import get_db
 
     conn = get_db()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     cursor = conn.execute(
         """
@@ -253,7 +261,7 @@ def complete_sync_log(log_id: int, status: str, documents_synced: int = 0, docum
     from app.memory.db import get_db
 
     conn = get_db()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     conn.execute(
         """
@@ -311,7 +319,7 @@ def create_im_bot(bot: IMBotConfig) -> IMBotConfig:
     from app.memory.db import get_db
 
     conn = get_db()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     cursor = conn.execute(
         """
@@ -357,7 +365,7 @@ def list_im_bots(workspace_id: str = None) -> list[IMBotConfig]:
         IMBotConfig(
             id=row["id"],
             platform=row["platform"],
-            bot_token=row["bot_token"],
+            bot_token=_mask_secret(row["bot_token"]),
             webhook_url=row["webhook_url"],
             workspace_id=row["workspace_id"],
             enabled=bool(row["enabled"]),
@@ -365,6 +373,30 @@ def list_im_bots(workspace_id: str = None) -> list[IMBotConfig]:
         )
         for row in rows
     ]
+
+
+def get_im_bot_config(platform: str, workspace_id: str) -> Optional[IMBotConfig]:
+    """获取单个 IM Bot 配置（bot_token 脱敏）"""
+    from app.memory.db import get_db
+
+    conn = get_db()
+    row = conn.execute(
+        "SELECT * FROM im_bot_configs WHERE platform = ? AND workspace_id = ?",
+        (platform, workspace_id),
+    ).fetchone()
+
+    if row is None:
+        return None
+
+    return IMBotConfig(
+        id=row["id"],
+        platform=row["platform"],
+        bot_token=_mask_secret(row["bot_token"]),
+        webhook_url=row["webhook_url"],
+        workspace_id=row["workspace_id"],
+        enabled=bool(row["enabled"]),
+        created_at=row["created_at"],
+    )
 
 
 def delete_im_bot(platform: str, workspace_id: str) -> bool:
