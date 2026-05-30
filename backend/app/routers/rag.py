@@ -200,7 +200,9 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
             yield f"data: {json.dumps({'type': 'error', 'content': str(e)}, ensure_ascii=False)}\n\n"
         finally:
             # 3. Cache as JSON (answer + sources) for cross-endpoint compatibility
-            if full_text:
+            # Skip caching if BM25 index not ready (prevents caching wrong startup results)
+            from app.rag.vector_store import _kw_docs as _bm25_docs
+            if full_text and len(_bm25_docs) > 0:
                 cache_payload = json.dumps({"answer": full_text, "sources": sources_data}, ensure_ascii=False)
                 asyncio.create_task(set_cached(req.query, cache_payload))
             # 4. Record query for Dashboard stats
