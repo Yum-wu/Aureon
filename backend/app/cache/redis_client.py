@@ -55,11 +55,26 @@ def _mem_set(query: str, response: str, ttl: int = _MEM_TTL):
                 del _mem_cache[k]
 
 
+_redis = None
+_redis_fail_count = 0
+_RECONNECT_AFTER = 5  # Retry after N failures
+
+
 def _get_redis():
-    """Return Redis client singleton, or False if unavailable."""
-    global _redis
+    """Return Redis client singleton, or False if unavailable.
+
+    Retries connection after _RECONNECT_AFTER failures to handle
+    cases where Redis becomes available after app startup.
+    """
+    global _redis, _redis_fail_count
     if _redis is not None:
         return _redis
+    # Retry after enough failures (handles REDIS_URL added post-deploy)
+    if _redis is False and _redis_fail_count < _RECONNECT_AFTER:
+        return False
+    if _redis is False:
+        _redis = None  # Reset to retry
+        _redis_fail_count = 0
     try:
         import redis.asyncio as aioredis
         from app.config import settings
@@ -69,10 +84,12 @@ def _get_redis():
             socket_connect_timeout=2,
             socket_timeout=2,
         )
+        _redis_fail_count = 0
         logger.info("Redis connected")
     except Exception as e:
         logger.warning("Redis unavailable (non-fatal): %s", e)
         _redis = False  # sentinel
+        _redis_fail_count += 1
     return _redis
 
 
