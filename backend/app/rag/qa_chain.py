@@ -230,24 +230,30 @@ async def rag_query_with_cache(
         except (json.JSONDecodeError, TypeError):
             answer = cached
             sources = []
-        # 记录缓存命中
-        from app.cache.redis_client import get_redis
-        from app.api.rag_stats import STATS_PREFIX
-        redis = get_redis()
-        if redis:
-            await redis.incr(f"{STATS_PREFIX}:cache_hits")
+        # Record cache hit
+        try:
+            from app.cache.redis_client import get_redis
+            from app.api.rag_stats import STATS_PREFIX
+            redis = get_redis()
+            if redis:
+                await redis.incr(f"{STATS_PREFIX}:cache_hits")
+        except Exception:
+            pass
         return RAGQueryResponse(answer=answer, sources=sources)
 
     result = rag_query(query, llm_call_fn, top_k, use_mmr, lang)
     cache_data = json.dumps({"answer": result.answer, "sources": [s.model_dump() for s in result.sources]})
     await set_cached(query, cache_data)
 
-    # 记录缓存未命中
-    from app.cache.redis_client import get_redis
-    from app.api.rag_stats import STATS_PREFIX
-    redis = get_redis()
-    if redis:
-        await redis.incr(f"{STATS_PREFIX}:cache_misses")
+    # Record cache miss
+    try:
+        from app.cache.redis_client import get_redis
+        from app.api.rag_stats import STATS_PREFIX
+        redis = get_redis()
+        if redis:
+            await redis.incr(f"{STATS_PREFIX}:cache_misses")
+    except Exception:
+        pass
 
     return result
 
