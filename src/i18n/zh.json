@@ -149,6 +149,7 @@
       }
     }
   },
+  "documents": {
     "title": "文档管理",
     "subtitle": "已索引的知识库文档",
     "error_loading": "加载文档失败",
