@@ -78,8 +78,6 @@ async def record_query(
         if len(_mem_latencies) > _MEM_MAX:
             _mem_latencies = _mem_latencies[-_MEM_MAX:]
         return
-    now = datetime.now(timezone.utc)
-    timestamp = now.isoformat()
     member = f"{timestamp}:{uuid.uuid4().hex[:8]}"
 
     try:
