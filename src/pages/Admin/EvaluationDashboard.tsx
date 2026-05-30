@@ -5,7 +5,7 @@ import {
   type EvaluationSummary,
   type EvaluationMetric,
   type BenchmarkRun,
-} from "../services/evaluation";
+} from "../../services/evaluation";
 
 export default function EvaluationDashboard() {
   const { t } = useTranslation();
