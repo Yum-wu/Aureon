@@ -46,16 +46,18 @@ class TestGenerateAnswer:
 
 
 class TestRagQuery:
+    @patch("app.rag.qa_chain.retrieve_keyword", return_value=[])
     @patch("app.rag.qa_chain.retrieve", return_value=[])
-    def test_no_chunks_returns_no_result_zh(self, mock_retrieve):
+    def test_no_chunks_returns_no_result_zh(self, mock_retrieve, mock_kw):
         llm_fn = MagicMock()
         result = rag_query("test", llm_fn, lang="zh")
         assert "暂无" in result.answer
         assert result.sources == []
         llm_fn.assert_not_called()
 
+    @patch("app.rag.qa_chain.retrieve_keyword", return_value=[])
     @patch("app.rag.qa_chain.retrieve", return_value=[])
-    def test_no_chunks_returns_no_result_en(self, mock_retrieve):
+    def test_no_chunks_returns_no_result_en(self, mock_retrieve, mock_kw):
         llm_fn = MagicMock()
         result = rag_query("test", llm_fn, lang="en")
         assert "No relevant content" in result.answer
@@ -81,8 +83,9 @@ class TestRagQuery:
         result = rag_query("q", llm_fn)
         assert result.sources[0].chunk.endswith("...")
 
+    @patch("app.rag.qa_chain.retrieve_keyword", return_value=[])
     @patch("app.rag.qa_chain.retrieve", return_value=[])
-    def test_auto_detect_language(self, mock_retrieve):
+    def test_auto_detect_language(self, mock_retrieve, mock_kw):
         llm_fn = MagicMock()
         rag_query("你好世界", llm_fn)
         # lang=None triggers auto-detect → should be zh
