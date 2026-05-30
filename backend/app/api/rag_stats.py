@@ -117,6 +117,16 @@ async def record_query(
             await pipe.execute()
     except Exception as e:
         logger.warning("record_query pipeline failed: %s", e)
+        # Fall back to in-memory on Redis failure
+        _mem_count += 1
+        _mem_queries.insert(0, {
+            "query": query, "sources_count": sources_count,
+            "latency_ms": latency_ms, "timestamp": timestamp,
+        })
+        _mem_queries = _mem_queries[:_MEM_MAX]
+        _mem_latencies.append(latency_ms)
+        if len(_mem_latencies) > _MEM_MAX:
+            _mem_latencies = _mem_latencies[-_MEM_MAX:]
 
 
 def _classify_intent(query: str) -> str:
