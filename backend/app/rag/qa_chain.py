@@ -42,6 +42,7 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
         return vector_results[:top_k]
 
     # RRF fusion: score each doc by 1/(k + rank) from each retriever
+    # BM25 gets 10% bonus — keyword matches are more precise for entity/topic queries
     rrf_scores: Dict[str, float] = {}
     doc_map: Dict[str, Dict] = {}
 
@@ -51,7 +52,7 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
 
     for rank, doc in enumerate(bm25_results, 1):
         key = _doc_key(doc)
-        rrf_scores[key] = rrf_scores.get(key, 0) + 1.0 / (_RRF_K + rank)
+        rrf_scores[key] = rrf_scores.get(key, 0) + 1.0 / (_RRF_K + rank) * 1.1
         doc_map[key] = doc
 
     for rank, doc in enumerate(vector_results, 1):
