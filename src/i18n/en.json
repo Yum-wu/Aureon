@@ -149,6 +149,7 @@
       }
     }
   },
+  "documents": {
     "title": "Documents",
     "subtitle": "Indexed knowledge base documents",
     "error_loading": "Failed to load documents",
