@@ -49,7 +49,7 @@ describe('Search', () => {
 
   it('renders initial state with title and empty search', () => {
     render(<Search />);
-    expect(screen.getByText('Enterprise Search')).toBeInTheDocument();
+    expect(screen.getByText('Enterprise AI Search')).toBeInTheDocument();
     expect(screen.getByText('AI-powered search across your knowledge base')).toBeInTheDocument();
     expect(screen.getByTestId('search-bar')).toBeInTheDocument();
   });
