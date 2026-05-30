@@ -43,7 +43,14 @@ export function Search() {
       onToken: (token) => {
         setAnswer(prev => prev + token);
       },
-      onCitations: (cits) => setCitations(cits),
+      onCitations: (cits) => {
+        // Merge: keep existing, add new unique by id
+        setCitations(prev => {
+          const existing = new Map(prev.map(c => [c.id, c]));
+          for (const c of cits) existing.set(c.id, c);
+          return Array.from(existing.values());
+        });
+      },
       onError: (msg) => setError(msg),
     });
 
