@@ -560,10 +560,16 @@ def format_context(chunks: List[Dict[str, Any]]) -> str:
 
 def get_bm25_stats() -> dict:
     """Return BM25 index statistics for health endpoint."""
+    # Diagnostic: sample IDF values for common terms
+    sample_terms = ["是", "什么", "crewai", "rag", "hermes", "react"]
+    idf_samples = {t: round(_kw_idf.get(t, 0), 3) for t in sample_terms}
     return {
         "docs": len(_kw_docs),
         "terms": len(_kw_idf),
         "avgdl": round(_kw_avgdl, 1) if _kw_avgdl else 0,
+        "min_idf_threshold": _KW_MIN_IDF,
+        "min_raw_score": _KW_MIN_RAW_SCORE,
+        "sample_idf": idf_samples,
     }
 
 
