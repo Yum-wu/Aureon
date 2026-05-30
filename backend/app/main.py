@@ -303,3 +303,4 @@ if os.path.isdir(static_dir):
     app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
 else:
     logger.warning("Static directory not found", path=os.path.abspath(static_dir))
+# redeploy trigger
