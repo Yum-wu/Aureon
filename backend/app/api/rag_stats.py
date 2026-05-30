@@ -158,9 +158,16 @@ async def get_stats(redis=Depends(get_redis_or_none)):
         try:
             count = int(await redis.get(f"{STATS_PREFIX}:count_24h") or 0)
 
-            # Latencies: get all from sorted set (score = latency_ms, not timestamp)
-            latencies_raw = await redis.zrange(f"{STATS_PREFIX}:latencies:z", 0, -1)
-            latencies = [float(l) for l in latencies_raw]
+            # Latencies: get scores from sorted set (score = latency_ms)
+            latencies_raw = await redis.zrange(
+                f"{STATS_PREFIX}:latencies:z", 0, -1, withscores=True
+            )
+            latencies = []
+            for member, score in latencies_raw:
+                try:
+                    latencies.append(float(score))
+                except (ValueError, TypeError):
+                    pass  # skip malformed entries
             avg_latency = sum(latencies) / len(latencies) if latencies else 0.0
 
             cache_hits = int(await redis.get(f"{STATS_PREFIX}:cache_hits") or 0)
