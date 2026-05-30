@@ -151,18 +151,26 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
         sources_count = 0
         input_tokens = 0
         output_tokens = 0
-        # 1. Try Redis cache hit
+        # 1. Try Redis cache hit (JSON format with sources)
         cached = await get_cached(req.query)
         if cached is not None:
-            yield f"data: {json.dumps({'type': 'sources', 'sources': []}, ensure_ascii=False)}\n\n"
-            yield f"data: {json.dumps({'type': 'text', 'content': cached}, ensure_ascii=False)}\n\n"
+            try:
+                cached_data = json.loads(cached)
+                answer_text = cached_data.get("answer", cached)
+                cached_sources = cached_data.get("sources", [])
+            except (json.JSONDecodeError, TypeError):
+                answer_text = cached
+                cached_sources = []
+            yield f"data: {json.dumps({'type': 'sources', 'sources': cached_sources}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'text', 'content': answer_text}, ensure_ascii=False)}\n\n"
             yield 'data: {"type": "cache_hit"}\n\n'
             latency_ms = int((time.time() - start_time) * 1000)
-            asyncio.create_task(record_query(req.query, 0, latency_ms))
+            asyncio.create_task(record_query(req.query, len(cached_sources), latency_ms))
             return
 
         # 2. Stream with buffering, auto-cache full answer on completion
         full_text = ""
+        sources_data = []
         try:
             raw_gen = rag_query_astream(
                 req.query, llm, top_k=req.top_k, use_mmr=req.use_mmr
@@ -173,13 +181,15 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
                     output_tokens = len(full_text) // 2
                 elif event.get("type") == "sources":
                     sources_count = len(event.get("sources", []))
+                    sources_data = event.get("sources", [])
                 yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'type': 'error', 'content': str(e)}, ensure_ascii=False)}\n\n"
         finally:
-            # 3. Cache full answer (fire-and-forget, non-blocking)
+            # 3. Cache as JSON (answer + sources) for cross-endpoint compatibility
             if full_text:
-                asyncio.create_task(set_cached(req.query, full_text))
+                cache_payload = json.dumps({"answer": full_text, "sources": sources_data}, ensure_ascii=False)
+                asyncio.create_task(set_cached(req.query, cache_payload))
             # 4. Record query for Dashboard stats
             latency_ms = int((time.time() - start_time) * 1000)
             input_tokens = len(req.query) + 500
