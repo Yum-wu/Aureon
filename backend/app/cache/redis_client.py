@@ -21,8 +21,12 @@ _mem_cache: dict = {}
 _MEM_TTL = 3600  # 1 hour, same as Redis TTL
 
 
+# Bump to invalidate all cached RAG responses (e.g. after retrieval logic changes)
+_CACHE_VERSION = "v2"
+
+
 def _mem_cache_key(key: str) -> str:
-    return f"llm_cache:{hashlib.md5(key.strip().lower().encode()).hexdigest()}"
+    return f"llm_cache:{_CACHE_VERSION}:{hashlib.md5(key.strip().lower().encode()).hexdigest()}"
 
 
 def _mem_get(query: str) -> Optional[str]:
@@ -96,7 +100,7 @@ def _get_redis():
 async def semantic_cache_key(query: str) -> str:
     """Return a deterministic cache key for a query."""
     raw = query.strip().lower()
-    return f"llm_cache:{hashlib.md5(raw.encode()).hexdigest()}"
+    return f"llm_cache:{_CACHE_VERSION}:{hashlib.md5(raw.encode()).hexdigest()}"
 
 
 async def get_cached(query: str, threshold: float = 0.92) -> Optional[str]:
