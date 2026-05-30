@@ -263,6 +263,10 @@ def retrieve_keyword(query: str, top_k: int = 3, lang_filter: str = None) -> Lis
     if not scored:
         return []
 
+    # Debug: log top 3 scores
+    logger.info("BM25 query=%r terms=%r top3=%s", query, q_terms,
+                [(round(s, 2), d["metadata"].get("slug", "")[:30]) for s, d in scored[:3]])
+
     # Filter: require minimum raw BM25 score to avoid generic-term noise
     if scored[0][0] < _KW_MIN_RAW_SCORE:
         return []
