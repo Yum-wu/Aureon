@@ -1,4 +1,5 @@
 import type { FormEvent, KeyboardEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface SearchBarProps {
   value: string;
@@ -13,8 +14,10 @@ export function SearchBar({
   onChange,
   onSearch,
   isLoading = false,
-  placeholder = 'Search enterprise knowledge...'
+  placeholder
 }: SearchBarProps) {
+  const { t } = useTranslation();
+  const defaultPlaceholder = t('search.placeholder');
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (value.trim()) onSearch();
@@ -35,7 +38,7 @@ export function SearchBar({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={placeholder}
+          placeholder={placeholder || defaultPlaceholder}
           disabled={isLoading}
           className="w-full px-6 py-4 bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl
                      text-[var(--text-primary)] placeholder-[var(--text-tertiary)]

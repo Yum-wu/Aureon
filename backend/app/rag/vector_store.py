@@ -179,8 +179,14 @@ def _bm25_score(query_terms: List[str], doc_terms: List[str]) -> float:
     return score
 
 
-def retrieve_keyword(query: str, top_k: int = 3) -> List[Dict[str, Any]]:
-    """Fast BM25 keyword retrieval — no embedding API needed. <10ms."""
+def retrieve_keyword(query: str, top_k: int = 3, lang_filter: str = None) -> List[Dict[str, Any]]:
+    """Fast BM25 keyword retrieval — no embedding API needed. <10ms.
+
+    Args:
+        query: 查询文本
+        top_k: 返回结果数量
+        lang_filter: 语言过滤（"zh" 或 "en"），None 表示不过滤
+    """
     _build_kw_index()
     if not _kw_docs:
         return []
@@ -189,8 +195,13 @@ def retrieve_keyword(query: str, top_k: int = 3) -> List[Dict[str, Any]]:
     if not q_terms:
         return []
 
+    # 语言过滤
+    filtered_docs = _kw_docs
+    if lang_filter:
+        filtered_docs = [doc for doc in _kw_docs if doc.get("metadata", {}).get("language") == lang_filter]
+
     scored = []
-    for doc in _kw_docs:
+    for doc in filtered_docs:
         doc_terms = _tokenize(doc["text"])
         s = _bm25_score(q_terms, doc_terms)
         if s > 0:
@@ -344,6 +355,7 @@ def add_to_index(chunks: List[Dict[str, Any]], path: str = None):
             "source": c["metadata"].get("source", ""),
             "title": c["metadata"].get("title", ""),
             "slug": c["metadata"].get("slug", ""),
+            "language": c["metadata"].get("language", "unknown"),
         }
         for c in chunks
     ]
@@ -405,6 +417,7 @@ def save_index(chunks: List[Dict[str, Any]], embeddings: np.ndarray = None, path
             "source": c["metadata"].get("source", ""),
             "title": c["metadata"].get("title", ""),
             "slug": c["metadata"].get("slug", ""),
+            "language": c["metadata"].get("language", "unknown"),
         }
         for c in chunks
     ]
@@ -435,8 +448,15 @@ def load_index(path: str = None):
         return None, None
 
 
-def retrieve(query: str, top_k: int = 3, use_mmr: bool = True) -> List[Dict[str, Any]]:
-    """Retrieve top_k chunks using Chroma similarity search."""
+def retrieve(query: str, top_k: int = 3, use_mmr: bool = True, lang_filter: str = None) -> List[Dict[str, Any]]:
+    """Retrieve top_k chunks using Chroma similarity search.
+
+    Args:
+        query: 查询文本
+        top_k: 返回结果数量
+        use_mmr: 是否使用 MMR 多样性优化
+        lang_filter: 语言过滤（"zh" 或 "en"），None 表示不过滤
+    """
     try:
         client = _get_chroma()
         collection = _get_collection(client)
@@ -451,10 +471,14 @@ def retrieve(query: str, top_k: int = 3, use_mmr: bool = True) -> List[Dict[str,
     fetch_k = max(top_k * 2, 10) if use_mmr else top_k
 
     try:
+        # 构建语言过滤条件
+        where_filter = {"language": lang_filter} if lang_filter else None
+
         results = collection.query(
             query_texts=[query],
             n_results=fetch_k,
             include=["documents", "metadatas", "distances"],
+            where=where_filter,
         )
     except Exception as e:
         print(f"[VectorStore] Query error: {e}")

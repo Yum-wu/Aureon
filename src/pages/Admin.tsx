@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface Workspace {
   id: string;
@@ -25,6 +26,7 @@ interface AuditLog {
 }
 
 const Admin = () => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'workspaces' | 'users' | 'audit'>('workspaces');
 
   // Mock 数据
@@ -50,9 +52,9 @@ const Admin = () => {
   ];
 
   const tabs = [
-    { id: 'workspaces' as const, label: '工作空间', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
-    { id: 'users' as const, label: '用户管理', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
-    { id: 'audit' as const, label: '审计日志', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01' },
+    { id: 'workspaces' as const, label: t('admin.workspaces.title'), icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
+    { id: 'users' as const, label: t('admin.users.title'), icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
+    { id: 'audit' as const, label: t('admin.audit.title'), icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01' },
   ];
 
   const roleColors = {
@@ -65,8 +67,8 @@ const Admin = () => {
     <div className="h-full overflow-y-auto p-4 md:p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-6 md:mb-8">
-        <h1 className="text-xl md:text-2xl font-bold text-gray-900">Enterprise Admin</h1>
-        <p className="text-gray-500 text-sm">企业管理控制台</p>
+        <h1 className="text-xl md:text-2xl font-bold text-gray-900">{t('admin.title')}</h1>
+        <p className="text-gray-500 text-sm">{t('admin.subtitle')}</p>
       </div>
 
       {/* Tabs - 水平滚动 on mobile */}
@@ -95,10 +97,10 @@ const Admin = () => {
         {activeTab === 'workspaces' && (
           <div className="p-4 md:p-6">
             <div className="flex items-center justify-between mb-4 md:mb-6">
-              <h3 className="font-semibold text-gray-900">工作空间</h3>
+              <h3 className="font-semibold text-gray-900">{t('admin.workspaces.title')}</h3>
               <button className="px-3 md:px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
-                <span className="hidden sm:inline">新建工作空间</span>
-                <span className="sm:hidden">新建</span>
+                <span className="hidden sm:inline">{t('admin.workspaces.new_button')}</span>
+                <span className="sm:hidden">{t('admin.workspaces.new_button')}</span>
               </button>
             </div>
 
@@ -107,11 +109,11 @@ const Admin = () => {
               <table className="w-full">
                 <thead>
                   <tr className="text-left text-sm text-gray-500 border-b border-gray-100">
-                    <th className="pb-3 font-medium">名称</th>
-                    <th className="pb-3 font-medium">用户数</th>
-                    <th className="pb-3 font-medium">文档数</th>
-                    <th className="pb-3 font-medium">创建时间</th>
-                    <th className="pb-3 font-medium">操作</th>
+                    <th className="pb-3 font-medium">{t('admin.workspaces.columns.name')}</th>
+                    <th className="pb-3 font-medium">{t('admin.workspaces.columns.users')}</th>
+                    <th className="pb-3 font-medium">{t('admin.workspaces.columns.docs')}</th>
+                    <th className="pb-3 font-medium">{t('admin.workspaces.columns.created')}</th>
+                    <th className="pb-3 font-medium">{t('admin.workspaces.columns.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -161,10 +163,10 @@ const Admin = () => {
         {activeTab === 'users' && (
           <div className="p-4 md:p-6">
             <div className="flex items-center justify-between mb-4 md:mb-6">
-              <h3 className="font-semibold text-gray-900">用户管理</h3>
+              <h3 className="font-semibold text-gray-900">{t('admin.users.title')}</h3>
               <button className="px-3 md:px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
-                <span className="hidden sm:inline">邀请用户</span>
-                <span className="sm:hidden">邀请</span>
+                <span className="hidden sm:inline">{t('admin.users.invite_button')}</span>
+                <span className="sm:hidden">{t('admin.users.invite_button')}</span>
               </button>
             </div>
 
@@ -238,10 +240,10 @@ const Admin = () => {
         {activeTab === 'audit' && (
           <div className="p-4 md:p-6">
             <div className="flex items-center justify-between mb-4 md:mb-6">
-              <h3 className="font-semibold text-gray-900">审计日志</h3>
+              <h3 className="font-semibold text-gray-900">{t('admin.audit.title')}</h3>
               <button className="px-3 md:px-4 py-2 border border-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
-                <span className="hidden sm:inline">导出日志</span>
-                <span className="sm:hidden">导出</span>
+                <span className="hidden sm:inline">{t('admin.audit.export_button')}</span>
+                <span className="sm:hidden">{t('admin.audit.export_button')}</span>
               </button>
             </div>
             <div className="space-y-3">

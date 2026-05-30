@@ -68,16 +68,23 @@ def rag_query(
     top_k: int = 3,
     use_mmr: bool = True,
     lang: str | None = None,
+    filter_lang: str | None = None,
 ) -> RAGQueryResponse:
     """Full RAG pipeline: retrieve → format → generate.
 
-    If *lang* is ``None``, auto-detect from *query*.
+    Args:
+        query: 查询文本
+        llm_call_fn: LLM 调用函数
+        top_k: 返回结果数量
+        use_mmr: 是否使用 MMR 多样性优化
+        lang: 回复语言（None 则自动检测）
+        filter_lang: 文档语言过滤（"zh" 或 "en"），None 表示不过滤
     """
     if lang is None:
         lang = detect_language(query)
 
-    # 1. Retrieve
-    chunks = retrieve(query, top_k=top_k, use_mmr=use_mmr)
+    # 1. Retrieve with language filter
+    chunks = retrieve(query, top_k=top_k, use_mmr=use_mmr, lang_filter=filter_lang)
 
     if not chunks:
         no_result_msg = (
@@ -116,6 +123,7 @@ async def rag_query_astream(
     top_k: int = 3,
     use_mmr: bool = True,
     lang: str | None = None,
+    filter_lang: str | None = None,
 ):
     """Async streaming RAG: BM25 keyword retrieve → stream LLM tokens.
 
@@ -123,12 +131,20 @@ async def rag_query_astream(
     first-token latency. Yields SSE dicts: sources first, then text tokens.
 
     *llm* must support ``.astream()`` (e.g. ``ChatOpenAI``).
+
+    Args:
+        query: 查询文本
+        llm: LLM 实例
+        top_k: 返回结果数量
+        use_mmr: 是否使用 MMR 多样性优化
+        lang: 回复语言（None 则自动检测）
+        filter_lang: 文档语言过滤（"zh" 或 "en"），None 表示不过滤
     """
     if lang is None:
         lang = detect_language(query)
 
-    # 1. Fast keyword retrieval (no embedding API, <10ms)
-    chunks = retrieve_keyword(query, top_k=top_k)
+    # 1. Fast keyword retrieval with language filter
+    chunks = retrieve_keyword(query, top_k=top_k, lang_filter=filter_lang)
 
     if not chunks:
         no_result_msg = (

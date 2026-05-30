@@ -9,6 +9,23 @@ from typing import List, Dict, Any
 from pathlib import Path
 
 
+def detect_doc_language(content: str, frontmatter_lang: str = None) -> str:
+    """检测文档语言，优先使用 frontmatter lang，否则自动检测。
+
+    Args:
+        content: 文档正文内容
+        frontmatter_lang: frontmatter 中的 lang 字段值
+
+    Returns:
+        "zh" 或 "en"
+    """
+    if frontmatter_lang in ("zh", "en"):
+        return frontmatter_lang
+    # 自动检测：检查前 500 字符中 CJK 字符比例
+    cjk_count = len(re.findall(r"[一-鿿]", content[:500]))
+    return "zh" if cjk_count > 20 else "en"
+
+
 def parse_frontmatter(content: str) -> tuple[Dict[str, Any], str]:
     """Parse YAML frontmatter from Markdown content. Return (metadata, body)."""
     match = re.match(r"^---\s*\n(.*?)\n---\s*\n(.*)", content, re.DOTALL)
@@ -47,6 +64,7 @@ def load_single_document(filepath: str) -> Dict[str, Any]:
     if suffix == ".md":
         content = fpath.read_text(encoding="utf-8")
         metadata, body = parse_frontmatter(content)
+        lang = detect_doc_language(body, metadata.get("lang"))
         return {
             "metadata": {
                 "source": fpath.name,
@@ -55,6 +73,7 @@ def load_single_document(filepath: str) -> Dict[str, Any]:
                 "tags": metadata.get("tags", []),
                 "category": metadata.get("category", ""),
                 "filepath": str(fpath),
+                "language": lang,
                 "uploaded": True,
             },
             "content": body,
@@ -88,6 +107,7 @@ def load_markdown_files(articles_dir: str) -> List[Dict[str, Any]]:
     for fpath in sorted(path.rglob("*.md")):
         content = fpath.read_text(encoding="utf-8")
         metadata, body = parse_frontmatter(content)
+        lang = detect_doc_language(body, metadata.get("lang"))
         doc = {
             "metadata": {
                 "source": fpath.name,
@@ -96,6 +116,7 @@ def load_markdown_files(articles_dir: str) -> List[Dict[str, Any]]:
                 "tags": metadata.get("tags", []),
                 "category": metadata.get("category", ""),
                 "filepath": str(fpath),
+                "language": lang,
             },
             "content": body,
         }

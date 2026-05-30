@@ -18,6 +18,7 @@
   },
   "landing": {
     "hero": {
+      "badge": "Production Ready",
       "title": "Enterprise AI Knowledge Base Platform",
       "subtitle": "96% retrieval accuracy · Sub-second response · 24h deployment",
       "cta_search": "Start Searching",
@@ -28,12 +29,25 @@
       "ttft": { "value": "~310ms", "label": "Time to First Token", "detail": "Streaming TTFT" },
       "cost": { "value": "~$0.001", "label": "Cost per Query", "detail": "GPT-4o-mini" }
     },
+    "features_title": "Core Capabilities",
     "features": [
       { "title": "Hybrid Search", "desc": "BM25 keyword + Dense semantic dual-channel fusion, 96% accuracy" },
       { "title": "Streaming Response", "desc": "SSE real-time push, ~310ms TTFT, token-by-token rendering" },
       { "title": "Multilingual", "desc": "Chinese + English bilingual knowledge base, auto language detection" },
-      { "title": "Enterprise Deploy", "desc": "Docker containerized, 24h standard deployment, RBAC + audit logs" }
+      { "title": "Enterprise Deploy", "desc": "Docker containerized, 24h standard deployment, RBAC + audit logs" },
+      { "title": "Document Intelligence", "desc": "Upload, auto-index, preview, source management" },
+      { "title": "Analytics Dashboard", "desc": "Latency, token usage, cache performance, query distribution" }
     ],
+    "benchmark": {
+      "title": "Performance Benchmark",
+      "subtitle": "Evaluated on 51 QA pairs with hybrid retrieval pipeline",
+      "vs_baseline": "vs baseline",
+      "optimized": "optimized",
+      "reduced": "reduced",
+      "optimization_story": "Optimization Story",
+      "cache_hit_rate": "Cache Hit Rate",
+      "cost_per_query": "Cost/Query"
+    },
     "credibility": {
       "title": "Technical Credibility",
       "desc": "All metrics measured in production",
@@ -82,8 +96,10 @@
     }
   },
   "search": {
-    "title": "AI Search",
-    "placeholder": "Search your knowledge base...",
+    "title": "Enterprise AI Search",
+    "subtitle": "AI-powered search across your knowledge base",
+    "placeholder": "Search enterprise knowledge...",
+    "error_max_length": "Query cannot exceed {{max}} characters (currently {{current}})",
     "suggested": "Suggested",
     "sources": "Sources",
     "score": "Score",
@@ -97,7 +113,42 @@
     "generate": "Generate",
     "generating": "Generating..."
   },
-  "documents": {
+  "admin": {
+    "title": "Enterprise Admin",
+    "subtitle": "Enterprise Management Console",
+    "workspaces": {
+      "title": "Workspaces",
+      "new_button": "New Workspace",
+      "columns": {
+        "name": "Name",
+        "users": "Users",
+        "docs": "Documents",
+        "created": "Created",
+        "actions": "Actions"
+      }
+    },
+    "users": {
+      "title": "User Management",
+      "invite_button": "Invite User",
+      "columns": {
+        "user": "User",
+        "email": "Email",
+        "role": "Role",
+        "last_active": "Last Active",
+        "actions": "Actions"
+      }
+    },
+    "audit": {
+      "title": "Audit Logs",
+      "export_button": "Export Logs",
+      "columns": {
+        "timestamp": "Timestamp",
+        "action": "Action",
+        "user": "User",
+        "details": "Details"
+      }
+    }
+  },
     "title": "Documents",
     "subtitle": "Indexed knowledge base documents",
     "error_loading": "Failed to load documents",
