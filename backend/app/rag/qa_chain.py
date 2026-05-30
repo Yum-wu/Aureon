@@ -84,8 +84,12 @@ def rag_query(
     if lang is None:
         lang = detect_language(query)
 
-    # 1. Retrieve with language filter
+    # 1. Retrieve with language filter (Chroma dense → BM25 fallback)
     chunks = retrieve(query, top_k=top_k, use_mmr=use_mmr, lang_filter=filter_lang)
+
+    if not chunks:
+        # Fallback: BM25 keyword retrieval (no embedding API needed)
+        chunks = retrieve_keyword(query, top_k=top_k, lang_filter=filter_lang)
 
     if not chunks:
         no_result_msg = (
