@@ -49,8 +49,9 @@ describe('Search', () => {
 
   it('renders initial state with title and empty search', () => {
     render(<Search />);
-    expect(screen.getByText('Enterprise AI Search')).toBeInTheDocument();
-    expect(screen.getByText('AI-powered search across your knowledge base')).toBeInTheDocument();
+    // i18n not initialized in tests, so translation keys are shown
+    expect(screen.getByText('search.title')).toBeInTheDocument();
+    expect(screen.getByText('search.subtitle')).toBeInTheDocument();
     expect(screen.getByTestId('search-bar')).toBeInTheDocument();
   });
 
