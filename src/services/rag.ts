@@ -7,6 +7,7 @@ export interface Citation {
   title: string;
   snippet: string;
   url?: string;
+  score?: number;
 }
 
 /** Backend source object from SSE events */
@@ -16,6 +17,7 @@ interface BackendSource {
   slug?: string;
   chunk?: string;
   snippet?: string;
+  score?: number;
 }
 
 /**
@@ -43,6 +45,7 @@ function parseSSELine(line: string): { type: string; content?: string; citations
             snippet: s.chunk || s.snippet || "",
           };
           if (s.slug) citation.url = `/search?ref=${s.slug}`;
+          if (typeof s.score === "number") citation.score = s.score;
           return citation;
         }),
       };
