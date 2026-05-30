@@ -69,7 +69,7 @@ _kw_docs: List[Dict] = []
 _kw_idf: Dict[str, float] = {}
 _kw_avgdl: float = 0.0
 _KW_MIN_RAW_SCORE = 1.5  # minimum raw BM25 score before normalization
-_KW_MIN_IDF = 1.5  # require at least one query term with IDF >= 1.5 (df < 50%)
+_KW_MIN_IDF = 2.0  # skip terms with IDF < 2.0 in scoring (filters common Chinese chars like 是=1.66)
 
 
 def _get_chroma(path: str = None) -> chromadb.PersistentClient:
@@ -165,8 +165,9 @@ def _build_kw_index(force: bool = False):
 def _bm25_score(query_terms: List[str], doc_terms: List[str]) -> float:
     """BM25 scoring with k1=1.2, b=0.75.
 
-    Boosts English words (3+ chars) by 2x to prevent Chinese single-char
-    tokens from diluting entity name matches.
+    Only scores terms with IDF >= _KW_MIN_IDF to prevent common Chinese
+    chars (是, 的, 了) from inflating scores via accumulation.
+    Boosts English words (3+ chars) by 2x.
     """
     from collections import Counter
     doc_tf = Counter(doc_terms)
@@ -177,10 +178,13 @@ def _bm25_score(query_terms: List[str], doc_terms: List[str]) -> float:
     for term in set(query_terms):
         if term not in _kw_idf:
             continue
+        idf = _kw_idf[term]
+        # Skip low-IDF terms — they're too common to be meaningful
+        if idf < _KW_MIN_IDF:
+            continue
         tf = doc_tf.get(term, 0)
         if tf == 0:
             continue
-        idf = _kw_idf[term]
         num = tf * (k1 + 1.0)
         denom = tf + k1 * (1.0 - b + b * doc_len / max(_kw_avgdl, 1.0))
         qf = query_terms.count(term)
