@@ -18,6 +18,10 @@ import structlog
 from app.api.models import StatusResponse
 from app.api.rag_stats import router as stats_router
 from app.api.analytics import router as analytics_router
+from app.features.router import router as feature_flags_router
+from app.observability.router import router as observability_router
+from app.security.router import router as security_router
+from app.evaluation.router import router as evaluation_router
 from app.exceptions import AureonException
 from app.routers import chat as chat_router
 from app.routers import rag as rag_router
@@ -114,6 +118,15 @@ async def startup():
         os.environ.setdefault("LANGCHAIN_PROJECT", settings.langchain_project)
         os.environ.setdefault("LANGCHAIN_ENDPOINT", "https://api.smith.langchain.com")
     init_db()
+    from app.features import init_feature_flags_table
+    from app.observability import init_query_traces_table
+    from app.security import init_pii_detection_table, init_sso_providers_table
+    from app.evaluation import init_evaluation_tables
+    init_feature_flags_table()
+    init_query_traces_table()
+    init_pii_detection_table()
+    init_sso_providers_table()
+    init_evaluation_tables()
     memory_manager.init_background_tasks()
 
 
@@ -258,6 +271,10 @@ app.include_router(chat_router.router)
 app.include_router(rag_router.router)
 app.include_router(stats_router)
 app.include_router(analytics_router)
+app.include_router(feature_flags_router)
+app.include_router(observability_router)
+app.include_router(security_router)
+app.include_router(evaluation_router)
 
 # ── SPA 静态文件（必须在 API 路由之后） ──
 static_dir = os.path.join(os.path.dirname(__file__), "..", "static")
