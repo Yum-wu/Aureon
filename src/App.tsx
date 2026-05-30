@@ -1,20 +1,31 @@
 // Aureon — Enterprise AI Knowledge Base Platform
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { LanguageSwitcher } from "./i18n/LanguageSwitcher";
 import { useSystemHealth } from "./hooks/useSystemHealth";
 import { useBenchmark } from "./hooks/useBenchmark";
-import { Landing } from "./pages/Landing";
-import { Dashboard } from "./pages/Dashboard";
-import { Search } from "./pages/Search";
-import { Documents } from "./pages/Documents";
-import { CrewGenerator } from "./components/CrewGenerator";
-import Login from "./pages/Login";
-import Analytics from "./pages/Analytics";
-import Benchmark from "./pages/Benchmark";
-import Admin from "./pages/Admin";
-import { Architecture } from "./pages/Architecture";
+
+// Route-level code splitting — each page is a separate chunk
+const Landing = lazy(() => import("./pages/Landing").then(m => ({ default: m.Landing })));
+const Dashboard = lazy(() => import("./pages/Dashboard").then(m => ({ default: m.Dashboard })));
+const Search = lazy(() => import("./pages/Search").then(m => ({ default: m.Search })));
+const Documents = lazy(() => import("./pages/Documents").then(m => ({ default: m.Documents })));
+const CrewGenerator = lazy(() => import("./components/CrewGenerator").then(m => ({ default: m.CrewGenerator })));
+const Login = lazy(() => import("./pages/Login"));
+const Analytics = lazy(() => import("./pages/Analytics"));
+const Benchmark = lazy(() => import("./pages/Benchmark"));
+const Admin = lazy(() => import("./pages/Admin"));
+const Architecture = lazy(() => import("./pages/Architecture").then(m => ({ default: m.Architecture })));
+
+function PageFallback() {
+  return (
+    <div className="flex items-center justify-center h-64">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+    </div>
+  );
+}
 
 /* ── StatusPill ── */
 function StatusPill({ color, label }: { color: string; label: string }) {
@@ -103,18 +114,20 @@ function AppLayout() {
       )}
 
       <div className="flex-1 overflow-auto">
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/search" element={<Search />} />
-          <Route path="/documents" element={<Documents />} />
-          <Route path="/analytics" element={<Analytics />} />
-          <Route path="/benchmark" element={<Benchmark />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="/architecture" element={<Architecture />} />
-          <Route path="/crew" element={<CrewGenerator />} />
-        </Routes>
+        <Suspense fallback={<PageFallback />}>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/search" element={<Search />} />
+            <Route path="/documents" element={<Documents />} />
+            <Route path="/analytics" element={<Analytics />} />
+            <Route path="/benchmark" element={<Benchmark />} />
+            <Route path="/admin" element={<Admin />} />
+            <Route path="/architecture" element={<Architecture />} />
+            <Route path="/crew" element={<CrewGenerator />} />
+          </Routes>
+        </Suspense>
       </div>
     </div>
   );

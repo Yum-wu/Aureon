@@ -144,6 +144,13 @@ async def startup():
     init_integration_tables()
     memory_manager.init_background_tasks()
 
+    # Pre-warm BM25 keyword index for instant first-query latency
+    try:
+        from app.rag.vector_store import _build_kw_index
+        _build_kw_index()
+    except Exception as e:
+        logger.warning("BM25 index warmup failed (will lazy-load on first query): %s", e)
+
 
 @app.on_event("shutdown")
 async def shutdown():
