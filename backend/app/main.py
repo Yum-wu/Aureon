@@ -151,16 +151,17 @@ async def shutdown():
     await close_redis()
 
 
+class LangGraphRunRequest(BaseModel):
+    query: str = Field(..., min_length=1, max_length=5000)
+    session_id: str = Field(default="", max_length=100)
+
+
 @app.post("/api/langgraph/run")
-async def langgraph_run(req: dict):
+async def langgraph_run(req: LangGraphRunRequest):
     """Run LangGraph workflow for complex tasks."""
     from app.langgraph.graph import run_workflow
 
-    query = req.get("query", "")
-    session_id = req.get("session_id", "")
-    if not query:
-        return {"error": "query required"}
-    result = await run_workflow(query, session_id=session_id)
+    result = await run_workflow(req.query, session_id=req.session_id or None)
     return result
 
 

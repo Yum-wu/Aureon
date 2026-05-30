@@ -3,6 +3,7 @@ QA chain for RAG system.
 Retrieves relevant context and generates answers using LLM.
 """
 
+import json
 import time
 import os
 from typing import List, Dict, Any, Optional
@@ -209,7 +210,7 @@ async def rag_query_with_cache(
 ) -> RAGQueryResponse:
     """RAG query with Redis semantic cache.
 
-    On a cache hit returns the cached answer immediately (no sources).
+    On a cache hit returns the cached answer with sources (stored as JSON).
     On a miss, delegates to :func:`rag_query` and caches the result.
     Degrades gracefully when Redis is unavailable.
     """
@@ -217,16 +218,25 @@ async def rag_query_with_cache(
 
     cached = await get_cached(query)
     if cached is not None:
+        try:
+            cached_data = json.loads(cached)
+            answer = cached_data.get("answer", cached)
+            sources = cached_data.get("sources", [])
+            sources = [SourceItem(**s) for s in sources]
+        except (json.JSONDecodeError, TypeError):
+            answer = cached
+            sources = []
         # 记录缓存命中
         from app.cache.redis_client import get_redis
         from app.api.rag_stats import STATS_PREFIX
         redis = get_redis()
         if redis:
             await redis.incr(f"{STATS_PREFIX}:cache_hits")
-        return RAGQueryResponse(answer=cached, sources=[])
+        return RAGQueryResponse(answer=answer, sources=sources)
 
     result = rag_query(query, llm_call_fn, top_k, use_mmr, lang)
-    await set_cached(query, result.answer)
+    cache_data = json.dumps({"answer": result.answer, "sources": [s.model_dump() for s in result.sources]})
+    await set_cached(query, cache_data)
 
     # 记录缓存未命中
     from app.cache.redis_client import get_redis

@@ -38,6 +38,17 @@ React 前端 (src/)            Python FastAPI 后端 (backend/)
                             │       ├─ L0 Conversation (原始)  │
                             │       └─ Context Offload (卸载)  │
                             │                                  │
+                            │ 企业级模块 (10 个 Priority)       │
+                            │  ├─ features/ (Feature Flags)    │
+                            │  ├─ observability/ (Query Trace) │
+                            │  ├─ security/ (PII + SSO + Rate) │
+                            │  ├─ evaluation/ (Metrics)        │
+                            │  ├─ cost/ (Budget + Tracking)    │
+                            │  ├─ reliability/ (Backup + SLO)  │
+                            │  ├─ knowledge/ (Version + Export)│
+                            │  ├─ ai_platform/ (LLM + Memory)  │
+                            │  └─ integration/ (Connectors)    │
+                            │                                  │
                             │ offloads/                        │
                             │  ├─ refs/*.md    (工具日志外存)  │
                             │  ├─ scenarios/*.md (场景总结)   │

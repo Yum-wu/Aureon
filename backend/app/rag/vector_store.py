@@ -4,10 +4,13 @@ Uses ChromaDB as persistent vector store with local BGE embeddings.
 Falls back to Zhipu AI embedding API if local model unavailable.
 """
 
+import logging
 import os
 import hashlib
 import numpy as np
 from typing import List, Dict, Any, Optional
+
+logger = logging.getLogger(__name__)
 
 import chromadb
 from chromadb.api.types import EmbeddingFunction
@@ -37,9 +40,9 @@ def _get_local_model():
             os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
             from sentence_transformers import SentenceTransformer
             _local_embed_model = SentenceTransformer(_LOCAL_MODEL_NAME)
-            print(f"[VectorStore] Local embedding model loaded: {_LOCAL_MODEL_NAME} ({_LOCAL_MODEL_DIM}d)")
+            logger.info("Local embedding model loaded: %s (%dd)", _LOCAL_MODEL_NAME, _LOCAL_MODEL_DIM)
         except Exception as e:
-            print(f"[VectorStore] Local model unavailable: {e}, will use API fallback")
+            logger.warning("Local model unavailable: %s, will use API fallback", e)
             _local_embed_model = False
     return _local_embed_model if _local_embed_model is not False else None
 
@@ -53,7 +56,7 @@ def _embed_local(texts: List[str]) -> Optional[np.ndarray]:
         embeddings = model.encode(texts, normalize_embeddings=True, show_progress_bar=False)
         return np.array(embeddings, dtype=np.float32)
     except Exception as e:
-        print(f"[VectorStore] Local embedding error: {e}")
+        logger.warning("Local embedding error: %s", e)
         return None
 
 
@@ -152,9 +155,9 @@ def _build_kw_index(force: bool = False):
         _kw_docs = docs
         _kw_idf = idf
         _kw_avgdl = avgdl
-        print(f"[VectorStore] BM25 index ready: {n} docs, {len(idf)} terms, avgdl={avgdl:.0f}")
+        logger.info("BM25 index ready: %d docs, %d terms, avgdl=%.0f", n, len(idf), avgdl)
     except Exception as e:
-        print(f"[VectorStore] BM25 index build failed: {e}")
+        logger.warning("BM25 index build failed: %s", e)
 
 
 def _bm25_score(query_terms: List[str], doc_terms: List[str]) -> float:
@@ -259,9 +262,10 @@ def embed_texts_llm(texts: List[str], batch_size: int = 20) -> Optional[np.ndarr
     base_url = settings.embedding_base_url or settings.llm_base_url
 
     if not api_key:
-        print("[VectorStore] No embedding API key configured, using zero vectors")
-        dim = _LOCAL_MODEL_DIM
-        return np.zeros((len(texts), dim), dtype=np.float32)
+        raise RuntimeError(
+            "No embedding API key configured and local model unavailable. "
+            "Set EMBEDDING_API_KEY or LLM_API_KEY in .env"
+        )
 
     import requests
 
@@ -290,7 +294,7 @@ def embed_texts_llm(texts: List[str], batch_size: int = 20) -> Optional[np.ndarr
             batch_embs = [d["embedding"] for d in sorted(data["data"], key=lambda x: x["index"])]
             all_embeddings.extend(batch_embs)
         except Exception as e:
-            print(f"[VectorStore] Embedding API error (batch {start}): {e}")
+            logger.warning("Embedding API error (batch %d): %s", start, e)
             # Fill failed batch with zeros
             dim = _LOCAL_MODEL_DIM if _get_local_model() else 768
             for _ in batch:
@@ -369,7 +373,7 @@ def add_to_index(chunks: List[Dict[str, Any]], path: str = None):
             metadatas=metadatas[start:end],
         )
 
-    print(f"[VectorStore] Added {len(chunks)} chunks to existing Chroma ({save_path})")
+    logger.info("Added %d chunks to existing Chroma (%s)", len(chunks), save_path)
     _build_kw_index(force=True)
 
 
@@ -380,7 +384,7 @@ def delete_from_index(source_filename: str, path: str = None):
         client = _get_chroma(save_path)
         collection = _get_collection(client)
     except Exception as e:
-        print(f"[VectorStore] Cannot open Chroma for delete: {e}")
+        logger.warning("Cannot open Chroma for delete: %s", e)
         return
 
     count_before = collection.count()
@@ -388,7 +392,7 @@ def delete_from_index(source_filename: str, path: str = None):
     count_after = collection.count()
     deleted = count_before - count_after
     safe_name = source_filename.encode("ascii", errors="replace").decode("ascii")
-    print(f"[VectorStore] Deleted {deleted} chunks for '{safe_name}' from Chroma ({save_path})")
+    logger.info("Deleted %d chunks for '%s' from Chroma (%s)", deleted, safe_name, save_path)
     _build_kw_index(force=True)
 
 
@@ -431,7 +435,7 @@ def save_index(chunks: List[Dict[str, Any]], embeddings: np.ndarray = None, path
             metadatas=metadatas[start:end],
         )
 
-    print(f"[VectorStore] Saved {len(chunks)} chunks to Chroma ({save_path})")
+    logger.info("Saved %d chunks to Chroma (%s)", len(chunks), save_path)
     _build_kw_index(force=True)
 
 
@@ -461,11 +465,11 @@ def retrieve(query: str, top_k: int = 3, use_mmr: bool = True, lang_filter: str 
         client = _get_chroma()
         collection = _get_collection(client)
     except Exception as e:
-        print(f"[VectorStore] Chroma init error: {e}")
+        logger.warning("Chroma init error: %s", e)
         return []
 
     if collection.count() == 0:
-        print("[VectorStore] Chroma collection is empty. Run /api/rag/index first.")
+        logger.warning("Chroma collection is empty. Run /api/rag/index first.")
         return []
 
     fetch_k = max(top_k * 2, 10) if use_mmr else top_k
@@ -481,7 +485,7 @@ def retrieve(query: str, top_k: int = 3, use_mmr: bool = True, lang_filter: str 
             where=where_filter,
         )
     except Exception as e:
-        print(f"[VectorStore] Query error: {e}")
+        logger.warning("Query error: %s", e)
         return []
 
     if not results["ids"] or not results["ids"][0]:

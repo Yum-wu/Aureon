@@ -51,6 +51,13 @@ logger = structlog.get_logger()
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
+
+def _validate_filename(filename: str) -> str:
+    """Validate filename for path traversal attacks."""
+    if ".." in filename or "/" in filename or "\\" in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    return filename
+
 # Module constants for data paths
 BASE_DATA_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 ARTICLES_DIR = os.path.join(BASE_DATA_DIR, "data", "articles")
@@ -231,8 +238,7 @@ async def rag_upload_endpoint(
         raise HTTPException(status_code=400, detail="No filename")
 
     # Security: prevent path traversal
-    if ".." in file.filename or "/" in file.filename or "\\" in file.filename:
-        raise HTTPException(status_code=400, detail="Invalid filename")
+    _validate_filename(file.filename)
 
     # Sanitize filename
     safe_filename = os.path.basename(file.filename)
@@ -297,8 +303,7 @@ async def rag_list_uploads():
 async def rag_delete_upload(filename: str):
     """Delete an uploaded file and its chunks from the index."""
     # Security: prevent path traversal
-    if ".." in filename or "/" in filename:
-        raise HTTPException(status_code=400, detail="Invalid filename")
+    _validate_filename(filename)
 
     filepath = os.path.join(UPLOADS_DIR, filename)
 

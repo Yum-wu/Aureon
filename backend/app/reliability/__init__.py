@@ -1,5 +1,5 @@
 """Reliability & Resilience - Backup, Failover, SLO"""
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 from pydantic import BaseModel, Field
 import structlog
@@ -69,7 +69,7 @@ class CircuitBreaker:
     def record_failure(self):
         """记录失败"""
         self.failure_count += 1
-        self.last_failure_time = datetime.utcnow()
+        self.last_failure_time = datetime.now(timezone.utc)
 
         if self.failure_count >= self.failure_threshold:
             self.state = "open"
@@ -90,7 +90,7 @@ class CircuitBreaker:
 
         if self.state == "open":
             if self.last_failure_time:
-                elapsed = (datetime.utcnow() - self.last_failure_time).seconds
+                elapsed = (datetime.now(timezone.utc) - self.last_failure_time).seconds
                 if elapsed >= self.recovery_timeout:
                     self.state = "half-open"
                     return True
@@ -156,7 +156,7 @@ def create_backup_record(record: BackupRecord) -> int:
     from app.memory.db import get_db
 
     conn = get_db()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     cursor = conn.execute(
         """
@@ -183,7 +183,7 @@ def complete_backup(record_id: int, status: str = "completed", file_path: str = 
     from app.memory.db import get_db
 
     conn = get_db()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     conn.execute(
         """
@@ -227,7 +227,7 @@ def create_incident(record: IncidentRecord) -> int:
     from app.memory.db import get_db
 
     conn = get_db()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     cursor = conn.execute(
         """
@@ -254,7 +254,7 @@ def resolve_incident(incident_id: str, resolution: str):
     from app.memory.db import get_db
 
     conn = get_db()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     conn.execute(
         """
@@ -299,7 +299,7 @@ def create_slo_config(config: SLOConfig) -> SLOConfig:
     from app.memory.db import get_db
 
     conn = get_db()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     cursor = conn.execute(
         """

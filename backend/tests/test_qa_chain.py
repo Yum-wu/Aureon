@@ -8,6 +8,7 @@ from app.rag.qa_chain import (
     generate_answer,
     rag_query,
     rag_query_astream,
+    rag_query_with_cache,
     run_incremental_index,
     run_index_pipeline,
 )
@@ -194,3 +195,64 @@ class TestRunIndexPipeline:
         # save_index is called via `from app.rag.vector_store import save_index` inside run_index_pipeline
         # so we need to check it was called through the vector_store module
         mock_save.assert_called_once()
+
+
+# ── rag_query_with_cache ──
+
+
+class TestRagQueryWithCache:
+    @pytest.mark.asyncio
+    @patch("app.cache.redis_client.get_redis", return_value=None)
+    @patch("app.cache.redis_client.set_cached", new_callable=AsyncMock)
+    @patch("app.cache.redis_client.get_cached", new_callable=AsyncMock, return_value=None)
+    @patch("app.rag.qa_chain.retrieve")
+    async def test_miss_then_cache_stores_sources(self, mock_retrieve, mock_get_cached, mock_set_cached, mock_redis):
+        mock_retrieve.return_value = [
+            {"text": "RAG content", "metadata": {"title": "Guide", "slug": "g"}, "score": 0.9}
+        ]
+        llm_fn = MagicMock(return_value="RAG answer")
+        result = await rag_query_with_cache("What is RAG?", llm_fn, lang="en")
+        assert result.answer == "RAG answer"
+        assert len(result.sources) == 1
+        assert result.sources[0].title == "Guide"
+        # Verify set_cached was called with JSON containing sources
+        import json
+        cached_value = mock_set_cached.call_args[0][1]
+        parsed = json.loads(cached_value)
+        assert parsed["answer"] == "RAG answer"
+        assert len(parsed["sources"]) == 1
+        assert parsed["sources"][0]["title"] == "Guide"
+
+    @pytest.mark.asyncio
+    @patch("app.cache.redis_client.get_redis", return_value=None)
+    @patch("app.cache.redis_client.set_cached", new_callable=AsyncMock)
+    @patch("app.cache.redis_client.get_cached", new_callable=AsyncMock)
+    @patch("app.rag.qa_chain.retrieve")
+    async def test_hit_restores_sources(self, mock_retrieve, mock_get_cached, mock_set_cached, mock_redis):
+        import json
+        cached_json = json.dumps({
+            "answer": "Cached answer",
+            "sources": [{"title": "Doc A", "slug": "a", "chunk": "text...", "score": 0.95}]
+        })
+        mock_get_cached.return_value = cached_json
+        llm_fn = MagicMock()
+        result = await rag_query_with_cache("test query", llm_fn, lang="en")
+        assert result.answer == "Cached answer"
+        assert len(result.sources) == 1
+        assert result.sources[0].title == "Doc A"
+        assert result.sources[0].score == 0.95
+        llm_fn.assert_not_called()
+
+    @pytest.mark.asyncio
+    @patch("app.cache.redis_client.get_redis", return_value=None)
+    @patch("app.cache.redis_client.set_cached", new_callable=AsyncMock)
+    @patch("app.cache.redis_client.get_cached", new_callable=AsyncMock)
+    @patch("app.rag.qa_chain.retrieve")
+    async def test_hit_plain_string_fallback(self, mock_retrieve, mock_get_cached, mock_set_cached, mock_redis):
+        """Old plain-string cache entries should still work (graceful fallback)."""
+        mock_get_cached.return_value = "Plain cached answer"
+        llm_fn = MagicMock()
+        result = await rag_query_with_cache("test query", llm_fn, lang="en")
+        assert result.answer == "Plain cached answer"
+        assert result.sources == []
+        llm_fn.assert_not_called()
