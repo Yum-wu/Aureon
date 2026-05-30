@@ -68,6 +68,8 @@ _chroma_collection = None
 _kw_docs: List[Dict] = []
 _kw_idf: Dict[str, float] = {}
 _kw_avgdl: float = 0.0
+_KW_MIN_RAW_SCORE = 1.5  # minimum raw BM25 score before normalization
+_KW_MIN_IDF = 0.5  # require at least one query term with meaningful IDF
 
 
 def _get_chroma(path: str = None) -> chromadb.PersistentClient:
@@ -204,6 +206,14 @@ def retrieve_keyword(query: str, top_k: int = 3, lang_filter: str = None) -> Lis
     if not q_terms:
         return []
 
+    # Filter: require at least one query term with meaningful IDF
+    # Prevents generic Chinese chars ("什么", "是") from producing false matches
+    has_meaningful_term = any(
+        _kw_idf.get(t, 0) >= _KW_MIN_IDF for t in set(q_terms)
+    )
+    if not has_meaningful_term:
+        return []
+
     # 语言过滤
     filtered_docs = _kw_docs
     if lang_filter:
@@ -219,6 +229,10 @@ def retrieve_keyword(query: str, top_k: int = 3, lang_filter: str = None) -> Lis
     scored.sort(key=lambda x: x[0], reverse=True)
 
     if not scored:
+        return []
+
+    # Filter: require minimum raw BM25 score to avoid generic-term noise
+    if scored[0][0] < _KW_MIN_RAW_SCORE:
         return []
 
     max_score = scored[0][0] if scored else 1.0
