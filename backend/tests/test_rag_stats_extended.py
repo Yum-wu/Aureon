@@ -137,7 +137,7 @@ async def test_get_stats_vector_store_error():
     """When vector store fails, returns 200 with zero document counts (graceful degradation)."""
     mock_redis = AsyncMock()
     mock_redis.get = AsyncMock(return_value="10")
-    mock_redis.zrangebyscore = AsyncMock(return_value=["100"])
+    mock_redis.zrange = AsyncMock(return_value=[("entry1", 100.0)])
 
     app.dependency_overrides[get_redis_or_none] = lambda: mock_redis
 
