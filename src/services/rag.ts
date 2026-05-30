@@ -18,10 +18,40 @@ function parseSSELine(line: string): { type: string; content?: string; citations
 
   try {
     const event = JSON.parse(trimmed.slice(5).trim());
-    if (event.type === "token") {
-      return { type: "token", content: event.content };
-    } else if (event.type === "citations") {
-      return { type: "citations", citations: event.citations };
+    // Backend sends "text", frontend accepts both "text" and "token"
+    if (event.type === "text" || event.type === "token") {
+      return { type: "text", content: event.content };
+    }
+    // Backend sends "sources" or "citations"
+    if (event.type === "sources" || event.type === "citations") {
+      const sources = event.sources || event.citations || [];
+      return {
+        type: "sources",
+        citations: sources.map((s: any, i: number) => {
+          const citation: Citation = {
+            id: s.index || i + 1,
+            title: s.title || "",
+            snippet: s.chunk || s.snippet || "",
+          };
+          if (s.slug) citation.url = `/search?ref=${s.slug}`;
+          return citation;
+        }),
+      };
+    }
+    // Individual citation chunk
+    if (event.type === "citation") {
+      return {
+        type: "sources",
+        citations: [{
+          id: event.source?.index || 1,
+          title: event.source?.title || "",
+          snippet: event.source?.chunk || "",
+        }],
+      };
+    }
+    // Cache hit, done, error — pass through
+    if (event.type === "cache_hit" || event.type === "done") {
+      return { type: event.type };
     }
   } catch {
     // Skip invalid JSON
@@ -81,10 +111,10 @@ export async function streamRAGQuery(
 
       for (const line of lines) {
         const parsed = parseSSELine(line);
-        if (parsed?.type === "token") {
-          onToken(parsed.content!);
-        } else if (parsed?.type === "citations") {
-          onCitations(parsed.citations!);
+        if (parsed?.type === "text" && parsed.content) {
+          onToken(parsed.content);
+        } else if (parsed?.type === "sources" && parsed.citations) {
+          onCitations(parsed.citations);
         }
       }
     }
@@ -92,10 +122,10 @@ export async function streamRAGQuery(
     // Process remaining event in buffer
     if (buffer.trim()) {
       const parsed = parseSSELine(buffer);
-      if (parsed?.type === "token") {
-        onToken(parsed.content!);
-      } else if (parsed?.type === "citations") {
-        onCitations(parsed.citations!);
+      if (parsed?.type === "text" && parsed.content) {
+        onToken(parsed.content);
+      } else if (parsed?.type === "sources" && parsed.citations) {
+        onCitations(parsed.citations);
       }
     }
   } catch (err: unknown) {
