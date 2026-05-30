@@ -101,7 +101,9 @@ async def record_query(
 
             # 延迟聚合（score = latency_ms, member = timestamp:uuid）
             pipe.zadd(f"{STATS_PREFIX}:latencies:z", {member: latency_ms})
-            # Keep only last 500 latency entries by trimming oldest
+            # Remove entries with score > 60000 (stale timestamp-based entries)
+            pipe.zremrangebyscore(f"{STATS_PREFIX}:latencies:z", 60000, "+inf")
+            # Keep only last 500 entries
             pipe.zremrangebyrank(f"{STATS_PREFIX}:latencies:z", 0, -501)
 
             # Token 使用统计
@@ -167,6 +169,18 @@ async def get_stats(redis=Depends(get_redis_or_none)):
                     latencies.append(float(score))
                 except (ValueError, TypeError):
                     pass  # skip malformed entries
+
+            # Fallback: if sorted set empty, read from recent queries list
+            if not latencies:
+                recent_entries = await redis.lrange("aureon:queries:recent", 0, 99)
+                for entry in recent_entries:
+                    parts = entry.split("|", 3)
+                    if len(parts) == 4:
+                        try:
+                            latencies.append(float(parts[3]))
+                        except (ValueError, TypeError):
+                            pass
+
             avg_latency = sum(latencies) / len(latencies) if latencies else 0.0
 
             cache_hits = int(await redis.get(f"{STATS_PREFIX}:cache_hits") or 0)
