@@ -22,7 +22,7 @@ _MEM_TTL = 3600  # 1 hour, same as Redis TTL
 
 
 # Bump to invalidate all cached RAG responses (e.g. after retrieval logic changes)
-_CACHE_VERSION = "v2"
+_CACHE_VERSION = "v3"  # v3: IDF filter in _bm25_score
 
 
 def _mem_cache_key(key: str) -> str:
