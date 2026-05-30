@@ -291,6 +291,14 @@ async def crew_health():
 
 @app.get("/api/health")
 async def health():
+    from app.rag.vector_store import _kw_docs
+    from fastapi.responses import JSONResponse
+    bm25_ready = len(_kw_docs) > 0
+    if not bm25_ready:
+        return JSONResponse(
+            status_code=503,
+            content={"status": "warming_up", "model": settings.llm_model},
+        )
     return {
         "status": "ok",
         "model": settings.llm_model,
