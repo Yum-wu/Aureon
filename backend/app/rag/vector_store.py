@@ -69,10 +69,10 @@ _kw_docs: List[Dict] = []
 _kw_idf: Dict[str, float] = {}
 _kw_avgdl: float = 0.0
 _KW_MIN_RAW_SCORE = 1.5  # minimum raw BM25 score before normalization
-_KW_MIN_IDF = 2.0  # skip terms with IDF < 2.0 in scoring (filters common Chinese chars like 是=1.66)
-# Chinese stop words — common function words / interrogatives that are
-# high-IDF noise in technical corpora (appear in few chunks but carry
-# no retrieval value).  Bigrams like 什么/怎么/为什么 also included.
+_KW_MIN_IDF = 1.0  # skip terms with very low IDF (appear in >60% docs)
+
+# Chinese stop words — function words, interrogatives, particles.
+# Applied after jieba segmentation so "什么" is a single token, not chars.
 _ZH_STOPWORDS = frozenset([
     "的", "是", "了", "在", "有", "和", "与", "或", "不", "也",
     "就", "都", "而", "及", "等", "这", "那", "个", "之", "其",
@@ -81,8 +81,26 @@ _ZH_STOPWORDS = frozenset([
     "下", "里", "着", "过", "去", "来", "又", "没", "很", "还",
     "更", "最", "已", "要", "做", "地", "得", "吗", "吧", "呢",
     "啊", "什么", "怎么", "怎样", "如何", "哪些", "哪个", "为什么",
-    "多少", "几", "哪", "谁", "什么样", "怎么样",
+    "多少", "几", "哪", "谁", "什么样", "怎么样", "一个", "进行",
+    "使用", "通过", "可以", "需要", "应该", "如果", "因为", "所以",
+    "但是", "然后", "已经", "正在", "一些", "这种", "那种",
 ])
+
+# Lazy-load jieba to avoid import cost at module level
+_jieba = None
+
+
+def _get_jieba():
+    """Lazy-load jieba segmenter."""
+    global _jieba
+    if _jieba is None:
+        try:
+            import jieba as _jb
+            _jb.setLogLevel(20)  # suppress jieba init log
+            _jieba = _jb
+        except ImportError:
+            _jieba = False
+    return _jieba if _jieba is not False else None
 
 
 def _get_chroma(path: str = None) -> chromadb.PersistentClient:
@@ -117,19 +135,32 @@ def _reset_chroma():
 # ── Keyword / BM25 retrieval (no embeddings, <10ms) ──
 
 def _tokenize(text: str) -> List[str]:
-    """Chinese-aware tokenizer: chars, bigrams, words, numbers."""
+    """jieba-based tokenizer with stopword filtering.
+
+    Uses jieba for proper Chinese word segmentation instead of
+    character-level n-grams. English words and numbers preserved.
+    Stopwords and single-char tokens filtered out.
+    """
     import re
-    tokens: List[str] = []
-    # English words + numbers
-    for m in re.finditer(r'[a-zA-Z]+|\d+', text.lower()):
-        tokens.append(m.group())
-    # Chinese single chars + bigrams
-    chars = re.findall(r'[一-鿿]', text)
-    for c in chars:
-        tokens.append(c)
-    for i in range(len(chars) - 1):
-        tokens.append(chars[i] + chars[i + 1])
-    return tokens
+    jieba = _get_jieba()
+
+    # English words + numbers (always extracted, case-insensitive)
+    en_tokens = [m.group().lower() for m in re.finditer(r'[a-zA-Z]{2,}|\d+', text)]
+
+    if jieba is None:
+        # Fallback: if jieba unavailable, use bigrams (old behavior minus single chars)
+        chars = re.findall(r'[一-鿿]', text)
+        zh_tokens = [chars[i] + chars[i + 1] for i in range(len(chars) - 1)]
+    else:
+        # jieba segmentation for Chinese text
+        zh_tokens = [t.strip() for t in jieba.cut(text)
+                     if t.strip() and not t.isascii()]
+
+    # Filter: remove stopwords, single-char Chinese tokens, whitespace
+    zh_filtered = [t for t in zh_tokens
+                   if len(t) >= 2 and t not in _ZH_STOPWORDS]
+
+    return en_tokens + zh_filtered
 
 
 def _build_kw_index(force: bool = False):
@@ -178,11 +209,9 @@ def _build_kw_index(force: bool = False):
 def _bm25_score(query_terms: List[str], doc_terms: List[str]) -> float:
     """BM25 scoring with k1=1.2, b=0.75.
 
-    Filters:
-    - Skip terms with IDF < _KW_MIN_IDF (common terms)
-    - Skip Chinese single-char tokens (是/的/了/什/么) — noise source
-    - Skip Chinese stopwords (什么/怎么/为什么) — high-IDF but meaningless
-    - Boost English words (3+ chars) by 2x.
+    Token filtering (stopwords, single-chars) handled upstream by _tokenize().
+    Only skips terms with IDF < _KW_MIN_IDF.
+    Boosts English words (3+ chars) by 2x.
     """
     from collections import Counter
     doc_tf = Counter(doc_terms)
@@ -194,14 +223,7 @@ def _bm25_score(query_terms: List[str], doc_terms: List[str]) -> float:
         if term not in _kw_idf:
             continue
         idf = _kw_idf[term]
-        # Skip low-IDF terms — too common to be meaningful
         if idf < _KW_MIN_IDF:
-            continue
-        # Skip Chinese single-char tokens (noise from character-level tokenization)
-        if len(term) == 1 and not term.isascii():
-            continue
-        # Skip Chinese stopwords (function words, interrogatives)
-        if not term.isascii() and term in _ZH_STOPWORDS:
             continue
         tf = doc_tf.get(term, 0)
         if tf == 0:
@@ -209,7 +231,6 @@ def _bm25_score(query_terms: List[str], doc_terms: List[str]) -> float:
         num = tf * (k1 + 1.0)
         denom = tf + k1 * (1.0 - b + b * doc_len / max(_kw_avgdl, 1.0))
         qf = query_terms.count(term)
-        # Boost English entity words (3+ lowercase latin chars)
         boost = 2.0 if term.isascii() and len(term) >= 3 and term.isalpha() else 1.0
         score += idf * (num / denom) * qf * boost
     return score
@@ -232,17 +253,10 @@ def retrieve_keyword(query: str, top_k: int = 3, lang_filter: str = None) -> Lis
         return []
 
     # Filter: require at least one query term with meaningful IDF
-    # that is NOT a Chinese single-char or stopword
-    def _is_meaningful(t: str) -> bool:
-        if _kw_idf.get(t, 0) < _KW_MIN_IDF:
-            return False
-        if len(t) == 1 and not t.isascii():
-            return False
-        if not t.isascii() and t in _ZH_STOPWORDS:
-            return False
-        return True
-
-    has_meaningful_term = any(_is_meaningful(t) for t in set(q_terms))
+    # _tokenize already filters stopwords and single chars
+    has_meaningful_term = any(
+        _kw_idf.get(t, 0) >= _KW_MIN_IDF for t in set(q_terms)
+    )
     if not has_meaningful_term:
         return []
 

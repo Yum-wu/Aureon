@@ -20,6 +20,7 @@ numpy
 langchain-text-splitters
 chromadb>=0.5,<0.6
 sentence-transformers>=3.0,<4.0
+jieba>=0.42
 
 # LangGraph dependencies (version resolved by langchain)
 langgraph
