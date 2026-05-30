@@ -114,6 +114,16 @@ async def logging_middleware(request: Request, call_next):
     return response
 
 
+def _warmup_bm25():
+    """Build BM25 index in background thread. Non-blocking."""
+    try:
+        from app.rag.vector_store import _build_kw_index
+        _build_kw_index()
+        logger.info("BM25 index warmup complete")
+    except Exception as e:
+        logger.warning("BM25 warmup failed (non-fatal): %s", e)
+
+
 @app.on_event("startup")
 async def startup():
     if not settings.llm_api_key and not settings.fallback_api_key:
@@ -143,6 +153,11 @@ async def startup():
     init_ai_platform_tables()
     init_integration_tables()
     memory_manager.init_background_tasks()
+
+    # Warm up BM25 index in background thread (non-blocking)
+    # Prevents first query from caching wrong results before index is ready
+    loop = asyncio.get_event_loop()
+    loop.run_in_executor(None, _warmup_bm25)
 
 
 @app.on_event("shutdown")
