@@ -144,16 +144,6 @@ async def startup():
     init_integration_tables()
     memory_manager.init_background_tasks()
 
-    # Pre-warm BM25 keyword index in background (non-blocking)
-    async def _warmup_bm25():
-        import asyncio
-        try:
-            from app.rag.vector_store import _build_kw_index
-            await asyncio.get_event_loop().run_in_executor(None, _build_kw_index)
-        except Exception as e:
-            logger.warning("BM25 index warmup failed (will lazy-load on first query): %s", e)
-    asyncio.create_task(_warmup_bm25())
-
 
 @app.on_event("shutdown")
 async def shutdown():
