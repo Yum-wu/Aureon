@@ -18,6 +18,7 @@
   },
   "landing": {
     "hero": {
+      "badge": "生产就绪",
       "title": "企业 AI 知识库平台",
       "subtitle": "96% 检索准确率 · 亚秒级响应 · 24 小时部署",
       "cta_search": "开始搜索",
@@ -28,12 +29,25 @@
       "ttft": { "value": "~310ms", "label": "首字延迟", "detail": "Time to First Token" },
       "cost": { "value": "~$0.001", "label": "每次查询成本", "detail": "使用 GPT-4o-mini" }
     },
+    "features_title": "核心功能",
     "features": [
       { "title": "混合检索", "desc": "BM25 关键词 + Dense 语义双通道融合，96% 检索准确率" },
       { "title": "流式响应", "desc": "SSE 实时流推送，首字延迟 ~310ms，逐 token 渲染" },
       { "title": "多语言支持", "desc": "中英双语知识库，自动语言检测与路由" },
-      { "title": "企业级部署", "desc": "Docker 容器化，24 小时标准部署，RBAC + 审计日志" }
+      { "title": "企业级部署", "desc": "Docker 容器化，24 小时标准部署，RBAC + 审计日志" },
+      { "title": "文档智能", "desc": "上传、自动索引、预览、来源管理" },
+      { "title": "分析仪表盘", "desc": "延迟、Token 使用、缓存性能、查询分布" }
     ],
+    "benchmark": {
+      "title": "性能基准测试",
+      "subtitle": "基于 51 组 QA 数据对混合检索流水线的评估",
+      "vs_baseline": "对比基线",
+      "optimized": "已优化",
+      "reduced": "已降低",
+      "optimization_story": "优化历程",
+      "cache_hit_rate": "缓存命中率",
+      "cost_per_query": "每次查询成本"
+    },
     "credibility": {
       "title": "技术可信度",
       "desc": "所有指标来自生产环境实测",
@@ -82,8 +96,10 @@
     }
   },
   "search": {
-    "title": "AI 搜索",
-    "placeholder": "搜索知识库...",
+    "title": "企业级 AI 搜索",
+    "subtitle": "AI 驱动的知识库智能搜索",
+    "placeholder": "搜索企业知识...",
+    "error_max_length": "查询内容不能超过 {{max}} 个字符（当前 {{current}} 个）",
     "suggested": "推荐问题",
     "sources": "来源",
     "score": "相关度",
@@ -97,7 +113,42 @@
     "generate": "生成文章",
     "generating": "生成中..."
   },
-  "documents": {
+  "admin": {
+    "title": "企业管理",
+    "subtitle": "企业管理控制台",
+    "workspaces": {
+      "title": "工作空间",
+      "new_button": "新建工作空间",
+      "columns": {
+        "name": "名称",
+        "users": "用户数",
+        "docs": "文档数",
+        "created": "创建时间",
+        "actions": "操作"
+      }
+    },
+    "users": {
+      "title": "用户管理",
+      "invite_button": "邀请用户",
+      "columns": {
+        "user": "用户",
+        "email": "邮箱",
+        "role": "角色",
+        "last_active": "最后活跃",
+        "actions": "操作"
+      }
+    },
+    "audit": {
+      "title": "审计日志",
+      "export_button": "导出日志",
+      "columns": {
+        "timestamp": "时间",
+        "action": "操作",
+        "user": "用户",
+        "details": "详情"
+      }
+    }
+  },
     "title": "文档管理",
     "subtitle": "已索引的知识库文档",
     "error_loading": "加载文档失败",

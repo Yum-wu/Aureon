@@ -202,8 +202,18 @@ async def rag_index_endpoint(request: Request):
 
 
 @router.post("/api/rag/upload", response_model=RAGUploadResponse)
-async def rag_upload_endpoint(file: UploadFile = File(...)):
-    """Upload a .md or .txt file and incrementally index it."""
+async def rag_upload_endpoint(
+    file: UploadFile = File(...),
+    language: str = Form(None),
+    title: str = Form(None),
+):
+    """Upload a .md or .txt file and incrementally index it.
+
+    Args:
+        file: 上传的文件
+        language: 文档语言（"zh" 或 "en"），可选
+        title: 文档标题，可选
+    """
     import shutil
 
     # Validate filename
@@ -239,6 +249,13 @@ async def rag_upload_endpoint(file: UploadFile = File(...)):
 
     # Incremental index
     result = run_incremental_index(dest)
+
+    # Update metadata with provided language and title
+    if language in ("zh", "en") and result.get("metadata"):
+        result["metadata"]["language"] = language
+    if title and result.get("metadata"):
+        result["metadata"]["title"] = title
+
     if result["status"] == "error":
         raise HTTPException(
             status_code=500, detail=result.get("message", "Index failed")

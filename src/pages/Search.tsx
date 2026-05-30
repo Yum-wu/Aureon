@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { SearchBar } from '../components/search/SearchBar';
 import { StreamingAnswer } from '../components/search/StreamingAnswer';
 import { CitationList } from '../components/search/CitationList';
@@ -7,6 +8,7 @@ import { streamRAGQuery, type Citation } from '../services/rag';
 const MAX_QUERY_LENGTH = 1000;
 
 export function Search() {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [answer, setAnswer] = useState('');
   const [citations, setCitations] = useState<Citation[]>([]);
@@ -21,7 +23,7 @@ export function Search() {
 
     // Frontend input length validation
     if (trimmed.length > MAX_QUERY_LENGTH) {
-      setError(`查询内容不能超过 ${MAX_QUERY_LENGTH} 个字符（当前 ${trimmed.length} 个）`);
+      setError(t('search.error_max_length', { max: MAX_QUERY_LENGTH, current: trimmed.length }));
       return;
     }
 
@@ -53,9 +55,9 @@ export function Search() {
     <div className="min-h-screen bg-[var(--bg-primary)]">
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2">Enterprise Search</h1>
+          <h1 className="text-3xl font-bold mb-2">{t('search.title')}</h1>
           <p className="text-[var(--text-secondary)]">
-            AI-powered search across your knowledge base
+            {t('search.subtitle')}
           </p>
         </div>
 
