@@ -25,6 +25,8 @@ from app.evaluation.router import router as evaluation_router
 from app.cost.router import router as cost_router
 from app.reliability.router import router as reliability_router
 from app.knowledge.router import router as knowledge_router
+from app.ai_platform.router import router as ai_platform_router
+from app.integration.router import router as integration_router
 from app.exceptions import AureonException
 from app.routers import chat as chat_router
 from app.routers import rag as rag_router
@@ -128,6 +130,8 @@ async def startup():
     from app.cost import init_cost_tables
     from app.reliability import init_reliability_tables
     from app.knowledge import init_knowledge_tables
+    from app.ai_platform import init_ai_platform_tables
+    from app.integration import init_integration_tables
     init_feature_flags_table()
     init_query_traces_table()
     init_pii_detection_table()
@@ -136,6 +140,8 @@ async def startup():
     init_cost_tables()
     init_reliability_tables()
     init_knowledge_tables()
+    init_ai_platform_tables()
+    init_integration_tables()
     memory_manager.init_background_tasks()
 
 
@@ -287,6 +293,8 @@ app.include_router(evaluation_router)
 app.include_router(cost_router)
 app.include_router(reliability_router)
 app.include_router(knowledge_router)
+app.include_router(ai_platform_router)
+app.include_router(integration_router)
 
 # ── SPA 静态文件（必须在 API 路由之后） ──
 static_dir = os.path.join(os.path.dirname(__file__), "..", "static")
