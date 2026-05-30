@@ -68,7 +68,13 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
         doc["score"] = score
         results.append(doc)
 
-    logger.info("Hybrid RRF: bm25=%d vector=%d fused=%d", len(bm25_results), len(vector_results), len(results))
+    logger.info("Hybrid RRF: bm25=%d vector=%d fused=%d query=%r",
+                len(bm25_results), len(vector_results), len(results), query[:30])
+    # Debug: show top 3 from each retriever
+    bm25_top = [(d.get("metadata",{}).get("slug","")[:25], round(s,3)) for s,d in [(d.get("score",0),d) for d in bm25_results[:3]]]
+    vec_top = [(d.get("metadata",{}).get("slug","")[:25], round(d.get("score",0),3)) for d in vector_results[:3]]
+    logger.info("  BM25 top3: %s", bm25_top)
+    logger.info("  Vec  top3: %s", vec_top)
     return results
 
 
