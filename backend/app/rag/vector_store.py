@@ -70,6 +70,19 @@ _kw_idf: Dict[str, float] = {}
 _kw_avgdl: float = 0.0
 _KW_MIN_RAW_SCORE = 1.5  # minimum raw BM25 score before normalization
 _KW_MIN_IDF = 2.0  # skip terms with IDF < 2.0 in scoring (filters common Chinese chars like 是=1.66)
+# Chinese stop words — common function words / interrogatives that are
+# high-IDF noise in technical corpora (appear in few chunks but carry
+# no retrieval value).  Bigrams like 什么/怎么/为什么 also included.
+_ZH_STOPWORDS = frozenset([
+    "的", "是", "了", "在", "有", "和", "与", "或", "不", "也",
+    "就", "都", "而", "及", "等", "这", "那", "个", "之", "其",
+    "我", "你", "他", "她", "它", "们", "所", "以", "为", "会",
+    "能", "可", "将", "把", "被", "从", "到", "对", "中", "上",
+    "下", "里", "着", "过", "去", "来", "又", "没", "很", "还",
+    "更", "最", "已", "要", "做", "地", "得", "吗", "吧", "呢",
+    "啊", "什么", "怎么", "怎样", "如何", "哪些", "哪个", "为什么",
+    "多少", "几", "哪", "谁", "什么样", "怎么样",
+])
 
 
 def _get_chroma(path: str = None) -> chromadb.PersistentClient:
@@ -165,9 +178,11 @@ def _build_kw_index(force: bool = False):
 def _bm25_score(query_terms: List[str], doc_terms: List[str]) -> float:
     """BM25 scoring with k1=1.2, b=0.75.
 
-    Only scores terms with IDF >= _KW_MIN_IDF to prevent common Chinese
-    chars (是, 的, 了) from inflating scores via accumulation.
-    Boosts English words (3+ chars) by 2x.
+    Filters:
+    - Skip terms with IDF < _KW_MIN_IDF (common terms)
+    - Skip Chinese single-char tokens (是/的/了/什/么) — noise source
+    - Skip Chinese stopwords (什么/怎么/为什么) — high-IDF but meaningless
+    - Boost English words (3+ chars) by 2x.
     """
     from collections import Counter
     doc_tf = Counter(doc_terms)
@@ -179,8 +194,14 @@ def _bm25_score(query_terms: List[str], doc_terms: List[str]) -> float:
         if term not in _kw_idf:
             continue
         idf = _kw_idf[term]
-        # Skip low-IDF terms — they're too common to be meaningful
+        # Skip low-IDF terms — too common to be meaningful
         if idf < _KW_MIN_IDF:
+            continue
+        # Skip Chinese single-char tokens (noise from character-level tokenization)
+        if len(term) == 1 and not term.isascii():
+            continue
+        # Skip Chinese stopwords (function words, interrogatives)
+        if not term.isascii() and term in _ZH_STOPWORDS:
             continue
         tf = doc_tf.get(term, 0)
         if tf == 0:
@@ -211,10 +232,17 @@ def retrieve_keyword(query: str, top_k: int = 3, lang_filter: str = None) -> Lis
         return []
 
     # Filter: require at least one query term with meaningful IDF
-    # Prevents generic Chinese chars ("什么", "是") from producing false matches
-    has_meaningful_term = any(
-        _kw_idf.get(t, 0) >= _KW_MIN_IDF for t in set(q_terms)
-    )
+    # that is NOT a Chinese single-char or stopword
+    def _is_meaningful(t: str) -> bool:
+        if _kw_idf.get(t, 0) < _KW_MIN_IDF:
+            return False
+        if len(t) == 1 and not t.isascii():
+            return False
+        if not t.isascii() and t in _ZH_STOPWORDS:
+            return False
+        return True
+
+    has_meaningful_term = any(_is_meaningful(t) for t in set(q_terms))
     if not has_meaningful_term:
         return []
 
