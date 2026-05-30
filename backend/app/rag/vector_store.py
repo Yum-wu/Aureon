@@ -161,7 +161,11 @@ def _build_kw_index(force: bool = False):
 
 
 def _bm25_score(query_terms: List[str], doc_terms: List[str]) -> float:
-    """BM25 scoring with k1=1.2, b=0.75."""
+    """BM25 scoring with k1=1.2, b=0.75.
+
+    Boosts English words (3+ chars) by 2x to prevent Chinese single-char
+    tokens from diluting entity name matches.
+    """
     from collections import Counter
     doc_tf = Counter(doc_terms)
     doc_len = len(doc_terms)
@@ -178,7 +182,9 @@ def _bm25_score(query_terms: List[str], doc_terms: List[str]) -> float:
         num = tf * (k1 + 1.0)
         denom = tf + k1 * (1.0 - b + b * doc_len / max(_kw_avgdl, 1.0))
         qf = query_terms.count(term)
-        score += idf * (num / denom) * qf
+        # Boost English entity words (3+ lowercase latin chars)
+        boost = 2.0 if term.isascii() and len(term) >= 3 and term.isalpha() else 1.0
+        score += idf * (num / denom) * qf * boost
     return score
 
 
