@@ -26,7 +26,7 @@ def mock_redis():
 async def test_get_stats_returns_expected_fields(mock_redis):
     """Stats endpoint returns all required fields with correct types."""
     mock_redis.get = AsyncMock(return_value=None)
-    mock_redis.zrangebyscore = AsyncMock(return_value=["100", "200"])
+    mock_redis.zrange = AsyncMock(return_value=["100", "200"])
 
     app.dependency_overrides[get_redis_or_none] = lambda: mock_redis
 
