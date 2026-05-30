@@ -99,8 +99,11 @@ async def rag_query_endpoint(req: RAGQueryRequest, request: Request):
         logger.error("rag_query_with_cache failed: %s", e)
         raise HTTPException(status_code=500, detail=f"Query processing error: {str(e)[:100]}")
     latency_ms = int((time.time() - start_time) * 1000)
-    # Record query for Dashboard stats (fire-and-forget)
-    asyncio.create_task(record_query(req.query, len(result.sources), latency_ms))
+    # Record query for Dashboard stats (fire-and-forget with error handling)
+    try:
+        asyncio.create_task(record_query(req.query, len(result.sources), latency_ms))
+    except Exception as e:
+        logger.warning("Failed to record query stats: %s", e)
     return result
 
 
