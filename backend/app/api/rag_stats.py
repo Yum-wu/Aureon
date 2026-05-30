@@ -67,6 +67,7 @@ async def record_query(
 
     # In-memory fallback when Redis is unavailable
     if not redis:
+        logger.info("record_query: using in-memory fallback (redis=%s)", redis)
         global _mem_count, _mem_queries, _mem_latencies
         _mem_count += 1
         _mem_queries.insert(0, {
