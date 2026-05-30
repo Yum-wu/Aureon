@@ -116,7 +116,7 @@ export function RagQuery() {
     } finally {
       setUploading(false);
     }
-  }, [t]);
+  }, [t, fetchUploadedFiles]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
