@@ -29,6 +29,7 @@ import structlog
 from app.api.models import StatusResponse
 from app.api.rag_stats import record_query
 from app.config import settings
+from app.dependencies import get_redis_or_none
 from app.rag.models import (
     RAGQueryRequest,
     RAGQueryResponse,
@@ -167,6 +168,14 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
         # 1. Try Redis cache hit (JSON format with sources)
         cached = await get_cached(req.query)
         if cached is not None:
+            # Cache hit - record stats
+            try:
+                redis = get_redis_or_none()
+                if redis:
+                    await redis.incr("aureon:stats:cache_hits")
+            except Exception:
+                pass
+
             try:
                 cached_data = json.loads(cached)
                 answer_text = cached_data.get("answer", cached)
@@ -180,6 +189,14 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
             latency_ms = int((time.time() - start_time) * 1000)
             asyncio.create_task(record_query(req.query, len(cached_sources), latency_ms))
             return
+
+        # Cache miss - record stats
+        try:
+            redis = get_redis_or_none()
+            if redis:
+                await redis.incr("aureon:stats:cache_misses")
+        except Exception:
+            pass
 
         # 2. Stream with buffering, auto-cache full answer on completion
         full_text = ""

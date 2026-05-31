@@ -111,12 +111,10 @@ async def get_latency_analytics(
         }
 
     try:
-        # 从 sorted set 获取延迟数据
-        now = datetime.now(timezone.utc)
-        cutoff = now.timestamp() - 86400  # 24h
-
-        latencies_raw = await redis.zrangebyscore(
-            f"{STATS_PREFIX}:latencies:z", cutoff, "+inf", withscores=True
+        # 从 sorted set 获取延迟数据（score = latency_ms, member = timestamp:uuid）
+        # 使用 zrange 获取所有数据（不按时间过滤，因为 score 是延迟值不是时间戳）
+        latencies_raw = await redis.zrange(
+            f"{STATS_PREFIX}:latencies:z", 0, -1, withscores=True
         )
         latencies = []
         for member, score in latencies_raw:
