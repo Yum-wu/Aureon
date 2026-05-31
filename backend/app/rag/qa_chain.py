@@ -378,15 +378,31 @@ def run_incremental_index(filepath: str) -> dict:
             "message": "文件为空或无法读取",
         }
 
-    # 2. Split
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=500,
-        chunk_overlap=50,
+    # 2. Split into parent-child structure
+    parent_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1500,
+        chunk_overlap=100,
         separators=["\n## ", "\n### ", "\n\n", "\n", " ", ""],
     )
+    child_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=300,
+        chunk_overlap=30,
+        separators=["\n", " ", ""],
+    )
 
-    texts = splitter.split_text(doc["content"])
-    chunks = [{"text": t, "metadata": doc["metadata"]} for t in texts]
+    parents = parent_splitter.split_text(doc["content"])
+    chunks = []
+    for parent_idx, parent_text in enumerate(parents):
+        children = child_splitter.split_text(parent_text)
+        for child_text in children:
+            chunks.append({
+                "text": child_text,
+                "metadata": {
+                    **doc["metadata"],
+                    "parent_text": parent_text,
+                    "parent_idx": parent_idx,
+                },
+            })
 
     # 3. Add to existing index (incremental)
     from app.rag.vector_store import add_to_index
@@ -429,21 +445,34 @@ def run_index_pipeline(
             "message": "没有找到 Markdown 文件",
         }
 
-    # 2. Split
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=500,
-        chunk_overlap=50,
+    # 2. Split into parent-child structure
+    # Parent: 1500 chars (rich context for LLM)
+    # Child:  300 chars (small chunks for precise retrieval)
+    parent_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1500,
+        chunk_overlap=100,
         separators=["\n## ", "\n### ", "\n\n", "\n", " ", ""],
+    )
+    child_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=300,
+        chunk_overlap=30,
+        separators=["\n", " ", ""],
     )
 
     chunks = []
     for doc in docs:
-        texts = splitter.split_text(doc["content"])
-        for text in texts:
-            chunks.append({
-                "text": text,
-                "metadata": doc["metadata"],
-            })
+        parents = parent_splitter.split_text(doc["content"])
+        for parent_idx, parent_text in enumerate(parents):
+            children = child_splitter.split_text(parent_text)
+            for child_text in children:
+                chunks.append({
+                    "text": child_text,
+                    "metadata": {
+                        **doc["metadata"],
+                        "parent_text": parent_text,
+                        "parent_idx": parent_idx,
+                    },
+                })
 
     # 3. Embed
     texts_to_embed = [c["text"] for c in chunks]

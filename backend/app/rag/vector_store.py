@@ -476,6 +476,8 @@ def add_to_index(chunks: List[Dict[str, Any]], path: str = None):
             "title": c["metadata"].get("title", ""),
             "slug": c["metadata"].get("slug", ""),
             "language": c["metadata"].get("language", "unknown"),
+            "parent_text": c["metadata"].get("parent_text", ""),
+            "parent_idx": c["metadata"].get("parent_idx", -1),
         }
         for c in chunks
     ]
@@ -538,6 +540,8 @@ def save_index(chunks: List[Dict[str, Any]], embeddings: np.ndarray = None, path
             "title": c["metadata"].get("title", ""),
             "slug": c["metadata"].get("slug", ""),
             "language": c["metadata"].get("language", "unknown"),
+            "parent_text": c["metadata"].get("parent_text", ""),
+            "parent_idx": c["metadata"].get("parent_idx", -1),
         }
         for c in chunks
     ]
@@ -663,11 +667,26 @@ def _simple_diversity(items: list, top_k: int) -> list:
 
 
 def format_context(chunks: List[Dict[str, Any]]) -> str:
-    """Format retrieved chunks into context string."""
+    """Format retrieved chunks into context string.
+
+    Uses parent_text when available (Parent-Child chunking) for richer context.
+    Deduplicates by parent to avoid repeating the same parent text.
+    """
     parts = []
+    seen_parents = set()
     for i, chunk in enumerate(chunks):
         source = chunk["metadata"].get("title", chunk["metadata"].get("source", "Unknown"))
-        parts.append(f"[Source {i+1}: {source}]\n{chunk['text']}")
+        # Prefer parent_text for richer context (Parent-Child chunking)
+        parent_text = chunk.get("metadata", {}).get("parent_text")
+        parent_idx = chunk.get("metadata", {}).get("parent_idx")
+        parent_key = f"{source}:{parent_idx}"
+
+        if parent_text and parent_key not in seen_parents:
+            seen_parents.add(parent_key)
+            parts.append(f"[Source {len(parts)+1}: {source}]\n{parent_text}")
+        elif not parent_text:
+            # Fallback: use child text (legacy chunks without parent)
+            parts.append(f"[Source {len(parts)+1}: {source}]\n{chunk['text']}")
     return "\n\n".join(parts)
 
 
