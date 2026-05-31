@@ -22,7 +22,7 @@ _MEM_TTL = 3600  # 1 hour, same as Redis TTL
 
 
 # Bump to invalidate all cached RAG responses (e.g. after retrieval logic changes)
-_CACHE_VERSION = "v10"  # v10: debug RRF output
+_CACHE_VERSION = "v11"  # v11: fix embedding dimension mismatch + RRF
 
 
 def _mem_cache_key(key: str) -> str:
