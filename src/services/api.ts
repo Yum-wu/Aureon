@@ -120,8 +120,14 @@ export async function streamEnhancedChat(params: StreamChatParams): Promise<void
 
     const decoder = new TextDecoder();
     let buffer = "";
+    let pendingEvents = 0;
 
     while (true) {
+      if (pendingEvents > BACKPRESSURE_HIGH_WATER) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        continue;
+      }
+
       const { done, value } = await reader.read();
       if (done) break;
 
@@ -135,7 +141,9 @@ export async function streamEnhancedChat(params: StreamChatParams): Promise<void
         const data = trimmed.slice(5).trim();
         try {
           const event: SSEEvent = JSON.parse(data);
+          pendingEvents++;
           onEvent(event);
+          setTimeout(() => pendingEvents--, 0);
         } catch {
           continue;
         }

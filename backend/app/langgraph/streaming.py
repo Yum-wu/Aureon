@@ -29,7 +29,7 @@ async def stream_workflow(
         t0 = time.time()
         intent, confidence = classify_intent(query)
         intent_ms = int((time.time() - t0) * 1000)
-        logger.info(f"[StreamWorkflow] Intent: {intent} ({confidence:.0%}) in {intent_ms}ms")
+        logger.info("stream_workflow intent=%s confidence=%.0f latency_ms=%d", intent, confidence * 100, intent_ms)
 
         yield {"type": "intent", "content": {"intent": intent, "confidence": confidence}}
 
@@ -47,8 +47,14 @@ async def stream_workflow(
                 yield event
 
     except Exception as e:
-        logger.error(f"[StreamWorkflow] Error: {e}", exc_info=True)
-        yield {"type": "error", "content": str(e)}
+        logger.error("stream_workflow error: %s", e, exc_info=True)
+        # Sanitize error message - never expose API keys or internal details
+        error_msg = "An error occurred while processing your request"
+        if "401" in str(e) or "auth" in str(e).lower():
+            error_msg = "AI service authentication failed. Please check API configuration."
+        elif "timeout" in str(e).lower():
+            error_msg = "Request timed out. Please try again."
+        yield {"type": "error", "content": error_msg}
 
     yield {"type": "done"}
 

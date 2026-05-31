@@ -5,23 +5,31 @@ from pathlib import Path
 DB_DIR = Path("offloads")
 DB_PATH = DB_DIR / "memory.db"
 
-# ── Global connection pool (singleton, WAL mode, thread-safe) ──
-_conn: sqlite3.Connection | None = None
-_conn_lock = threading.Lock()
+# Thread-local storage for per-thread SQLite connections.
+# Each thread gets its own connection, avoiding cross-thread sharing.
+# WAL mode allows concurrent reads from multiple connections.
+_thread_local = threading.local()
+_init_lock = threading.Lock()
 
 
-def get_db():
-    """Get shared SQLite connection (created once, reused)."""
-    global _conn
-    if _conn is None:
-        with _conn_lock:
-            if _conn is None:  # double-check
-                DB_DIR.mkdir(parents=True, exist_ok=True)
-                _conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
-                _conn.row_factory = sqlite3.Row
-                _conn.execute("PRAGMA journal_mode=WAL")
-                _conn.execute("PRAGMA busy_timeout=5000")
-    return _conn
+def get_db() -> sqlite3.Connection:
+    """Get a thread-local SQLite connection.
+
+    Each calling thread gets its own connection instance.
+    WAL mode enables concurrent reads; busy_timeout handles write contention.
+    """
+    conn = getattr(_thread_local, "conn", None)
+    if conn is not None:
+        return conn
+
+    with _init_lock:
+        DB_DIR.mkdir(parents=True, exist_ok=True)
+        conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA busy_timeout=5000")
+        _thread_local.conn = conn
+        return conn
 
 
 def init_db():

@@ -1,40 +1,40 @@
 {
-  "timestamp": "2026-05-31T12:01:35",
+  "timestamp": "2026-05-31T15:23:23",
   "metrics": [
     {
       "label": "Recall@3 (Hybrid)",
-      "value": "98.7%",
-      "detail": "74/76 (BM25+ Scoring + RRF + Parent-Child)"
+      "value": "100.0%",
+      "detail": "75/75 (BM25+ Scoring + RRF + Parent-Child + diversity)"
     },
     {
       "label": "Recall@3 (Dense)",
-      "value": "90.2%",
-      "detail": "69/76 (BGE-small-zh 512d, 零 embedding API)"
+      "value": "93.3%",
+      "detail": "70/75 (BGE-small-zh 512d, zero embedding API cost)"
     },
     {
       "label": "Retrieval Latency",
-      "value": "~26ms",
-      "detail": "BM25 ~10ms / Chroma + BGE local ~10ms / RRF ~6ms"
+      "value": "~4.2ms",
+      "detail": "BM25 ~2ms (pre-tokenized) + Vector ~2ms (BGE local cached) + RRF ~0.2ms"
     },
     {
       "label": "TTFT (Streaming)",
       "value": "~310ms",
-      "detail": "BM25 ~10ms + LLM first token ~300ms"
+      "detail": "Retrieval ~4ms + LLM first token ~300ms"
     },
     {
       "label": "Full RAG Latency (Sync)",
       "value": "~400ms",
-      "detail": "BGE local ~10ms + Chroma ~10ms + LLM ~300ms"
+      "detail": "Retrieval ~4ms + LLM ~300ms"
     },
     {
       "label": "LLM Calls per Query",
       "value": "1",
-      "detail": "单次流式 LLM 调用，无冗余"
+      "detail": "Single streaming LLM call, no redundancy"
     },
     {
       "label": "Intent Classification",
       "value": "<1ms",
-      "detail": "关键词规则，零 LLM 调用"
+      "detail": "Keyword rules, zero LLM calls"
     },
     {
       "label": "Cost per Query",
@@ -43,16 +43,21 @@
     },
     {
       "label": "Test QA Pairs",
-      "value": 76,
-      "detail": "覆盖全部 25 篇文章，Recall@3 = 98.7%"
+      "value": 75,
+      "detail": "Covering 25 articles, Recall@3 = 100%"
+    },
+    {
+      "label": "BM25 Optimization",
+      "value": "73x faster",
+      "detail": "Pre-tokenized index: 153ms -> 2.1ms per query"
     }
   ],
   "services": {
     "llm": "DeepSeek v4-flash",
-    "embedding": "BGE-small-zh 512d (本地) + DashScope fallback",
-    "vector_db": "ChromaDB (持久化)",
-    "hybrid_search": "BM25+ + RRF + Parent-Child",
-    "reranking": "bge-reranker-base (可选)",
+    "embedding": "BGE-small-zh 512d (local) + DashScope fallback",
+    "vector_db": "ChromaDB (persistent)",
+    "hybrid_search": "BM25+ (pre-tokenized) + RRF + Parent-Child",
+    "reranking": "bge-reranker-base (optional)",
     "guardrails": "Hallucination + Citation Verification",
     "streaming": "SSE /api/rag/query/stream",
     "cache": "Redis + in-memory (Railway)"

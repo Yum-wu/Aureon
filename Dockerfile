@@ -21,13 +21,14 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx \
     sqlite3 \
+    curl \
     && rm -rf /var/lib/apt/lists/* \
     && ln -sf /dev/stdout /var/log/nginx/access.log \
     && ln -sf /dev/stderr /var/log/nginx/error.log
 
-# Python 依赖
-COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Python 依赖（BuildKit cache mount 加速重建）
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r requirements.txt
 
 # 预下载 BGE-small-zh embedding 模型（~130MB，消除冷启动延迟）
 RUN python3 -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-small-zh-v1.5')" \
@@ -49,6 +50,14 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
+# 非 root 用户运行应用
+RUN groupadd -r aureon && useradd -r -g aureon -d /app -s /sbin/nologin aureon \
+    && chown -R aureon:aureon /app /usr/share/nginx/html /etc/nginx
+USER aureon
+
 EXPOSE 80
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+    CMD curl -f http://localhost:80/api/health || exit 1
 
 CMD ["/docker-entrypoint.sh"]

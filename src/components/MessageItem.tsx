@@ -1,4 +1,4 @@
-import { useState, useMemo, lazy, Suspense } from "react";
+import { useState, useMemo, lazy, Suspense, memo } from "react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -42,7 +42,7 @@ function SimpleCode({ language, code }: { language?: string; code: string }) {
 }
 
 /** Single message bubble — user plain text, AI rendered markdown + copy */
-export function MessageItem({ message }: MessageItemProps) {
+export const MessageItem = memo(function MessageItem({ message }: MessageItemProps) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const isUser = message.role === "user";
@@ -157,4 +157,4 @@ export function MessageItem({ message }: MessageItemProps) {
       </div>
     </div>
   );
-}
+});

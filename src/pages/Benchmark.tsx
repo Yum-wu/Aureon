@@ -1,5 +1,22 @@
 import { useBenchmark } from '../hooks/useBenchmark';
 
+const colorMap: Record<string, string> = {
+  blue: 'bg-blue-100 text-blue-700',
+  purple: 'bg-purple-100 text-purple-700',
+  cyan: 'bg-cyan-100 text-cyan-700',
+  green: 'bg-green-100 text-green-700',
+  amber: 'bg-amber-100 text-amber-700',
+  rose: 'bg-rose-100 text-rose-700',
+};
+const borderMap: Record<string, string> = {
+  blue: 'border-blue-300',
+  purple: 'border-purple-300',
+  cyan: 'border-cyan-300',
+  green: 'border-green-300',
+  amber: 'border-amber-300',
+  rose: 'border-rose-300',
+};
+
 const Benchmark = () => {
   const { data: benchmark, loading } = useBenchmark();
 
@@ -82,7 +99,7 @@ const Benchmark = () => {
             { name: 'LLM', detail: benchmark?.services?.llm || 'LLM', color: 'amber' },
             { name: 'SSE Streaming', detail: '实时输出', color: 'rose' },
           ].map((item, i) => (
-            <div key={i} className={`bg-${item.color}-100 text-${item.color}-700 px-4 py-3 rounded-lg border-2 border-${item.color}-300`}>
+            <div key={i} className={`${colorMap[item.color]} px-4 py-3 rounded-lg border-2 ${borderMap[item.color]}`}>
               <div className="font-semibold">{item.name}</div>
               <div className="text-xs opacity-75">{item.detail}</div>
             </div>
