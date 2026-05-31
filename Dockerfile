@@ -26,9 +26,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && ln -sf /dev/stdout /var/log/nginx/access.log \
     && ln -sf /dev/stderr /var/log/nginx/error.log
 
-# Python 依赖（BuildKit cache mount 加速重建）
-RUN --mount=type=cache,target=/root/.cache/pip,id=pip-cache \
-    pip install -r requirements.txt
+# Python 依赖
+RUN pip install -r requirements.txt
 
 # 预下载 BGE-small-zh embedding 模型（~130MB，消除冷启动延迟）
 RUN python3 -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-small-zh-v1.5')" \
