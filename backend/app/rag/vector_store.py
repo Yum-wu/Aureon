@@ -209,7 +209,11 @@ def _build_kw_index(force: bool = False):
 
 
 def _bm25_score(query_terms: List[str], doc_terms: List[str]) -> float:
-    """BM25 scoring with k1=1.2, b=0.75.
+    """BM25+ scoring (Lv & Zhai 2011) with k1=1.2, b=0.75, δ=0.05.
+
+    BM25+ adds a lower bound δ to TF normalization, preventing long documents
+    from being unfairly penalized. Standard BM25's TF term → 0 when dl >> avgdl,
+    even if the document contains the query term.
 
     Token filtering (stopwords, single-chars) handled upstream by _tokenize().
     Only skips terms with IDF < _KW_MIN_IDF.
@@ -218,7 +222,7 @@ def _bm25_score(query_terms: List[str], doc_terms: List[str]) -> float:
     from collections import Counter
     doc_tf = Counter(doc_terms)
     doc_len = len(doc_terms)
-    k1, b = 1.2, 0.75
+    k1, b, delta = 1.2, 0.75, 0.05
     score = 0.0
 
     for term in set(query_terms):
@@ -230,7 +234,8 @@ def _bm25_score(query_terms: List[str], doc_terms: List[str]) -> float:
         tf = doc_tf.get(term, 0)
         if tf == 0:
             continue
-        num = tf * (k1 + 1.0)
+        # BM25+: add δ to numerator so long docs don't get zero TF contribution
+        num = delta + tf * (k1 + 1.0)
         denom = tf + k1 * (1.0 - b + b * doc_len / max(_kw_avgdl, 1.0))
         qf = query_terms.count(term)
         boost = 2.0 if term.isascii() and len(term) >= 3 and term.isalpha() else 1.0
