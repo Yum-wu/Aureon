@@ -61,7 +61,7 @@ const Benchmark = () => {
           </svg>
           <div className="bg-amber-100 text-amber-700 px-4 py-3 rounded-lg border-2 border-amber-300">
             <div className="font-semibold">LLM</div>
-            <div className="text-xs opacity-75">GLM-4-Flash</div>
+            <div className="text-xs opacity-75">{benchmark?.services?.llm || 'LLM'}</div>
           </div>
           <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -79,7 +79,7 @@ const Benchmark = () => {
             { name: 'BGE Embedding', detail: '512d 本地推理', color: 'purple' },
             { name: 'Chroma DB', detail: '向量数据库', color: 'cyan' },
             { name: 'Hybrid Search', detail: 'BM25 + Dense', color: 'green' },
-            { name: 'LLM', detail: 'GLM-4-Flash', color: 'amber' },
+            { name: 'LLM', detail: benchmark?.services?.llm || 'LLM', color: 'amber' },
             { name: 'SSE Streaming', detail: '实时输出', color: 'rose' },
           ].map((item, i) => (
             <div key={i} className={`bg-${item.color}-100 text-${item.color}-700 px-4 py-3 rounded-lg border-2 border-${item.color}-300`}>

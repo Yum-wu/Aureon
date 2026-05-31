@@ -41,7 +41,8 @@ describe('useDashboardStats', () => {
 
     mockFetch
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(statsData) })
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(recentData) });
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(recentData) })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ data: [], total: 0 }) });
 
     const { result } = renderHook(() => useDashboardStats());
 
