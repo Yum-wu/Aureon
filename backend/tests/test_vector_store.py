@@ -231,9 +231,8 @@ class TestZhipuEmbeddingFn:
         assert len(result[0]) == 3
 
     @patch("app.rag.vector_store.embed_texts_llm")
-    def test_returns_zeros_on_none(self, mock_embed):
-        mock_embed.return_value = None
+    def test_raises_on_failure(self, mock_embed):
+        mock_embed.side_effect = RuntimeError("All embedding providers failed")
         fn = ZhipuEmbeddingFn()
-        result = fn(["test"])
-        assert len(result) == 1
-        assert all(v == 0.0 for v in result[0])
+        with pytest.raises(RuntimeError, match="All embedding providers failed"):
+            fn(["test"])
