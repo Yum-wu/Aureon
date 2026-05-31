@@ -83,9 +83,10 @@ async def test_latency_no_redis():
 
 @pytest.mark.asyncio
 async def test_latency_with_data(mock_redis):
-    mock_redis.zrangebyscore = AsyncMock(return_value=[
-        ("ts1:abc", 100.0), ("ts2:def", 200.0), ("ts3:ghi", 150.0),
-        ("ts4:jkl", 300.0), ("ts5:mno", 250.0),
+    # Setup mock to return latency scores from sorted set (score = latency_ms)
+    mock_redis.zrange = AsyncMock(return_value=[
+        (b"ts1:abc", 100.0), (b"ts2:def", 200.0), (b"ts3:ghi", 150.0),
+        (b"ts4:jkl", 300.0), (b"ts5:mno", 250.0),
     ])
     app.dependency_overrides[get_redis_or_none] = lambda: mock_redis
 
@@ -100,7 +101,7 @@ async def test_latency_with_data(mock_redis):
 
 @pytest.mark.asyncio
 async def test_latency_empty_data(mock_redis):
-    mock_redis.zrangebyscore = AsyncMock(return_value=[])
+    mock_redis.zrange = AsyncMock(return_value=[])
     app.dependency_overrides[get_redis_or_none] = lambda: mock_redis
 
     transport = ASGITransport(app=app)
