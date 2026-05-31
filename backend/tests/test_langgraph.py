@@ -124,7 +124,8 @@ class TestStreamWorkflow:
 
         error_events = [e for e in events if e["type"] == "error"]
         assert len(error_events) == 1
-        assert "intent fail" in error_events[0]["content"]
+        # Error message is sanitized — never expose internal details
+        assert "error" in error_events[0]["content"].lower()
         # Should still emit done
         assert events[-1]["type"] == "done"
 
