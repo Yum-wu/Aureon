@@ -8,7 +8,7 @@ import time
 import os
 from typing import List, Dict, Any, Optional
 
-from app.rag.vector_store import retrieve, retrieve_keyword, format_context, save_index, embed_texts_llm, load_index
+from app.rag.vector_store import retrieve, retrieve_keyword, format_context, save_index, embed_texts_llm, load_index, rerank
 from app.rag.models import RAGQueryResponse, SourceItem
 from app.utils.lang_detect import detect_language, lang_instruction
 
@@ -33,8 +33,8 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
         top_k: 返回结果数量
         lang_filter: 语言过滤（"zh" 或 "en"）
     """
-    bm25_results = retrieve_keyword(query, top_k=top_k * 2, lang_filter=lang_filter)
-    vector_results = retrieve(query, top_k=top_k * 2, use_mmr=False, lang_filter=lang_filter)
+    bm25_results = retrieve_keyword(query, top_k=top_k * 3, lang_filter=lang_filter)
+    vector_results = retrieve(query, top_k=top_k * 3, use_mmr=False, lang_filter=lang_filter)
 
     # Quality check: if vector results all have the same score, they're garbage
     # (embedding API returned zero vectors → all cosine similarities identical)
@@ -97,11 +97,17 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
 
     # Sort by RRF score descending
     ranked = sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)
-    results = []
-    for key, score in ranked[:top_k]:
+
+    # Take more candidates for reranking (up to 10)
+    candidate_limit = min(len(ranked), max(top_k * 3, 10))
+    candidates = []
+    for key, score in ranked[:candidate_limit]:
         doc = doc_map[key].copy()
         doc["score"] = score
-        results.append(doc)
+        candidates.append(doc)
+
+    # Cross-encoder reranking: jointly encode query+doc for precise relevance
+    results = rerank(query, candidates, top_k=top_k)
 
     return results
 
