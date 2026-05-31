@@ -292,7 +292,7 @@ def rag_query(
         lang = detect_language(query)
 
     # 1. Hybrid retrieval: BM25 keyword + vector search, RRF fusion
-    chunks = hybrid_retrieve(query, top_k=top_k, lang_filter=filter_lang)
+    chunks = multi_query_retrieve(query, top_k=top_k, lang_filter=filter_lang)
 
     if not chunks:
         no_result_msg = (
@@ -352,7 +352,7 @@ async def rag_query_astream(
         lang = detect_language(query)
 
     # 1. Hybrid retrieval: BM25 keyword + vector search, RRF fusion
-    chunks = hybrid_retrieve(query, top_k=top_k, lang_filter=filter_lang)
+    chunks = multi_query_retrieve(query, top_k=top_k, lang_filter=filter_lang)
 
     if not chunks:
         no_result_msg = (
