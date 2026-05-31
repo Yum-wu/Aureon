@@ -38,12 +38,13 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
 
     # Quality check: if vector results all have the same score, they're garbage
     # (embedding API returned zero vectors → all cosine similarities identical)
+    # Threshold 0.001: cosine scores on small collections naturally range 0.3-0.7
     vector_usable = True
     if vector_results:
         scores = [d.get("score", 0) for d in vector_results]
         if len(scores) >= 2:
             score_range = max(scores) - min(scores)
-            if score_range < 0.01:
+            if score_range < 0.001:
                 logger.warning("Vector results degenerate (all scores ≈ %.3f), using BM25 only", scores[0])
                 vector_usable = False
 
