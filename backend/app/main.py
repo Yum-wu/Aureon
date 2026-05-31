@@ -116,12 +116,18 @@ async def logging_middleware(request: Request, call_next):
 
 def _warmup_bm25():
     """Build BM25 index in background thread. Non-blocking."""
+    global _bm25_warmup_done
     try:
         from app.rag.vector_store import _build_kw_index
         _build_kw_index()
         logger.info("BM25 index warmup complete")
     except Exception as e:
         logger.warning("BM25 warmup failed (non-fatal): %s", e)
+    finally:
+        _bm25_warmup_done = True
+
+
+_bm25_warmup_done = True  # set False during startup warmup
 
 
 @app.on_event("startup")
@@ -155,9 +161,13 @@ async def startup():
     memory_manager.init_background_tasks()
 
     # Warm up BM25 index in background thread (non-blocking)
-    # Prevents first query from caching wrong results before index is ready
-    loop = asyncio.get_event_loop()
-    loop.run_in_executor(None, _warmup_bm25)
+    from app.rag.vector_store import _kw_docs as _bm25_docs
+    if len(_bm25_docs) > 0:
+        pass  # already built
+    else:
+        _bm25_warmup_done = False  # mark as warming up
+        loop = asyncio.get_event_loop()
+        loop.run_in_executor(None, _warmup_bm25)
 
 
 @app.on_event("shutdown")
@@ -291,10 +301,9 @@ async def crew_health():
 
 @app.get("/api/health")
 async def health():
-    from app.rag.vector_store import _kw_docs
     from fastapi.responses import JSONResponse
-    bm25_ready = len(_kw_docs) > 0
-    if not bm25_ready:
+    # Return 503 only while BM25 warmup is still running
+    if not _bm25_warmup_done:
         return JSONResponse(
             status_code=503,
             content={"status": "warming_up", "model": settings.llm_model},

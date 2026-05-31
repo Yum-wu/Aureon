@@ -42,19 +42,15 @@ class TestTokenize:
 
     def test_chinese_chars_and_bigrams(self):
         tokens = _tokenize("人工智能")
-        # Single chars
-        assert "人" in tokens
-        assert "工" in tokens
-        # Bigrams
-        assert "人工" in tokens
-        assert "智能" in tokens
+        # jieba segments into words; "人工" and "智能" are standard splits
+        assert any("人工" in t for t in tokens)
+        assert any("智能" in t for t in tokens)
 
     def test_mixed_content(self):
         tokens = _tokenize("RAG 系统 v2")
         assert "rag" in tokens
-        assert "v" in tokens
-        assert "2" in tokens
-        assert "系" in tokens
+        # jieba keeps "系统" as one word; single chars filtered out
+        assert "系统" in tokens
 
     def test_empty_string(self):
         assert _tokenize("") == []
