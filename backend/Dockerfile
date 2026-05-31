@@ -13,6 +13,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# 预下载 BGE-m3 embedding 模型（消除冷启动延迟）
+RUN HF_ENDPOINT=https://hf-mirror.com python3 -c \
+    "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-m3')"
+
 # 复制后端代码
 COPY backend/ .
 

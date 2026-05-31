@@ -26,6 +26,8 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
     Runs both retrievers and combines results using Reciprocal Rank Fusion.
     BM25 handles exact keyword matches; vector handles semantic similarity.
 
+    Auto-degrades to BM25-only if vector results look broken (all same score).
+
     Args:
         query: 查询文本
         top_k: 返回结果数量
@@ -33,6 +35,20 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
     """
     bm25_results = retrieve_keyword(query, top_k=top_k * 2, lang_filter=lang_filter)
     vector_results = retrieve(query, top_k=top_k * 2, use_mmr=False, lang_filter=lang_filter)
+
+    # Quality check: if vector results all have the same score, they're garbage
+    # (embedding API returned zero vectors → all cosine similarities identical)
+    vector_usable = True
+    if vector_results:
+        scores = [d.get("score", 0) for d in vector_results]
+        if len(scores) >= 2:
+            score_range = max(scores) - min(scores)
+            if score_range < 0.01:
+                logger.warning("Vector results degenerate (all scores ≈ %.3f), using BM25 only", scores[0])
+                vector_usable = False
+
+    if not vector_usable:
+        vector_results = []
 
     # If only one retriever has results, use it directly
     if not bm25_results and not vector_results:

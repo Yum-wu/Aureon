@@ -23,8 +23,8 @@ _EMBED_CACHE_MAX = 500
 
 # ── Local embedding model (lazy-loaded singleton) ──
 _local_embed_model = None
-_LOCAL_MODEL_NAME = "BAAI/bge-small-zh-v1.5"
-_LOCAL_MODEL_DIM = 512
+_LOCAL_MODEL_NAME = "BAAI/bge-m3"
+_LOCAL_MODEL_DIM = 1024
 # Set True if collection was built with API (different dim than local model)
 _skip_local_embed = False
 
@@ -298,89 +298,124 @@ def retrieve_keyword(query: str, top_k: int = 3, lang_filter: str = None) -> Lis
     ]
 
 
-def embed_texts_llm(texts: List[str], batch_size: int = 20) -> Optional[np.ndarray]:
-    """Generate embeddings: local BGE model first, Zhipu API fallback.
+def _embed_api(texts: List[str], provider: str, batch_size: int = 20) -> np.ndarray:
+    """Call a single embedding API provider. Returns (N, dim) array.
 
-    Uses caching to avoid re-embedding identical texts.
+    Raises on failure — caller decides fallback strategy.
+
+    Args:
+        provider: "dashscope" | "siliconflow" | "zhipu"
+    """
+    from app.config import settings
+    import requests
+
+    if provider == "dashscope":
+        url = f"{settings.dashscope_base_url}/embeddings"
+        api_key = settings.dashscope_api_key
+        model = settings.dashscope_model
+        dim = settings.dashscope_dimensions
+    elif provider == "siliconflow":
+        url = f"{settings.siliconflow_base_url}/embeddings"
+        api_key = settings.siliconflow_api_key
+        model = settings.siliconflow_model
+        dim = None  # model-determined
+    elif provider == "zhipu":
+        url = f"{settings.embedding_base_url}/embeddings"
+        api_key = settings.embedding_api_key or settings.llm_api_key
+        model = settings.embedding_model or "embedding-2"
+        dim = None
+    else:
+        raise ValueError(f"Unknown provider: {provider}")
+
+    if not api_key:
+        raise RuntimeError(f"{provider}: API key not configured")
+
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    all_embeddings = []
+
+    for start in range(0, len(texts), batch_size):
+        batch = texts[start:start + batch_size]
+        payload = {"model": model, "input": batch}
+        if dim and dim != 1024:
+            payload["dimensions"] = dim
+            payload["encoding_format"] = "float"  # DashScope needs this for non-default dimensions in batch
+        resp = requests.post(url, headers=headers, json=payload, timeout=60)
+        resp.raise_for_status()
+        data = resp.json()
+        batch_embs = [d["embedding"] for d in sorted(data["data"], key=lambda x: x["index"])]
+        all_embeddings.extend(batch_embs)
+
+    result = np.array(all_embeddings, dtype=np.float32)
+
+    # Validate: reject zero vectors (broken API response)
+    norms = np.linalg.norm(result, axis=1)
+    zero_ratio = np.sum(norms < 1e-6) / len(norms)
+    if zero_ratio > 0.5:
+        raise RuntimeError(f"{provider}: {zero_ratio:.0%} zero vectors — API returning garbage")
+
+    logger.info("Embedding via %s: %d texts, dim=%d", provider, len(texts), result.shape[1])
+    return result
+
+
+def embed_texts_llm(texts: List[str], batch_size: int = 20) -> np.ndarray:
+    """Multi-provider embedding with fallback chain.
+
+    Priority: local BGE (512d) → DashScope (512d) → SiliconFlow → Zhipu.
+    Raises if ALL providers fail. Never returns zero vectors.
     """
     from app.config import settings
 
-    # 1. Check cache for each text
+    # 1. Check cache
     uncached: List[tuple[int, str]] = []
     result = [None] * len(texts)
-
     for i, t in enumerate(texts):
         key = _cache_key(t)
         if key in _embed_cache:
             result[i] = _embed_cache[key]
         else:
             uncached.append((i, t))
-
     if not uncached:
         return np.array(result, dtype=np.float32)
 
-    # 2. Try local model first (skip if collection uses different dimensions)
     uncached_texts = [t for _, t in uncached]
+
+    # 2. Try local BGE model (skip if collection uses different dimensions)
+    embeddings = None
     if not _skip_local_embed:
-        local_embs = _embed_local(uncached_texts)
-    else:
-        local_embs = None
-    if local_embs is not None:
-        # Fill results + cache
-        for (idx, text), emb in zip(uncached, local_embs):
-            result[idx] = emb
-            _embed_cache[_cache_key(text)] = emb
-        return np.array(result, dtype=np.float32)
+        embeddings = _embed_local(uncached_texts)
 
-    # 3. Fall back to Zhipu embedding API
-    api_key = settings.embedding_api_key or settings.llm_api_key
-    base_url = settings.embedding_base_url or settings.llm_base_url
+    # 3. API fallback chain
+    if embeddings is None:
+        providers = []
+        if settings.dashscope_api_key:
+            providers.append("dashscope")
+        if settings.siliconflow_api_key:
+            providers.append("siliconflow")
+        if settings.embedding_api_key or settings.llm_api_key:
+            providers.append("zhipu")
 
-    if not api_key:
-        raise RuntimeError(
-            "No embedding API key configured and local model unavailable. "
-            "Set EMBEDDING_API_KEY or LLM_API_KEY in .env"
-        )
-
-    import requests
-
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
-
-    all_embeddings = []
-
-    for start in range(0, len(uncached_texts), batch_size):
-        batch = uncached_texts[start:start + batch_size]
-        payload = {
-            "model": "embedding-2",
-            "input": batch,
-        }
-        try:
-            resp = requests.post(
-                f"{base_url}/embeddings",
-                headers=headers,
-                json=payload,
-                timeout=60,
+        if not providers:
+            raise RuntimeError(
+                "No embedding provider available. Local model failed and no API keys configured. "
+                "Set DASHSCOPE_API_KEY or EMBEDDING_API_KEY in .env"
             )
-            resp.raise_for_status()
-            data = resp.json()
-            batch_embs = [d["embedding"] for d in sorted(data["data"], key=lambda x: x["index"])]
-            all_embeddings.extend(batch_embs)
-        except Exception as e:
-            logger.warning("Embedding API error (batch %d): %s", start, e)
-            # Fill failed batch with zeros
-            dim = _LOCAL_MODEL_DIM if _get_local_model() else 768
-            for _ in batch:
-                all_embeddings.append([0.0] * dim)
 
-    # Fill results + update cache
-    for (idx, text), emb in zip(uncached, all_embeddings):
-        arr = np.array(emb, dtype=np.float32)
-        result[idx] = arr
-        key = _cache_key(text)
-        _embed_cache[key] = arr
+        last_error = None
+        for p in providers:
+            try:
+                embeddings = _embed_api(uncached_texts, p, batch_size)
+                break
+            except Exception as e:
+                logger.warning("Embedding provider %s failed: %s", p, e)
+                last_error = e
+
+        if embeddings is None:
+            raise RuntimeError(f"All embedding providers failed. Last error: {last_error}")
+
+    # 4. Fill results + update cache
+    for (idx, text), emb in zip(uncached, embeddings):
+        result[idx] = emb
+        _embed_cache[_cache_key(text)] = emb
 
     # Evict if over limit
     if len(_embed_cache) > _EMBED_CACHE_MAX:
@@ -393,17 +428,18 @@ def embed_texts_llm(texts: List[str], batch_size: int = 20) -> Optional[np.ndarr
 # ── Chroma embedding function wrapper ──
 
 class ZhipuEmbeddingFn(EmbeddingFunction):
-    """ChromaDB-compatible embedding function wrapping Zhipu AI API."""
+    """ChromaDB-compatible embedding function with multi-provider fallback.
+
+    Tries: local BGE → DashScope → SiliconFlow → Zhipu API.
+    Raises on complete failure instead of returning zero vectors.
+    """
 
     def name(self) -> str:
-        return "zhipu"
+        return "multi-embed"
 
     def __call__(self, input):
         texts = input if isinstance(input, list) else [input]
         embeddings = embed_texts_llm(texts)
-        if embeddings is None:
-            dim = 768
-            return [[0.0] * dim] * len(texts)
         return embeddings.tolist()
 
     def embed_query(self, input):

@@ -22,7 +22,7 @@ _MEM_TTL = 3600  # 1 hour, same as Redis TTL
 
 
 # Bump to invalidate all cached RAG responses (e.g. after retrieval logic changes)
-_CACHE_VERSION = "v12"  # v12: reindexed with correct 512-dim embeddings
+_CACHE_VERSION = "v13"  # v13: multi-provider embedding, no zero-vector fallback
 
 
 def _mem_cache_key(key: str) -> str:

@@ -390,9 +390,19 @@ async def rag_experiment_endpoint():
 @router.get("/api/rag/health")
 async def rag_health():
     """RAG system health + live service status."""
-    from app.rag.vector_store import get_bm25_stats
+    from app.rag.vector_store import get_bm25_stats, _skip_local_embed
 
     bm25 = get_bm25_stats()
+
+    # Embedding provider chain status
+    embed_providers = ["local-bge-m3-1024d"]
+    if settings.dashscope_api_key:
+        embed_providers.append("dashscope-1024d")
+    if settings.siliconflow_api_key:
+        embed_providers.append("siliconflow")
+    if settings.embedding_api_key or settings.llm_api_key:
+        embed_providers.append("zhipu-1024d")
+
     return {
         "status": "ok",
         "llm_configured": bool(settings.llm_api_key),
@@ -409,7 +419,8 @@ async def rag_health():
         "bm25_min_idf": bm25.get("min_idf_threshold", 0),
         "bm25_min_raw": bm25.get("min_raw_score", 0),
         "bm25_idf_samples": bm25.get("sample_idf", {}),
-        "sync_retrieval": "Chroma dense (BGE local embedding)",
+        "embedding_providers": embed_providers,
+        "skip_local_embed": _skip_local_embed,
         "hybrid_search_enabled": True,
         "guardrails_enabled": True,
         "langsmith_enabled": bool(

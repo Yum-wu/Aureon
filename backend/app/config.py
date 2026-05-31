@@ -14,9 +14,23 @@ class Settings(BaseSettings):
     fallback_model: str = "GLM-4-Flash-250414"
     fallback_base_url: str = "https://open.bigmodel.cn/api/paas/v4/"
 
-    # Embedding API (Zhipu AI — DeepSeek does not provide embeddings)
+    # Embedding API — multi-provider fallback chain
+    # Priority: local BGE (512d) → DashScope → SiliconFlow → Zhipu
     embedding_api_key: str = ""
     embedding_base_url: str = "https://open.bigmodel.cn/api/paas/v4/"
+    embedding_model: str = "embedding-2"
+    embedding_dimensions: int = 1024  # only used by APIs that support dimension control
+
+    # DashScope (通义千问) — primary API fallback, supports 512d
+    dashscope_api_key: str = ""
+    dashscope_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    dashscope_model: str = "text-embedding-v3"
+    dashscope_dimensions: int = 1024
+
+    # SiliconFlow — secondary API fallback, hosts BGE models
+    siliconflow_api_key: str = ""
+    siliconflow_base_url: str = "https://api.siliconflow.cn/v1"
+    siliconflow_model: str = "BAAI/bge-small-zh-v1.5"
 
     tavily_api_key: str = ""
 
