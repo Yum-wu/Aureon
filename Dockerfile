@@ -1,5 +1,6 @@
 # ── Stage 1：构建前端 ──
-ARG BUILD_VERSION=1
+# Bump this value to force Railway to rebuild without cache
+ARG BUILD_VERSION=2
 FROM node:22-alpine AS frontend-builder
 
 WORKDIR /app
