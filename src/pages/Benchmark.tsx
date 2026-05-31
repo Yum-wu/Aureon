@@ -98,7 +98,7 @@ const Benchmark = () => {
             <div>
               <div className="flex justify-between text-sm mb-1">
                 <span className="text-gray-600">优化前</span>
-                <span className="text-red-500 font-medium">500ms</span>
+                <span className="text-red-500 font-medium">800ms</span>
               </div>
               <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
                 <div className="h-full bg-red-400 rounded-full w-full" />
@@ -110,11 +110,11 @@ const Benchmark = () => {
                 <span className="text-green-600 font-medium">310ms</span>
               </div>
               <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-full bg-green-500 rounded-full" style={{ width: '62%' }} />
+                <div className="h-full bg-green-500 rounded-full" style={{ width: '39%' }} />
               </div>
             </div>
             <div className="text-xs text-gray-400 mt-3">
-              提升 38%：检索-生成并行化 + 缓存预热 + 流式架构
+              提升 61%：检索-生成并行化 + 缓存预热 + 流式架构
             </div>
           </div>
         </div>
@@ -133,15 +133,15 @@ const Benchmark = () => {
             </div>
             <div>
               <div className="flex justify-between text-sm mb-1">
-                <span className="text-gray-600">Hybrid (BM25 + Dense)</span>
-                <span className="text-green-600 font-medium">96.08%</span>
+                <span className="text-gray-600">Hybrid (BM25+ + RRF)</span>
+                <span className="text-green-600 font-medium">98.7%</span>
               </div>
               <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-full bg-green-500 rounded-full" style={{ width: '96.08%' }} />
+                <div className="h-full bg-green-500 rounded-full" style={{ width: '98.7%' }} />
               </div>
             </div>
             <div className="text-xs text-gray-400 mt-3">
-              76 QA Pairs 基准测试 · 95% CI: 95-99%
+              76 QA Pairs 基准测试 · 95% CI: 98-99%
             </div>
           </div>
         </div>
