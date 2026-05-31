@@ -1,4 +1,5 @@
 # ── Stage 1：构建前端 ──
+ARG BUILD_VERSION=1
 FROM node:22-alpine AS frontend-builder
 
 WORKDIR /app
@@ -13,6 +14,7 @@ ENV VITE_CREW_API_URL=/api/crew
 RUN npm run build
 
 # ── Stage 2：后端 + nginx ──
+ARG BUILD_VERSION=1
 FROM python:3.12-slim
 
 WORKDIR /app
