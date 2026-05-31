@@ -395,9 +395,9 @@ async def rag_health():
     bm25 = get_bm25_stats()
 
     # Embedding provider chain status
-    embed_providers = ["local-bge-m3-1024d"]
+    embed_providers = ["local-bge-small-512d"]
     if settings.dashscope_api_key:
-        embed_providers.append("dashscope-1024d")
+        embed_providers.append("dashscope-512d")
     if settings.siliconflow_api_key:
         embed_providers.append("siliconflow")
     if settings.embedding_api_key or settings.llm_api_key:

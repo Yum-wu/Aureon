@@ -23,8 +23,8 @@ _EMBED_CACHE_MAX = 500
 
 # ── Local embedding model (lazy-loaded singleton) ──
 _local_embed_model = None
-_LOCAL_MODEL_NAME = "BAAI/bge-m3"
-_LOCAL_MODEL_DIM = 1024
+_LOCAL_MODEL_NAME = "BAAI/bge-small-zh-v1.5"
+_LOCAL_MODEL_DIM = 512
 # Set True if collection was built with API (different dim than local model)
 _skip_local_embed = False
 
@@ -338,7 +338,7 @@ def _embed_api(texts: List[str], provider: str, batch_size: int = 20) -> np.ndar
         payload = {"model": model, "input": batch}
         if dim and dim != 1024:
             payload["dimensions"] = dim
-            payload["encoding_format"] = "float"  # DashScope needs this for non-default dimensions in batch
+            payload["encoding_format"] = "float"  # DashScope needs this for non-default dimensions
         resp = requests.post(url, headers=headers, json=payload, timeout=60)
         resp.raise_for_status()
         data = resp.json()
