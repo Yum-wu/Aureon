@@ -25,6 +25,8 @@ _EMBED_CACHE_MAX = 500
 _local_embed_model = None
 _LOCAL_MODEL_NAME = "BAAI/bge-small-zh-v1.5"
 _LOCAL_MODEL_DIM = 512
+# Set True if collection was built with API (different dim than local model)
+_skip_local_embed = False
 
 
 def _cache_key(text: str) -> str:
@@ -317,9 +319,12 @@ def embed_texts_llm(texts: List[str], batch_size: int = 20) -> Optional[np.ndarr
     if not uncached:
         return np.array(result, dtype=np.float32)
 
-    # 2. Try local model first
+    # 2. Try local model first (skip if collection uses different dimensions)
     uncached_texts = [t for _, t in uncached]
-    local_embs = _embed_local(uncached_texts)
+    if not _skip_local_embed:
+        local_embs = _embed_local(uncached_texts)
+    else:
+        local_embs = None
     if local_embs is not None:
         # Fill results + cache
         for (idx, text), emb in zip(uncached, local_embs):
@@ -555,8 +560,25 @@ def retrieve(query: str, top_k: int = 3, use_mmr: bool = True, lang_filter: str 
             where=where_filter,
         )
     except Exception as e:
-        logger.warning("Query error: %s", e)
-        return []
+        # Auto-detect dimension mismatch: skip local model and retry
+        global _skip_local_embed
+        if "dimension" in str(e).lower() and not _skip_local_embed:
+            logger.warning("Embedding dimension mismatch, switching to API embeddings")
+            _skip_local_embed = True
+            _embed_cache.clear()  # clear cached wrong-dimension embeddings
+            try:
+                results = collection.query(
+                    query_texts=[query],
+                    n_results=fetch_k,
+                    include=["documents", "metadatas", "distances"],
+                    where=where_filter,
+                )
+            except Exception as e2:
+                logger.warning("Query error after retry: %s", e2)
+                return []
+        else:
+            logger.warning("Query error: %s", e)
+            return []
 
     if not results["ids"] or not results["ids"][0]:
         return []
