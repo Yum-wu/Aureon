@@ -18,12 +18,12 @@ TEST_QA_PAIRS = [
     {"id": "hermes-007", "question": "短期记忆、中层存储和长期持久化分别负责什么？", "answer": "短期记忆保留最近对话，中层存储任务状态，长期持久化用户偏好", "source_article": "hermes-agent-practical-guide"},
     # ── SPA GitHub Pages (8 pairs) ──
     {"id": "spa-001", "question": "把 React SPA 部署到 GitHub Pages 经历了哪三阶段崩溃？", "answer": "404 → 白屏 → 路由 404", "source_article": "spa-github-pages"},
-    {"id": "spa-002", "question": "文章中列出了多少个部署问题？分别是什么？", "answer": "7 个部署问题", "source_article": "spa-github-pages"},
+    {"id": "spa-002", "question": "GitHub Pages 部署 SPA 列出了多少个部署问题？", "answer": "7 个部署问题", "source_article": "spa-github-pages"},
     {"id": "spa-003", "question": "SPA 路由回退的解决方案是什么？", "answer": "复制 index.html 为 404.html", "source_article": "spa-github-pages"},
     {"id": "spa-004", "question": "Vite 配置中需要设置什么参数？", "answer": "设置 base 为部署子路径", "source_article": "spa-github-pages"},
     {"id": "spa-005", "question": "React Router 中需要设置什么参数？", "answer": "设置 BrowserRouter 的 basename", "source_article": "spa-github-pages"},
     {"id": "spa-006", "question": "base 和 basename 各自控制什么？", "answer": "base 控制静态资源路径，basename 控制前端路由路径", "source_article": "spa-github-pages"},
-    {"id": "spa-007", "question": "自检清单包含哪些检查项？", "answer": "Network 面板、Console 面板、Elements 面板、路由测试、CI 日志", "source_article": "spa-github-pages"},
+    {"id": "spa-007", "question": "SPA 部署到 GitHub Pages 的自检清单包含哪些检查项？", "answer": "Network 面板、Console 面板、Elements 面板、路由测试、CI 日志", "source_article": "spa-github-pages"},
     {"id": "spa-008", "question": "构建阶段出现的两个问题是什么？", "answer": "构建产物被 gitignore 和 Node.js 版本太低", "source_article": "spa-github-pages"},
     # ── AI Agent Memory System (3 pairs) ──
     {"id": "mem-001", "question": "AI Agent 多层记忆系统有几层？", "answer": "四层：L0 对话记录、L1 原子事实、L2 场景聚合、L3 用户画像", "source_article": "agent-memory-system"},
@@ -81,6 +81,34 @@ TEST_QA_PAIRS = [
     {"id": "aw-002", "question": "AI 写作助手支持哪些写作模式？", "answer": "多种写作模式，支持文本优化和历史记录", "source_article": "ai-writing-assistant"},
     # ── Cross-article reasoning (1 pair) ──
     {"id": "cross-001", "question": "两篇文章的共同点是什么？", "answer": "都是技术实战经验分享，包含具体数据或问题清单", "source_article": "both"},
+    # ── LangChain Framework Guide (3 pairs) ──
+    {"id": "lc-001", "question": "LangChain v0.2+ 推荐的链式编排语法是什么？", "answer": "LCEL（LangChain Expression Language），使用管道操作符连接各组件", "source_article": "langchain-framework-guide"},
+    {"id": "lc-002", "question": "create_tool_calling_agent 和 create_react_agent 的主要区别是什么？", "answer": "前者依赖模型原生 function calling，后者使用 ReAct prompt 模式", "source_article": "langchain-framework-guide"},
+    {"id": "lc-003", "question": "LangGraph 相比 LangChain 的核心优势是什么？", "answer": "有状态 Agent 编排，基于有向图的状态机，支持循环和条件分支", "source_article": "langchain-framework-guide"},
+    # ── LlamaIndex RAG Guide (3 pairs) ──
+    {"id": "li-001", "question": "LlamaIndex 的 RAG Pipeline 分为哪三个核心阶段？", "answer": "Loading、Indexing、Querying", "source_article": "llamaindex-rag-guide"},
+    {"id": "li-002", "question": "LlamaIndex Response Synthesizer 的 compact 模式是什么？", "answer": "将多个文档压缩后一次性送入 LLM，性价比最高", "source_article": "llamaindex-rag-guide"},
+    {"id": "li-003", "question": "QueryFusionRetriever 的默认 BM25 和向量权重各是多少？", "answer": "BM25 0.4，向量 0.6", "source_article": "llamaindex-rag-guide"},
+    # ── RAG Concepts Deep Dive (3 pairs) ──
+    {"id": "ragc-001", "question": "RAG 和 Fine-tuning 各自最适合什么场景？", "answer": "RAG 适合知识密集型问答，Fine-tuning 适合调整输出风格", "source_article": "rag-concepts-deep-dive"},
+    {"id": "ragc-002", "question": "RRF 的公式是什么，k 通常取多少？", "answer": "score = Σ 1/(k + rank_i)，k 通常取 60", "source_article": "rag-concepts-deep-dive"},
+    {"id": "ragc-003", "question": "Parent-Child 切分策略的核心思路是什么？", "answer": "小块检索精确匹配，大块作为上下文返回 LLM", "source_article": "rag-concepts-deep-dive"},
+    # ── Vector Database Guide (3 pairs) ──
+    {"id": "vdb-001", "question": "HNSW 索引算法的核心结构是什么？", "answer": "多层图结构，底层所有向量，上层稀疏高速公路", "source_article": "vector-database-guide"},
+    {"id": "vdb-002", "question": "ChromaDB 默认使用什么索引算法？", "answer": "HNSW，适合 100 万以下向量", "source_article": "vector-database-guide"},
+    {"id": "vdb-003", "question": "已有 PostgreSQL 时推荐哪个向量数据库？", "answer": "pgvector，PostgreSQL 扩展", "source_article": "vector-database-guide"},
+    # ── Embedding Models Guide (3 pairs) ──
+    {"id": "emb-001", "question": "BGE 模型相比 OpenAI Embedding 的优势是什么？", "answer": "本地部署、零费用、中文优秀、支持 instruction", "source_article": "embedding-models-guide"},
+    {"id": "emb-002", "question": "768 维 vs 1536 维 Embedding 的性能差异？", "answer": "768 维快一倍，精度损失有限时优先低维", "source_article": "embedding-models-guide"},
+    {"id": "emb-003", "question": "BGE 查询编码为什么建议加 instruction 前缀？", "answer": "提升检索精度，区分文档编码和查询编码", "source_article": "embedding-models-guide"},
+    # ── AI Agent Architecture (3 pairs) ──
+    {"id": "agenta-001", "question": "AI Agent 架构中 ReAct 模式的核心循环是什么？", "answer": "Thought → Action → Observation 循环，交替推理和行动", "source_article": "ai-agent-architecture"},
+    {"id": "agenta-002", "question": "Agent 数据库工具为什么默认只读？", "answer": "最小权限原则，防止 Agent 执行写操作", "source_article": "ai-agent-architecture"},
+    {"id": "agenta-003", "question": "多 Agent 主从模式中编排者的职责是什么？", "answer": "将任务分配给合适的专家 Worker", "source_article": "ai-agent-architecture"},
+    # ── Prompt Engineering Guide (3 pairs) ──
+    {"id": "pe-001", "question": "Prompt Engineering 中 Chain-of-Thought 的三种主要变体是什么？", "answer": "Zero-shot CoT、Few-shot CoT、Tree-of-Thought", "source_article": "prompt-engineering-guide"},
+    {"id": "pe-002", "question": "Self-Consistency 技术的工作原理是什么？", "answer": "多次独立推理，投票选择最一致的答案", "source_article": "prompt-engineering-guide"},
+    {"id": "pe-003", "question": "RAG 场景中 Prompt 设计的关键规则有哪些？", "answer": "只基于参考回答、无信息时说明不知道、标注来源、不编造", "source_article": "prompt-engineering-guide"},
 ]
 
 # For recall evaluation: expected source articles per query
