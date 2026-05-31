@@ -60,19 +60,35 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
 
     # RRF fusion: score each doc by 1/(k + rank) from each retriever
     # BM25 gets 10% bonus — keyword matches are more precise for entity/topic queries
+    # Deduplicate chunks by slug BEFORE ranking — same article should count once per retriever
     rrf_scores: Dict[str, float] = {}
     doc_map: Dict[str, Dict] = {}
 
     def _doc_key(doc: Dict) -> str:
-        """Unique key for deduplication."""
+        """Unique key for deduplication — uses slug (article ID)."""
         return doc.get("metadata", {}).get("slug", "") or doc.get("text", "")[:50]
 
-    for rank, doc in enumerate(bm25_results, 1):
+    # Dedup by slug within each retriever: keep best rank per source
+    def _dedup_by_source(results: List[Dict]) -> List[Dict]:
+        seen: Dict[str, int] = {}
+        deduped = []
+        for rank, doc in enumerate(results, 1):
+            key = _doc_key(doc)
+            if key not in seen:
+                seen[key] = rank
+                deduped.append(doc)
+            # else: already have a better-ranked chunk from this source
+        return deduped
+
+    bm25_deduped = _dedup_by_source(bm25_results)
+    vector_deduped = _dedup_by_source(vector_results)
+
+    for rank, doc in enumerate(bm25_deduped, 1):
         key = _doc_key(doc)
         rrf_scores[key] = rrf_scores.get(key, 0) + 1.0 / (_RRF_K + rank) * 1.1
         doc_map[key] = doc
 
-    for rank, doc in enumerate(vector_results, 1):
+    for rank, doc in enumerate(vector_deduped, 1):
         key = _doc_key(doc)
         rrf_scores[key] = rrf_scores.get(key, 0) + 1.0 / (_RRF_K + rank)
         if key not in doc_map:
