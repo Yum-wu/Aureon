@@ -99,8 +99,8 @@ const Admin = () => {
             <div className="flex items-center justify-between mb-4 md:mb-6">
               <h3 className="font-semibold text-gray-900">{t('admin.workspaces.title')}</h3>
               <button className="px-3 md:px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
-                <span className="hidden sm:inline">{t('admin.workspaces.new_button')}</span>
-                <span className="sm:hidden">{t('admin.workspaces.new_button')}</span>
+                <span className="hidden sm:inline">{t('admin.workspaces.new_button', 'New Workspace')}</span>
+                <span className="sm:hidden">{t('admin.workspaces.new_button', 'New')}</span>
               </button>
             </div>
 
@@ -165,8 +165,8 @@ const Admin = () => {
             <div className="flex items-center justify-between mb-4 md:mb-6">
               <h3 className="font-semibold text-gray-900">{t('admin.users.title')}</h3>
               <button className="px-3 md:px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
-                <span className="hidden sm:inline">{t('admin.users.invite_button')}</span>
-                <span className="sm:hidden">{t('admin.users.invite_button')}</span>
+                <span className="hidden sm:inline">{t('admin.users.invite_button', 'Invite User')}</span>
+                <span className="sm:hidden">{t('admin.users.invite_button', 'Invite')}</span>
               </button>
             </div>
 
