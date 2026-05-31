@@ -1,6 +1,4 @@
 # ── Stage 1：构建前端 ──
-# Force rebuild on Railway: change this timestamp to bust BuildKit cache
-ARG CACHE_BUST=20260531
 FROM node:22-alpine AS frontend-builder
 
 WORKDIR /app
@@ -15,7 +13,6 @@ ENV VITE_CREW_API_URL=/api/crew
 RUN npm run build
 
 # ── Stage 2：后端 + nginx ──
-ARG BUILD_VERSION=1
 FROM python:3.12-slim
 
 WORKDIR /app
@@ -30,7 +27,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && ln -sf /dev/stderr /var/log/nginx/error.log
 
 # Python 依赖（BuildKit cache mount 加速重建）
-RUN --mount=type=cache,target=/root/.cache/pip \
+RUN --mount=type=cache,target=/root/.cache/pip,id=pip-cache \
     pip install -r requirements.txt
 
 # 预下载 BGE-small-zh embedding 模型（~130MB，消除冷启动延迟）
