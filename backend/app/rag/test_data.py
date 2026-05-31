@@ -113,7 +113,7 @@ TEST_QA_PAIRS = [
     {"id": "cross-zh-001", "question": "比较 LangChain 和 LlamaIndex 的 RAG 实现有什么不同？", "answer": "LangChain 使用 LCEL 链式编排，LlamaIndex 使用 Pipeline 三阶段架构", "source_article": "langchain-framework-guide"},
     {"id": "cross-zh-002", "question": "Hermes Agent 和 AI Agent Architecture 有什么共同点？", "answer": "都涉及 ReAct 模式、工具调用、分层架构", "source_article": "hermes-agent-practical-guide"},
     {"id": "cross-zh-003", "question": "向量数据库和 Embedding 模型的关系是什么？", "answer": "Embedding 模型生成向量，向量数据库存储和检索向量", "source_article": "vector-database-guide"},
-    {"id": "cross-en-001", "question": "compare the deployment approaches of Railway and GitHub Pages", "answer": "Railway uses Docker multi-stage build, GitHub Pages uses static SPA with router fallback", "source_article": "chatbot-railway-deployment"},
+    {"id": "cross-en-001", "question": "compare the deployment approaches of Railway and GitHub Pages", "answer": "Railway uses Docker multi-stage build, GitHub Pages uses static SPA with router fallback", "source_article": "spa-github-pages"},
     {"id": "cross-en-002", "question": "what are the similarities between React.memo and useMemo", "answer": "Both optimize performance by avoiding unnecessary re-computation, memo caches render output while useMemo caches computation", "source_article": "react-performance-tips"},
     {"id": "cross-en-003", "question": "differences between BM25 and vector search in RAG systems", "answer": "BM25 uses keyword matching with TF-IDF scoring, vector search uses semantic similarity via embeddings", "source_article": "rag-concepts-deep-dive"},
 ]
