@@ -5,17 +5,6 @@ import { QueryVolumeChart } from '../components/dashboard/QueryVolumeChart';
 import { RecentQueries } from '../components/dashboard/RecentQueries';
 import { Card } from '../components/ui/Card';
 
-// QueryVolumeChart still uses mock data (no volume endpoint yet)
-const queryVolume = [
-  { date: '2026-05-23', count: 45 },
-  { date: '2026-05-24', count: 52 },
-  { date: '2026-05-25', count: 38 },
-  { date: '2026-05-26', count: 61 },
-  { date: '2026-05-27', count: 55 },
-  { date: '2026-05-28', count: 48 },
-  { date: '2026-05-29', count: 67 },
-];
-
 function LoadingSkeleton() {
   return (
     <div data-testid="dashboard-loading" className="space-y-8">
@@ -53,7 +42,7 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
 
 export function Dashboard() {
   const { t } = useTranslation();
-  const { stats, recentQueries, loading, error, refetch } = useDashboardStats();
+  const { stats, recentQueries, queryVolume, loading, error, refetch } = useDashboardStats();
 
   const metrics = stats
     ? [

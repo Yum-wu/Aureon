@@ -4,6 +4,7 @@ import type { StatsResponse, RecentQuery } from "../types/dashboard";
 interface DashboardData {
   stats: StatsResponse | null;
   recentQueries: RecentQuery[];
+  queryVolume: { date: string; count: number }[];
   loading: boolean;
   error: string | null;
   refetch: () => void;
@@ -11,12 +12,14 @@ interface DashboardData {
 
 const STATS_URL = "/api/rag/stats";
 const RECENT_URL = "/api/rag/queries/recent?limit=5";
+const VOLUME_URL = "/api/rag/query-volume?days=7";
 const BASE_INTERVAL = 30_000;
 const MAX_INTERVAL = 300_000;
 
 export function useDashboardStats(): DashboardData {
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [recentQueries, setRecentQueries] = useState<RecentQuery[]>([]);
+  const [queryVolume, setQueryVolume] = useState<{ date: string; count: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const retryCountRef = useRef(0);
@@ -32,9 +35,10 @@ export function useDashboardStats(): DashboardData {
 
     async function fetchAll() {
       try {
-        const [statsRes, recentRes] = await Promise.all([
+        const [statsRes, recentRes, volumeRes] = await Promise.all([
           fetch(STATS_URL),
           fetch(RECENT_URL),
+          fetch(VOLUME_URL),
         ]);
 
         if (!statsRes.ok) {
@@ -51,10 +55,12 @@ export function useDashboardStats(): DashboardData {
 
         const statsData: StatsResponse = await statsRes.json();
         const recentData = await recentRes.json();
+        const volumeData = volumeRes.ok ? await volumeRes.json() : { data: [] };
 
         if (!cancelled) {
           setStats(statsData);
           setRecentQueries(recentData.queries ?? []);
+          setQueryVolume(volumeData.data ?? []);
           setError(null);
           retryCountRef.current = 0;
         }
@@ -83,5 +89,5 @@ export function useDashboardStats(): DashboardData {
     };
   }, [trigger]);
 
-  return { stats, recentQueries, loading, error, refetch };
+  return { stats, recentQueries, queryVolume, loading, error, refetch };
 }

@@ -326,6 +326,59 @@ async def get_benchmark():
         raise AureonException(status_code=500, error_type="benchmark_read_error", detail=str(e))
 
 
+# ── Query Volume API ──
+
+
+@router.get("/api/rag/query-volume")
+async def get_query_volume(days: int = 7):
+    """Get daily query counts for the last N days."""
+    redis = get_redis_or_none()
+
+    if not redis:
+        # In-memory fallback: generate mock data for demo
+        from datetime import timedelta
+        now = datetime.now(timezone.utc)
+        data = []
+        for i in range(days - 1, -1, -1):
+            date = now - timedelta(days=i)
+            data.append({
+                "date": date.strftime("%Y-%m-%d"),
+                "count": 0
+            })
+        return {"data": data, "total": 0}
+
+    try:
+        from datetime import timedelta
+        now = datetime.now(timezone.utc)
+        daily_counts = {}
+
+        # Aggregate hourly counts into daily counts
+        for i in range(days):
+            date = now - timedelta(days=i)
+            date_key = date.strftime("%Y-%m-%d")
+            daily_counts[date_key] = 0
+
+            # Sum all hourly keys for this date
+            for hour in range(24):
+                hour_key = f"{date_key}-{hour:02d}"
+                count = await redis.get(f"{STATS_PREFIX}:hourly:{hour_key}")
+                if count:
+                    daily_counts[date_key] += int(count)
+
+        # Convert to list sorted by date ascending
+        data = [
+            {"date": date_key, "count": daily_counts[date_key]}
+            for date_key in sorted(daily_counts.keys())
+        ]
+
+        total = sum(d["count"] for d in data)
+        return {"data": data, "total": total}
+
+    except Exception as e:
+        logger.error("Error fetching query volume: %s", e)
+        return {"data": [], "total": 0}
+
+
 # ── Blog Sync API ──
 
 class BlogConfig(BaseModel):
