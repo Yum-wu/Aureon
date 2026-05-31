@@ -1,4 +1,5 @@
 import { Card } from '../ui/Card';
+import { useBenchmark } from '../../hooks/useBenchmark';
 
 interface PipelineStep {
   id: string;
@@ -7,7 +8,7 @@ interface PipelineStep {
   latency: string;
 }
 
-const pipelineSteps: PipelineStep[] = [
+const defaultSteps: PipelineStep[] = [
   { id: 'query', label: 'User Query', description: 'Natural language input', latency: '0ms' },
   { id: 'intent', label: 'Intent Classifier', description: 'Route to appropriate handler', latency: '<1ms' },
   { id: 'retrieval', label: 'Hybrid Retrieval', description: 'BM25+ + RRF + Parent-Child', latency: '26ms' },
@@ -19,6 +20,21 @@ const pipelineSteps: PipelineStep[] = [
 ];
 
 export function ArchitectureFlow() {
+  const { data: benchmark } = useBenchmark();
+
+  // Use benchmark data if available, otherwise use defaults
+  const pipelineSteps = benchmark?.services
+    ? [
+        { id: 'query', label: 'User Query', description: 'Natural language input', latency: '0ms' },
+        { id: 'intent', label: 'Intent Classifier', description: 'Route to appropriate handler', latency: '<1ms' },
+        { id: 'retrieval', label: 'Hybrid Retrieval', description: benchmark.services.hybrid_search || 'BM25+ + RRF', latency: '26ms' },
+        { id: 'mmr', label: 'MMR Re-ranking', description: 'Maximal Marginal Relevance', latency: '3ms' },
+        { id: 'prompt', label: 'Prompt Assembly', description: 'Context + query formatting', latency: '2ms' },
+        { id: 'llm', label: 'LLM Generation', description: `Streaming (${benchmark.services.llm || 'LLM'})`, latency: '300ms' },
+        { id: 'citation', label: 'Citation Injection', description: benchmark.services.guardrails || 'Source mapping', latency: '5ms' },
+        { id: 'sse', label: 'SSE Streaming', description: benchmark.services.streaming || 'Real-time token delivery', latency: '5ms' },
+      ]
+    : defaultSteps;
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
