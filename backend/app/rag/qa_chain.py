@@ -9,6 +9,7 @@ import os
 from typing import List, Dict, Any, Optional
 
 from app.rag.vector_store import retrieve, retrieve_keyword, format_context, save_index, embed_texts_llm, load_index, rerank
+from app.rag.query_rewriter import is_cross_article_query, expand_queries_rules
 from app.rag.models import RAGQueryResponse, SourceItem
 from app.utils.lang_detect import detect_language, lang_instruction
 
@@ -18,6 +19,7 @@ import structlog
 logger = structlog.get_logger()
 
 _RRF_K = 60  # RRF constant (standard value from literature)
+MULTI_QUERY_ENABLED = os.getenv("MULTI_QUERY_ENABLED", "true").lower() == "true"
 
 
 def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List[Dict[str, Any]]:
@@ -111,6 +113,92 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
 
     # Diversity selection: prefer unique articles (slugs) to maximize coverage
     # Especially useful for cross-article queries like "两篇文章的共同点"
+    selected = []
+    seen_slugs = set()
+    # Pass 1: best chunk per unique article
+    for doc in candidates:
+        slug = doc.get("metadata", {}).get("slug", "")
+        if slug not in seen_slugs:
+            seen_slugs.add(slug)
+            selected.append(doc)
+            if len(selected) >= top_k:
+                break
+    # Pass 2: fill remaining with best scores from duplicates
+    if len(selected) < top_k:
+        for doc in candidates:
+            if doc not in selected:
+                selected.append(doc)
+                if len(selected) >= top_k:
+                    break
+
+    return selected
+
+
+def multi_query_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List[Dict[str, Any]]:
+    """Multi-query retrieval for cross-article queries.
+
+    Detects cross-article queries (comparisons, contrasts, etc.) and expands
+    them into multiple focused sub-queries. Each variant is retrieved independently
+    and results are fused via RRF, with diversity selection to maximize coverage.
+
+    For simple single-article queries, this delegates directly to hybrid_retrieve
+    with zero overhead.
+
+    Args:
+        query: 查询文本
+        top_k: 返回结果数量
+        lang_filter: 语言过滤（"zh" 或 "en"）
+
+    Returns:
+        List of top_k document chunks, deduplicated by slug with diversity
+    """
+    # Fast path: skip expansion for simple queries or when disabled
+    if not MULTI_QUERY_ENABLED or not is_cross_article_query(query):
+        return hybrid_retrieve(query, top_k=top_k, lang_filter=lang_filter)
+
+    # Cross-article path: expand into variants and retrieve each
+    variants = expand_queries_rules(query)
+
+    # Collect all results with their source variant for RRF scoring
+    all_results: List[Dict[str, Any]] = []
+    for variant in variants:
+        variant_results = hybrid_retrieve(variant, top_k=top_k * 2, lang_filter=lang_filter)
+        all_results.append(variant_results)
+
+    # RRF fusion across all variant result lists
+    rrf_scores: Dict[str, float] = {}
+    doc_map: Dict[str, Dict] = {}
+
+    def _doc_key(doc: Dict) -> str:
+        return doc.get("metadata", {}).get("slug", "") or doc.get("text", "")[:50]
+
+    for variant_results in all_results:
+        # Deduplicate within each variant's results by slug
+        seen: Dict[str, int] = {}
+        deduped = []
+        for rank, doc in enumerate(variant_results, 1):
+            key = _doc_key(doc)
+            if key not in seen:
+                seen[key] = rank
+                deduped.append(doc)
+
+        for rank, doc in enumerate(deduped, 1):
+            key = _doc_key(doc)
+            rrf_scores[key] = rrf_scores.get(key, 0) + 1.0 / (_RRF_K + rank)
+            if key not in doc_map:
+                doc_map[key] = doc
+
+    # Sort by RRF score descending
+    ranked = sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)
+
+    # Build candidate list
+    candidates = []
+    for key, score in ranked:
+        doc = doc_map[key].copy()
+        doc["score"] = score
+        candidates.append(doc)
+
+    # Diversity selection: one per unique slug, then fill remaining slots
     selected = []
     seen_slugs = set()
     # Pass 1: best chunk per unique article
