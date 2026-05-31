@@ -26,7 +26,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && ln -sf /dev/stdout /var/log/nginx/access.log \
     && ln -sf /dev/stderr /var/log/nginx/error.log
 
-# Python 依赖
+# Python 依赖（先复制 requirements.txt 加速缓存）
+COPY backend/requirements.txt .
 RUN pip install -r requirements.txt
 
 # 预下载 BGE-small-zh embedding 模型（~130MB，消除冷启动延迟）
