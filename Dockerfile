@@ -1,6 +1,6 @@
 # ── Stage 1：构建前端 ──
-# Bump this value to force Railway to rebuild without cache
-ARG BUILD_VERSION=2
+# Force rebuild on Railway: change this timestamp to bust BuildKit cache
+ARG CACHE_BUST=20260531
 FROM node:22-alpine AS frontend-builder
 
 WORKDIR /app
