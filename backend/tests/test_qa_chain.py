@@ -46,25 +46,23 @@ class TestGenerateAnswer:
 
 
 class TestRagQuery:
-    @patch("app.rag.qa_chain.retrieve_keyword", return_value=[])
-    @patch("app.rag.qa_chain.retrieve", return_value=[])
-    def test_no_chunks_returns_no_result_zh(self, mock_retrieve, mock_kw):
+    @patch("app.rag.qa_chain.hybrid_retrieve", return_value=[])
+    def test_no_chunks_returns_no_result_zh(self, mock_hybrid):
         llm_fn = MagicMock()
         result = rag_query("test", llm_fn, lang="zh")
         assert "暂无" in result.answer
         assert result.sources == []
         llm_fn.assert_not_called()
 
-    @patch("app.rag.qa_chain.retrieve_keyword", return_value=[])
-    @patch("app.rag.qa_chain.retrieve", return_value=[])
-    def test_no_chunks_returns_no_result_en(self, mock_retrieve, mock_kw):
+    @patch("app.rag.qa_chain.hybrid_retrieve", return_value=[])
+    def test_no_chunks_returns_no_result_en(self, mock_hybrid):
         llm_fn = MagicMock()
         result = rag_query("test", llm_fn, lang="en")
         assert "No relevant content" in result.answer
 
-    @patch("app.rag.qa_chain.retrieve")
-    def test_with_chunks(self, mock_retrieve):
-        mock_retrieve.return_value = [
+    @patch("app.rag.qa_chain.hybrid_retrieve")
+    def test_with_chunks(self, mock_hybrid):
+        mock_hybrid.return_value = [
             {"text": "RAG is retrieval augmented generation", "metadata": {"title": "RAG Guide", "slug": "rag"}, "score": 0.9}
         ]
         llm_fn = MagicMock(return_value="RAG is a technique...")
@@ -73,19 +71,18 @@ class TestRagQuery:
         assert len(result.sources) == 1
         assert result.sources[0].title == "RAG Guide"
 
-    @patch("app.rag.qa_chain.retrieve")
-    def test_long_chunk_truncated(self, mock_retrieve):
+    @patch("app.rag.qa_chain.hybrid_retrieve")
+    def test_long_chunk_truncated(self, mock_hybrid):
         long_text = "x" * 300
-        mock_retrieve.return_value = [
+        mock_hybrid.return_value = [
             {"text": long_text, "metadata": {"title": "T", "slug": "s"}, "score": 0.8}
         ]
         llm_fn = MagicMock(return_value="ok")
         result = rag_query("q", llm_fn)
         assert result.sources[0].chunk.endswith("...")
 
-    @patch("app.rag.qa_chain.retrieve_keyword", return_value=[])
-    @patch("app.rag.qa_chain.retrieve", return_value=[])
-    def test_auto_detect_language(self, mock_retrieve, mock_kw):
+    @patch("app.rag.qa_chain.hybrid_retrieve", return_value=[])
+    def test_auto_detect_language(self, mock_hybrid):
         llm_fn = MagicMock()
         rag_query("你好世界", llm_fn)
         # lang=None triggers auto-detect → should be zh
@@ -96,8 +93,8 @@ class TestRagQuery:
 
 class TestRagQueryAstream:
     @pytest.mark.asyncio
-    @patch("app.rag.qa_chain.retrieve_keyword", return_value=[])
-    async def test_no_chunks(self, mock_retrieve):
+    @patch("app.rag.qa_chain.hybrid_retrieve", return_value=[])
+    async def test_no_chunks(self, mock_hybrid):
         events = []
         async for event in rag_query_astream("test", AsyncMock(), lang="en"):
             events.append(event)
@@ -108,9 +105,9 @@ class TestRagQueryAstream:
         assert "No relevant content" in next(e["content"] for e in events if e["type"] == "text")
 
     @pytest.mark.asyncio
-    @patch("app.rag.qa_chain.retrieve_keyword")
-    async def test_with_chunks(self, mock_retrieve):
-        mock_retrieve.return_value = [
+    @patch("app.rag.qa_chain.hybrid_retrieve")
+    async def test_with_chunks(self, mock_hybrid):
+        mock_hybrid.return_value = [
             {"text": "RAG content", "metadata": {"title": "Guide", "slug": "g"}, "score": 0.9}
         ]
 
@@ -134,9 +131,8 @@ class TestRagQueryAstream:
         assert "text" in types
 
     @pytest.mark.asyncio
-    @patch("app.rag.qa_chain.retrieve_keyword")
-    async def test_zh_no_results(self, mock_retrieve):
-        mock_retrieve.return_value = []
+    @patch("app.rag.qa_chain.hybrid_retrieve", return_value=[])
+    async def test_zh_no_results(self, mock_hybrid):
         events = []
         async for event in rag_query_astream("test", AsyncMock(), lang="zh"):
             events.append(event)
@@ -208,9 +204,9 @@ class TestRagQueryWithCache:
     @patch("app.cache.redis_client.get_redis", return_value=None)
     @patch("app.cache.redis_client.set_cached", new_callable=AsyncMock)
     @patch("app.cache.redis_client.get_cached", new_callable=AsyncMock, return_value=None)
-    @patch("app.rag.qa_chain.retrieve")
-    async def test_miss_then_cache_stores_sources(self, mock_retrieve, mock_get_cached, mock_set_cached, mock_redis):
-        mock_retrieve.return_value = [
+    @patch("app.rag.qa_chain.hybrid_retrieve")
+    async def test_miss_then_cache_stores_sources(self, mock_hybrid, mock_get_cached, mock_set_cached, mock_redis):
+        mock_hybrid.return_value = [
             {"text": "RAG content", "metadata": {"title": "Guide", "slug": "g"}, "score": 0.9}
         ]
         llm_fn = MagicMock(return_value="RAG answer")
@@ -230,8 +226,8 @@ class TestRagQueryWithCache:
     @patch("app.cache.redis_client.get_redis", return_value=None)
     @patch("app.cache.redis_client.set_cached", new_callable=AsyncMock)
     @patch("app.cache.redis_client.get_cached", new_callable=AsyncMock)
-    @patch("app.rag.qa_chain.retrieve")
-    async def test_hit_restores_sources(self, mock_retrieve, mock_get_cached, mock_set_cached, mock_redis):
+    @patch("app.rag.qa_chain.hybrid_retrieve")
+    async def test_hit_restores_sources(self, mock_hybrid, mock_get_cached, mock_set_cached, mock_redis):
         import json
         cached_json = json.dumps({
             "answer": "Cached answer",
