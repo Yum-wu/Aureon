@@ -671,6 +671,57 @@ def format_context(chunks: List[Dict[str, Any]]) -> str:
     return "\n\n".join(parts)
 
 
+# ── Cross-Encoder Reranker (lazy-loaded singleton) ──
+_reranker = None
+_RERANKER_MODEL = "BAAI/bge-reranker-base"
+
+
+def _get_reranker():
+    """Lazy-load cross-encoder reranker. Returns None if unavailable."""
+    global _reranker
+    if _reranker is None:
+        try:
+            from sentence_transformers import CrossEncoder
+            _reranker = CrossEncoder(_RERANKER_MODEL)
+            logger.info("Cross-encoder reranker loaded: %s", _RERANKER_MODEL)
+        except Exception as e:
+            logger.warning("Reranker unavailable: %s", e)
+            _reranker = False
+    return _reranker if _reranker is not False else None
+
+
+def rerank(query: str, chunks: List[Dict[str, Any]], top_k: int = 3) -> List[Dict[str, Any]]:
+    """Rerank chunks using cross-encoder. Returns top_k results.
+
+    Cross-encoder jointly encodes query + document for precise relevance scoring.
+    More accurate than bi-encoder cosine similarity but slower (~300-600ms CPU).
+
+    Currently disabled by default — BM25+RRF is sufficient for small collections.
+    Enable by setting RERANK_ENABLED=true in environment.
+    """
+    if not chunks or len(chunks) <= top_k:
+        return chunks
+
+    # Disabled by default — enable via env var for large collections
+    import os
+    if not os.environ.get("RERANK_ENABLED"):
+        return chunks[:top_k]
+
+    model = _get_reranker()
+    if model is None:
+        return chunks[:top_k]
+
+    pairs = [(query, c["text"]) for c in chunks]
+    scores = model.predict(pairs)
+
+    # Attach scores and sort
+    for chunk, score in zip(chunks, scores):
+        chunk["rerank_score"] = float(score)
+
+    reranked = sorted(chunks, key=lambda x: x.get("rerank_score", 0), reverse=True)
+    return reranked[:top_k]
+
+
 def get_bm25_stats() -> dict:
     """Return BM25 index statistics for health endpoint."""
     # Diagnostic: sample IDF values for common terms

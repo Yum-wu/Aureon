@@ -17,6 +17,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN python3 -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-small-zh-v1.5')" \
     || HF_ENDPOINT=https://hf-mirror.com python3 -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-small-zh-v1.5')"
 
+# 预下载 Cross-Encoder reranker 模型（~430MB，中文多语言）
+RUN python3 -c "from sentence_transformers import CrossEncoder; CrossEncoder('BAAI/bge-reranker-base')" \
+    || HF_ENDPOINT=https://hf-mirror.com python3 -c "from sentence_transformers import CrossEncoder; CrossEncoder('BAAI/bge-reranker-base')"
+
 # 复制后端代码
 COPY backend/ .
 
