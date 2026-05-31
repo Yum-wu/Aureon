@@ -12,7 +12,7 @@ Aureon 项目开发指南。
 | 后端 | Python FastAPI + LangChain + LangGraph |
 | 端口 | 前端 5173 / 后端 8000 |
 | 数据库 | SQLite（记忆）+ Chroma（向量库）|
-| AI API | 智谱 AI / OpenAI |
+| AI API | DeepSeek / 智谱 AI / DashScope (embedding) |
 
 ## 构建命令
 
