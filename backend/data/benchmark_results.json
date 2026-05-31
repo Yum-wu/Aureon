@@ -3,13 +3,13 @@
   "metrics": [
     {
       "label": "Recall@3 (Hybrid)",
-      "value": "100.0%",
-      "detail": "75/75 (BM25+ Scoring + RRF + Parent-Child + diversity)"
+      "value": "97.4%",
+      "detail": "74/76 (BM25+ Scoring + RRF + Parent-Child + diversity, 2 edge-case misses)"
     },
     {
       "label": "Recall@3 (Dense)",
-      "value": "93.3%",
-      "detail": "70/75 (BGE-small-zh 512d, zero embedding API cost)"
+      "value": "90.8%",
+      "detail": "69/76 (BGE-small-zh 512d, zero embedding API cost)"
     },
     {
       "label": "Retrieval Latency",

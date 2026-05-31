@@ -69,7 +69,7 @@ TEST_QA_PAIRS = [
     {"id": "git-002", "question": "功能分支的流程是怎样的？", "answer": "从 main 创建分支 → 开发 → 测试 → 合并回 main", "source_article": "git-workflow-best-practices"},
     # ── Weather App API (2 pairs) ──
     {"id": "weather-001", "question": "天气应用的三层 API 调用设计是什么？", "answer": "定位 API → 天气 API → 空气质量 API", "source_article": "weather-app-api-integration"},
-    {"id": "weather-002", "question": "天气应用为什么采用定位→天气→空气质量三层 API 设计？", "answer": "每个 API 职责单一，需要前一个 API 的结果作为后一个的输入", "source_article": "weather-app-api-integration"},
+    {"id": "weather-002", "question": "为什么需要三层 API 而不是一次性获取？", "answer": "每个 API 职责单一，需要前一个 API 的结果作为后一个的输入", "source_article": "weather-app-api-integration"},
     # ── WeChat Mini Program (2 pairs) ──
     {"id": "wx-001", "question": "微信小程序开发遇到的第一个坑是什么？", "answer": "基础库 3.15.2 的 timeout 问题", "source_article": "wechat-miniprogram-ai-agent"},
     {"id": "wx-002", "question": "WXML 中 wx:key 的正确写法是什么？", "answer": "使用字符串而非 *this", "source_article": "wechat-miniprogram-ai-agent"},
@@ -79,6 +79,8 @@ TEST_QA_PAIRS = [
     # ── AI Writing Assistant (2 pairs) ──
     {"id": "aw-001", "question": "AI 写作助手的流式输出如何实现？", "answer": "使用 SSE (Server-Sent Events) 逐字输出", "source_article": "ai-writing-assistant"},
     {"id": "aw-002", "question": "AI 写作助手支持哪些写作模式？", "answer": "多种写作模式，支持文本优化和历史记录", "source_article": "ai-writing-assistant"},
+    # ── Cross-article reasoning (1 pair) ──
+    {"id": "cross-001", "question": "两篇文章的共同点是什么？", "answer": "都是技术实战经验分享，包含具体数据或问题清单", "source_article": "both"},
     # ── LangChain Framework Guide (3 pairs) ──
     {"id": "lcf-001", "question": "LangChain v0.2+ 推荐的链式编排语法是什么？", "answer": "LCEL（LangChain Expression Language），使用管道操作符连接各组件", "source_article": "langchain-framework-guide"},
     {"id": "lcf-002", "question": "create_tool_calling_agent 和 create_react_agent 的主要区别是什么？", "answer": "前者依赖模型原生 function calling，后者使用 ReAct prompt 模式", "source_article": "langchain-framework-guide"},
