@@ -70,8 +70,6 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
         doc["score"] = score
         results.append(doc)
 
-    logger.info("[RRF] query=%r bm25=%d vec=%d fused=%d",
-                query[:30], len(bm25_results), len(vector_results), len(results))
     return results
 
 
