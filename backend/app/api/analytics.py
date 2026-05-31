@@ -103,11 +103,11 @@ async def get_latency_analytics(
             "p95": p95,
             "p99": p99,
             "breakdown": {
-                "retrieval": 26,
-                "llm_first_token": 300,
-                "llm_generation": 700,
+                "retrieval": 0,
+                "llm_first_token": 0,
+                "llm_generation": 0,
             },
-            "trend": {"avg_change": -8.2, "period": "vs previous period"},
+            "trend": {"avg_change": 0, "period": "vs previous period"},
         }
 
     try:
@@ -145,12 +145,12 @@ async def get_latency_analytics(
             "p95": p95,
             "p99": p99,
             "breakdown": {
-                "retrieval": 10,  # TODO: 从实际 tracing 获取
-                "llm_first_token": 300,
-                "llm_generation": 700,
+                "retrieval": 0,
+                "llm_first_token": 0,
+                "llm_generation": 0,
             },
             "trend": {
-                "avg_change": -8.2,  # TODO: 对比前一时间段
+                "avg_change": 0,
                 "period": "vs previous period",
             },
         }
@@ -265,11 +265,20 @@ async def get_cache_analytics(redis=Depends(get_redis_or_none)):
         total = cache_hits + cache_misses
         hit_rate = round((cache_hits / total * 100), 1) if total > 0 else 0
 
+        # Get memory usage from Redis INFO
+        try:
+            info = await redis.info("memory")
+            memory_bytes = info.get("used_memory", 0)
+            memory_mb = round(memory_bytes / (1024 * 1024), 1)
+            memory_usage = f"{memory_mb}MB"
+        except Exception:
+            memory_usage = "0MB"
+
         return {
             "hitRate": hit_rate,
             "saves": cache_hits,
-            "latencyReduction": 45 if cache_hits > 0 else 0,  # TODO: 实际计算
-            "memoryUsage": "128MB",  # TODO: 从 Redis INFO 获取
+            "latencyReduction": 0,
+            "memoryUsage": memory_usage,
         }
     except Exception as e:
         logger.error(f"Error fetching cache analytics: {e}")

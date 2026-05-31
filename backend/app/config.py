@@ -34,6 +34,10 @@ class Settings(BaseSettings):
 
     tavily_api_key: str = ""
 
+    # Blog sync configuration
+    blog_url: str = ""  # Personal blog URL for sync feature
+    blog_sync_enabled: bool = False  # Enable/disable blog sync feature
+
     redis_url: str = ""
 
     offload_max_chars: int = 1000
