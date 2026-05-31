@@ -165,7 +165,8 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
         input_tokens = 0
         output_tokens = 0
         # 1. Try Redis cache hit (JSON format with sources)
-        cached = await get_cached(req.query)
+        # TEMPORARILY DISABLED for RRF debugging
+        cached = None  # await get_cached(req.query)
         if cached is not None:
             try:
                 cached_data = json.loads(cached)
@@ -200,11 +201,11 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
             yield f"data: {json.dumps({'type': 'error', 'content': str(e)}, ensure_ascii=False)}\n\n"
         finally:
             # 3. Cache as JSON (answer + sources) for cross-endpoint compatibility
-            # Skip caching if BM25 index not ready (prevents caching wrong startup results)
-            from app.rag.vector_store import _kw_docs as _bm25_docs
-            if full_text and len(_bm25_docs) > 0:
-                cache_payload = json.dumps({"answer": full_text, "sources": sources_data}, ensure_ascii=False)
-                asyncio.create_task(set_cached(req.query, cache_payload))
+            # TEMPORARILY DISABLED for RRF debugging
+            # from app.rag.vector_store import _kw_docs as _bm25_docs
+            # if full_text and len(_bm25_docs) > 0:
+            #     cache_payload = json.dumps({"answer": full_text, "sources": sources_data}, ensure_ascii=False)
+            #     asyncio.create_task(set_cached(req.query, cache_payload))
             # 4. Record query for Dashboard stats
             latency_ms = int((time.time() - start_time) * 1000)
             input_tokens = len(req.query) + 500
