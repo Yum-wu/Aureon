@@ -9,11 +9,11 @@ interface PipelineStep {
 
 const pipelineSteps: PipelineStep[] = [
   { id: 'query', label: 'User Query', description: 'Natural language input', latency: '0ms' },
-  { id: 'intent', label: 'Intent Classifier', description: 'Route to appropriate handler', latency: '5ms' },
-  { id: 'retrieval', label: 'Hybrid Retrieval', description: 'BM25 + Dense semantic search', latency: '10ms' },
+  { id: 'intent', label: 'Intent Classifier', description: 'Route to appropriate handler', latency: '<1ms' },
+  { id: 'retrieval', label: 'Hybrid Retrieval', description: 'BM25+ + RRF + Parent-Child', latency: '26ms' },
   { id: 'mmr', label: 'MMR Re-ranking', description: 'Maximal Marginal Relevance', latency: '3ms' },
   { id: 'prompt', label: 'Prompt Assembly', description: 'Context + query formatting', latency: '2ms' },
-  { id: 'llm', label: 'LLM Generation', description: 'Streaming token generation', latency: '280ms' },
+  { id: 'llm', label: 'LLM Generation', description: 'Streaming token generation', latency: '300ms' },
   { id: 'citation', label: 'Citation Injection', description: 'Source mapping & markers', latency: '5ms' },
   { id: 'sse', label: 'SSE Streaming', description: 'Real-time token delivery', latency: '5ms' },
 ];
