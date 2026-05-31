@@ -98,7 +98,7 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
     # Sort by RRF score descending
     ranked = sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)
 
-    # Take more candidates for reranking (up to 10)
+    # Take candidates for diversity selection (more than top_k)
     candidate_limit = min(len(ranked), max(top_k * 3, 10))
     candidates = []
     for key, score in ranked[:candidate_limit]:
@@ -107,9 +107,29 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
         candidates.append(doc)
 
     # Cross-encoder reranking: jointly encode query+doc for precise relevance
-    results = rerank(query, candidates, top_k=top_k)
+    candidates = rerank(query, candidates, top_k=candidate_limit)
 
-    return results
+    # Diversity selection: prefer unique articles (slugs) to maximize coverage
+    # Especially useful for cross-article queries like "两篇文章的共同点"
+    selected = []
+    seen_slugs = set()
+    # Pass 1: best chunk per unique article
+    for doc in candidates:
+        slug = doc.get("metadata", {}).get("slug", "")
+        if slug not in seen_slugs:
+            seen_slugs.add(slug)
+            selected.append(doc)
+            if len(selected) >= top_k:
+                break
+    # Pass 2: fill remaining with best scores from duplicates
+    if len(selected) < top_k:
+        for doc in candidates:
+            if doc not in selected:
+                selected.append(doc)
+                if len(selected) >= top_k:
+                    break
+
+    return selected
 
 
 QA_SYSTEM_PROMPT = """你是知识库问答助手。基于提供的参考文档回答用户问题。
