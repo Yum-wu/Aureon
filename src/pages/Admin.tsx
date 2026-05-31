@@ -1,77 +1,55 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
-interface Workspace {
-  id: string;
+interface SSOProvider {
+  id: number;
   name: string;
-  users: number;
-  docs: number;
-  created: string;
+  provider_type: string;
+  client_id: string;
+  enabled: boolean;
+  created_at: string;
 }
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: 'Admin' | 'Editor' | 'Viewer';
-  lastActive: string;
-}
-
-interface AuditLog {
-  id: string;
-  timestamp: string;
-  action: string;
-  user: string;
-  details: string;
+interface AuditEntry {
+  id: number;
+  request_id: string;
+  query: string;
+  intent: string;
+  total_latency_ms: number;
+  created_at: string;
 }
 
 const Admin = () => {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<'workspaces' | 'users' | 'audit'>('workspaces');
+  const [activeTab, setActiveTab] = useState<'providers' | 'audit'>('providers');
+  const [providers, setProviders] = useState<SSOProvider[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditEntry[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock 数据
-  const workspaces: Workspace[] = [
-    { id: '1', name: 'Default', users: 3, docs: 12, created: '2 天前' },
-    { id: '2', name: 'R&D Team', users: 5, docs: 28, created: '1 周前' },
-    { id: '3', name: 'Product', users: 2, docs: 8, created: '2 周前' },
-  ];
-
-  const users: User[] = [
-    { id: '1', name: '张明', email: 'zhang@example.com', role: 'Admin', lastActive: '刚刚' },
-    { id: '2', name: '李华', email: 'li@example.com', role: 'Editor', lastActive: '10 分钟前' },
-    { id: '3', name: '王芳', email: 'wang@example.com', role: 'Viewer', lastActive: '1 小时前' },
-    { id: '4', name: 'John Doe', email: 'john@example.com', role: 'Editor', lastActive: '3 小时前' },
-  ];
-
-  const auditLogs: AuditLog[] = [
-    { id: '1', timestamp: '12:34', action: '查询', user: '张明', details: '"RAG 系统配置"' },
-    { id: '2', timestamp: '12:30', action: '文档更新', user: '李华', details: '"api.md"' },
-    { id: '3', timestamp: '12:15', action: '登录', user: '王芳', details: '从 192.168.1.100' },
-    { id: '4', timestamp: '11:50', action: '文档上传', user: '张明', details: '"RAG.pdf" (2MB)' },
-    { id: '5', timestamp: '11:30', action: '设置变更', user: 'John Doe', details: '更新 LLM 模型配置' },
-  ];
+  useEffect(() => {
+    const controller = new AbortController();
+    Promise.all([
+      fetch('/api/security/sso/providers', { signal: controller.signal }).then(r => r.ok ? r.json() : []),
+      fetch('/api/observability/traces?limit=20', { signal: controller.signal }).then(r => r.ok ? r.json() : { traces: [] }),
+    ]).then(([provs, traces]) => {
+      setProviders(Array.isArray(provs) ? provs : []);
+      setAuditLogs(traces.traces || []);
+    }).catch(() => {}).finally(() => setLoading(false));
+    return () => controller.abort();
+  }, []);
 
   const tabs = [
-    { id: 'workspaces' as const, label: t('admin.workspaces.title'), icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
-    { id: 'users' as const, label: t('admin.users.title'), icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
-    { id: 'audit' as const, label: t('admin.audit.title'), icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01' },
+    { id: 'providers' as const, label: t('admin.users.title', 'Identity Providers'), icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
+    { id: 'audit' as const, label: t('admin.audit.title', 'Query Audit Log'), icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
   ];
-
-  const roleColors = {
-    Admin: 'bg-red-100 text-red-700',
-    Editor: 'bg-blue-100 text-blue-700',
-    Viewer: 'bg-gray-100 text-gray-700',
-  };
 
   return (
     <div className="h-full overflow-y-auto p-4 md:p-6 max-w-7xl mx-auto">
-      {/* Header */}
       <div className="mb-6 md:mb-8">
         <h1 className="text-xl md:text-2xl font-bold text-gray-900">{t('admin.title')}</h1>
         <p className="text-gray-500 text-sm">{t('admin.subtitle')}</p>
       </div>
 
-      {/* Tabs - 水平滚动 on mobile */}
       <div className="flex gap-1 mb-4 md:mb-6 border-b border-gray-200 overflow-x-auto">
         {tabs.map((tab) => (
           <button
@@ -91,175 +69,80 @@ const Admin = () => {
         ))}
       </div>
 
-      {/* Tab Content */}
       <div className="bg-white rounded-xl border border-gray-200">
-        {/* Workspaces Tab */}
-        {activeTab === 'workspaces' && (
-          <div className="p-4 md:p-6">
-            <div className="flex items-center justify-between mb-4 md:mb-6">
-              <h3 className="font-semibold text-gray-900">{t('admin.workspaces.title')}</h3>
-              <button className="px-3 md:px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
-                <span className="hidden sm:inline">{t('admin.workspaces.new_button', 'New Workspace')}</span>
-                <span className="sm:hidden">{t('admin.workspaces.new_button', 'New')}</span>
-              </button>
-            </div>
-
-            {/* Desktop: Table */}
-            <div className="hidden md:block">
-              <table className="w-full">
-                <thead>
-                  <tr className="text-left text-sm text-gray-500 border-b border-gray-100">
-                    <th className="pb-3 font-medium">{t('admin.workspaces.columns.name')}</th>
-                    <th className="pb-3 font-medium">{t('admin.workspaces.columns.users')}</th>
-                    <th className="pb-3 font-medium">{t('admin.workspaces.columns.docs')}</th>
-                    <th className="pb-3 font-medium">{t('admin.workspaces.columns.created')}</th>
-                    <th className="pb-3 font-medium">{t('admin.workspaces.columns.actions')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {workspaces.map((ws) => (
-                    <tr key={ws.id} className="border-b border-gray-50 last:border-0">
-                      <td className="py-4 font-medium text-gray-900">{ws.name}</td>
-                      <td className="py-4 text-gray-600">{ws.users}</td>
-                      <td className="py-4 text-gray-600">{ws.docs}</td>
-                      <td className="py-4 text-gray-500 text-sm">{ws.created}</td>
-                      <td className="py-4">
-                        <button className="text-gray-400 hover:text-gray-600">
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                          </svg>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile: Cards */}
-            <div className="md:hidden space-y-3">
-              {workspaces.map((ws) => (
-                <div key={ws.id} className="bg-gray-50 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-gray-900">{ws.name}</span>
-                    <button className="text-gray-400 hover:text-gray-600">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                      </svg>
-                    </button>
-                  </div>
-                  <div className="flex gap-4 text-sm text-gray-600">
-                    <span>用户: {ws.users}</span>
-                    <span>文档: {ws.docs}</span>
-                    <span className="text-gray-400">{ws.created}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+        {loading && (
+          <div className="p-8 text-center text-gray-400">Loading...</div>
         )}
 
-        {/* Users Tab */}
-        {activeTab === 'users' && (
+        {!loading && activeTab === 'providers' && (
           <div className="p-4 md:p-6">
             <div className="flex items-center justify-between mb-4 md:mb-6">
-              <h3 className="font-semibold text-gray-900">{t('admin.users.title')}</h3>
-              <button className="px-3 md:px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
-                <span className="hidden sm:inline">{t('admin.users.invite_button', 'Invite User')}</span>
-                <span className="sm:hidden">{t('admin.users.invite_button', 'Invite')}</span>
-              </button>
+              <h3 className="font-semibold text-gray-900">SSO Identity Providers</h3>
+              <span className="text-sm text-gray-500">{providers.length} configured</span>
             </div>
-
-            {/* Desktop: Table */}
-            <div className="hidden md:block">
-              <table className="w-full">
-                <thead>
-                  <tr className="text-left text-sm text-gray-500 border-b border-gray-100">
-                    <th className="pb-3 font-medium">用户</th>
-                    <th className="pb-3 font-medium">邮箱</th>
-                    <th className="pb-3 font-medium">角色</th>
-                    <th className="pb-3 font-medium">最后活跃</th>
-                    <th className="pb-3 font-medium">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((user) => (
-                    <tr key={user.id} className="border-b border-gray-50 last:border-0">
-                      <td className="py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-sm font-medium">
-                            {user.name[0]}
-                          </div>
-                          <span className="font-medium text-gray-900">{user.name}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 text-gray-600 text-sm">{user.email}</td>
-                      <td className="py-4">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${roleColors[user.role]}`}>
-                          {user.role}
-                        </span>
-                      </td>
-                      <td className="py-4 text-gray-500 text-sm">{user.lastActive}</td>
-                      <td className="py-4">
-                        <button className="text-gray-400 hover:text-gray-600">
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                          </svg>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile: Cards */}
-            <div className="md:hidden space-y-3">
-              {users.map((user) => (
-                <div key={user.id} className="bg-gray-50 rounded-lg p-4">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-medium">
-                      {user.name[0]}
+            {providers.length === 0 ? (
+              <div className="text-center py-12 text-gray-400">
+                <p className="text-lg mb-2">No identity providers configured</p>
+                <p className="text-sm">Configure SSO via the API or security settings</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {providers.map((p) => (
+                  <div key={p.id} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
+                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
+                      {p.provider_type?.slice(0, 2).toUpperCase() || 'SS'}
                     </div>
-                    <div className="flex-1">
-                      <div className="font-medium text-gray-900">{user.name}</div>
-                      <div className="text-sm text-gray-500">{user.email}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-gray-900 truncate">{p.name}</div>
+                      <div className="text-sm text-gray-500">{p.provider_type} | Client ID: {p.client_id?.slice(0, 20)}...</div>
                     </div>
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${roleColors[user.role]}`}>
-                      {user.role}
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${p.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                      {p.enabled ? 'Active' : 'Disabled'}
                     </span>
                   </div>
-                  <div className="text-xs text-gray-400">最后活跃: {user.lastActive}</div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
-        {/* Audit Tab */}
-        {activeTab === 'audit' && (
+        {!loading && activeTab === 'audit' && (
           <div className="p-4 md:p-6">
             <div className="flex items-center justify-between mb-4 md:mb-6">
-              <h3 className="font-semibold text-gray-900">{t('admin.audit.title')}</h3>
-              <button className="px-3 md:px-4 py-2 border border-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
-                <span className="hidden sm:inline">{t('admin.audit.export_button')}</span>
-                <span className="sm:hidden">{t('admin.audit.export_button')}</span>
-              </button>
+              <h3 className="font-semibold text-gray-900">Query Audit Log</h3>
+              <span className="text-sm text-gray-500">{auditLogs.length} recent traces</span>
             </div>
-            <div className="space-y-3">
-              {auditLogs.map((log) => (
-                <div key={log.id} className="flex items-start gap-3 md:gap-4 p-3 md:p-4 bg-gray-50 rounded-lg">
-                  <div className="text-sm text-gray-400 w-14 md:w-16 shrink-0">{log.timestamp}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-gray-900">{log.user}</span>
-                      <span className="text-gray-500 text-sm">{log.action}</span>
+            {auditLogs.length === 0 ? (
+              <div className="text-center py-12 text-gray-400">
+                <p className="text-lg mb-2">No query traces yet</p>
+                <p className="text-sm">Traces will appear here as users interact with the system</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {auditLogs.map((log) => (
+                  <div key={log.id} className="flex items-start gap-3 md:gap-4 p-3 md:p-4 bg-gray-50 rounded-lg">
+                    <div className="text-xs text-gray-400 w-16 shrink-0">
+                      {log.created_at ? new Date(log.created_at).toLocaleTimeString() : '-'}
                     </div>
-                    <div className="text-sm text-gray-600 mt-1 truncate">{log.details}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                          log.intent === 'rag' ? 'bg-blue-100 text-blue-700' :
+                          log.intent === 'chat' ? 'bg-green-100 text-green-700' :
+                          'bg-gray-100 text-gray-600'
+                        }`}>
+                          {log.intent || 'unknown'}
+                        </span>
+                        <span className="text-sm text-gray-600 truncate">{log.query?.slice(0, 80)}</span>
+                      </div>
+                      <div className="text-xs text-gray-400 mt-1">
+                        {log.total_latency_ms ? `${log.total_latency_ms}ms` : '-'} | {log.request_id}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

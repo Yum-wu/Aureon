@@ -297,8 +297,11 @@ async def rag_upload_endpoint(
     os.makedirs(UPLOADS_DIR, exist_ok=True)
     dest = os.path.join(UPLOADS_DIR, safe_filename)
 
+    MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10MB
     try:
         content = await file.read()
+        if len(content) > MAX_UPLOAD_BYTES:
+            raise HTTPException(status_code=413, detail=f"File too large (max {MAX_UPLOAD_BYTES // 1024 // 1024}MB)")
         with open(dest, "wb") as f:
             f.write(content)
     except Exception as e:

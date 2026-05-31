@@ -68,8 +68,8 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.getenv("CORS_ORIGINS", "*")],
-    allow_methods=["*"],
+    allow_origins=[o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")],
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["*"],
 )
 
@@ -95,7 +95,7 @@ async def aureon_exception_handler(request: Request, exc: AureonException):
 
 @app.middleware("http")
 async def logging_middleware(request: Request, call_next):
-    """Inject request_id / session_id into structlog context per request."""
+    """Inject request_id + security headers, log request completion."""
     request_id = str(uuid.uuid4())[:8]
     structlog.contextvars.clear_contextvars()
     structlog.contextvars.bind_contextvars(request_id=request_id)
@@ -103,6 +103,12 @@ async def logging_middleware(request: Request, call_next):
     start = time.time()
     response = await call_next(request)
     elapsed = int((time.time() - start) * 1000)
+
+    # Security headers
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
 
     logger.info(
         "request_completed",
@@ -182,7 +188,8 @@ class LangGraphRunRequest(BaseModel):
 
 
 @app.post("/api/langgraph/run")
-async def langgraph_run(req: LangGraphRunRequest):
+@limiter.limit("5/minute")
+async def langgraph_run(req: LangGraphRunRequest, request: Request):
     """Run LangGraph workflow for complex tasks."""
     from app.langgraph.graph import run_workflow
 
@@ -198,13 +205,14 @@ class CrewGenerateRequest(BaseModel):
 
 
 @app.post("/api/crew/generate")
-async def crew_generate(req: CrewGenerateRequest):
+@limiter.limit("3/minute")
+async def crew_generate(req: CrewGenerateRequest, request: Request):
     """Generate article via 3-agent crew (synchronous)."""
     import time
     try:
         from app.crew.crew_setup import generate_article
-    except ImportError as e:
-        raise HTTPException(status_code=503, detail=f"CrewAI not installed: {str(e)}")
+    except ImportError:
+        raise HTTPException(status_code=503, detail="CrewAI module not available")
 
     try:
         # litellm (used by crewai 0.80+) needs standard OpenAI env vars
@@ -226,10 +234,12 @@ async def crew_generate(req: CrewGenerateRequest):
             "agents": result["agents"],
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
+        logger.error("crew_generate_failed", error=str(e)[:200])
+        raise HTTPException(status_code=500, detail="Article generation failed")
 
 
 @app.post("/api/crew/generate/stream")
+@limiter.limit("3/minute")
 async def crew_generate_stream(req: CrewGenerateRequest, request: Request):
     """Generate article with real-time agent progress via SSE."""
     try:

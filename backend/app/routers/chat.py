@@ -78,7 +78,8 @@ async def chat_enhanced_stream(req: ChatRequest, request: Request):
             ):
                 yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
         except Exception as e:
-            yield f"data: {json.dumps({'type': 'error', 'content': str(e)}, ensure_ascii=False)}\n\n"
+            logger.error("enhanced_stream_error: %s", e)
+            yield f"data: {json.dumps({'type': 'error', 'content': 'An error occurred while processing your request'}, ensure_ascii=False)}\n\n"
 
     return StreamingResponse(
         event_stream(),
