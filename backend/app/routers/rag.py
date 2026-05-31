@@ -418,23 +418,6 @@ async def rag_health():
     }
 
 
-@router.get("/api/rag/debug")
-async def rag_debug(q: str = "RAG"):
-    """Debug: show BM25 and vector results separately."""
-    from app.rag.vector_store import retrieve_keyword, retrieve, _tokenize, _kw_idf
-    tokens = _tokenize(q)
-    meaningful = {t: round(_kw_idf.get(t, 0), 3) for t in set(tokens) if _kw_idf.get(t, 0) >= 1.0}
-    bm25 = retrieve_keyword(q, top_k=5)
-    vec = retrieve(q, top_k=5, use_mmr=False)
-    return {
-        "query": q,
-        "tokens": tokens,
-        "meaningful_terms": meaningful,
-        "bm25": [{"slug": d["metadata"].get("slug","")[:30], "score": round(d.get("score",0), 3)} for d in bm25],
-        "vector": [{"slug": d["metadata"].get("slug","")[:30], "score": round(d.get("score",0), 3)} for d in vec],
-    }
-
-
 @router.get("/api/rag/benchmark")
 async def rag_benchmark():
     """Latest RAG evaluation benchmark results."""
