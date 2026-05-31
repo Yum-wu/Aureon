@@ -13,8 +13,9 @@ from app.rag.models import RAGQueryResponse, SourceItem
 from app.utils.lang_detect import detect_language, lang_instruction
 
 import logging
+import structlog
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger()
 
 _RRF_K = 60  # RRF constant (standard value from literature)
 
