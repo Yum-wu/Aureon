@@ -40,7 +40,7 @@
     ],
     "benchmark": {
       "title": "Performance Benchmark",
-      "subtitle": "Evaluated on 51 QA pairs with hybrid retrieval pipeline",
+      "subtitle": "Evaluated on 76 QA pairs with hybrid retrieval pipeline",
       "vs_baseline": "vs baseline",
       "optimized": "optimized",
       "reduced": "reduced",

@@ -40,7 +40,7 @@
     ],
     "benchmark": {
       "title": "性能基准测试",
-      "subtitle": "基于 51 组 QA 数据对混合检索流水线的评估",
+      "subtitle": "基于 76 组 QA 数据对混合检索流水线的评估",
       "vs_baseline": "对比基线",
       "optimized": "已优化",
       "reduced": "已降低",

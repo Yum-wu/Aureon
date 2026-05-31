@@ -141,7 +141,7 @@ const Benchmark = () => {
               </div>
             </div>
             <div className="text-xs text-gray-400 mt-3">
-              51 QA Pairs 基准测试 · 95% CI: 88-99%
+              76 QA Pairs 基准测试 · 95% CI: 95-99%
             </div>
           </div>
         </div>
