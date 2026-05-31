@@ -69,13 +69,15 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
         doc["score"] = score
         results.append(doc)
 
-    logger.info("Hybrid RRF: bm25=%d vector=%d fused=%d query=%r",
-                len(bm25_results), len(vector_results), len(results), query[:30])
+    import sys
+    print(f"[RRF] query={query!r} bm25={len(bm25_results)} vec={len(vector_results)}", file=sys.stderr, flush=True)
+    bm25_slugs = [d.get('metadata',{}).get('slug','')[:25] for d in bm25_results[:3]]
+    vec_slugs = [d.get('metadata',{}).get('slug','')[:25] for d in vector_results[:3]]
+    print(f"[RRF] bm25_top3={bm25_slugs} vec_top3={vec_slugs}", file=sys.stderr, flush=True)
     # Debug: show top 3 from each retriever
     bm25_top = [(d.get("metadata",{}).get("slug","")[:25], round(s,3)) for s,d in [(d.get("score",0),d) for d in bm25_results[:3]]]
     vec_top = [(d.get("metadata",{}).get("slug","")[:25], round(d.get("score",0),3)) for d in vector_results[:3]]
-    logger.info("  BM25 top3: %s", bm25_top)
-    logger.info("  Vec  top3: %s", vec_top)
+    print(f"[RRF] bm25_scores={bm25_top} vec_scores={vec_top}", file=sys.stderr, flush=True)
     return results
 
 
