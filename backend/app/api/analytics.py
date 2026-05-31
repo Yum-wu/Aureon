@@ -115,8 +115,15 @@ async def get_latency_analytics(
         now = datetime.now(timezone.utc)
         cutoff = now.timestamp() - 86400  # 24h
 
-        latencies = await redis.zrangebyscore(f"{STATS_PREFIX}:latencies:z", cutoff, "+inf")
-        latencies = [float(l) for l in latencies] if latencies else []
+        latencies_raw = await redis.zrangebyscore(
+            f"{STATS_PREFIX}:latencies:z", cutoff, "+inf", withscores=True
+        )
+        latencies = []
+        for member, score in latencies_raw:
+            try:
+                latencies.append(float(score))
+            except (ValueError, TypeError):
+                pass
 
         if not latencies:
             return {
