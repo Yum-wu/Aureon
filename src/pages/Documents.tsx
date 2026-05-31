@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDocuments } from "../hooks/useDocuments";
+import { useBlogConfig } from "../hooks/useBlogConfig";
 import { DocumentUpload } from "../components/documents/DocumentUpload";
 
 const TYPE_BADGE: Record<string, string> = {
@@ -12,6 +13,7 @@ const TYPE_BADGE: Record<string, string> = {
 export function Documents() {
   const { t } = useTranslation();
   const { documents, totalDocs, totalChunks, loading, error, refetch } = useDocuments();
+  const { config: blogConfig } = useBlogConfig();
   const [filter, setFilter] = useState("");
   const [showUpload, setShowUpload] = useState(false);
 
@@ -56,6 +58,40 @@ export function Documents() {
           <p className="text-sm text-gray-500 mt-1">{t("documents.subtitle")}</p>
         </div>
         <div className="flex items-center gap-4">
+          {/* Blog link */}
+          {blogConfig?.url && (
+            <a
+              href={blogConfig.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200 transition-colors flex items-center gap-2"
+            >
+              <span>打开博客</span>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </a>
+          )}
+
+          {/* Sync blog button */}
+          {blogConfig?.sync_enabled && (
+            <button
+              onClick={async () => {
+                const res = await fetch("/api/rag/blog/sync", { method: "POST" });
+                if (res.ok) {
+                  refetch();
+                }
+              }}
+              className="px-4 py-2 rounded-lg bg-purple-500 text-white text-sm font-medium hover:bg-purple-600 transition-colors flex items-center gap-2"
+            >
+              <span>同步博客文档</span>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+          )}
+
+          {/* Upload button */}
           <button
             onClick={() => setShowUpload((v) => !v)}
             className="px-4 py-2 rounded-lg bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 transition-colors"

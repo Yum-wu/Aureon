@@ -293,3 +293,74 @@ async def get_documents():
             raise
         logger.warning("get_documents failed: %s", e)
         raise VectorStoreError(detail=f"Failed to fetch documents: {str(e)}")
+
+
+# ── Benchmark API ──
+
+import json
+from pathlib import Path
+
+
+BENCHMARK_FILE = Path(__file__).parent.parent.parent / "data" / "benchmark_results.json"
+
+
+class BenchmarkData(BaseModel):
+    timestamp: Optional[str] = None
+    metrics: list[dict]
+    services: dict[str, str]
+
+
+@router.get("/api/rag/benchmark")
+async def get_benchmark():
+    """Read benchmark results from file — dynamic data source."""
+    try:
+        if BENCHMARK_FILE.exists():
+            with open(BENCHMARK_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            return BenchmarkData(**data)
+        else:
+            logger.warning("Benchmark file not found: %s", BENCHMARK_FILE)
+            return BenchmarkData(metrics=[], services={})
+    except Exception as e:
+        logger.error("Failed to read benchmark file: %s", e)
+        raise AureonException(status_code=500, error_type="benchmark_read_error", detail=str(e))
+
+
+# ── Blog Sync API ──
+
+class BlogConfig(BaseModel):
+    url: str
+    sync_enabled: bool
+    last_synced: Optional[str] = None
+
+
+@router.get("/api/rag/blog/config")
+async def get_blog_config():
+    """Get blog sync configuration from settings."""
+    from ..config import settings
+    return BlogConfig(
+        url=settings.blog_url,
+        sync_enabled=settings.blog_sync_enabled,
+        last_synced=None,  # TODO: track last sync time
+    )
+
+
+@router.post("/api/rag/blog/sync")
+async def sync_blog_documents():
+    """Sync documents from external blog. Placeholder for future implementation."""
+    from ..config import settings
+
+    if not settings.blog_sync_enabled or not settings.blog_url:
+        raise AureonException(
+            status_code=400,
+            error_type="blog_sync_disabled",
+            detail="Blog sync is not enabled. Set BLOG_URL and BLOG_SYNC_ENABLED=true in .env",
+        )
+
+    # TODO: Implement actual blog sync logic
+    # This would fetch articles from the blog and index them into Chroma
+    return {
+        "status": "success",
+        "message": "Blog sync endpoint ready — implementation pending",
+        "blog_url": settings.blog_url,
+    }
