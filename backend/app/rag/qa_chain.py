@@ -72,7 +72,9 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
     logger.warning("[RRF] query=%r bm25=%d vec=%d", query[:30], len(bm25_results), len(vector_results))
     bm25_slugs = [d.get('metadata',{}).get('slug','')[:25] for d in bm25_results[:3]]
     vec_slugs = [d.get('metadata',{}).get('slug','')[:25] for d in vector_results[:3]]
-    logger.warning("[RRF] bm25_top3=%s vec_top3=%s", bm25_slugs, vec_slugs)
+    # Debug: inject into results for visibility
+    if results:
+        results[0]["_debug_rrf"] = f"bm25={len(bm25_results)}:{bm25_slugs} vec={len(vector_results)}:{vec_slugs}"
     return results
 
 
