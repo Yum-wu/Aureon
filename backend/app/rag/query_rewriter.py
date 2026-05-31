@@ -67,7 +67,6 @@ _ZH_SPLIT_MARKERS = ("和", "与", "以及")
 _EN_SPLIT_MARKERS = (" and ", " vs ", " versus ", " compared to ", " compared with ")
 
 _ZH_STRIP = ("的", "是什么", "是", "有", "哪些", "什么")
-_EN_STRIP = ("the", "a", "an", "in", "of", "for", "to", "is", "are", "was", "were")
 
 
 def is_cross_article_query(query: str) -> bool:
@@ -108,10 +107,11 @@ def expand_queries_rules(query: str) -> List[str]:
             break
 
     if not fragments:
+        q_lower = query.lower()
         for marker in _EN_SPLIT_MARKERS:
-            if marker in query.lower():
-                # split preserving case for fragment content
-                fragments = query.lower().split(marker)
+            if marker in q_lower:
+                idx = q_lower.index(marker)
+                fragments = [query[:idx], query[idx + len(marker):]]
                 break
 
     # If we got a meaningful split (2+ parts), strip and return
@@ -121,8 +121,6 @@ def expand_queries_rules(query: str) -> List[str]:
             frag = frag.strip()
             for word in _ZH_STRIP:
                 frag = frag.replace(word, "")
-            for word in _EN_STRIP:
-                frag = frag.replace(word + " ", " ").replace(word, "")
             frag = frag.strip(" ,，。")
             if frag:
                 cleaned.append(frag)
@@ -133,7 +131,7 @@ def expand_queries_rules(query: str) -> List[str]:
 
     # Fallback: remove common intent words to extract content keywords
     stripped = query
-    for word in _ZH_STRIP + _EN_STRIP:
+    for word in _ZH_STRIP:
         stripped = stripped.replace(word + " ", " ").replace(word, "")
     stripped = stripped.strip(" ,，。")
 
