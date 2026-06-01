@@ -461,3 +461,21 @@ async def rag_benchmark():
         return {"metrics": [], "services": {}, "timestamp": None}
     with open(benchmark_path, encoding="utf-8") as f:
         return json.load(f)
+
+
+@router.post("/api/rag/cache/clear")
+async def rag_cache_clear():
+    """Clear all RAG query caches (Redis + in-memory)."""
+    from app.cache.redis_client import get_redis, _mem_cache
+    cleared = 0
+    # Clear in-memory cache
+    _mem_cache.clear()
+    try:
+        redis = get_redis()
+        if redis:
+            keys = redis.keys("llm_cache:*")
+            if keys:
+                cleared = redis.delete(*keys)
+    except Exception as e:
+        logger.warning("Redis cache clear failed: %s", e)
+    return {"status": "ok", "cleared_keys": cleared}
