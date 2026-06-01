@@ -74,7 +74,7 @@ async def test_upload_no_filename():
 async def test_upload_invalid_extension():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        resp = await ac.post("/api/rag/upload", files={"file": ("test.pdf", b"content")})
+        resp = await ac.post("/api/rag/upload", files={"file": ("test.csv", b"a,b,c")})
     assert resp.status_code == 400
     assert "Unsupported" in resp.json()["detail"]
 

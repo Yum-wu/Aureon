@@ -68,11 +68,11 @@ class TestLoadSingleDocument:
         assert result["content"] == "Plain text content."
 
     def test_unsupported_extension_raises(self, tmp_path):
-        pdf_file = tmp_path / "doc.pdf"
-        pdf_file.write_bytes(b"fake pdf")
+        csv_file = tmp_path / "data.csv"
+        csv_file.write_text("a,b,c\n1,2,3", encoding="utf-8")
 
         with pytest.raises(ValueError, match="Unsupported file type"):
-            load_single_document(str(pdf_file))
+            load_single_document(str(csv_file))
 
     def test_md_without_frontmatter_uses_stem_as_title(self, tmp_path):
         md_file = tmp_path / "no-fm.md"

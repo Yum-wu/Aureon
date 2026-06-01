@@ -38,7 +38,7 @@ async def test_rag_query_returns_response():
 async def test_rag_query_stream_returns_sse():
     """POST /api/rag/query/stream returns SSE with text/event-stream content type."""
 
-    async def fake_astream(query, llm, top_k=3, use_mmr=True):
+    async def fake_astream(query, llm, top_k=3, use_mmr=True, filter_lang=None):
         yield {"type": "sources", "sources": []}
         yield {"type": "text", "content": "streamed answer"}
         yield {"type": "done"}
