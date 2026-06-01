@@ -414,6 +414,7 @@ async def rag_query_with_cache(
     top_k: int = 3,
     use_mmr: bool = True,
     lang: str | None = None,
+    filter_lang: str | None = None,
 ) -> RAGQueryResponse:
     """RAG query with Redis semantic cache.
 
@@ -444,7 +445,7 @@ async def rag_query_with_cache(
             pass
         return RAGQueryResponse(answer=answer, sources=sources)
 
-    result = rag_query(query, llm_call_fn, top_k, use_mmr, lang)
+    result = rag_query(query, llm_call_fn, top_k, use_mmr, lang, filter_lang)
     cache_data = json.dumps({"answer": result.answer, "sources": [s.model_dump() for s in result.sources]})
     await set_cached(query, cache_data)
 

@@ -15,6 +15,7 @@ class RAGQueryRequest(BaseModel):
     )
     top_k: int = Field(default=3, ge=1, le=20)
     use_mmr: bool = True
+    language: Optional[str] = Field(default=None, description="Filter results by language: 'zh' or 'en'")
 
     @field_validator("query")
     @classmethod

@@ -92,7 +92,8 @@ async def rag_query_endpoint(req: RAGQueryRequest, request: Request):
     start_time = time.time()
     try:
         result = await rag_query_with_cache(
-            req.query, _llm_call, top_k=req.top_k, use_mmr=req.use_mmr
+            req.query, _llm_call, top_k=req.top_k, use_mmr=req.use_mmr,
+            filter_lang=req.language,
         )
     except HTTPException:
         raise
@@ -203,7 +204,8 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
         sources_data = []
         try:
             raw_gen = rag_query_astream(
-                req.query, llm, top_k=req.top_k, use_mmr=req.use_mmr
+                req.query, llm, top_k=req.top_k, use_mmr=req.use_mmr,
+                filter_lang=req.language,
             )
             async for event in _buffer_events(raw_gen):
                 if event.get("type") == "text":
