@@ -256,7 +256,7 @@ async def rag_upload_endpoint(
     title: str = Form(None),
     api_key: str = Form(None),
 ):
-    """Upload a .md or .txt file and incrementally index it.
+    """Upload a document (.md, .txt, .pdf, .docx, .xlsx) and incrementally index it.
 
     Args:
         file: 上传的文件
@@ -285,7 +285,7 @@ async def rag_upload_endpoint(
     safe_filename = os.path.basename(file.filename)
 
     # Validate extension
-    allowed = {".md", ".txt"}
+    allowed = {".md", ".txt", ".pdf", ".docx", ".xlsx"}
     ext = os.path.splitext(safe_filename)[1].lower()
     if ext not in allowed:
         raise HTTPException(
