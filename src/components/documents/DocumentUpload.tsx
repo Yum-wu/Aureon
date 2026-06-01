@@ -141,7 +141,7 @@ export function DocumentUpload({ onUploadSuccess }: DocumentUploadProps) {
           ref={fileInputRef}
           data-testid="upload-file-input"
           type="file"
-          accept=".md,.txt"
+          accept=".md,.txt,.pdf,.docx,.xlsx"
           onChange={handleFileChange}
           className="hidden"
         />

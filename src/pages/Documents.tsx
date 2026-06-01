@@ -8,6 +8,8 @@ const TYPE_BADGE: Record<string, string> = {
   md: "bg-green-100 text-green-700",
   pdf: "bg-red-100 text-red-700",
   txt: "bg-gray-100 text-gray-600",
+  docx: "bg-blue-100 text-blue-700",
+  xlsx: "bg-emerald-100 text-emerald-700",
 };
 
 export function Documents() {
@@ -172,7 +174,7 @@ export function Documents() {
                   >
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">{doc.file_type === "pdf" ? "📄" : "📝"}</span>
+                        <span className="text-lg">{doc.file_type === "pdf" ? "📄" : doc.file_type === "docx" ? "📘" : doc.file_type === "xlsx" ? "📊" : "📝"}</span>
                         <span className="text-sm font-medium text-gray-800 truncate max-w-[240px]">
                           {doc.title}
                         </span>
@@ -204,7 +206,7 @@ export function Documents() {
               <div key={`${doc.source}-${doc.title}-${i}`} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-lg shrink-0">{doc.file_type === "pdf" ? "📄" : "📝"}</span>
+                    <span className="text-lg shrink-0">{doc.file_type === "pdf" ? "📄" : doc.file_type === "docx" ? "📘" : doc.file_type === "xlsx" ? "📊" : "📝"}</span>
                     <span className="text-sm font-medium text-gray-800 truncate">{doc.title}</span>
                   </div>
                   <span className={`px-2 py-0.5 rounded text-xs font-medium shrink-0 ml-2 ${TYPE_BADGE[doc.file_type] || TYPE_BADGE.txt}`}>
