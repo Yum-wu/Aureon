@@ -37,10 +37,9 @@ def _extract_title_keywords(query: str) -> List[str]:
     q_lower = query.lower()
     return [kw for kw, normalized in _TITLE_KEYWORDS_ZH.items() if kw in q_lower]
 
-# RRF score threshold: with k=60, rank-1 single-retriever score ≈ 0.0164.
-# 0.025 requires rank-1 in BOTH retrievers (0.033) or rank-2 in at least one.
-# Filters out single-retriever noise that would otherwise pass.
-_MIN_RELEVANCE_SCORE = float(os.getenv("MIN_RELEVANCE_SCORE", "0.025"))
+# RRF score threshold: conservative floor — catches truly empty results.
+# The reranker is the primary quality gate; this is just a safety net.
+_MIN_RELEVANCE_SCORE = float(os.getenv("MIN_RELEVANCE_SCORE", "0.015"))
 
 
 def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List[Dict[str, Any]]:
@@ -158,10 +157,8 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
         selected = candidates[:top_k]
 
     # Reranker score gate: if best rerank_score is below threshold, return empty.
-    # The cross-encoder is the most reliable relevance signal — if it says nothing
-    # is relevant (score < 0.3), trust it even if RRF scores look reasonable.
     if selected and "rerank_score" in selected[0]:
-        MIN_RERANK_SCORE = float(os.getenv("MIN_RERANK_SCORE", "0.3"))
+        MIN_RERANK_SCORE = float(os.getenv("MIN_RERANK_SCORE", "0.5"))
         if selected[0]["rerank_score"] < MIN_RERANK_SCORE:
             logger.info("All results below rerank threshold (max=%.3f < %.3f), returning empty",
                          selected[0]["rerank_score"], MIN_RERANK_SCORE)
@@ -283,11 +280,8 @@ def multi_query_retrieve(query: str, top_k: int = 3, lang_filter: str = None) ->
         return []
 
     # Reranker score gate: if best rerank_score is below threshold, return empty.
-    # This catches cases where RRF rank agreement is high but actual semantic
-    # relevance is low (e.g., query about "SaaS pricing" returning articles
-    # that mention "SaaS" but don't discuss pricing).
     if selected and "rerank_score" in selected[0]:
-        MIN_RERANK_SCORE = float(os.getenv("MIN_RERANK_SCORE", "0.3"))
+        MIN_RERANK_SCORE = float(os.getenv("MIN_RERANK_SCORE", "0.5"))
         if selected[0]["rerank_score"] < MIN_RERANK_SCORE:
             logger.info("multi_query: best rerank_score %.3f < %.3f, returning empty",
                          selected[0]["rerank_score"], MIN_RERANK_SCORE)
