@@ -21,9 +21,26 @@ logger = structlog.get_logger()
 _RRF_K = 60  # RRF constant (standard value from literature)
 MULTI_QUERY_ENABLED = os.getenv("MULTI_QUERY_ENABLED", "true").lower() == "true"
 
-# RRF score threshold: with k=60, rank-1 score ≈ 0.0164.
-# Results below this are likely irrelevant (both retrievers failed to find good matches).
-_MIN_RELEVANCE_SCORE = float(os.getenv("MIN_RELEVANCE_SCORE", "0.012"))
+# Keywords that uniquely identify specific articles — used for title/slug boost.
+# Only terms that are specific enough to disambiguate between articles.
+_TITLE_KEYWORDS_ZH = {
+    "langgraph": "langgraph", "hermes": "hermes", "crewai": "crewai",
+    "rag": "rag", "bm25": "bm25", "lcel": "lcel", "llamaindex": "llamaindex",
+    "bge": "bge", "cross-encoder": "cross-encoder", "hyde": "hyde",
+    "react": "react", "deepseek": "deepseek", "dashscope": "dashscope",
+    "chromadb": "chromadb", "langchain": "langchain",
+}
+
+
+def _extract_title_keywords(query: str) -> List[str]:
+    """Extract keywords from query that could uniquely identify an article."""
+    q_lower = query.lower()
+    return [kw for kw, normalized in _TITLE_KEYWORDS_ZH.items() if kw in q_lower]
+
+# RRF score threshold: with k=60, rank-1 single-retriever score ≈ 0.0164.
+# 0.025 requires rank-1 in BOTH retrievers (0.033) or rank-2 in at least one.
+# Filters out single-retriever noise that would otherwise pass.
+_MIN_RELEVANCE_SCORE = float(os.getenv("MIN_RELEVANCE_SCORE", "0.025"))
 
 
 def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List[Dict[str, Any]]:
@@ -39,8 +56,8 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
         top_k: 返回结果数量
         lang_filter: 语言过滤（"zh" 或 "en"）
     """
-    bm25_results = retrieve_keyword(query, top_k=top_k * 3, lang_filter=lang_filter)
-    vector_results = retrieve(query, top_k=top_k * 3, use_mmr=False, lang_filter=lang_filter)
+    bm25_results = retrieve_keyword(query, top_k=top_k * 2, lang_filter=lang_filter)
+    vector_results = retrieve(query, top_k=top_k * 2, use_mmr=False, lang_filter=lang_filter)
 
     # Use all vector results — quality check removed to avoid false discards
     # on small collections where cosine scores naturally cluster together
@@ -89,6 +106,19 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
         if key not in doc_map:
             doc_map[key] = doc
 
+    # Title/slug boost: if query terms match a document's title or slug,
+    # boost its RRF score. Helps disambiguate when multiple articles share
+    # terminology (e.g., "LangGraph" should prioritize the LangGraph article).
+    _title_boost_keywords = _extract_title_keywords(query)
+    if _title_boost_keywords:
+        for key, doc in doc_map.items():
+            title = (doc.get("metadata", {}).get("title", "") + " " +
+                     doc.get("metadata", {}).get("slug", "")).lower()
+            matches = sum(1 for kw in _title_boost_keywords if kw in title)
+            if matches > 0:
+                boost = 1.0 + 0.5 * matches  # 50% boost per matching keyword
+                rrf_scores[key] *= boost
+
     # Sort by RRF score descending
     ranked = sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)
 
@@ -103,25 +133,39 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
     # Cross-encoder reranking: jointly encode query+doc for precise relevance
     candidates = rerank(query, candidates, top_k=candidate_limit)
 
-    # Diversity selection: prefer unique articles (slugs) to maximize coverage
-    # Especially useful for cross-article queries like "两篇文章的共同点"
-    selected = []
-    seen_slugs = set()
-    # Pass 1: best chunk per unique article
-    for doc in candidates:
-        slug = doc.get("metadata", {}).get("slug", "")
-        if slug not in seen_slugs:
-            seen_slugs.add(slug)
-            selected.append(doc)
-            if len(selected) >= top_k:
-                break
-    # Pass 2: fill remaining with best scores from duplicates
-    if len(selected) < top_k:
+    # Diversity selection: only for cross-article queries (comparisons, summaries).
+    # For simple factual queries, return top-k by score — this maximizes precision
+    # since the correct article's chunks should cluster at the top.
+    if is_cross_article_query(query):
+        selected = []
+        seen_slugs = set()
+        # Pass 1: best chunk per unique article
         for doc in candidates:
-            if doc not in selected:
+            slug = doc.get("metadata", {}).get("slug", "")
+            if slug not in seen_slugs:
+                seen_slugs.add(slug)
                 selected.append(doc)
                 if len(selected) >= top_k:
                     break
+        # Pass 2: fill remaining with best scores from duplicates
+        if len(selected) < top_k:
+            for doc in candidates:
+                if doc not in selected:
+                    selected.append(doc)
+                    if len(selected) >= top_k:
+                        break
+    else:
+        selected = candidates[:top_k]
+
+    # Reranker score gate: if best rerank_score is below threshold, return empty.
+    # The cross-encoder is the most reliable relevance signal — if it says nothing
+    # is relevant (score < 0.3), trust it even if RRF scores look reasonable.
+    if selected and "rerank_score" in selected[0]:
+        MIN_RERANK_SCORE = float(os.getenv("MIN_RERANK_SCORE", "0.3"))
+        if selected[0]["rerank_score"] < MIN_RERANK_SCORE:
+            logger.info("All results below rerank threshold (max=%.3f < %.3f), returning empty",
+                         selected[0]["rerank_score"], MIN_RERANK_SCORE)
+            return []
 
     # Relevance gate: if best score is too low, both retrievers failed to find relevant docs
     if selected and selected[0].get("score", 0) < _MIN_RELEVANCE_SCORE:
@@ -189,6 +233,17 @@ def multi_query_retrieve(query: str, top_k: int = 3, lang_filter: str = None) ->
             if key not in doc_map:
                 doc_map[key] = doc
 
+    # Title/slug boost (same logic as hybrid_retrieve)
+    _title_boost_keywords = _extract_title_keywords(query)
+    if _title_boost_keywords:
+        for key, doc in doc_map.items():
+            title = (doc.get("metadata", {}).get("title", "") + " " +
+                     doc.get("metadata", {}).get("slug", "")).lower()
+            matches = sum(1 for kw in _title_boost_keywords if kw in title)
+            if matches > 0:
+                boost = 1.0 + 0.5 * matches
+                rrf_scores[key] *= boost
+
     # Sort by RRF score descending
     ranked = sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)
 
@@ -198,6 +253,9 @@ def multi_query_retrieve(query: str, top_k: int = 3, lang_filter: str = None) ->
         doc = doc_map[key].copy()
         doc["score"] = score
         candidates.append(doc)
+
+    # Rerank final fused candidates (same as hybrid_retrieve)
+    candidates = rerank(query, candidates, top_k=len(candidates))
 
     # Diversity selection: one per unique slug, then fill remaining slots
     selected = []
@@ -217,6 +275,23 @@ def multi_query_retrieve(query: str, top_k: int = 3, lang_filter: str = None) ->
                 selected.append(doc)
                 if len(selected) >= top_k:
                     break
+
+    # Relevance gate (same as hybrid_retrieve): check RRF score
+    if selected and selected[0].get("score", 0) < _MIN_RELEVANCE_SCORE:
+        logger.info("multi_query: all results below relevance threshold (max=%.4f < %.4f)",
+                     selected[0]["score"], _MIN_RELEVANCE_SCORE)
+        return []
+
+    # Reranker score gate: if best rerank_score is below threshold, return empty.
+    # This catches cases where RRF rank agreement is high but actual semantic
+    # relevance is low (e.g., query about "SaaS pricing" returning articles
+    # that mention "SaaS" but don't discuss pricing).
+    if selected and "rerank_score" in selected[0]:
+        MIN_RERANK_SCORE = float(os.getenv("MIN_RERANK_SCORE", "0.3"))
+        if selected[0]["rerank_score"] < MIN_RERANK_SCORE:
+            logger.info("multi_query: best rerank_score %.3f < %.3f, returning empty",
+                         selected[0]["rerank_score"], MIN_RERANK_SCORE)
+            return []
 
     return selected
 
