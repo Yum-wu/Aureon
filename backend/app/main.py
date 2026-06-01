@@ -175,6 +175,18 @@ async def startup():
         loop = asyncio.get_event_loop()
         loop.run_in_executor(None, _warmup_bm25)
 
+    # Pre-load BGE embedding model in background (non-blocking)
+    def _preload_bge():
+        try:
+            from app.rag.vector_store import _get_local_model
+            _get_local_model()
+            logger.info("BGE model preloaded successfully")
+        except Exception as e:
+            logger.warning("BGE model preload failed (will lazy-load on first query): %s", e)
+
+    loop = asyncio.get_event_loop()
+    loop.run_in_executor(None, _preload_bge)
+
 
 @app.on_event("shutdown")
 async def shutdown():
