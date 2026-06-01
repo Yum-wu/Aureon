@@ -5,6 +5,9 @@ import sys
 import time
 import uuid
 
+# Suppress noisy ChromaDB telemetry errors
+logging.getLogger("chromadb.telemetry").setLevel(logging.CRITICAL)
+
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -165,27 +168,7 @@ async def startup():
     init_ai_platform_tables()
     init_integration_tables()
     memory_manager.init_background_tasks()
-
-    # Warm up BM25 index in background thread (non-blocking)
-    from app.rag.vector_store import _kw_docs as _bm25_docs
-    if len(_bm25_docs) > 0:
-        pass  # already built
-    else:
-        _bm25_warmup_done = False  # mark as warming up
-        loop = asyncio.get_event_loop()
-        loop.run_in_executor(None, _warmup_bm25)
-
-    # Pre-load BGE embedding model in background (non-blocking)
-    def _preload_bge():
-        try:
-            from app.rag.vector_store import _get_local_model
-            _get_local_model()
-            logger.info("BGE model preloaded successfully")
-        except Exception as e:
-            logger.warning("BGE model preload failed (will lazy-load on first query): %s", e)
-
-    loop = asyncio.get_event_loop()
-    loop.run_in_executor(None, _preload_bge)
+    logger.info("Startup complete — BGE model and BM25 will lazy-load on first query")
 
 
 @app.on_event("shutdown")
