@@ -246,8 +246,25 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
 @router.post("/api/rag/index", response_model=RAGIndexResponse)
 @limiter.limit("1/second")
 async def rag_index_endpoint(request: Request):
-    """Re-index all articles into Chroma."""
+    """Re-index all articles into Chroma + clear caches + rebuild BM25."""
     result = run_index_pipeline(ARTICLES_DIR)
+
+    # Clear all caches so fresh results are served
+    from app.cache.redis_client import get_redis, _mem_cache
+    _mem_cache.clear()
+    try:
+        redis = get_redis()
+        if redis:
+            keys = redis.keys("llm_cache:*")
+            if keys:
+                redis.delete(*keys)
+    except Exception:
+        pass
+
+    # Force BM25 rebuild from Chroma
+    from app.rag.vector_store import _build_kw_index
+    _build_kw_index(force=True)
+
     return result
 
 

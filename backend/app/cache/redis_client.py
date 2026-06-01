@@ -22,7 +22,7 @@ _MEM_TTL = 3600  # 1 hour, same as Redis TTL
 
 
 # Bump to invalidate all cached RAG responses (e.g. after retrieval logic changes)
-_CACHE_VERSION = "v14"  # v14: invalidate all cached RAG responses after BM25 fix
+_CACHE_VERSION = "v15"  # v15: index endpoint now clears all caches + rebuilds BM25
 
 
 def _mem_cache_key(key: str) -> str:
