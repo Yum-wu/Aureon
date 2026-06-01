@@ -70,7 +70,7 @@ _chroma_collection = None
 _kw_docs: List[Dict] = []
 _kw_idf: Dict[str, float] = {}
 _kw_avgdl: float = 0.0
-_KW_MIN_RAW_SCORE = 0.5  # minimum raw BM25 score before normalization
+_KW_MIN_RAW_SCORE = 0.3  # minimum raw BM25 score before normalization
 _KW_MIN_IDF = 1.0  # skip terms with very low IDF (appear in >60% docs)
 
 # Chinese stop words — function words, interrogatives, particles.
@@ -200,10 +200,12 @@ def _build_kw_index(force: bool = False):
             for t in set(tokens):
                 df[t] += 1
 
-        # BM25 IDF
+        # BM25 IDF — clamp to min 0.1 to prevent ubiquitous terms (RAG, AI)
+        # from getting IDF≈0 and being completely ignored by scoring
         idf: Dict[str, float] = {}
         for term, freq in df.items():
-            idf[term] = math.log(1.0 + (n - freq + 0.5) / (freq + 0.5))
+            raw_idf = math.log(1.0 + (n - freq + 0.5) / (freq + 0.5))
+            idf[term] = max(raw_idf, 0.1)
 
         avgdl = total_len / max(n, 1)
 
