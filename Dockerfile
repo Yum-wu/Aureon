@@ -57,7 +57,7 @@ RUN sed -i 's/\r$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh
 #     && chown -R aureon:aureon /app /usr/share/nginx/html /etc/nginx
 # USER aureon
 
-EXPOSE ${PORT:-80}
+EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
     CMD curl -f http://localhost:${PORT:-80}/api/health || exit 1
