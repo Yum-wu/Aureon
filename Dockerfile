@@ -48,7 +48,7 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # 启动脚本（JSON 数组 CMD 确保信号正确传递）
 COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
+RUN sed -i 's/\r$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh
 
 # 非 root 用户运行 —— Railway 容器已隔离，且非 root 无法绑定 <1024 端口
 # RUN groupadd -r aureon && useradd -r -g aureon -d /app -s /sbin/nologin aureon \
