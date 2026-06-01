@@ -41,3 +41,8 @@ prometheus-fastapi-instrumentator>=6.0,<7.0
 
 # Redis semantic cache
 redis>=5.0,<6.0
+
+# Document format parsers
+pypdf>=4.0,<6.0
+python-docx>=1.1,<2.0
+openpyxl>=3.1,<4.0
