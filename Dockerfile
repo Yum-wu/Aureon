@@ -24,7 +24,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/* \
     && ln -sf /dev/stdout /var/log/nginx/access.log \
-    && ln -sf /dev/stderr /var/log/nginx/error.log
+    && ln -sf /dev/stderr /var/log/nginx/error.log \
+    && rm -f /etc/nginx/sites-enabled/default
 
 # Python 依赖（先复制 requirements.txt 加速缓存）
 COPY backend/requirements.txt .
