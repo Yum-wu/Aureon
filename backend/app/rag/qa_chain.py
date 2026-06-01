@@ -144,17 +144,20 @@ def multi_query_retrieve(query: str, top_k: int = 3, lang_filter: str = None) ->
     For simple single-article queries, this delegates directly to hybrid_retrieve
     with zero overhead.
 
+    Note: lang_filter is accepted for API compatibility but search always covers
+    all languages. Language filtering only applies to document list display.
+
     Args:
         query: 查询文本
         top_k: 返回结果数量
-        lang_filter: 语言过滤（"zh" 或 "en"）
+        lang_filter: 语言过滤（已弃用，搜索始终覆盖所有语言）
 
     Returns:
         List of top_k document chunks, deduplicated by slug with diversity
     """
     # Fast path: skip expansion for simple queries or when disabled
     if not MULTI_QUERY_ENABLED or not is_cross_article_query(query):
-        return hybrid_retrieve(query, top_k=top_k, lang_filter=lang_filter)
+        return hybrid_retrieve(query, top_k=top_k)
 
     # Cross-article path: expand into variants and retrieve each
     variants = expand_queries_rules(query)
@@ -162,7 +165,7 @@ def multi_query_retrieve(query: str, top_k: int = 3, lang_filter: str = None) ->
     # Collect all results with their source variant for RRF scoring
     all_results: List[Dict[str, Any]] = []
     for variant in variants:
-        variant_results = hybrid_retrieve(variant, top_k=top_k * 2, lang_filter=lang_filter)
+        variant_results = hybrid_retrieve(variant, top_k=top_k * 2)
         all_results.append(variant_results)
 
     # RRF fusion across all variant result lists
