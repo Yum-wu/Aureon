@@ -4,8 +4,6 @@ import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-ro
 import { useTranslation } from "react-i18next";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { LanguageSwitcher } from "./i18n/LanguageSwitcher";
-import { useSystemHealth } from "./hooks/useSystemHealth";
-import { useBenchmark } from "./hooks/useBenchmark";
 
 // Route-level code splitting — each page is a separate chunk
 const Landing = lazy(() => import("./pages/Landing").then(m => ({ default: m.Landing })));
@@ -27,33 +25,11 @@ function PageFallback() {
   );
 }
 
-/* ── StatusPill ── */
-function StatusPill({ color, label }: { color: string; label: string }) {
-  const colorMap: Record<string, string> = {
-    green: "bg-green-100 text-green-700",
-    blue: "bg-blue-100 text-blue-700",
-    purple: "bg-purple-100 text-purple-700",
-    gray: "bg-gray-100 text-gray-500",
-  };
-  return (
-    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${colorMap[color] || colorMap.gray}`} role="status">
-      {label}
-    </span>
-  );
-}
-
 /* ── App Layout ── */
 function AppLayout() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  useSystemHealth();
-  const { data: benchmark } = useBenchmark();
-
-  const findMetric = (pat: string) =>
-    benchmark?.metrics?.find((m: { label: string; value: string | number }) => m.label.includes(pat))?.value ?? null;
-  const recallVal = findMetric("Recall@3 (Hybrid)");
-  const latencyVal = findMetric("Retrieval Latency");
 
   const navItems = [
     { path: "/dashboard", key: "app.nav.dashboard" },
@@ -102,12 +78,6 @@ function AppLayout() {
 
           {/* Right side */}
           <div className="ml-auto flex items-center gap-3">
-            {recallVal && (
-              <StatusPill color="green" label={String(recallVal)} />
-            )}
-            {latencyVal && (
-              <StatusPill color="blue" label={String(latencyVal)} />
-            )}
             <LanguageSwitcher />
           </div>
         </nav>

@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useDashboardStats } from '../hooks/useDashboardStats';
+import { useSystemHealth } from '../hooks/useSystemHealth';
+import { useBenchmark } from '../hooks/useBenchmark';
 import { MetricGrid } from '../components/dashboard/MetricGrid';
 import { QueryVolumeChart } from '../components/dashboard/QueryVolumeChart';
 import { RecentQueries } from '../components/dashboard/RecentQueries';
@@ -43,6 +45,13 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
 export function Dashboard() {
   const { t } = useTranslation();
   const { stats, recentQueries, queryVolume, loading, error, refetch } = useDashboardStats();
+  useSystemHealth();
+  const { data: benchmark } = useBenchmark();
+
+  const findMetric = (pat: string) =>
+    benchmark?.metrics?.find((m: { label: string; value: string | number }) => m.label.includes(pat))?.value ?? null;
+  const recallVal = findMetric("Recall@3 (Hybrid)");
+  const latencyVal = findMetric("Retrieval Latency");
 
   const metrics = stats
     ? [
@@ -57,10 +66,22 @@ export function Dashboard() {
     <div className="min-h-screen bg-[var(--bg-primary)]">
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">{t('dashboard.title')}</h1>
-          <p className="text-[var(--text-secondary)]">
-            {t('dashboard.subtitle')}
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">{t('dashboard.title')}</h1>
+              <p className="text-[var(--text-secondary)]">
+                {t('dashboard.subtitle')}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {recallVal && (
+                <span className="text-xs px-2.5 py-1 rounded-full bg-green-100 text-green-700 font-medium">{String(recallVal)}</span>
+              )}
+              {latencyVal && (
+                <span className="text-xs px-2.5 py-1 rounded-full bg-blue-100 text-blue-700 font-medium">{String(latencyVal)}</span>
+              )}
+            </div>
+          </div>
         </div>
 
         {loading && <LoadingSkeleton />}
