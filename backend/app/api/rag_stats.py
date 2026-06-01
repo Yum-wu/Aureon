@@ -249,6 +249,7 @@ class DocumentItem(BaseModel):
     title: str
     source: str
     file_type: str
+    language: str = "unknown"
     chunk_count: int
     status: str
 
@@ -266,7 +267,7 @@ async def get_documents():
         all_data = collection.get(include=["metadatas"])
         # Group chunks by source file
         doc_map: dict[str, dict] = defaultdict(lambda: {
-            "title": "", "source": "", "file_type": "md", "chunk_count": 0
+            "title": "", "source": "", "file_type": "md", "language": "unknown", "chunk_count": 0
         })
         for meta in all_data.get("metadatas", []):
             if not meta or not isinstance(meta, dict):
@@ -276,14 +277,19 @@ async def get_documents():
             doc["source"] = src
             doc["title"] = meta.get("title", src.replace(".md", "").replace("_", " "))
             doc["chunk_count"] += 1
+            doc["language"] = meta.get("language", "unknown")
             if src.endswith(".pdf"):
                 doc["file_type"] = "pdf"
+            elif src.endswith(".docx"):
+                doc["file_type"] = "docx"
+            elif src.endswith(".xlsx") or src.endswith(".xls"):
+                doc["file_type"] = "xlsx"
             elif src.endswith(".txt"):
                 doc["file_type"] = "txt"
 
         documents = [
             DocumentItem(title=d["title"], source=d["source"], file_type=d["file_type"],
-                         chunk_count=d["chunk_count"], status="ready")
+                         language=d["language"], chunk_count=d["chunk_count"], status="ready")
             for d in sorted(doc_map.values(), key=lambda x: x["title"])
         ]
         return {"documents": [d.model_dump() for d in documents],
