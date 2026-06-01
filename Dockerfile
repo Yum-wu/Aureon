@@ -50,14 +50,14 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
-# 非 root 用户运行应用
-RUN groupadd -r aureon && useradd -r -g aureon -d /app -s /sbin/nologin aureon \
-    && chown -R aureon:aureon /app /usr/share/nginx/html /etc/nginx
-USER aureon
+# 非 root 用户运行 —— Railway 容器已隔离，且非 root 无法绑定 <1024 端口
+# RUN groupadd -r aureon && useradd -r -g aureon -d /app -s /sbin/nologin aureon \
+#     && chown -R aureon:aureon /app /usr/share/nginx/html /etc/nginx
+# USER aureon
 
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-    CMD curl -f http://localhost:80/api/health || exit 1
+    CMD curl -f http://localhost:${PORT:-80}/api/health || exit 1
 
 CMD ["/docker-entrypoint.sh"]
