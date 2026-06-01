@@ -79,6 +79,12 @@ function AppLayout() {
           {/* Right side */}
           <div className="ml-auto flex items-center gap-3">
             <LanguageSwitcher />
+            <button
+              onClick={() => navigate("/login")}
+              className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              {t("app.nav.admin")}
+            </button>
           </div>
         </nav>
       )}

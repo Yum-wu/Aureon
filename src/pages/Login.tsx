@@ -173,7 +173,7 @@ const Login = () => {
       {/* 底部 footer */}
       <div className="absolute bottom-6 left-0 right-0 text-center text-xs text-slate-500">
         <p>Aureon — Enterprise AI Knowledge Base Platform</p>
-        <p className="mt-1">96% Recall · 310ms TTFT · 24h Deploy</p>
+        <p className="mt-1">97.6% Recall · 310ms TTFT · 24h Deploy</p>
       </div>
     </div>
   );
