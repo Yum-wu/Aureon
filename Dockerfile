@@ -47,7 +47,7 @@ COPY --from=frontend-builder /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # 启动脚本（JSON 数组 CMD 确保信号正确传递）
-ARG CACHE_BUST=1
+ARG CACHE_BUST=2
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN sed -i 's/\r$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh
 
@@ -56,9 +56,10 @@ RUN sed -i 's/\r$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh
 #     && chown -R aureon:aureon /app /usr/share/nginx/html /etc/nginx
 # USER aureon
 
-EXPOSE 80
+EXPOSE ${PORT:-80}
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
     CMD curl -f http://localhost:${PORT:-80}/api/health || exit 1
 
-CMD ["/docker-entrypoint.sh"]
+# 直接启动 uvicorn（绕过 entrypoint，避免 CRLF 问题）
+CMD ["sh", "-c", "sed -i 's/listen 80;/listen ${PORT:-80};/' /etc/nginx/conf.d/default.conf && nginx && exec uvicorn app.main:app --host 127.0.0.1 --port 8000"]
