@@ -271,8 +271,8 @@ def retrieve_keyword(query: str, top_k: int = 3, lang_filter: str = None) -> Lis
     has_meaningful_term = any(
         _kw_idf.get(t, 0) >= _KW_MIN_IDF for t in set(q_terms)
     )
-    if not has_meaningful_term:
-        return []
+    # Don't early-return — let BM25 scoring handle low-IDF terms naturally
+    # Documents with more query term matches still score higher
 
     # 语言过滤
     filtered_docs = _kw_docs
