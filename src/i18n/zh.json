@@ -20,18 +20,18 @@
     "hero": {
       "badge": "生产就绪",
       "title": "企业 AI 知识库平台",
-      "subtitle": "96% 检索准确率 · 亚秒级响应 · 24 小时部署",
+      "subtitle": "97% 检索准确率 · 亚秒级响应 · 24 小时部署",
       "cta_search": "开始搜索",
       "cta_architecture": "查看架构"
     },
     "metrics": {
-      "recall": { "value": "96.08%", "label": "检索准确率", "detail": "Hybrid Recall@3" },
+      "recall": { "value": "97.6%", "label": "检索准确率", "detail": "Hybrid Recall@3" },
       "ttft": { "value": "~310ms", "label": "首字延迟", "detail": "Time to First Token" },
       "cost": { "value": "~$0.001", "label": "每次查询成本", "detail": "使用 GPT-4o-mini" }
     },
     "features_title": "核心功能",
     "features": [
-      { "title": "混合检索", "desc": "BM25 关键词 + Dense 语义双通道融合，96% 检索准确率" },
+      { "title": "混合检索", "desc": "BM25 关键词 + Dense 语义双通道融合，97% 检索准确率" },
       { "title": "流式响应", "desc": "SSE 实时流推送，首字延迟 ~310ms，逐 token 渲染" },
       { "title": "多语言支持", "desc": "中英双语知识库，自动语言检测与路由" },
       { "title": "企业级部署", "desc": "Docker 容器化，24 小时标准部署，RBAC + 审计日志" },
@@ -116,9 +116,15 @@
   "admin": {
     "title": "企业管理",
     "subtitle": "企业管理控制台",
+    "tabs": {
+      "workspaces": "工作空间",
+      "users": "用户管理",
+      "audit": "审计日志"
+    },
     "workspaces": {
       "title": "工作空间",
       "new_button": "新建工作空间",
+      "create": "新建工作空间",
       "columns": {
         "name": "名称",
         "users": "用户数",
@@ -130,17 +136,25 @@
     "users": {
       "title": "用户管理",
       "invite_button": "邀请用户",
+      "invite": "邀请用户",
       "columns": {
         "user": "用户",
         "email": "邮箱",
         "role": "角色",
         "last_active": "最后活跃",
+        "lastActive": "最后活跃",
         "actions": "操作"
       }
+    },
+    "roles": {
+      "admin": "管理员",
+      "editor": "编辑者",
+      "viewer": "查看者"
     },
     "audit": {
       "title": "审计日志",
       "export_button": "导出日志",
+      "export": "导出日志",
       "columns": {
         "timestamp": "时间",
         "action": "操作",
@@ -238,43 +252,5 @@
     "ttft_before": "优化前",
     "ttft_after": "优化后",
     "improvement": "提升"
-  },
-  "admin": {
-    "title": "企业管理",
-    "subtitle": "企业管理控制台",
-    "tabs": {
-      "workspaces": "工作空间",
-      "users": "用户管理",
-      "audit": "审计日志"
-    },
-    "workspaces": {
-      "title": "工作空间",
-      "create": "新建工作空间",
-      "columns": {
-        "name": "名称",
-        "users": "用户数",
-        "docs": "文档数",
-        "created": "创建时间"
-      }
-    },
-    "users": {
-      "title": "用户管理",
-      "invite": "邀请用户",
-      "columns": {
-        "user": "用户",
-        "email": "邮箱",
-        "role": "角色",
-        "lastActive": "最后活跃"
-      }
-    },
-    "roles": {
-      "admin": "管理员",
-      "editor": "编辑者",
-      "viewer": "查看者"
-    },
-    "audit": {
-      "title": "审计日志",
-      "export": "导出日志"
-    }
   }
 }
