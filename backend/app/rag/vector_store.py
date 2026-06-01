@@ -70,8 +70,8 @@ _chroma_collection = None
 _kw_docs: List[Dict] = []
 _kw_idf: Dict[str, float] = {}
 _kw_avgdl: float = 0.0
-_KW_MIN_RAW_SCORE = 0.1  # minimum raw BM25 score — low to support single low-IDF queries like "RAG"
-_KW_MIN_IDF = 1.0  # skip terms with very low IDF (appear in >60% docs)
+_KW_MIN_RAW_SCORE = 0.01  # minimum raw BM25 score — lowered for Chinese queries with fewer contributing terms
+_KW_MIN_IDF = 0.3  # skip only very high-frequency terms (appear in >85% docs)
 
 # Chinese stop words — function words, interrogatives, particles.
 # Applied after jieba segmentation so "什么" is a single token, not chars.
@@ -136,12 +136,13 @@ def _reset_chroma():
 
 # ── Keyword / BM25 retrieval (no embeddings, <10ms) ──
 
-def _tokenize(text: str) -> List[str]:
+def _tokenize(text: str, is_query: bool = False) -> List[str]:
     """jieba-based tokenizer with stopword filtering.
 
     Uses jieba for proper Chinese word segmentation instead of
     character-level n-grams. English words and numbers preserved.
-    Stopwords and single-char tokens filtered out.
+    Stopwords filtered for documents; lighter filtering for queries
+    to preserve terms that appear in document titles/headings.
     """
     import re
     jieba = _get_jieba()
@@ -158,9 +159,15 @@ def _tokenize(text: str) -> List[str]:
         zh_tokens = [t.strip() for t in jieba.cut(text)
                      if t.strip() and not t.isascii()]
 
-    # Filter: remove stopwords, single-char Chinese tokens, whitespace
-    zh_filtered = [t for t in zh_tokens
-                   if len(t) >= 2 and t not in _ZH_STOPWORDS]
+    # For queries: lighter filtering — only remove pure function particles
+    # For documents: full stopword removal to reduce index noise
+    if is_query:
+        # Query: keep all tokens with length >= 1 (no stopword removal)
+        zh_filtered = [t for t in zh_tokens if len(t) >= 1]
+    else:
+        # Document: remove stopwords + single-char tokens
+        zh_filtered = [t for t in zh_tokens
+                       if len(t) >= 2 and t not in _ZH_STOPWORDS]
 
     return en_tokens + zh_filtered
 
@@ -264,7 +271,7 @@ def retrieve_keyword(query: str, top_k: int = 3, lang_filter: str = None) -> Lis
     if not _kw_docs:
         return []
 
-    q_terms = _tokenize(query)
+    q_terms = _tokenize(query, is_query=True)
     if not q_terms:
         return []
 
@@ -724,15 +731,14 @@ def rerank(query: str, chunks: List[Dict[str, Any]], top_k: int = 3) -> List[Dic
     Cross-encoder jointly encodes query + document for precise relevance scoring.
     More accurate than bi-encoder cosine similarity but slower (~300-600ms CPU).
 
-    Currently disabled by default — BM25+RRF is sufficient for small collections.
-    Enable by setting RERANK_ENABLED=true in environment.
+    Disabled when fewer than 4 candidates or when RERANK_ENABLED=false.
     """
     if not chunks or len(chunks) <= top_k:
         return chunks
 
-    # Disabled by default — enable via env var for large collections
+    # Disabled explicitly or too few candidates to rerank
     import os
-    if not os.environ.get("RERANK_ENABLED"):
+    if os.environ.get("RERANK_ENABLED", "true").lower() == "false":
         return chunks[:top_k]
 
     model = _get_reranker()
@@ -747,7 +753,17 @@ def rerank(query: str, chunks: List[Dict[str, Any]], top_k: int = 3) -> List[Dic
         chunk["rerank_score"] = float(score)
 
     reranked = sorted(chunks, key=lambda x: x.get("rerank_score", 0), reverse=True)
-    return reranked[:top_k]
+
+    # Filter out low-relevance results (cross-encoder scores < 0.3 are typically irrelevant)
+    MIN_RERANK_SCORE = float(os.getenv("MIN_RERANK_SCORE", "0.3"))
+    filtered = [c for c in reranked if c.get("rerank_score", 0) >= MIN_RERANK_SCORE]
+
+    if not filtered:
+        logger.info("All results below rerank threshold (max=%.3f), returning top results",
+                     reranked[0].get("rerank_score", 0) if reranked else 0)
+        return reranked[:top_k]  # fallback: return unfiltered
+
+    return filtered[:top_k]
 
 
 def get_bm25_stats() -> dict:

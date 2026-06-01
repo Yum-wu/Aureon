@@ -21,6 +21,10 @@ logger = structlog.get_logger()
 _RRF_K = 60  # RRF constant (standard value from literature)
 MULTI_QUERY_ENABLED = os.getenv("MULTI_QUERY_ENABLED", "true").lower() == "true"
 
+# RRF score threshold: with k=60, rank-1 score ≈ 0.0164.
+# Results below this are likely irrelevant (both retrievers failed to find good matches).
+_MIN_RELEVANCE_SCORE = float(os.getenv("MIN_RELEVANCE_SCORE", "0.012"))
+
 
 def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List[Dict[str, Any]]:
     """Hybrid retrieval: BM25 keyword + vector search, fused via RRF.
@@ -118,6 +122,12 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
                 selected.append(doc)
                 if len(selected) >= top_k:
                     break
+
+    # Relevance gate: if best score is too low, both retrievers failed to find relevant docs
+    if selected and selected[0].get("score", 0) < _MIN_RELEVANCE_SCORE:
+        logger.info("All results below relevance threshold (max=%.4f < %.4f), returning empty",
+                     selected[0]["score"], _MIN_RELEVANCE_SCORE)
+        return []
 
     return selected
 
