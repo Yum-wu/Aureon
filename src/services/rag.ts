@@ -1,6 +1,17 @@
 /** RAG 查询后端 SSE streaming 地址 */
 const RAG_STREAM_URL = "/api/rag/query/stream";
 
+/** Get current i18n language for query filtering */
+function getQueryLanguage(): string {
+  try {
+    // Dynamic import to avoid circular deps; falls back to browser locale
+    const lang = document.documentElement.lang || navigator.language || "en";
+    return lang.startsWith("zh") ? "zh" : "en";
+  } catch {
+    return "en";
+  }
+}
+
 /** 引用来源 */
 export interface Citation {
   id: number;
@@ -94,7 +105,7 @@ export async function streamRAGQuery(
     const response = await fetch(RAG_STREAM_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: question }),
+      body: JSON.stringify({ query: question, language: getQueryLanguage() }),
       signal,
     });
 
