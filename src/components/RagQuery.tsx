@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import i18n from "../i18n/config";
 
 const RAG_API_URL =
   (import.meta.env.VITE_API_RAG_URL as string) || "/api/rag/query";
@@ -33,6 +34,17 @@ export function RagQuery() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  // Search history (localStorage)
+  const [history, setHistory] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("aureon_search_history") || "[]"); } catch { return []; }
+  });
+
+  const saveToHistory = (q: string) => {
+    const updated = [q, ...history.filter((h) => h !== q)].slice(0, 10);
+    setHistory(updated);
+    localStorage.setItem("aureon_search_history", JSON.stringify(updated));
+  };
 
   // Upload state
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -147,12 +159,13 @@ export function RagQuery() {
     setError(null);
     setAnswer("");
     setSources([]);
+    saveToHistory(trimmed);
 
     try {
       const res = await fetch(RAG_STREAM_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: trimmed, top_k: 3, use_mmr: true }),
+        body: JSON.stringify({ query: trimmed, top_k: 3, use_mmr: true, language: (i18n.language || "en").startsWith("zh") ? "zh" : "en" }),
         signal: controller.signal,
       });
 
@@ -256,9 +269,24 @@ export function RagQuery() {
             ),
           )}
         </div>
+        {/* Search history */}
+        {history.length > 0 && !loading && !answer && (
+          <div className="mt-3">
+            <p className="text-xs text-gray-400 mb-1.5">{t("search.history")}</p>
+            <div className="flex gap-2 flex-wrap">
+              {history.slice(0, 5).map((h) => (
+                <button
+                  key={h}
+                  onClick={() => { setQuery(h); }}
+                  className="text-xs px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                >
+                  {h.length > 30 ? h.slice(0, 30) + "…" : h}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
-
-      {/* Upload panel */}
       {uploadOpen && (
         <div className="bg-white border-b border-gray-200 px-6 py-4">
           <div

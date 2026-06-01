@@ -1,15 +1,12 @@
 /** RAG 查询后端 SSE streaming 地址 */
 const RAG_STREAM_URL = "/api/rag/query/stream";
 
+import i18n from "../i18n/config";
+
 /** Get current i18n language for query filtering */
 function getQueryLanguage(): string {
-  try {
-    // Dynamic import to avoid circular deps; falls back to browser locale
-    const lang = document.documentElement.lang || navigator.language || "en";
-    return lang.startsWith("zh") ? "zh" : "en";
-  } catch {
-    return "en";
-  }
+  const lang = i18n.language || "en";
+  return lang.startsWith("zh") ? "zh" : "en";
 }
 
 /** 引用来源 */
