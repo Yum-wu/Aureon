@@ -13,7 +13,7 @@
 
 | Metric | Value |
 |--------|-------|
-| Recall@3 (Hybrid) | **96.08%** |
+| Recall@3 (Hybrid) | **97.6%** |
 | TTFT (Streaming) | **~310ms** |
 | Full RAG Latency | **~400ms** |
 | Retrieval Latency | **~10ms** |
