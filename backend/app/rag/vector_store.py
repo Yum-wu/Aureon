@@ -759,9 +759,9 @@ def rerank(query: str, chunks: List[Dict[str, Any]], top_k: int = 3) -> List[Dic
     filtered = [c for c in reranked if c.get("rerank_score", 0) >= MIN_RERANK_SCORE]
 
     if not filtered:
-        logger.info("All results below rerank threshold (max=%.3f), returning top results",
-                     reranked[0].get("rerank_score", 0) if reranked else 0)
-        return reranked[:top_k]  # fallback: return unfiltered
+        logger.info("All results below rerank threshold (max=%.3f < %.3f), returning empty",
+                     reranked[0].get("rerank_score", 0) if reranked else 0, MIN_RERANK_SCORE)
+        return []  # nothing truly relevant — let caller handle empty
 
     return filtered[:top_k]
 
