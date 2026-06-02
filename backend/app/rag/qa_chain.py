@@ -382,6 +382,61 @@ def generate_answer(
     return llm_call_fn(messages)
 
 
+# ── Faithfulness Check (post-generation) ──
+
+_FAITHFULNESS_PROMPT_ZH = """判断以下回答是否完全基于提供的参考文档。
+
+规则：
+1. 如果回答中的所有信息都能在参考文档中找到依据，返回 1.0
+2. 如果回答包含文档中没有的信息（幻觉），返回 0.0
+3. 如果回答说"文档中未提及"或"无法回答"，返回 1.0（这是诚实的回答）
+
+只返回数字 (0.0 或 1.0)，不要解释。
+
+参考文档：
+{context}
+
+用户问题：{query}
+回答：{answer}"""
+
+_FAITHFULNESS_PROMPT_EN = """Determine if the following answer is fully supported by the reference documents.
+
+Rules:
+1. If ALL information in the answer can be found in the reference documents, return 1.0
+2. If the answer contains information NOT in the documents (hallucination), return 0.0
+3. If the answer says "not mentioned" or "cannot answer", return 1.0 (honest response)
+
+Return ONLY a number (0.0 or 1.0), no explanation.
+
+Reference documents:
+{context}
+
+User question: {query}
+Answer: {answer}"""
+
+
+def check_faithfulness(query: str, answer: str, context: str, llm_call_fn, lang: str = "zh") -> float:
+    """Verify that the generated answer is grounded in the retrieved context.
+
+    Returns 1.0 if fully supported, 0.0 if hallucinated.
+    Uses a single LLM call to check factual consistency.
+    """
+    prompt_template = _FAITHFULNESS_PROMPT_EN if lang == "en" else _FAITHFULNESS_PROMPT_ZH
+    prompt = prompt_template.format(context=context[:1500], query=query, answer=answer[:500])
+    messages = [{"role": "user", "content": prompt}]
+
+    try:
+        response = llm_call_fn(messages)
+        import re
+        match = re.search(r'(0\.0|1\.0|0|1)', str(response).strip())
+        if match:
+            return float(match.group())
+    except Exception as e:
+        logger.warning("Faithfulness check failed (fail-open): %s", e)
+
+    return 1.0  # fail-open: assume faithful if check fails
+
+
 def rag_query(
     query: str,
     llm_call_fn,
@@ -429,7 +484,20 @@ def rag_query(
     # 3. Generate
     answer = generate_answer(query, context, llm_call_fn, lang=lang)
 
-    # 4. Build response with sources
+    # 4. Faithfulness check: verify answer is grounded in context.
+    #    Prevents hallucination when query is topically related but unanswerable.
+    faithfulness = check_faithfulness(query, answer, context, llm_call_fn, lang=lang)
+    if faithfulness < 0.5:
+        logger.info("Faithfulness check failed (%.2f), returning no-answer for: %s",
+                     faithfulness, query[:60])
+        no_result_msg = (
+            "Based on the available documents, I cannot provide a reliable answer to this question. Please try a different question."
+            if lang == "en"
+            else "根据现有文档，我无法可靠地回答这个问题。请尝试其他问题。"
+        )
+        return RAGQueryResponse(answer=no_result_msg, sources=[])
+
+    # 5. Build response with sources
     sources = [
         SourceItem(
             title=c["metadata"].get("title", c["metadata"].get("source", "Unknown")),
