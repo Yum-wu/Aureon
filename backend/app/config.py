@@ -40,11 +40,21 @@ class Settings(BaseSettings):
 
     redis_url: str = ""
 
+    # Vector store backend ("chroma" or "qdrant")
+    vector_backend: str = "chroma"
+    qdrant_url: str = "http://localhost:6333"
+    qdrant_api_key: str = ""
+
     offload_max_chars: int = 1000
     session_max_messages: int = 500
 
     langchain_api_key: str = ""
     langchain_project: str = "chatbot-rag"
+
+    # Elasticsearch BM25 backend
+    es_url: str = "http://localhost:9200"
+    es_index: str = "aureon"
+    bm25_backend: str = "memory"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
