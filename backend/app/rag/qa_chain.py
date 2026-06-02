@@ -495,9 +495,10 @@ def rag_query(
     answer = generate_answer(query, context, llm_call_fn, lang=lang)
 
     # 4. Faithfulness check: verify answer claims against context (RAGAS-inspired).
-    #    If <50% of claims are supported, regenerate with strict prompt.
+    #    If <30% of claims are supported, regenerate with strict prompt.
+    #    Threshold 0.3 is lenient: allows answers with some inference/explanation.
     faithfulness = check_faithfulness(query, answer, context, llm_call_fn, lang=lang)
-    if faithfulness < 0.5:
+    if faithfulness < 0.3:
         logger.info("Faithfulness failed (%.2f), regenerating with strict prompt for: %s",
                      faithfulness, query[:60])
         # Regenerate with strict "context-only" prompt
