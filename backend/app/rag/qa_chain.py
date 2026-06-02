@@ -19,6 +19,8 @@ import structlog
 logger = structlog.get_logger()
 
 _RRF_K = int(os.getenv("RRF_K", "200"))
+_RETRIEVAL_MULTIPLIER = int(os.getenv("RETRIEVAL_MULTIPLIER", "7"))
+_RERANK_CANDIDATES = int(os.getenv("RERANK_CANDIDATES", "20"))
 MULTI_QUERY_ENABLED = os.getenv("MULTI_QUERY_ENABLED", "true").lower() == "true"
 
 # Keywords that uniquely identify specific articles — used for title/slug boost.
@@ -96,8 +98,8 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
         top_k: 返回结果数量
         lang_filter: 语言过滤（"zh" 或 "en"）
     """
-    bm25_results = retrieve_keyword(query, top_k=top_k * 2, lang_filter=lang_filter)
-    vector_results = retrieve(query, top_k=top_k * 2, use_mmr=False, lang_filter=lang_filter)
+    bm25_results = retrieve_keyword(query, top_k=top_k * _RETRIEVAL_MULTIPLIER, lang_filter=lang_filter)
+    vector_results = retrieve(query, top_k=top_k * _RETRIEVAL_MULTIPLIER, use_mmr=False, lang_filter=lang_filter)
 
     # Use all vector results — quality check removed to avoid false discards
     # on small collections where cosine scores naturally cluster together
@@ -183,7 +185,7 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
     ranked = sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)
 
     # Take candidates for diversity selection (more than top_k)
-    candidate_limit = min(len(ranked), max(top_k * 3, 10))
+    candidate_limit = min(len(ranked), max(_RERANK_CANDIDATES, top_k * 3))
     candidates = []
     for key, score in ranked[:candidate_limit]:
         doc = doc_map[key].copy()
@@ -216,6 +218,10 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
                         break
     else:
         selected = candidates[:top_k]
+
+    # Rerank: cross-encoder 精排 top-20 → top-3
+    if len(selected) > top_k:
+        selected = rerank(query, selected, top_k=top_k)
 
     # Reranker is for ranking only — no score threshold here.
     # CRAG assessment (below) handles relevance filtering.
