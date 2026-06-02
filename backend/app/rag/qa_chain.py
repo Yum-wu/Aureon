@@ -495,18 +495,24 @@ def rag_query(
     answer = generate_answer(query, context, llm_call_fn, lang=lang)
 
     # 4. Faithfulness check: verify answer is grounded in context.
-    #    Only blocks CLEAR hallucinations (score 0.0).
-    #    Partial answers (0.5) and honest refusals (1.0) are allowed.
+    #    If hallucination detected (score 0.0), regenerate with strict prompt.
+    #    This prevents blocking valid queries while catching true hallucinations.
     faithfulness = check_faithfulness(query, answer, context, llm_call_fn, lang=lang)
     if faithfulness <= 0.0:
-        logger.info("Faithfulness check failed (%.2f), returning no-answer for: %s",
+        logger.info("Faithfulness failed (%.2f), regenerating with strict prompt for: %s",
                      faithfulness, query[:60])
-        no_result_msg = (
-            "Based on the available documents, I cannot provide a reliable answer to this question. Please try a different question."
-            if lang == "en"
-            else "根据现有文档，我无法可靠地回答这个问题。请尝试其他问题。"
-        )
-        return RAGQueryResponse(answer=no_result_msg, sources=[])
+        # Regenerate with strict "context-only" prompt
+        if lang == "en":
+            strict_prompt = QA_SYSTEM_PROMPT_EN.replace(
+                "Only answer based on the reference documents.",
+                "CRITICAL: Answer ONLY using information from the reference documents. Do NOT add ANY information from your training data. If the documents don't contain the answer, say 'not mentioned in the documents'."
+            )
+        else:
+            strict_prompt = QA_SYSTEM_PROMPT.replace(
+                "只基于参考文档内容回答。",
+                "严格要求：仅使用参考文档中的信息回答。不要添加任何来自训练数据的信息。如果文档中没有相关信息，说'文档中未提及'。"
+            )
+        answer = generate_answer(query, context, llm_call_fn, system_prompt=strict_prompt, lang=lang)
 
     # 5. Build response with sources
     sources = [
