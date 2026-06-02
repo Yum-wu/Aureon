@@ -1,14 +1,16 @@
 {
-  "timestamp": "2026-06-02T18:32:37",
+  "timestamp": "2026-06-02T19:52:22",
   "total_qa_pairs": 97,
   "collection": {
     "docs": 26,
     "chunks": 476
   },
   "hybrid": {
-    "recall@3": 0.9390243902439024,
-    "precision@3": 0.3130081300813008,
-    "mrr": 0.8943089430894309,
+    "recall@3": 0.9512195121951219,
+    "recall@10": 1.0,
+    "ndcg@10": 1.0103466287811516,
+    "precision@3": 0.3333333333333333,
+    "mrr": 0.9126016260162602,
     "negative_detection_rate": 0.06666666666666667
   },
   "bm25": {
@@ -17,39 +19,39 @@
     "mrr": 0.8800813008130082
   },
   "dense": {
-    "recall@3": 0.8658536585365854,
-    "precision@3": 0.3130081300813008,
-    "mrr": 0.7845528455284553
+    "recall@3": 0.9146341463414634,
+    "precision@3": 0.36991869918699183,
+    "mrr": 0.8719512195121951
   },
   "by_category": {
     "difficulty_easy": {
-      "recall": 1.0,
-      "precision": 0.3333333333333333,
-      "mrr": 0.9393939393939394,
+      "recall": 0.9090909090909091,
+      "precision": 0.36363636363636365,
+      "mrr": 0.9090909090909091,
       "count": 21
     },
     "difficulty_hard": {
-      "recall": 0.896551724137931,
-      "precision": 0.29885057471264365,
-      "mrr": 0.8275862068965517,
+      "recall": 0.9655172413793104,
+      "precision": 0.3218390804597701,
+      "mrr": 0.8908045977011494,
       "count": 29
     },
     "difficulty_medium": {
       "recall": 0.9523809523809523,
-      "precision": 0.31746031746031744,
+      "precision": 0.3333333333333333,
       "mrr": 0.9285714285714286,
       "count": 47
     },
     "type_cross_article": {
-      "recall": 0.8333333333333334,
-      "precision": 0.2777777777777778,
-      "mrr": 0.6666666666666666,
+      "recall": 1.0,
+      "precision": 0.3333333333333333,
+      "mrr": 0.8333333333333334,
       "count": 6
     },
     "type_factual": {
-      "recall": 1.0,
-      "precision": 0.3333333333333333,
-      "mrr": 0.9393939393939394,
+      "recall": 0.9090909090909091,
+      "precision": 0.36363636363636365,
+      "mrr": 0.9090909090909091,
       "count": 11
     },
     "type_negative": {
@@ -60,40 +62,40 @@
     },
     "type_reasoning": {
       "recall": 0.975609756097561,
-      "precision": 0.3252032520325203,
+      "precision": 0.3414634146341463,
       "mrr": 0.9512195121951219,
       "count": 41
     },
     "type_synthesis": {
-      "recall": 0.875,
-      "precision": 0.29166666666666663,
-      "mrr": 0.8333333333333334,
+      "recall": 0.9166666666666666,
+      "precision": 0.3055555555555555,
+      "mrr": 0.8680555555555556,
       "count": 24
     }
   },
   "latency": {
     "bm25": {
-      "mean_ms": 2.9,
-      "p50_ms": 2.6,
-      "p99_ms": 5.2,
-      "min_ms": 2.0,
-      "max_ms": 6.0,
+      "mean_ms": 2.8,
+      "p50_ms": 2.8,
+      "p99_ms": 4.3,
+      "min_ms": 2.3,
+      "max_ms": 5.0,
       "num_samples": 246
     },
     "vector": {
-      "mean_ms": 2.2,
-      "p50_ms": 2.2,
-      "p99_ms": 3.0,
-      "min_ms": 1.9,
-      "max_ms": 4.0,
+      "mean_ms": 2.7,
+      "p50_ms": 2.6,
+      "p99_ms": 3.4,
+      "min_ms": 2.4,
+      "max_ms": 3.7,
       "num_samples": 246
     },
     "hybrid": {
-      "mean_ms": 5.2,
-      "p50_ms": 4.9,
-      "p99_ms": 7.8,
-      "min_ms": 4.3,
-      "max_ms": 8.3,
+      "mean_ms": 6.6,
+      "p50_ms": 6.4,
+      "p99_ms": 9.0,
+      "min_ms": 5.6,
+      "max_ms": 9.2,
       "num_samples": 246
     }
   },
@@ -110,8 +112,8 @@
         "expected": "rag-system-guide",
         "retrieved": [
           "llamaindex-rag-guide",
-          "rag-concepts-deep-dive",
-          "vector-database-guide"
+          "vector-database-guide",
+          "rag-concepts-deep-dive"
         ]
       },
       {
@@ -120,17 +122,18 @@
         "expected": "langgraph-workflow",
         "retrieved": [
           "langchain-framework-guide",
-          "ai-agent-architecture"
+          "ai-agent-architecture",
+          "langchain-agent-intro"
         ]
       },
       {
-        "id": "11p-002",
-        "question": "这篇文章分享了哪些关于快速迭代和项目管理的经验教训？",
-        "expected": "eleven-projects-two-months",
+        "id": "pe-003",
+        "question": "RAG 场景中的 Prompt 设计需要遵循哪些规则才能避免幻觉？",
+        "expected": "prompt-engineering-guide",
         "retrieved": [
-          "zustand-todo-app",
-          "langchain-agent-intro",
-          "hello-world"
+          "llamaindex-rag-guide",
+          "rag-concepts-deep-dive",
+          "eleven-projects-two-months"
         ]
       },
       {
@@ -138,19 +141,9 @@
         "question": "博客从零搭建到上线经历了哪些关键决策？",
         "expected": "hello-world",
         "retrieved": [
+          "eleven-projects-two-months",
           "ai-agent-architecture",
-          "chatbot-railway-deployment",
-          "eleven-projects-two-months"
-        ]
-      },
-      {
-        "id": "cross-zh-003",
-        "question": "向量数据库选型和 Embedding 模型选择之间有什么关联？如何配合使用？",
-        "expected": "vector-database-guide",
-        "retrieved": [
-          "embedding-models-guide",
-          "rag-system-guide",
-          "rag-concepts-deep-dive"
+          "chatbot-railway-deployment"
         ]
       }
     ],
@@ -201,8 +194,8 @@
         "retrieved_count": 3,
         "retrieved_sources": [
           "langchain-framework-guide",
-          "langchain-framework-guide",
-          "langchain-framework-guide"
+          "ai-agent-architecture",
+          "llamaindex-rag-guide"
         ]
       },
       {
@@ -222,7 +215,7 @@
         "retrieved_sources": [
           "chatbot-railway-deployment",
           "weather-app-api-integration",
-          "ai-agent-architecture"
+          "weather-app-api-integration"
         ]
       },
       {
@@ -242,7 +235,7 @@
         "retrieved_sources": [
           "react-performance-tips",
           "hello-world",
-          "chatbot-railway-deployment"
+          "eleven-projects-two-months"
         ]
       },
       {
@@ -251,8 +244,8 @@
         "retrieved_count": 3,
         "retrieved_sources": [
           "chatbot-railway-deployment",
-          "langchain-framework-guide",
-          "embedding-models-guide"
+          "chatbot-railway-deployment",
+          "chatbot-railway-deployment"
         ]
       }
     ],
@@ -303,8 +296,8 @@
         "sources_count": 3,
         "sources": [
           "langchain-framework-guide",
-          "langchain-framework-guide",
-          "langchain-framework-guide"
+          "ai-agent-architecture",
+          "llamaindex-rag-guide"
         ]
       },
       {
@@ -324,7 +317,7 @@
         "sources": [
           "chatbot-railway-deployment",
           "weather-app-api-integration",
-          "ai-agent-architecture"
+          "weather-app-api-integration"
         ]
       },
       {
@@ -344,7 +337,7 @@
         "sources": [
           "react-performance-tips",
           "hello-world",
-          "chatbot-railway-deployment"
+          "eleven-projects-two-months"
         ]
       },
       {
@@ -353,11 +346,11 @@
         "sources_count": 3,
         "sources": [
           "chatbot-railway-deployment",
-          "langchain-framework-guide",
-          "embedding-models-guide"
+          "chatbot-railway-deployment",
+          "chatbot-railway-deployment"
         ]
       }
     ]
   },
-  "pass_rate": "6/9"
+  "pass_rate": "9/11"
 }

@@ -45,12 +45,12 @@ _MIN_RELEVANCE_SCORE = float(os.getenv("MIN_RELEVANCE_SCORE", "0.003"))
 
 # Pre-RRF cosine threshold: filters vector results BEFORE fusion.
 # RRF rank-1 = 1/(200+1) ≈ 0.005, so post-RRF thresholds are too low.
-_VECTOR_MIN_COSINE = float(os.getenv("VECTOR_MIN_COSINE", "0.10"))
+_VECTOR_MIN_COSINE = float(os.getenv("VECTOR_MIN_COSINE", "0.01"))
 
 # Vector RRF contribution cap: limit how many vector results enter RRF fusion.
 # Prevents low-confidence vector matches from drowning precise BM25 results.
 _VECTOR_MAX_CONTRIB = int(os.getenv("VECTOR_MAX_CONTRIB", "3"))
-_VECTOR_CONFIDENCE_THRESHOLD = float(os.getenv("VECTOR_CONFIDENCE_THRESHOLD", "0.35"))
+_VECTOR_CONFIDENCE_THRESHOLD = float(os.getenv("VECTOR_CONFIDENCE_THRESHOLD", "0.05"))
 
 # LLM-based negative detection: when top retrieval score is below this threshold,
 # use an LLM classifier to decide if the query is answerable by the knowledge base.
