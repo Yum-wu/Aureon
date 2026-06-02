@@ -23,8 +23,8 @@ _EMBED_CACHE_MAX = 500
 
 # ── Local embedding model (lazy-loaded singleton) ──
 _local_embed_model = None
-_LOCAL_MODEL_NAME = "BAAI/bge-small-zh-v1.5"
-_LOCAL_MODEL_DIM = 512
+_LOCAL_MODEL_NAME = "BAAI/bge-large-zh-v1.5"
+_LOCAL_MODEL_DIM = 1024
 # Set True if collection was built with API (different dim than local model)
 _skip_local_embed = False
 
@@ -711,7 +711,7 @@ def format_context(chunks: List[Dict[str, Any]]) -> str:
 
 # ── Cross-Encoder Reranker (lazy-loaded singleton) ──
 _reranker = None
-_RERANKER_MODEL = "BAAI/bge-reranker-base"
+_RERANKER_MODEL = "BAAI/bge-reranker-v2-m3"
 
 
 def _get_reranker():
