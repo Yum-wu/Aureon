@@ -130,7 +130,8 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
         candidates.append(doc)
 
     # Cross-encoder reranking: jointly encode query+doc for precise relevance
-    candidates = rerank(query, candidates, top_k=candidate_limit)
+    # Pass top_k (not candidate_limit) so reranker can filter down to final count
+    candidates = rerank(query, candidates, top_k=top_k)
 
     # Diversity selection: only for cross-article queries (comparisons, summaries).
     # For simple factual queries, return top-k by score — this maximizes precision
@@ -156,15 +157,10 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
     else:
         selected = candidates[:top_k]
 
-    # Reranker score gate: if best rerank_score is below threshold, return empty.
-    if selected and "rerank_score" in selected[0]:
-        MIN_RERANK_SCORE = float(os.getenv("MIN_RERANK_SCORE", "0.5"))
-        if selected[0]["rerank_score"] < MIN_RERANK_SCORE:
-            logger.info("All results below rerank threshold (max=%.3f < %.3f), returning empty",
-                         selected[0]["rerank_score"], MIN_RERANK_SCORE)
-            return []
+    # Reranker is for ranking only — no score threshold here.
+    # CRAG assessment (below) handles relevance filtering.
 
-    # Relevance gate: if best score is too low, both retrievers failed to find relevant docs
+    # Relevance gate: if best RRF score is too low, both retrievers failed
     if selected and selected[0].get("score", 0) < _MIN_RELEVANCE_SCORE:
         logger.info("All results below relevance threshold (max=%.4f < %.4f), returning empty",
                      selected[0]["score"], _MIN_RELEVANCE_SCORE)
@@ -279,13 +275,8 @@ def multi_query_retrieve(query: str, top_k: int = 3, lang_filter: str = None) ->
                      selected[0]["score"], _MIN_RELEVANCE_SCORE)
         return []
 
-    # Reranker score gate: if best rerank_score is below threshold, return empty.
-    if selected and "rerank_score" in selected[0]:
-        MIN_RERANK_SCORE = float(os.getenv("MIN_RERANK_SCORE", "0.5"))
-        if selected[0]["rerank_score"] < MIN_RERANK_SCORE:
-            logger.info("multi_query: best rerank_score %.3f < %.3f, returning empty",
-                         selected[0]["rerank_score"], MIN_RERANK_SCORE)
-            return []
+    # Reranker is for ranking only — no score threshold here.
+    # CRAG assessment (in rag_query) handles relevance filtering.
 
     return selected
 
@@ -413,21 +404,18 @@ def rag_query(
     chunks = multi_query_retrieve(query, top_k=top_k, lang_filter=filter_lang)
 
     # 2. CRAG-style retrieval quality assessment:
-    #    If reranker is uncertain (score < 0.5), use LLM to verify relevance.
-    #    This catches cases where cross-encoder scores are inflated by vocabulary overlap.
-    if chunks and "rerank_score" in chunks[0] and chunks[0].get("rerank_score", 0) < 0.5:
-        assessment = assess_retrieval_quality(query, chunks, llm_call_fn)
-        if assessment <= 1:
-            logger.info("CRAG: assessment=%d (irrelevant), returning empty for: %s",
-                         assessment, query[:60])
-            chunks = []
-    elif chunks and "rerank_score" not in chunks[0]:
-        # No reranker score (model not loaded) — always assess
-        assessment = assess_retrieval_quality(query, chunks, llm_call_fn)
-        if assessment <= 1:
-            logger.info("CRAG: assessment=%d (irrelevant), returning empty for: %s",
-                         assessment, query[:60])
-            chunks = []
+    #    Always run for borderline reranker scores to catch unanswerable queries.
+    #    The reranker is unreliable for distinguishing "topically related" from
+    #    "actually answers the question" — vocabulary overlap inflates scores.
+    if chunks:
+        top_rerank = chunks[0].get("rerank_score", 0) if chunks else 0
+        # Run CRAG when reranker is absent or score is below 0.7
+        if not chunks[0].get("rerank_score") or top_rerank < 0.7:
+            assessment = assess_retrieval_quality(query, chunks, llm_call_fn)
+            if assessment <= 1:
+                logger.info("CRAG: assessment=%d (irrelevant), returning empty for: %s",
+                             assessment, query[:60])
+                chunks = []
 
     if not chunks:
         no_result_msg = (
