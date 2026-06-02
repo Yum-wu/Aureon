@@ -105,8 +105,9 @@ class TestRagQueryAstream:
         assert "No relevant content" in next(e["content"] for e in events if e["type"] == "text")
 
     @pytest.mark.asyncio
+    @patch("app.rag.qa_chain.assess_retrieval_quality", return_value=4)
     @patch("app.rag.qa_chain.hybrid_retrieve")
-    async def test_with_chunks(self, mock_hybrid):
+    async def test_with_chunks(self, mock_hybrid, mock_assess):
         mock_hybrid.return_value = [
             {"text": "RAG content", "metadata": {"title": "Guide", "slug": "g"}, "score": 0.9}
         ]
