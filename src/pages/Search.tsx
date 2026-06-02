@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SearchBar } from '../components/search/SearchBar';
 import { StreamingAnswer } from '../components/search/StreamingAnswer';
@@ -15,7 +15,15 @@ export function Search() {
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<Array<{query: string; category: string}>>([]);
   const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    fetch('/api/rag/suggestions')
+      .then(r => r.json())
+      .then(d => setSuggestions(d.suggestions || []))
+      .catch(() => {});
+  }, []);
 
   const handleSearch = async () => {
     const trimmed = query.trim();
@@ -82,6 +90,20 @@ export function Search() {
             {query.length}/{MAX_QUERY_LENGTH}
           </p>
         </div>
+
+        {suggestions.length > 0 && !answer && !isLoading && (
+          <div className="flex flex-wrap gap-2 mt-4">
+            {suggestions.map((s, i) => (
+              <button
+                key={i}
+                onClick={() => { setQuery(s.query); }}
+                className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+              >
+                {s.query}
+              </button>
+            ))}
+          </div>
+        )}
 
         {error && (
           <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm" role="alert">
