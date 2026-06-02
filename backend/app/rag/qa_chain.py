@@ -508,19 +508,7 @@ def rag_query(
         )
         return RAGQueryResponse(answer=no_result_msg, sources=[])
 
-    # 5. Detect "cannot answer" responses — LLM correctly identified unanswerable query.
-    #    Strip sources to avoid misleading the user.
-    _NO_ANSWER_PATTERNS_ZH = ["未提及", "未找到", "无法回答", "没有提到", "没有相关信息"]
-    _NO_ANSWER_PATTERNS_EN = ["not mentioned", "not found", "cannot answer", "no information"]
-    answer_lower = answer.lower()
-    is_no_answer = (
-        any(p in answer for p in _NO_ANSWER_PATTERNS_ZH) or
-        any(p in answer_lower for p in _NO_ANSWER_PATTERNS_EN)
-    )
-    if is_no_answer:
-        return RAGQueryResponse(answer=answer, sources=[])
-
-    # 6. Build response with sources
+    # 5. Build response with sources
     sources = [
         SourceItem(
             title=c["metadata"].get("title", c["metadata"].get("source", "Unknown")),
