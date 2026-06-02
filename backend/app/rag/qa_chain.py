@@ -384,14 +384,19 @@ def generate_answer(
 
 # ── Faithfulness Check (post-generation) ──
 
-_FAITHFULNESS_PROMPT_ZH = """判断以下回答是否完全基于提供的参考文档。
+_FAITHFULNESS_PROMPT_ZH = """评估以下回答与参考文档的一致性。
 
-规则：
-1. 如果回答中的所有信息都能在参考文档中找到依据，返回 1.0
-2. 如果回答包含文档中没有的信息（幻觉），返回 0.0
-3. 如果回答说"文档中未提及"或"无法回答"，返回 1.0（这是诚实的回答）
+评分标准：
+- 1.0: 回答完全基于文档，所有信息都有依据
+- 0.5: 回答部分基于文档，包含一些推断或补充
+- 0.0: 回答包含明显的幻觉（文档中完全不存在的信息）
 
-只返回数字 (0.0 或 1.0)，不要解释。
+特别注意：
+- 如果回答说"文档中未提及"或"无法回答"，这是诚实的回答，评 1.0
+- 如果回答包含文档中没有的具体数据/事实，评 0.0
+- 如果回答是对文档内容的合理总结和解释，评 1.0
+
+只返回数字 (0.0, 0.5, 或 1.0)，不要解释。
 
 参考文档：
 {context}
@@ -399,14 +404,19 @@ _FAITHFULNESS_PROMPT_ZH = """判断以下回答是否完全基于提供的参考
 用户问题：{query}
 回答：{answer}"""
 
-_FAITHFULNESS_PROMPT_EN = """Determine if the following answer is fully supported by the reference documents.
+_FAITHFULNESS_PROMPT_EN = """Evaluate the consistency between the answer and the reference documents.
 
-Rules:
-1. If ALL information in the answer can be found in the reference documents, return 1.0
-2. If the answer contains information NOT in the documents (hallucination), return 0.0
-3. If the answer says "not mentioned" or "cannot answer", return 1.0 (honest response)
+Scoring:
+- 1.0: Answer fully based on documents, all information grounded
+- 0.5: Answer partially based on documents, includes some inference
+- 0.0: Answer contains clear hallucination (information not in documents)
 
-Return ONLY a number (0.0 or 1.0), no explanation.
+Special cases:
+- If answer says "not mentioned" or "cannot answer", this is honest → 1.0
+- If answer contains specific data/facts NOT in documents → 0.0
+- If answer is a reasonable summary/interpretation of documents → 1.0
+
+Return ONLY a number (0.0, 0.5, or 1.0), no explanation.
 
 Reference documents:
 {context}
@@ -428,7 +438,7 @@ def check_faithfulness(query: str, answer: str, context: str, llm_call_fn, lang:
     try:
         response = llm_call_fn(messages)
         import re
-        match = re.search(r'(0\.0|1\.0|0|1)', str(response).strip())
+        match = re.search(r'(0\.0|0\.5|1\.0)', str(response).strip())
         if match:
             return float(match.group())
     except Exception as e:
@@ -485,9 +495,10 @@ def rag_query(
     answer = generate_answer(query, context, llm_call_fn, lang=lang)
 
     # 4. Faithfulness check: verify answer is grounded in context.
-    #    Prevents hallucination when query is topically related but unanswerable.
+    #    Only blocks CLEAR hallucinations (score 0.0).
+    #    Partial answers (0.5) and honest refusals (1.0) are allowed.
     faithfulness = check_faithfulness(query, answer, context, llm_call_fn, lang=lang)
-    if faithfulness < 0.5:
+    if faithfulness <= 0.0:
         logger.info("Faithfulness check failed (%.2f), returning no-answer for: %s",
                      faithfulness, query[:60])
         no_result_msg = (
