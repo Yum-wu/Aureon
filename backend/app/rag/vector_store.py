@@ -733,7 +733,7 @@ def rerank(query: str, chunks: List[Dict[str, Any]], top_k: int = 3) -> List[Dic
 
     Disabled when fewer than 4 candidates or when RERANK_ENABLED=false.
     """
-    if not chunks or len(chunks) <= top_k:
+    if not chunks or len(chunks) <= 1:
         return chunks
 
     # Disabled explicitly or too few candidates to rerank
