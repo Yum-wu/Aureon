@@ -3,6 +3,7 @@ RAG Evaluation: Recall@k, Faithfulness (LLM-as-judge), Latency stats.
 """
 
 import json
+import math
 import time
 import statistics
 from typing import Callable, List, Dict, Any
@@ -54,6 +55,16 @@ def evaluate_recall(
         "score": round(recall, 4),
         "details": details,
     }
+
+
+def ndcg_at_k(retrieved_sources: list, expected_source: str, k: int = 10) -> float:
+    """Calculate nDCG@K for a single query. Relevant doc scores 1.0."""
+    dcg = 0.0
+    for i, source in enumerate(retrieved_sources[:k]):
+        rel = 1.0 if source == expected_source else 0.0
+        dcg += rel / math.log2(i + 2)
+    idcg = 1.0  # ideal: relevant doc at rank 1
+    return dcg / idcg if idcg > 0 else 0.0
 
 
 FAITHFULNESS_JUDGE_PROMPT = """你是一个评估助手。判断以下回答是否忠实于提供的参考文档。

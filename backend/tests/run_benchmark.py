@@ -17,6 +17,7 @@ import os
 import time
 import statistics
 import json
+import math
 from pathlib import Path
 from collections import defaultdict
 
@@ -30,7 +31,7 @@ def load_qa_pairs():
 
 
 def test_recall(retrieve_fn, qa_pairs, k=3):
-    """Evaluate Recall@K and Precision@K.
+    """Evaluate Recall@K, Precision@K, Recall@10, and nDCG@10.
 
     For negative queries (source_article='none'), recall is not applicable.
     Instead we check that the system returns few/no results.
@@ -45,6 +46,9 @@ def test_recall(retrieve_fn, qa_pairs, k=3):
 
     precisions = []
     rranks = []
+
+    recall_10_hits = 0
+    ndcg_scores = []
 
     for qa in qa_pairs:
         q = qa["question"]
@@ -91,15 +95,32 @@ def test_recall(retrieve_fn, qa_pairs, k=3):
                     break
             rranks.append(rr)
 
+            # Recall@10 and nDCG@10: fetch top-10 results
+            chunks_10 = retrieve_fn(q, top_k=10)
+            retrieved_sources_10 = [c.get("metadata", {}).get("slug", "") for c in chunks_10]
+            if expected_source in retrieved_sources_10:
+                recall_10_hits += 1
+            # nDCG@10: binary relevance (1.0 if source matches)
+            dcg = 0.0
+            for i, source in enumerate(retrieved_sources_10[:10]):
+                rel = 1.0 if source == expected_source else 0.0
+                dcg += rel / math.log2(i + 2)
+            ndcg_scores.append(dcg)  # idcg = 1.0 for single relevant doc
+
     recall = positive_hits / positive_total if positive_total > 0 else 0
+    recall_10 = recall_10_hits / positive_total if positive_total > 0 else 0
     precision = statistics.mean(precisions) if precisions else 0
     mrr = statistics.mean(rranks) if rranks else 0
+    ndcg_10 = statistics.mean(ndcg_scores) if ndcg_scores else 0
     neg_rate = negative_correct / negative_total if negative_total > 0 else 0
 
     return {
         "recall": recall,
         "recall_hits": positive_hits,
         "recall_total": positive_total,
+        "recall_10": recall_10,
+        "recall_10_hits": recall_10_hits,
+        "ndcg_10": ndcg_10,
         "precision": precision,
         "mrr": mrr,
         "negative_detection_rate": neg_rate,
@@ -251,8 +272,10 @@ def main():
     hybrid_results = test_recall(hybrid_retrieve, qa_pairs, k=3)
     print(f"\n  Hybrid Retrieval:")
     print(f"    Recall@3:     {hybrid_results['recall']*100:.1f}% ({hybrid_results['recall_hits']}/{hybrid_results['recall_total']})")
+    print(f"    Recall@10:    {hybrid_results['recall_10']*100:.1f}% ({hybrid_results['recall_10_hits']}/{hybrid_results['recall_total']})")
     print(f"    Precision@3:  {hybrid_results['precision']*100:.1f}%")
     print(f"    MRR:          {hybrid_results['mrr']:.3f}")
+    print(f"    nDCG@10:      {hybrid_results['ndcg_10']:.3f}")
     print(f"    Negative Detection: {hybrid_results['negative_detection_rate']*100:.1f}% ({hybrid_results['negative_correct']}/{hybrid_results['negative_total']})")
 
     if hybrid_results["misses"]:
@@ -325,6 +348,8 @@ def main():
 
     targets = {
         "Recall@3 (Hybrid)": (hybrid_results["recall"], 0.95),
+        "Recall@10 (Hybrid)": (hybrid_results["recall_10"], 0.97),
+        "nDCG@10 (Hybrid)": (hybrid_results["ndcg_10"], 0.80),
         "Precision@3 (Hybrid)": (hybrid_results["precision"], 0.80),
         "MRR (Hybrid)": (hybrid_results["mrr"], 0.85),
         "Negative Detection (Pipeline)": (crag_results["negative_detection_rate"], 0.90),
@@ -342,7 +367,7 @@ def main():
             passes = actual <= target
             actual_str = f"{actual:.1f}ms"
             target_str = f"≤{target}ms"
-        elif "MRR" in label:
+        elif "MRR" in label or "nDCG" in label:
             passes = actual >= target
             actual_str = f"{actual:.3f}"
             target_str = f"≥{target}"
@@ -366,6 +391,8 @@ def main():
         "collection": {"docs": stats[0], "chunks": stats[1]},
         "hybrid": {
             "recall@3": hybrid_results["recall"],
+            "recall@10": hybrid_results["recall_10"],
+            "ndcg@10": hybrid_results["ndcg_10"],
             "precision@3": hybrid_results["precision"],
             "mrr": hybrid_results["mrr"],
             "negative_detection_rate": hybrid_results["negative_detection_rate"],
