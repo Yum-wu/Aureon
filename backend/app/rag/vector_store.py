@@ -648,10 +648,13 @@ def retrieve(query: str, top_k: int = 3, use_mmr: bool = True, lang_filter: str 
     for i in range(len(results["ids"][0])):
         distance = results["distances"][0][i]
         score = 1.0 / (1.0 + distance)
+        cosine_score = 1.0 - distance
+        item_meta = dict(results["metadatas"][0][i] or {})
+        item_meta["cosine_score"] = cosine_score
         items.append({
             "id": results["ids"][0][i],
             "text": results["documents"][0][i],
-            "metadata": results["metadatas"][0][i] or {},
+            "metadata": item_meta,
             "score": score,
         })
 
