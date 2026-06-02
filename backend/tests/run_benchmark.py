@@ -113,17 +113,24 @@ def test_recall(retrieve_fn, qa_pairs, k=3):
 def test_pipeline_negative_detection(qa_pairs):
     """Test negative detection through the full RAG pipeline (with CRAG).
 
-    Uses a dummy LLM to test whether CRAG correctly filters irrelevant retrievals.
+    Uses the real LLM to test whether CRAG correctly filters irrelevant retrievals.
     Returns negative detection rate and list of failures.
     """
     from app.rag.qa_chain import rag_query
+    from app.agent.llm import create_llm
 
     negative_pairs = [qa for qa in qa_pairs if qa["source_article"] == "none"]
     if not negative_pairs:
         return {"negative_detection_rate": 1.0, "negative_correct": 0, "negative_total": 0, "negative_wrong": []}
 
-    def _dummy_llm(messages):
-        return "dummy answer"
+    # Use real LLM for CRAG assessment
+    llm = create_llm(streaming=False)
+
+    def _llm_call(messages):
+        try:
+            return llm.invoke(messages).content
+        except Exception:
+            return "3"  # fail-open
 
     correct = 0
     total = 0
@@ -132,8 +139,7 @@ def test_pipeline_negative_detection(qa_pairs):
     for qa in negative_pairs:
         total += 1
         try:
-            result = rag_query(qa["question"], _dummy_llm, top_k=3)
-            # CRAG success = empty sources (retrieval filtered out)
+            result = rag_query(qa["question"], _llm_call, top_k=3)
             if not result.sources:
                 correct += 1
             else:
@@ -144,7 +150,6 @@ def test_pipeline_negative_detection(qa_pairs):
                     "sources": [s.slug for s in result.sources[:3]],
                 })
         except Exception as e:
-            # On error, count as correct (safe side)
             correct += 1
             print(f"    [{qa['id']}] error (counted as correct): {e}")
 
