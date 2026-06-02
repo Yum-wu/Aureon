@@ -754,30 +754,9 @@ def rerank(query: str, chunks: List[Dict[str, Any]], top_k: int = 3) -> List[Dic
 
     reranked = sorted(chunks, key=lambda x: x.get("rerank_score", 0), reverse=True)
 
-    # Two-level filtering:
-    # 1. Hard threshold: discard anything below MIN_RERANK_SCORE (default 0.5)
-    # 2. Cliff detection: if top score drops sharply, only keep results above the cliff
-    MIN_RERANK_SCORE = float(os.getenv("MIN_RERANK_SCORE", "0.5"))
-    filtered = [c for c in reranked if c.get("rerank_score", 0) >= MIN_RERANK_SCORE]
-
-    if not filtered:
-        # Cliff detection: find where score drops >40% from peak
-        if len(reranked) >= 2:
-            peak = reranked[0].get("rerank_score", 0)
-            cliff_filtered = []
-            for c in reranked:
-                score = c.get("rerank_score", 0)
-                if peak > 0 and (peak - score) / peak > 0.4:
-                    break  # score cliff detected
-                if score >= 0.3:  # still above absolute minimum
-                    cliff_filtered.append(c)
-            if cliff_filtered:
-                logger.info("Cliff detection: kept %d results (peak=%.3f)", len(cliff_filtered), peak)
-                return cliff_filtered[:top_k]
-
-        logger.info("All results below rerank threshold (max=%.3f < %.3f), returning empty",
-                     reranked[0].get("rerank_score", 0) if reranked else 0, MIN_RERANK_SCORE)
-        return []  # nothing truly relevant
+    # No score threshold or cliff detection — let CRAG handle relevance filtering.
+    # The reranker's job is RANKING only: better results first.
+    return reranked[:top_k]
 
     return filtered[:top_k]
 
