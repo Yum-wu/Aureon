@@ -41,6 +41,10 @@ def _extract_title_keywords(query: str) -> List[str]:
 # The reranker is the primary quality gate; this is just a safety net.
 _MIN_RELEVANCE_SCORE = float(os.getenv("MIN_RELEVANCE_SCORE", "0.015"))
 
+# Pre-RRF cosine threshold: filters vector results BEFORE fusion.
+# RRF rank-1 = 1/(200+1) ≈ 0.005, so post-RRF thresholds are too low.
+_VECTOR_MIN_COSINE = float(os.getenv("VECTOR_MIN_COSINE", "0.25"))
+
 
 def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List[Dict[str, Any]]:
     """Hybrid retrieval: BM25 keyword + vector search, fused via RRF.
@@ -60,6 +64,19 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
 
     # Use all vector results — quality check removed to avoid false discards
     # on small collections where cosine scores naturally cluster together
+
+    # ── Pre-RRF score filtering ──
+    if vector_results:
+        filtered_vector = [
+            r for r in vector_results
+            if r.get("metadata", {}).get("cosine_score", 1.0) >= _VECTOR_MIN_COSINE
+        ]
+        if not filtered_vector and vector_results:
+            logger.info(
+                "All %d vector results below cosine threshold %.2f, degrading to BM25-only",
+                len(vector_results), _VECTOR_MIN_COSINE,
+            )
+        vector_results = filtered_vector
 
     # If only one retriever has results, use it directly
     if not bm25_results and not vector_results:
