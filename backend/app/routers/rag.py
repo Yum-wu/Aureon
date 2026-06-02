@@ -496,3 +496,16 @@ async def rag_cache_clear():
     except Exception as e:
         logger.warning("Redis cache clear failed: %s", e)
     return {"status": "ok", "cleared_keys": cleared}
+
+
+@router.get("/api/rag/suggestions")
+async def get_suggestions():
+    """Return suggested queries based on knowledge base topics."""
+    suggestions = [
+        {"query": "RAG 系统的检索管线是怎么设计的？", "category": "RAG"},
+        {"query": "BM25 和向量检索各有什么优劣？", "category": "检索"},
+        {"query": "LangGraph 和 LangChain LCEL 有什么区别？", "category": "框架"},
+        {"query": "如何优化 RAG 系统的检索延迟？", "category": "性能"},
+        {"query": "企业 AI 知识库部署有哪些注意事项？", "category": "部署"},
+    ]
+    return {"suggestions": suggestions}
