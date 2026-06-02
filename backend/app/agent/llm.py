@@ -6,6 +6,7 @@ Fallback LLM uses `settings.fallback_*` (Zhipu AI).
 """
 
 import logging
+import os
 
 from langchain_openai import ChatOpenAI
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
@@ -16,8 +17,24 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 
-def create_llm(**kwargs):
-    """Factory: create primary ChatOpenAI instance (DeepSeek)."""
+def create_llm(model: str = None, **kwargs):
+    """Factory: create ChatOpenAI instance. Supports DeepSeek/OpenAI/Claude via MODEL_REGISTRY."""
+    if model:
+        from app.config import MODEL_REGISTRY
+        if model in MODEL_REGISTRY:
+            cfg = MODEL_REGISTRY[model]
+            api_key = cfg["api_key"] or os.environ.get(f"{cfg['provider'].upper()}_API_KEY", "")
+            if not api_key:
+                raise ValueError(f"No API key for {model}. Set {cfg['provider'].upper()}_API_KEY env var.")
+            return ChatOpenAI(
+                model=cfg["model"],
+                api_key=api_key,
+                base_url=cfg["base_url"],
+                temperature=kwargs.get("temperature", 0.7),
+                streaming=kwargs.get("streaming", True),
+                max_tokens=cfg["max_tokens"],
+            )
+    # Default: DeepSeek (existing behavior unchanged)
     return ChatOpenAI(
         model=settings.llm_model,
         api_key=settings.llm_api_key,

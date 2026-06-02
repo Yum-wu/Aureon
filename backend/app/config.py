@@ -50,3 +50,27 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+MODEL_REGISTRY = {
+    "deepseek-chat": {
+        "provider": "deepseek",
+        "model": settings.llm_model,
+        "base_url": settings.llm_base_url,
+        "api_key": settings.llm_api_key,
+        "max_tokens": 8192,
+    },
+    "gpt-4o": {
+        "provider": "openai",
+        "model": "gpt-4o",
+        "base_url": "https://api.openai.com/v1",
+        "api_key": "",
+        "max_tokens": 16384,
+    },
+    "claude-sonnet-4-20250514": {
+        "provider": "anthropic",
+        "model": "claude-sonnet-4-20250514",
+        "base_url": "https://api.anthropic.com",
+        "api_key": "",
+        "max_tokens": 8192,
+    },
+}
