@@ -43,12 +43,12 @@ _MIN_RELEVANCE_SCORE = float(os.getenv("MIN_RELEVANCE_SCORE", "0.003"))
 
 # Pre-RRF cosine threshold: filters vector results BEFORE fusion.
 # RRF rank-1 = 1/(200+1) ≈ 0.005, so post-RRF thresholds are too low.
-_VECTOR_MIN_COSINE = float(os.getenv("VECTOR_MIN_COSINE", "0.25"))
+_VECTOR_MIN_COSINE = float(os.getenv("VECTOR_MIN_COSINE", "0.10"))
 
 # Vector RRF contribution cap: limit how many vector results enter RRF fusion.
 # Prevents low-confidence vector matches from drowning precise BM25 results.
 _VECTOR_MAX_CONTRIB = int(os.getenv("VECTOR_MAX_CONTRIB", "3"))
-_VECTOR_CONFIDENCE_THRESHOLD = float(os.getenv("VECTOR_CONFIDENCE_THRESHOLD", "0.60"))
+_VECTOR_CONFIDENCE_THRESHOLD = float(os.getenv("VECTOR_CONFIDENCE_THRESHOLD", "0.35"))
 
 
 def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List[Dict[str, Any]]:
