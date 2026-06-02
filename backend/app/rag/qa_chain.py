@@ -45,6 +45,11 @@ _MIN_RELEVANCE_SCORE = float(os.getenv("MIN_RELEVANCE_SCORE", "0.015"))
 # RRF rank-1 = 1/(200+1) ≈ 0.005, so post-RRF thresholds are too low.
 _VECTOR_MIN_COSINE = float(os.getenv("VECTOR_MIN_COSINE", "0.25"))
 
+# Vector RRF contribution cap: limit how many vector results enter RRF fusion.
+# Prevents low-confidence vector matches from drowning precise BM25 results.
+_VECTOR_MAX_CONTRIB = int(os.getenv("VECTOR_MAX_CONTRIB", "3"))
+_VECTOR_CONFIDENCE_THRESHOLD = float(os.getenv("VECTOR_CONFIDENCE_THRESHOLD", "0.60"))
+
 
 def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List[Dict[str, Any]]:
     """Hybrid retrieval: BM25 keyword + vector search, fused via RRF.
@@ -116,11 +121,18 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
         rrf_scores[key] = rrf_scores.get(key, 0) + 1.0 / (_RRF_K + rank) * 1.1
         doc_map[key] = doc
 
+    _vector_contrib_count = 0
     for rank, doc in enumerate(vector_deduped, 1):
+        if _vector_contrib_count >= _VECTOR_MAX_CONTRIB:
+            break
+        cosine = doc.get("metadata", {}).get("cosine_score", 1.0)
+        if cosine < _VECTOR_CONFIDENCE_THRESHOLD:
+            continue
         key = _doc_key(doc)
         rrf_scores[key] = rrf_scores.get(key, 0) + 1.0 / (_RRF_K + rank)
         if key not in doc_map:
             doc_map[key] = doc
+        _vector_contrib_count += 1
 
     # Title/slug boost: if query terms match a document's title or slug,
     # boost its RRF score. Helps disambiguate when multiple articles share
