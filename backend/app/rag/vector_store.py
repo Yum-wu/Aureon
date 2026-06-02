@@ -817,80 +817,98 @@ def get_collection_stats() -> tuple[int, int]:
         return 0, 0
 
 
-# ── Qdrant Backend ──
-_qdrant_client = None
+# ── Qdrant Backend (REST API, bypasses qdrant-client compatibility issues) ──
+_qdrant_url: str = ""
 
 
-def _get_qdrant():
-    """Get or create Qdrant client singleton."""
-    global _qdrant_client
-    if _qdrant_client is None:
-        from qdrant_client import QdrantClient
+def _get_qdrant_url() -> str:
+    """Get Qdrant URL from settings."""
+    global _qdrant_url
+    if not _qdrant_url:
         from app.config import settings
-        _qdrant_client = QdrantClient(
-            url=settings.qdrant_url,
-            api_key=settings.qdrant_api_key or None,
-        )
-    return _qdrant_client
+        _qdrant_url = settings.qdrant_url.rstrip("/")
+    return _qdrant_url
 
 
 def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
-    """Save chunks to Qdrant vector store."""
-    from qdrant_client.models import VectorParams, Distance, PointStruct
-    from app.config import settings
-
-    client = _get_qdrant()
+    """Save chunks to Qdrant via REST API."""
+    import requests
+    base = _get_qdrant_url()
     dim = _LOCAL_MODEL_DIM
 
-    try:
-        client.delete_collection(collection_name)
-    except Exception:
-        pass
+    # Delete existing collection
+    requests.delete(f"{base}/collections/{collection_name}")
 
-    client.create_collection(
-        collection_name=collection_name,
-        vectors_config=VectorParams(size=dim, distance=Distance.COSINE),
-    )
+    # Create collection
+    resp = requests.put(f"{base}/collections/{collection_name}", json={
+        "vectors": {"size": dim, "distance": "Cosine"},
+    })
+    resp.raise_for_status()
 
+    # Embed all texts
     texts = [c["text"] for c in chunks]
     embeddings = _embed_local(texts)
     if embeddings is None:
         embeddings = embed_texts_llm(texts)
 
-    points = []
-    for i, (chunk, emb) in enumerate(zip(chunks, embeddings)):
-        points.append(PointStruct(
-            id=i,
-            vector=emb.tolist(),
-            payload={"metadata": chunk.get("metadata", {}), "text": chunk["text"]},
-        ))
+    # Upsert in batches of 100
+    batch_size = 100
+    for start in range(0, len(chunks), batch_size):
+        end = min(start + batch_size, len(chunks))
+        points = []
+        for i in range(start, end):
+            points.append({
+                "id": i,
+                "vector": embeddings[i].tolist(),
+                "payload": {
+                    "metadata": chunks[i].get("metadata", {}),
+                    "text": chunks[i]["text"],
+                },
+            })
+        resp = requests.put(
+            f"{base}/collections/{collection_name}/points",
+            json={"points": points},
+        )
+        resp.raise_for_status()
 
-    client.upsert(collection_name=collection_name, points=points)
-    logger.info("Qdrant: indexed %d chunks", len(chunks))
+    logger.info("Qdrant: indexed %d chunks into '%s'", len(chunks), collection_name)
 
 
 def retrieve_qdrant(query: str, top_k: int = 3, collection_name: str = "aureon") -> List[Dict]:
-    """Retrieve from Qdrant vector store."""
-    client = _get_qdrant()
+    """Retrieve from Qdrant via REST API (subprocess to avoid PyTorch socket deadlock)."""
+    import subprocess
+    import json as _json
+    import sys as _sys
+    base = _get_qdrant_url()
 
     query_emb = _embed_local([query])
     if query_emb is None:
         query_emb = embed_texts_llm([query])
 
-    results = client.search(
-        collection_name=collection_name,
-        query_vector=query_emb[0].tolist(),
-        limit=top_k,
-    )
+    # Use subprocess to avoid Python 3.14 + PyTorch socket deadlock
+    vector_json = _json.dumps(query_emb[0].tolist())
+    cmd = [
+        _sys.executable, "-c",
+        f"import requests,json; r=requests.post('{base}/collections/{collection_name}/points/search',"
+        f"json={{'vector':json.loads('{vector_json}'),'limit':{top_k},'with_payload':True}},timeout=10);"
+        f"print(json.dumps(r.json().get('result',[])))",
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    if result.returncode != 0:
+        logger.warning("Qdrant subprocess failed: %s", result.stderr[:200])
+        return []
+
+    results = _json.loads(result.stdout.strip())
 
     return [
         {
-            "text": r.payload.get("text", ""),
-            "metadata": {**r.payload.get("metadata", {}), "cosine_score": r.score},
-            "score": r.score,
+            "text": r.get("payload", {}).get("text", ""),
+            "metadata": r.get("payload", {}).get("metadata", {}),
+            "score": r.get("score", 0.0),
         }
         for r in results
     ]
+
 
 
 # ── Elasticsearch BM25 Backend ──
