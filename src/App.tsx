@@ -39,7 +39,7 @@ function AppLayout() {
     { path: "/benchmark", key: "app.nav.benchmark" },
     { path: "/admin", key: "app.nav.admin" },
     { path: "/architecture", key: "app.nav.architecture" },
-    { path: "/crew", key: "app.nav.crew" },
+    // { path: "/crew", key: "app.nav.crew" },  // hidden: CrewAI not production-ready
   ];
 
   const isLanding = location.pathname === "/";
