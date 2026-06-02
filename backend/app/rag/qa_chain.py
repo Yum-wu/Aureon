@@ -494,25 +494,11 @@ def rag_query(
     # 3. Generate
     answer = generate_answer(query, context, llm_call_fn, lang=lang)
 
-    # 4. Faithfulness check: verify answer claims against context (RAGAS-inspired).
-    #    If <30% of claims are supported, regenerate with strict prompt.
-    #    Threshold 0.3 is lenient: allows answers with some inference/explanation.
+    # 4. Faithfulness monitoring: log score for quality tracking.
+    #    Does NOT block or regenerate — the system prompt handles honest refusals.
     faithfulness = check_faithfulness(query, answer, context, llm_call_fn, lang=lang)
     if faithfulness < 0.3:
-        logger.info("Faithfulness failed (%.2f), regenerating with strict prompt for: %s",
-                     faithfulness, query[:60])
-        # Regenerate with strict "context-only" prompt
-        if lang == "en":
-            strict_prompt = QA_SYSTEM_PROMPT_EN.replace(
-                "Only answer based on the reference documents.",
-                "CRITICAL: Answer ONLY using information from the reference documents. Do NOT add ANY information from your training data. If the documents don't contain the answer, say 'not mentioned in the documents'."
-            )
-        else:
-            strict_prompt = QA_SYSTEM_PROMPT.replace(
-                "只基于参考文档内容回答。",
-                "严格要求：仅使用参考文档中的信息回答。不要添加任何来自训练数据的信息。如果文档中没有相关信息，说'文档中未提及'。"
-            )
-        answer = generate_answer(query, context, llm_call_fn, system_prompt=strict_prompt, lang=lang)
+        logger.info("Low faithfulness (%.2f) for: %s", faithfulness, query[:60])
 
     # 5. Build response with sources
     sources = [
