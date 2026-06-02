@@ -267,6 +267,10 @@ def retrieve_keyword(query: str, top_k: int = 3, lang_filter: str = None) -> Lis
         top_k: 返回结果数量
         lang_filter: 语言过滤（"zh" 或 "en"），None 表示不过滤
     """
+    from app.config import settings
+    if settings.bm25_backend == "elasticsearch":
+        return retrieve_keyword_es(query, top_k=top_k)
+
     _build_kw_index()
     if not _kw_docs:
         return []
@@ -535,6 +539,8 @@ def save_index(chunks: List[Dict[str, Any]], embeddings: np.ndarray = None, path
     from app.config import settings
     if settings.vector_backend == "qdrant":
         return save_index_qdrant(chunks)
+    if settings.bm25_backend == "elasticsearch":
+        return save_index_es(chunks)
 
     save_path = path or VECTOR_DIR
     os.makedirs(save_path, exist_ok=True)
@@ -884,5 +890,78 @@ def retrieve_qdrant(query: str, top_k: int = 3, collection_name: str = "aureon")
             "score": r.score,
         }
         for r in results
+    ]
+
+
+# ── Elasticsearch BM25 Backend ──
+_es_client = None
+
+
+def _get_es():
+    """Get or create Elasticsearch client singleton."""
+    global _es_client
+    if _es_client is None:
+        from elasticsearch import Elasticsearch
+        from app.config import settings
+        _es_client = Elasticsearch(settings.es_url)
+    return _es_client
+
+
+def save_index_es(chunks: List[Dict], index_name: str = None):
+    """Index chunks into Elasticsearch for BM25 retrieval."""
+    from app.config import settings
+    index_name = index_name or settings.es_index
+    es = _get_es()
+
+    if es.indices.exists(index=index_name):
+        es.indices.delete(index=index_name)
+
+    es.indices.create(index=index_name, body={
+        "settings": {"analysis": {"analyzer": {"default": {"type": "standard"}}}},
+        "mappings": {"properties": {
+            "text": {"type": "text"},
+            "slug": {"type": "keyword"},
+            "title": {"type": "text"},
+            "parent_text": {"type": "text"},
+        }}
+    })
+
+    for i, chunk in enumerate(chunks):
+        meta = chunk.get("metadata", {})
+        es.index(index=index_name, id=i, body={
+            "text": chunk["text"],
+            "slug": meta.get("slug", ""),
+            "title": meta.get("title", ""),
+            "parent_text": meta.get("parent_text", ""),
+        })
+
+    es.indices.refresh(index=index_name)
+    logger.info("ES: indexed %d chunks into '%s'", len(chunks), index_name)
+
+
+def retrieve_keyword_es(query: str, top_k: int = 20, index_name: str = None) -> List[Dict]:
+    """BM25 retrieval via Elasticsearch."""
+    from app.config import settings
+    index_name = index_name or settings.es_index
+    es = _get_es()
+
+    results = es.search(index=index_name, body={
+        "query": {"multi_match": {
+            "query": query,
+            "fields": ["text^2", "title^3", "parent_text"],
+        }},
+        "size": top_k,
+    })
+
+    return [
+        {
+            "text": hit["_source"]["text"],
+            "metadata": {
+                "slug": hit["_source"].get("slug", ""),
+                "title": hit["_source"].get("title", ""),
+            },
+            "score": hit["_score"],
+        }
+        for hit in results["hits"]["hits"]
     ]
 
