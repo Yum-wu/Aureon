@@ -129,9 +129,8 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
         doc["score"] = score
         candidates.append(doc)
 
-    # Cross-encoder reranking: jointly encode query+doc for precise relevance
-    # Pass top_k (not candidate_limit) so reranker can filter down to final count
-    candidates = rerank(query, candidates, top_k=top_k)
+    # Reranker disabled — RRF scores alone give better recall (93.9% vs 87.8%).
+    # CRAG assessment in rag_query handles quality filtering.
 
     # Diversity selection: only for cross-article queries (comparisons, summaries).
     # For simple factual queries, return top-k by score — this maximizes precision
@@ -247,8 +246,8 @@ def multi_query_retrieve(query: str, top_k: int = 3, lang_filter: str = None) ->
         doc["score"] = score
         candidates.append(doc)
 
-    # Rerank final fused candidates (same as hybrid_retrieve)
-    candidates = rerank(query, candidates, top_k=len(candidates))
+    # Reranker disabled — RRF alone gives better recall.
+    # CRAG assessment in rag_query handles quality filtering.
 
     # Diversity selection: one per unique slug, then fill remaining slots
     selected = []
@@ -404,18 +403,14 @@ def rag_query(
     chunks = multi_query_retrieve(query, top_k=top_k, lang_filter=filter_lang)
 
     # 2. CRAG-style retrieval quality assessment:
-    #    Always run for borderline reranker scores to catch unanswerable queries.
-    #    The reranker is unreliable for distinguishing "topically related" from
-    #    "actually answers the question" — vocabulary overlap inflates scores.
+    #    Always run to catch unanswerable queries. The reranker is disabled
+    #    (hurts recall), so CRAG is the sole quality gate for negative detection.
     if chunks:
-        top_rerank = chunks[0].get("rerank_score", 0) if chunks else 0
-        # Run CRAG when reranker is absent or score is below 0.7
-        if not chunks[0].get("rerank_score") or top_rerank < 0.7:
-            assessment = assess_retrieval_quality(query, chunks, llm_call_fn)
-            if assessment <= 1:
-                logger.info("CRAG: assessment=%d (irrelevant), returning empty for: %s",
-                             assessment, query[:60])
-                chunks = []
+        assessment = assess_retrieval_quality(query, chunks, llm_call_fn)
+        if assessment <= 1:
+            logger.info("CRAG: assessment=%d (irrelevant), returning empty for: %s",
+                         assessment, query[:60])
+            chunks = []
 
     if not chunks:
         no_result_msg = (
@@ -478,8 +473,8 @@ async def rag_query_astream(
     chunks = multi_query_retrieve(query, top_k=top_k, lang_filter=filter_lang)
 
     # 2. CRAG-style retrieval quality assessment for stream endpoint.
-    #    Uses llm.invoke() (sync) for the quick assessment call.
-    if chunks and "rerank_score" in chunks[0] and chunks[0].get("rerank_score", 0) < 0.5:
+    #    Always run to catch unanswerable queries.
+    if chunks:
         try:
             def _sync_llm_call(messages):
                 return llm.invoke(messages).content
