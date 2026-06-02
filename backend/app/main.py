@@ -168,7 +168,22 @@ async def startup():
     init_ai_platform_tables()
     init_integration_tables()
     memory_manager.init_background_tasks()
-    logger.info("Startup complete — BGE model and BM25 will lazy-load on first query")
+
+    # Auto-rebuild index if ChromaDB is empty (Railway ephemeral filesystem)
+    try:
+        from app.rag.vector_store import get_collection_stats
+        _, chunks = get_collection_stats()
+        if chunks == 0:
+            logger.info("ChromaDB empty — auto-rebuilding index...")
+            from app.rag.qa_chain import run_index_pipeline
+            articles_dir = os.path.join(os.path.dirname(__file__), "..", "data", "articles")
+            if os.path.isdir(articles_dir):
+                result = run_index_pipeline(articles_dir)
+                logger.info("Auto-index: %s", result)
+    except Exception as e:
+        logger.warning("Auto-index failed (non-fatal): %s", e)
+
+    logger.info("Startup complete")
 
 
 @app.on_event("shutdown")
