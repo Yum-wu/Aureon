@@ -50,6 +50,38 @@ _VECTOR_MIN_COSINE = float(os.getenv("VECTOR_MIN_COSINE", "0.10"))
 _VECTOR_MAX_CONTRIB = int(os.getenv("VECTOR_MAX_CONTRIB", "3"))
 _VECTOR_CONFIDENCE_THRESHOLD = float(os.getenv("VECTOR_CONFIDENCE_THRESHOLD", "0.35"))
 
+# LLM-based negative detection: when top retrieval score is below this threshold,
+# use an LLM classifier to decide if the query is answerable by the knowledge base.
+_LOW_SCORE_THRESHOLD = float(os.getenv("LOW_SCORE_THRESHOLD", "0.005"))
+_NEGATIVE_DETECTION_ENABLED = os.getenv("NEGATIVE_DETECTION_ENABLED", "true").lower() == "true"
+
+
+async def classify_query_answerable(query: str, model: str = None) -> bool:
+    """Use LLM to determine if a query can be answered by the knowledge base."""
+    from app.agent.llm import create_llm
+
+    llm = create_llm(model=model, temperature=0.0, streaming=False)
+    prompt = (
+        "你是一个企业知识库的查询分类器。判断以下查询是否能在"
+        "\"AI技术、开发经验、部署实践\"相关的知识库中找到答案。\n\n"
+        f"查询：{query}\n\n"
+        "只回答 YES 或 NO。如果查询涉及以下内容，回答 NO：\n"
+        "- 未在知识库中覆盖的具体技术细节（如特定云服务商配置、定价、团队规模）\n"
+        "- 与知识库主题无关的领域（如量子计算、生物医学）\n"
+        "- 要求最新实时信息的问题（如当前股价、今日天气）\n\n"
+        "如果查询涉及以下内容，回答 YES：\n"
+        "- RAG、LangChain、LangGraph、BM25、向量检索等 AI 技术\n"
+        "- 开发流程、部署实践、性能优化\n"
+        "- 知识库中可能涵盖的通用技术问题"
+    )
+
+    try:
+        response = await llm.ainvoke(prompt)
+        return "YES" in response.content.upper()
+    except Exception as e:
+        logger.warning("LLM classifier failed: %s, defaulting to answerable", e)
+        return True
+
 
 def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List[Dict[str, Any]]:
     """Hybrid retrieval: BM25 keyword + vector search, fused via RRF.
@@ -544,6 +576,7 @@ async def rag_query_astream(
     use_mmr: bool = True,
     lang: str | None = None,
     filter_lang: str | None = None,
+    model: str = None,
 ):
     """Async streaming RAG: BM25 keyword retrieve → stream LLM tokens.
 
@@ -559,6 +592,7 @@ async def rag_query_astream(
         use_mmr: 是否使用 MMR 多样性优化
         lang: 回复语言（None 则自动检测）
         filter_lang: 文档语言过滤（"zh" 或 "en"），None 表示不过滤
+        model: 模型标识（传给 LLM 负面检测分类器）
     """
     if lang is None:
         lang = detect_language(query)
@@ -578,6 +612,22 @@ async def rag_query_astream(
         yield {"type": "sources", "sources": []}
         yield {"type": "text", "content": no_result_msg}
         return
+
+    # LLM Negative Detection: when top retrieval score is very low, use an LLM
+    # classifier to decide if the query is answerable by the knowledge base.
+    # This catches cases where score-based thresholds alone give false positives
+    # on queries that contain real keywords but are outside the KB scope.
+    if _NEGATIVE_DETECTION_ENABLED and chunks[0].get("score", 0) < _LOW_SCORE_THRESHOLD:
+        answerable = await classify_query_answerable(query, model=model)
+        if not answerable:
+            yield {"type": "sources", "sources": []}
+            no_answer_msg = (
+                "Sorry, this question is outside the scope of the knowledge base."
+                if lang == "en"
+                else "抱歉，该问题超出了知识库的覆盖范围。"
+            )
+            yield {"type": "text", "content": no_answer_msg}
+            return
 
     # 2. Format context
     context = format_context(chunks)
