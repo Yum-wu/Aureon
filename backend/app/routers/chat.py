@@ -31,21 +31,22 @@ _agent_lock = asyncio.Lock()
 router = APIRouter()
 
 
-async def _get_agent(lang: str = "zh"):
-    """Get or create a chat agent for the given language."""
+async def _get_agent(lang: str = "zh", model: str = None):
+    """Get or create a chat agent for the given language and model."""
     global _agents
-    if lang not in _agents:
+    cache_key = f"{lang}:{model or 'default'}"
+    if cache_key not in _agents:
         async with _agent_lock:
-            if lang not in _agents:
-                llm = create_llm()
-                _agents[lang] = create_chat_agent(llm, lang=lang)
-    return _agents[lang]
+            if cache_key not in _agents:
+                llm = create_llm(model=model)
+                _agents[cache_key] = create_chat_agent(llm, lang=lang)
+    return _agents[cache_key]
 
 
 @router.post("/api/chat/stream")
 async def chat_stream(req: ChatRequest, request: Request):
     lang = detect_language(req.message)
-    agent = await _get_agent(lang)
+    agent = await _get_agent(lang, model=req.model)
     return StreamingResponse(
         stream_agent_with_memory(
             agent,
@@ -67,7 +68,7 @@ async def chat_enhanced_stream(req: ChatRequest, request: Request):
     """Enhanced chat with automatic RAG integration via LangGraph intent routing."""
     from app.langgraph.streaming import stream_workflow
 
-    llm = create_llm()
+    llm = create_llm(model=req.model)
 
     async def event_stream():
         try:

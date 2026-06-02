@@ -79,7 +79,7 @@ async def rag_query_endpoint(req: RAGQueryRequest, request: Request):
             detail="LLM API key not configured. Please set LLM_API_KEY or FALLBACK_API_KEY environment variable."
         )
 
-    llm = create_llm()
+    llm = create_llm(model=req.model)
 
     def _llm_call(messages):
         try:
@@ -124,7 +124,7 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
             detail="LLM API key not configured. Please set LLM_API_KEY or FALLBACK_API_KEY environment variable."
         )
 
-    llm = create_llm()
+    llm = create_llm(model=req.model)
 
     async def _buffer_events(generator, flush_interval=0.05, max_chars=200):
         """Buffer text events, flush at interval or max_chars.
