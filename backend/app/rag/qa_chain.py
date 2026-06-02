@@ -282,18 +282,22 @@ def multi_query_retrieve(query: str, top_k: int = 3, lang_filter: str = None) ->
 
 # ── Retrieval Quality Assessment (CRAG-style) ──
 
-_RETRIEVAL_ASSESSMENT_PROMPT = """Evaluate whether the retrieved documents can answer the user's question.
+_RETRIEVAL_ASSESSMENT_PROMPT = """判断以下文档能否回答用户的具体问题。
 
-Score 0-5:
-- 5: Documents directly answer the question
-- 3-4: Documents are partially relevant
-- 1-2: Documents share topic but don't answer the question
-- 0: Documents are completely irrelevant
+评分标准（只看能否回答，不看话题是否相关）：
+- 5: 文档包含问题的明确答案
+- 4: 文档包含相关信息但不完整
+- 3: 文档提到相关话题但没有具体答案
+- 2: 文档与问题话题相关但完全不包含答案
+- 1: 文档与问题几乎无关
+- 0: 文档完全无关
 
-Return ONLY a number (0-5), nothing else.
+关键区分：如果问题是"X的Y是多少"，而文档只提到X但没有Y的信息，应该评2分。
 
-Question: {question}
-Documents: {documents}"""
+只返回数字(0-5)，不要解释。
+
+问题：{question}
+文档：{documents}"""
 
 
 def assess_retrieval_quality(query: str, chunks: List[Dict[str, Any]], llm_call_fn) -> int:
@@ -407,7 +411,7 @@ def rag_query(
     #    (hurts recall), so CRAG is the sole quality gate for negative detection.
     if chunks:
         assessment = assess_retrieval_quality(query, chunks, llm_call_fn)
-        if assessment <= 1:
+        if assessment <= 2:
             logger.info("CRAG: assessment=%d (irrelevant), returning empty for: %s",
                          assessment, query[:60])
             chunks = []
