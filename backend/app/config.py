@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     dashscope_api_key: str = ""
     dashscope_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
     dashscope_model: str = "text-embedding-v3"
-    dashscope_dimensions: int = 512
+    dashscope_dimensions: int = 1024
 
     # SiliconFlow — secondary API fallback, hosts BGE models
     siliconflow_api_key: str = ""
