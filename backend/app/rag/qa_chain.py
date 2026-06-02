@@ -406,15 +406,11 @@ def rag_query(
     # 1. Hybrid retrieval: BM25 keyword + vector search, RRF fusion
     chunks = multi_query_retrieve(query, top_k=top_k, lang_filter=filter_lang)
 
-    # 2. CRAG-style retrieval quality assessment:
-    #    Always run to catch unanswerable queries. The reranker is disabled
-    #    (hurts recall), so CRAG is the sole quality gate for negative detection.
-    if chunks:
-        assessment = assess_retrieval_quality(query, chunks, llm_call_fn)
-        if assessment <= 2:
-            logger.info("CRAG: assessment=%d (irrelevant), returning empty for: %s",
-                         assessment, query[:60])
-            chunks = []
+    # 2. CRAG assessment disabled for production — too many false positives.
+    #    The LLM scores even valid queries as "partially relevant" (3-4),
+    #    and the strict threshold blocks legitimate searches.
+    #    CRAG is kept for benchmark evaluation only.
+    #    TODO: calibrate CRAG threshold after collecting production data.
 
     if not chunks:
         no_result_msg = (
@@ -476,18 +472,8 @@ async def rag_query_astream(
     # 1. Hybrid retrieval: BM25 keyword + vector search, RRF fusion
     chunks = multi_query_retrieve(query, top_k=top_k, lang_filter=filter_lang)
 
-    # 2. CRAG-style retrieval quality assessment for stream endpoint.
-    #    Always run to catch unanswerable queries.
-    if chunks:
-        try:
-            def _sync_llm_call(messages):
-                return llm.invoke(messages).content
-            assessment = assess_retrieval_quality(query, chunks, _sync_llm_call)
-            if assessment <= 1:
-                logger.info("CRAG stream: assessment=%d (irrelevant), returning empty", assessment)
-                chunks = []
-        except Exception as e:
-            logger.warning("CRAG assessment failed (fail-open): %s", e)
+    # 2. CRAG assessment disabled — too many false positives on production.
+    #    TODO: calibrate after collecting data.
 
     if not chunks:
         no_result_msg = (
