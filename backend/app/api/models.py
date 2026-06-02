@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field, field_validator
+from typing import Optional
 
 
 class ChatRequest(BaseModel):
@@ -9,6 +10,7 @@ class ChatRequest(BaseModel):
         description="用户消息",
     )
     session_id: str | None = None
+    model: Optional[str] = Field(default=None, description="Model name from MODEL_REGISTRY (e.g. 'deepseek', 'zhipu')")
 
     @field_validator("message")
     @classmethod
