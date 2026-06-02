@@ -290,6 +290,54 @@ def multi_query_retrieve(query: str, top_k: int = 3, lang_filter: str = None) ->
     return selected
 
 
+# ── Retrieval Quality Assessment (CRAG-style) ──
+
+_RETRIEVAL_ASSESSMENT_PROMPT = """Evaluate whether the retrieved documents can answer the user's question.
+
+Score 0-5:
+- 5: Documents directly answer the question
+- 3-4: Documents are partially relevant
+- 1-2: Documents share topic but don't answer the question
+- 0: Documents are completely irrelevant
+
+Return ONLY a number (0-5), nothing else.
+
+Question: {question}
+Documents: {documents}"""
+
+
+def assess_retrieval_quality(query: str, chunks: List[Dict[str, Any]], llm_call_fn) -> int:
+    """Assess whether retrieved chunks can answer the query. Returns 0-5 score.
+
+    Uses a short LLM call to catch cases where the reranker passes irrelevant
+    results due to vocabulary overlap (e.g., technical terms shared across articles).
+    """
+    if not chunks:
+        return 0
+
+    # Build short document summary (titles + first 100 chars of each chunk)
+    doc_summary = "\n".join(
+        f"[Doc {i+1}: {c['metadata'].get('title', 'Unknown')}] {c['text'][:100]}..."
+        for i, c in enumerate(chunks[:3])
+    )
+
+    prompt = _RETRIEVAL_ASSESSMENT_PROMPT.format(question=query, documents=doc_summary)
+    messages = [{"role": "user", "content": prompt}]
+
+    try:
+        response = llm_call_fn(messages)
+        # Extract number from response
+        import re
+        match = re.search(r'[0-5]', str(response).strip())
+        if match:
+            return int(match.group())
+    except Exception as e:
+        logger.warning("Retrieval assessment failed: %s", e)
+
+    # Default: assume relevant (fail-open to avoid breaking valid queries)
+    return 3
+
+
 QA_SYSTEM_PROMPT = """你是知识库问答助手。基于提供的参考文档回答用户问题。
 
 规则：
@@ -364,6 +412,23 @@ def rag_query(
     # 1. Hybrid retrieval: BM25 keyword + vector search, RRF fusion
     chunks = multi_query_retrieve(query, top_k=top_k, lang_filter=filter_lang)
 
+    # 2. CRAG-style retrieval quality assessment:
+    #    If reranker is uncertain (score < 0.5), use LLM to verify relevance.
+    #    This catches cases where cross-encoder scores are inflated by vocabulary overlap.
+    if chunks and "rerank_score" in chunks[0] and chunks[0].get("rerank_score", 0) < 0.5:
+        assessment = assess_retrieval_quality(query, chunks, llm_call_fn)
+        if assessment <= 1:
+            logger.info("CRAG: assessment=%d (irrelevant), returning empty for: %s",
+                         assessment, query[:60])
+            chunks = []
+    elif chunks and "rerank_score" not in chunks[0]:
+        # No reranker score (model not loaded) — always assess
+        assessment = assess_retrieval_quality(query, chunks, llm_call_fn)
+        if assessment <= 1:
+            logger.info("CRAG: assessment=%d (irrelevant), returning empty for: %s",
+                         assessment, query[:60])
+            chunks = []
+
     if not chunks:
         no_result_msg = (
             "No relevant content found in the knowledge base. Please try a different question."
@@ -423,6 +488,19 @@ async def rag_query_astream(
 
     # 1. Hybrid retrieval: BM25 keyword + vector search, RRF fusion
     chunks = multi_query_retrieve(query, top_k=top_k, lang_filter=filter_lang)
+
+    # 2. CRAG-style retrieval quality assessment for stream endpoint.
+    #    Uses llm.invoke() (sync) for the quick assessment call.
+    if chunks and "rerank_score" in chunks[0] and chunks[0].get("rerank_score", 0) < 0.5:
+        try:
+            def _sync_llm_call(messages):
+                return llm.invoke(messages).content
+            assessment = assess_retrieval_quality(query, chunks, _sync_llm_call)
+            if assessment <= 1:
+                logger.info("CRAG stream: assessment=%d (irrelevant), returning empty", assessment)
+                chunks = []
+        except Exception as e:
+            logger.warning("CRAG assessment failed (fail-open): %s", e)
 
     if not chunks:
         no_result_msg = (
