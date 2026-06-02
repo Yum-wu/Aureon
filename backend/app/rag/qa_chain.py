@@ -494,13 +494,7 @@ def rag_query(
     # 3. Generate
     answer = generate_answer(query, context, llm_call_fn, lang=lang)
 
-    # 4. Faithfulness monitoring: log score for quality tracking.
-    #    Does NOT block or regenerate — the system prompt handles honest refusals.
-    faithfulness = check_faithfulness(query, answer, context, llm_call_fn, lang=lang)
-    if faithfulness < 0.3:
-        logger.info("Low faithfulness (%.2f) for: %s", faithfulness, query[:60])
-
-    # 5. Build response with sources
+    # 4. Build response with sources
     sources = [
         SourceItem(
             title=c["metadata"].get("title", c["metadata"].get("source", "Unknown")),
