@@ -531,7 +531,11 @@ def delete_from_index(source_filename: str, path: str = None):
 
 
 def save_index(chunks: List[Dict[str, Any]], embeddings: np.ndarray = None, path: str = None):
-    """Save chunks to Chroma persistent storage (embeddings computed automatically)."""
+    """Save chunks to vector storage (embeddings computed automatically)."""
+    from app.config import settings
+    if settings.vector_backend == "qdrant":
+        return save_index_qdrant(chunks)
+
     save_path = path or VECTOR_DIR
     os.makedirs(save_path, exist_ok=True)
 
@@ -589,7 +593,7 @@ def load_index(path: str = None):
 
 
 def retrieve(query: str, top_k: int = 3, use_mmr: bool = True, lang_filter: str = None) -> List[Dict[str, Any]]:
-    """Retrieve top_k chunks using Chroma similarity search.
+    """Retrieve top_k chunks using vector similarity search.
 
     Args:
         query: 查询文本
@@ -597,6 +601,10 @@ def retrieve(query: str, top_k: int = 3, use_mmr: bool = True, lang_filter: str 
         use_mmr: 是否使用 MMR 多样性优化
         lang_filter: 语言过滤（"zh" 或 "en"），None 表示不过滤
     """
+    from app.config import settings
+    if settings.vector_backend == "qdrant":
+        return retrieve_qdrant(query, top_k=top_k)
+
     try:
         client = _get_chroma()
         collection = _get_collection(client)
@@ -801,4 +809,80 @@ def get_collection_stats() -> tuple[int, int]:
         return 0, 0
     except Exception:
         return 0, 0
+
+
+# ── Qdrant Backend ──
+_qdrant_client = None
+
+
+def _get_qdrant():
+    """Get or create Qdrant client singleton."""
+    global _qdrant_client
+    if _qdrant_client is None:
+        from qdrant_client import QdrantClient
+        from app.config import settings
+        _qdrant_client = QdrantClient(
+            url=settings.qdrant_url,
+            api_key=settings.qdrant_api_key or None,
+        )
+    return _qdrant_client
+
+
+def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
+    """Save chunks to Qdrant vector store."""
+    from qdrant_client.models import VectorParams, Distance, PointStruct
+    from app.config import settings
+
+    client = _get_qdrant()
+    dim = _LOCAL_MODEL_DIM
+
+    try:
+        client.delete_collection(collection_name)
+    except Exception:
+        pass
+
+    client.create_collection(
+        collection_name=collection_name,
+        vectors_config=VectorParams(size=dim, distance=Distance.COSINE),
+    )
+
+    texts = [c["text"] for c in chunks]
+    embeddings = _embed_local(texts)
+    if embeddings is None:
+        embeddings = embed_texts_llm(texts)
+
+    points = []
+    for i, (chunk, emb) in enumerate(zip(chunks, embeddings)):
+        points.append(PointStruct(
+            id=i,
+            vector=emb.tolist(),
+            payload={"metadata": chunk.get("metadata", {}), "text": chunk["text"]},
+        ))
+
+    client.upsert(collection_name=collection_name, points=points)
+    logger.info("Qdrant: indexed %d chunks", len(chunks))
+
+
+def retrieve_qdrant(query: str, top_k: int = 3, collection_name: str = "aureon") -> List[Dict]:
+    """Retrieve from Qdrant vector store."""
+    client = _get_qdrant()
+
+    query_emb = _embed_local([query])
+    if query_emb is None:
+        query_emb = embed_texts_llm([query])
+
+    results = client.search(
+        collection_name=collection_name,
+        query_vector=query_emb[0].tolist(),
+        limit=top_k,
+    )
+
+    return [
+        {
+            "text": r.payload.get("text", ""),
+            "metadata": {**r.payload.get("metadata", {}), "cosine_score": r.score},
+            "score": r.score,
+        }
+        for r in results
+    ]
 

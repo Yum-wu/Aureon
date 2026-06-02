@@ -18,7 +18,9 @@ pydantic-settings>=2.0,<3.0
 # RAG dependencies
 numpy>=2.0,<2.5
 langchain-text-splitters>=0.3,<0.4
+# Vector store backends
 chromadb>=0.5,<0.6
+qdrant-client>=1.7.0
 sentence-transformers>=3.0,<4.0
 jieba>=0.42
 
@@ -38,6 +40,9 @@ structlog>=24.0,<25.0
 
 # Prometheus metrics
 prometheus-fastapi-instrumentator>=6.0,<7.0
+
+# Elasticsearch BM25 backend
+elasticsearch>=8.10.0
 
 # Redis semantic cache
 redis>=5.0,<6.0
