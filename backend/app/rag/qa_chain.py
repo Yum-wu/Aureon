@@ -384,67 +384,67 @@ def generate_answer(
 
 # ── Faithfulness Check (post-generation) ──
 
-_FAITHFULNESS_PROMPT_ZH = """评估以下回答与参考文档的一致性。
+_FAITHFULNESS_PROMPT_ZH = """验证以下回答中的每个事实声明是否被参考文档支持。
 
-评分标准：
-- 1.0: 回答完全基于文档，所有信息都有依据
-- 0.5: 回答部分基于文档，包含一些推断或补充
-- 0.0: 回答包含明显的幻觉（文档中完全不存在的信息）
-
-特别注意：
-- 如果回答说"文档中未提及"或"无法回答"，这是诚实的回答，评 1.0
-- 如果回答包含文档中没有的具体数据/事实，评 0.0
-- 如果回答是对文档内容的合理总结和解释，评 1.0
-
-只返回数字 (0.0, 0.5, 或 1.0)，不要解释。
+回答中的声明：
+{claims}
 
 参考文档：
 {context}
 
-用户问题：{query}
-回答：{answer}"""
+对于每个声明，判断：
+- SUPPORTED: 文档中有明确依据
+- UNSUPPORTED: 文档中完全没有提到
 
-_FAITHFULNESS_PROMPT_EN = """Evaluate the consistency between the answer and the reference documents.
+最后统计：SUPPORTED 数量 / 总声明数量
 
-Scoring:
-- 1.0: Answer fully based on documents, all information grounded
-- 0.5: Answer partially based on documents, includes some inference
-- 0.0: Answer contains clear hallucination (information not in documents)
+格式：
+SUPPORTED: X
+UNSUPPORTED: Y
+TOTAL: Z"""
 
-Special cases:
-- If answer says "not mentioned" or "cannot answer", this is honest → 1.0
-- If answer contains specific data/facts NOT in documents → 0.0
-- If answer is a reasonable summary/interpretation of documents → 1.0
+_FAITHFULNESS_PROMPT_EN = """Verify each factual claim in the answer against the reference documents.
 
-Return ONLY a number (0.0, 0.5, or 1.0), no explanation.
+Claims in the answer:
+{claims}
 
 Reference documents:
 {context}
 
-User question: {query}
-Answer: {answer}"""
+For each claim, determine:
+- SUPPORTED: explicitly found in documents
+- UNSUPPORTED: not mentioned in documents at all
+
+Final count format:
+SUPPORTED: X
+UNSUPPORTED: Y
+TOTAL: Z"""
 
 
 def check_faithfulness(query: str, answer: str, context: str, llm_call_fn, lang: str = "zh") -> float:
-    """Verify that the generated answer is grounded in the retrieved context.
+    """Verify answer faithfulness using claim-level decomposition (RAGAS-inspired).
 
-    Returns 1.0 if fully supported, 0.0 if hallucinated.
-    Uses a single LLM call to check factual consistency.
+    Decomposes answer into claims, checks each against context.
+    Returns ratio of supported claims (0.0 to 1.0).
     """
     prompt_template = _FAITHFULNESS_PROMPT_EN if lang == "en" else _FAITHFULNESS_PROMPT_ZH
-    prompt = prompt_template.format(context=context[:1500], query=query, answer=answer[:500])
+    prompt = prompt_template.format(context=context[:1500], claims=answer[:500])
     messages = [{"role": "user", "content": prompt}]
 
     try:
         response = llm_call_fn(messages)
         import re
-        match = re.search(r'(0\.0|0\.5|1\.0)', str(response).strip())
-        if match:
-            return float(match.group())
+        supported = re.search(r'SUPPORTED:\s*(\d+)', str(response))
+        total = re.search(r'TOTAL:\s*(\d+)', str(response))
+        if supported and total:
+            s = int(supported.group(1))
+            t = int(total.group(1))
+            if t > 0:
+                return s / t
     except Exception as e:
         logger.warning("Faithfulness check failed (fail-open): %s", e)
 
-    return 1.0  # fail-open: assume faithful if check fails
+    return 1.0  # fail-open
 
 
 def rag_query(
@@ -494,11 +494,10 @@ def rag_query(
     # 3. Generate
     answer = generate_answer(query, context, llm_call_fn, lang=lang)
 
-    # 4. Faithfulness check: verify answer is grounded in context.
-    #    If hallucination detected (score 0.0), regenerate with strict prompt.
-    #    This prevents blocking valid queries while catching true hallucinations.
+    # 4. Faithfulness check: verify answer claims against context (RAGAS-inspired).
+    #    If <50% of claims are supported, regenerate with strict prompt.
     faithfulness = check_faithfulness(query, answer, context, llm_call_fn, lang=lang)
-    if faithfulness <= 0.0:
+    if faithfulness < 0.5:
         logger.info("Faithfulness failed (%.2f), regenerating with strict prompt for: %s",
                      faithfulness, query[:60])
         # Regenerate with strict "context-only" prompt
