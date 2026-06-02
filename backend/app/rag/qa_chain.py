@@ -39,7 +39,7 @@ def _extract_title_keywords(query: str) -> List[str]:
 
 # RRF score threshold: conservative floor — catches truly empty results.
 # The reranker is the primary quality gate; this is just a safety net.
-_MIN_RELEVANCE_SCORE = float(os.getenv("MIN_RELEVANCE_SCORE", "0.015"))
+_MIN_RELEVANCE_SCORE = float(os.getenv("MIN_RELEVANCE_SCORE", "0.003"))
 
 # Pre-RRF cosine threshold: filters vector results BEFORE fusion.
 # RRF rank-1 = 1/(200+1) ≈ 0.005, so post-RRF thresholds are too low.
