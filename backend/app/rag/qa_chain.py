@@ -18,7 +18,7 @@ import structlog
 
 logger = structlog.get_logger()
 
-_RRF_K = 60  # RRF constant (standard value from literature)
+_RRF_K = int(os.getenv("RRF_K", "200"))
 MULTI_QUERY_ENABLED = os.getenv("MULTI_QUERY_ENABLED", "true").lower() == "true"
 
 # Keywords that uniquely identify specific articles — used for title/slug boost.

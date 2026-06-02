@@ -70,7 +70,7 @@ _chroma_collection = None
 _kw_docs: List[Dict] = []
 _kw_idf: Dict[str, float] = {}
 _kw_avgdl: float = 0.0
-_KW_MIN_RAW_SCORE = 0.01  # minimum raw BM25 score — lowered for Chinese queries with fewer contributing terms
+_KW_MIN_RAW_SCORE = float(os.getenv("KW_MIN_RAW_SCORE", "0.15"))
 _KW_MIN_IDF = 0.3  # skip only very high-frequency terms (appear in >85% docs)
 
 # Chinese stop words — function words, interrogatives, particles.
