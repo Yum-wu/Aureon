@@ -10,14 +10,16 @@
 - 检索量 top-20 + rerank ✅
 - Qdrant 后端 ✅（代码完成，Python 3.12 验证通过）
 - Elasticsearch 后端 ✅（代码完成）
-- LLM Negative Detection classifier ✅
+- LLM Negative Detection classifier ✅（无条件调用，100% 识别率）
+- Precision@3 Binary Metric ✅（95.1%）
 - Recall@10 + nDCG@10 指标 ✅
 - Multi-LLM (MODEL_REGISTRY) ✅
 - Suggested Prompts ✅
 - SEO JSON-LD ✅
 - CrewAI 隐藏 ✅
+- Railway 部署修复 ✅（CRLF + 健康检查 + OOM）
 
-### 当前 Benchmark（ChromaDB 后端，Python 3.14）
+### 当前 Benchmark（2026-06-03 v22 Phase 1 修复后）
 
 | 指标 | 值 | 目标 | 状态 |
 |------|-----|------|------|
@@ -25,11 +27,12 @@
 | Recall@10 | 100% | ≥97% | ✅ |
 | nDCG@10 | 1.010 | ≥0.80 | ✅ |
 | MRR | 0.913 | ≥0.85 | ✅ |
-| Precision@3 | 33.3% | ≥80% | ❌ 测量伪影 |
-| Negative Detection | 6.7% | ≥80% | ❌ 真实问题 |
-| Hybrid Latency | 6.7ms | ≤26ms | ✅ |
-| BM25 Latency | 2.9ms | ≤10ms | ✅ |
+| Precision@3 (Binary) | 95.1% | ≥80% | ✅ Phase 1 修复 |
+| Negative Detection | 100% (15/15) | ≥90% | ✅ Phase 1 修复 |
+| Hybrid Latency | 5.8ms | ≤26ms | ✅ |
+| BM25 Latency | 2.5ms | ≤10ms | ✅ |
 | Vector Latency | 2.5ms | ≤10ms | ✅ |
+| Pass Rate | 11/11 | — | ✅ |
 
 ### Qdrant 端到端测试结果
 
@@ -58,15 +61,14 @@ results = client.query_points(collection_name="aureon", query=vector, limit=3)
 
 ### 剩余问题
 
-**问题 1：Precision@3 = 33.3%（测量伪影）**
-- 根因：BM25 top-3 含重复 slug（同一文章多个 chunk），precision 计算时每个都算 correct → 虚高
-- hybrid 去重后 precision 更真实，但定义与行业不一致
-- 行业标准：top-3 中是否包含正确文章（binary），不是"几个 chunk 匹配"
+**~~问题 1：Precision@3 = 33.3%（测量伪影）~~ ✅ 已修复（2026-06-03）**
+- 改为 binary metric：`1 if expected_source in retrieved_sources else 0`
+- 结果：33.3% → 95.1%
 
-**问题 2：Negative Detection = 6.7%（真实问题）**
-- 15 个负面查询中只有 1 个被检测到
-- LLM classifier 已实现但 benchmark 中未被触发（score 阈值条件不满足）
-- 含真实关键词的负面查询（如"Aureon 的 AWS 部署成本"）总能匹配到结果
+**~~问题 2：Negative Detection = 6.7%（真实问题）~~ ✅ 已修复（2026-06-03）**
+- 根因：score 阈值不可靠（负面查询 RRF score 0.005-1.0，reranker 给不相关结果高置信度）
+- 方案：无条件 LLM classifier，不依赖 score 阈值
+- 结果：6.7% → 100%（15/15 全部正确）
 
 **问题 3：Python 版本兼容性**
 - 当前默认 Python 3.14.4，与 PyTorch socket 不兼容
@@ -77,34 +79,34 @@ results = client.query_points(collection_name="aureon", query=vector, limit=3)
 
 ## 二、优化方案
 
-### Phase 1：修复核心问题（1-2 天）
+### Phase 1：修复核心问题 ✅ 已完成（2026-06-03）
 
-#### 1.1 修复 Precision@3 测量
+#### 1.1 修复 Precision@3 测量 ✅
 
-**方案**：改为 binary metric — top-3 中是否包含正确文章（是=1，否=0）。
-
-```python
-# run_benchmark.py — precision 计算改为
-# 旧：correct_count / k（计算匹配 chunk 数量）
-# 新：1 if expected_source in retrieved_sources else 0（是否包含正确文章）
-```
-
-预期：33.3% → 90%+（与 Recall@3 接近，因为 binary precision ≈ recall）
-
-#### 1.2 修复 Negative Detection
-
-**方案**：score 阈值 + top-3 一致性检查。
+**实际方案**：改为 binary metric — top-3 中是否包含正确文章（是=1，否=0）。
 
 ```python
-# qa_chain.py — hybrid_retrieve 返回后
-if not results or (len(results) > 0 and results[0].get("score", 0) < _NEGATIVE_THRESHOLD):
-    return []  # 判定为不可回答
+# run_benchmark.py — precision 计算
+precisions.append(1.0 if expected_source in retrieved_sources else 0.0)
 ```
 
-**阈值标定**：
-- 正常查询 top-1 RRF score: 0.005-0.015
-- 负面查询 top-1 RRF score: 0.002-0.005
-- 建议阈值: 0.004
+结果：33.3% → 95.1%（超过 90% 目标）
+
+#### 1.2 修复 Negative Detection ✅
+
+**实际方案**：无条件 LLM classifier（score 阈值方案被否决）。
+
+**为什么 score 阈值不可行**：
+- 负面查询的 RRF score 分布为 0.005-1.0，远高于预期的 0.002-0.005
+- reranker 给不相关结果高置信度分数（score=1.0）
+- 含真实关键词的负面查询（如"DeepSeek V4 训练数据量"）BM25 匹配后 RRF 得分不低
+
+**实际实现**：
+- 新增 `classify_query_answerable_sync(query, llm_call_fn)` — sync 版本
+- `rag_query` 和 `rag_query_astream` 中无条件调用 LLM classifier
+- 仅在 chunks 非空时调用（空结果直接返回）
+
+结果：6.7% → 100%（15/15 全部正确）
 
 **LLM classifier 集成**：
 - 仅在 score 在 0.003-0.006 边界区间时触发
@@ -177,10 +179,10 @@ if not results or (len(results) > 0 and results[0].get("score", 0) < _NEGATIVE_T
 
 ## 三、验收标准
 
-### Phase 1
-- Precision@3 (binary): ≥90%
-- Negative Detection: ≥70%
-- Recall@3: ≥93%（不退步）
+### Phase 1 ✅
+- Precision@3 (binary): 95.1% ≥ 90% ✅
+- Negative Detection: 100% ≥ 70% ✅
+- Recall@3: 95.1% ≥ 93% ✅（未退步）
 
 ### Phase 2
 - Cache hit rate: ≥40%
@@ -220,28 +222,35 @@ if not results or (len(results) > 0 and results[0].get("score", 0) < _NEGATIVE_T
 |------|------|---------|
 | Python 3.14 + PyTorch socket 死锁 | Qdrant/ES 后端不可用 | 降级 Python 3.12 或 Docker 部署 |
 | qdrant-client API 变更 | `search()` → `query_points()` | 已修复（v22 commit） |
-| HuggingFace 模型下载超时 | 离线环境启动慢 | 设置 `HF_HUB_OFFLINE=1` + 确保缓存 |
-| LLM classifier 未被 benchmark 触发 | Negative Detection 6.7% | 调整 score 阈值触发条件 |
-| Precision@3 定义不一致 | 33.3% 看起来很差 | 改为 binary metric |
+| HuggingFace 模型下载超时 | 离线环境启动慢 | 设置 `TRANSFORMERS_OFFLINE=1` + 确保缓存 |
+| ~~LLM classifier 未被 benchmark 触发~~ | ~~Negative Detection 6.7%~~ | ✅ 改为无条件调用（100%） |
+| ~~Precision@3 定义不一致~~ | ~~33.3% 看起来很差~~ | ✅ 改为 binary metric（95.1%） |
+| Railway 文件系统临时性 | 每次部署 ChromaDB 为空 | 部署后手动 `POST /api/rag/index` |
+| Railway OOM — BGE 模型加载 | 启动时加载模型超出内存限制 | 不在启动时自动重建索引 |
 
 ---
 
 ## 六、继续优化的入口
 
-### 下一步（接 v22）
+### Phase 1 已完成（2026-06-03）
 
-1. **Negative Detection 修复**（最高优先级）
-   - 文件：`backend/app/rag/qa_chain.py`
-   - 当前 `_LOW_SCORE_THRESHOLD = 0.005`，需要降低到 0.003-0.004 以触发 LLM classifier
-   - 或改为无条件对所有负面查询（source_article="none"）触发 classifier
+1. ~~**Negative Detection 修复**~~ ✅ — 无条件 LLM classifier，100% 识别率
+2. ~~**Precision@3 测量修复**~~ ✅ — binary metric，95.1%
+3. ~~**Railway 部署修复**~~ ✅ — CRLF + 健康检查阻塞 + OOM 重启循环
 
-2. **Precision@3 测量修复**
-   - 文件：`backend/tests/run_benchmark.py`
-   - 将 precision 计算从 `correct_count / k` 改为 `1 if expected in sources else 0`
+### 下一步（Phase 2）
 
-3. **Semantic Cache**（Phase 2）
+1. **Semantic Cache**
    - 文件：`backend/app/rag/qa_chain.py`、`backend/app/cache/`
    - Redis exact match + embedding similarity > 0.95
+   - 预期：Cache hit rate ≥40%，平均 TTFT ≤150ms
+
+2. **Query Rewrite**
+   - LLM 将口语化查询改写为正式表述
+   - 预期：Recall +2-5pp（对长尾查询）
+
+3. **RAGAS 评估框架**
+   - Faithfulness, Answer Relevancy, Context Precision/Recall
 
 4. **Qdrant 完整验证**（需要 Python 3.12 环境）
    - 用 `TRANSFORMERS_OFFLINE=1`（不是 `HF_HUB_OFFLINE=1`）避免阻断 DeepSeek API
@@ -249,6 +258,6 @@ if not results or (len(results) > 0 and results[0].get("score", 0) < _NEGATIVE_T
 
 ---
 
-*方案版本: v22.1*
-*最后更新: 2026-06-02*
-*基于: 4 份企业级 RAG 研究 + benchmark 95.1% Recall@3 + Qdrant 端到端验证*
+*方案版本: v22.2*
+*最后更新: 2026-06-03*
+*Phase 1 完成: Precision@3 95.1%, Negative Detection 100%, Pass Rate 11/11*

@@ -145,3 +145,92 @@ body {
 .text-balance {
   text-wrap: balance;
 }
+
+/* ══════════════════════════════════════
+   Global Dark Theme Overrides
+   Remap Tailwind utility classes to dark palette
+   ══════════════════════════════════════ */
+
+/* Backgrounds */
+.bg-white { background-color: #111111 !important; }
+.bg-gray-50, .bg-gray-100 { background-color: #161616 !important; }
+.bg-gray-200 { background-color: #1A1A1A !important; }
+
+/* Text colors */
+.text-gray-900, .text-gray-800 { color: #EDEDED !important; }
+.text-gray-700, .text-gray-600 { color: #CCCCCC !important; }
+.text-gray-500 { color: #888888 !important; }
+.text-gray-400 { color: #666666 !important; }
+.text-gray-300 { color: #555555 !important; }
+
+/* Borders */
+.border-gray-100, .border-gray-200 { border-color: rgba(255,255,255,0.06) !important; }
+.border-gray-300 { border-color: rgba(255,255,255,0.10) !important; }
+
+/* Hover backgrounds */
+[class*="hover\\:bg-gray"]:hover { background-color: #1A1A1A !important; }
+[class*="hover\\:bg-gray-200"]:hover { background-color: #222222 !important; }
+[class*="hover\\:border-gray"]:hover { border-color: rgba(255,255,255,0.12) !important; }
+[class*="hover\\:bg-blue"]:hover { background-color: #6C70DB !important; }
+
+/* Active states */
+.bg-blue-600 { background-color: #5B5FC7 !important; }
+.text-blue-600 { color: #818CF8 !important; }
+.border-blue-600 { border-color: #5B5FC7 !important; }
+
+/* Status colors */
+.text-green-600, .text-green-700 { color: #22C55E !important; }
+.bg-green-100 { background-color: rgba(34,197,94,0.15) !important; }
+.text-green-100 { color: #22C55E !important; }
+.text-red-600, .text-red-700 { color: #EF4444 !important; }
+.bg-red-50, .bg-red-100 { background-color: rgba(239,68,68,0.12) !important; }
+.text-yellow-600, .text-yellow-700 { color: #EAB308 !important; }
+.bg-yellow-100 { background-color: rgba(234,179,8,0.12) !important; }
+.bg-blue-100 { background-color: rgba(91,95,199,0.12) !important; }
+.text-blue-700 { color: #818CF8 !important; }
+.bg-indigo-50 { background-color: rgba(91,95,199,0.08) !important; }
+
+/* Gradient overrides */
+.from-blue-50 { --tw-gradient-from: rgba(91,95,199,0.08) !important; }
+.to-indigo-50 { --tw-gradient-to: rgba(91,95,199,0.04) !important; }
+.from-blue-600 { --tw-gradient-from: #5B5FC7 !important; }
+.to-amber-500 { --tw-gradient-to: #EAB308 !important; }
+.from-green-500 { --tw-gradient-from: #22C55E !important; }
+.to-emerald-500 { --tw-gradient-to: #10B981 !important; }
+.from-purple-500 { --tw-gradient-from: #818CF8 !important; }
+.to-pink-500 { --tw-gradient-to: #EC4899 !important; }
+
+/* Shadows */
+.shadow-sm { box-shadow: 0 1px 2px rgba(0,0,0,0.3) !important; }
+.shadow { box-shadow: 0 1px 3px rgba(0,0,0,0.4) !important; }
+.shadow-md { box-shadow: 0 4px 6px rgba(0,0,0,0.4) !important; }
+.shadow-lg { box-shadow: 0 10px 15px rgba(0,0,0,0.4) !important; }
+
+/* Form elements */
+input, textarea, select {
+  background-color: #161616 !important;
+  color: #EDEDED !important;
+  border-color: rgba(255,255,255,0.10) !important;
+}
+input::placeholder, textarea::placeholder { color: #555555 !important; }
+input:focus, textarea:focus, select:focus {
+  border-color: #5B5FC7 !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(91,95,199,0.2) !important;
+}
+
+/* Code blocks */
+code, pre { background-color: #161616 !important; color: #CCCCCC !important; }
+pre { border: 1px solid rgba(255,255,255,0.06) !important; border-radius: 6px !important; }
+
+/* Tables */
+table { border-color: rgba(255,255,255,0.06) !important; }
+th { background-color: #111111 !important; color: #888888 !important; }
+td { border-color: rgba(255,255,255,0.04) !important; }
+tr:hover { background-color: rgba(255,255,255,0.02) !important; }
+
+/* Progress bars */
+.bg-green-500 { background-color: #22C55E !important; }
+.bg-red-500 { background-color: #EF4444 !important; }
+.bg-yellow-500 { background-color: #EAB308 !important; }
+.bg-blue-500 { background-color: #5B5FC7 !important; }
