@@ -2,17 +2,22 @@
 
 > 基于 4 份企业级 RAG 最佳实践研究 + 当前 benchmark 数据（95.1% Recall@3, 100% Recall@10）
 
-## 一、当前状态
+## 一、当前状态（2026-06-02 最新）
 
-### 已完成的升级（v20-v21）
+### 已完成的升级（v20-v22）
 - BGE-large-zh-v1.5 (1024d) ✅
 - bge-reranker-v2-m3 ✅
 - 检索量 top-20 + rerank ✅
-- Qdrant + Elasticsearch 后端 ✅
+- Qdrant 后端 ✅（代码完成，Python 3.12 验证通过）
+- Elasticsearch 后端 ✅（代码完成）
 - LLM Negative Detection classifier ✅
 - Recall@10 + nDCG@10 指标 ✅
+- Multi-LLM (MODEL_REGISTRY) ✅
+- Suggested Prompts ✅
+- SEO JSON-LD ✅
+- CrewAI 隐藏 ✅
 
-### 当前指标
+### 当前 Benchmark（ChromaDB 后端，Python 3.14）
 
 | 指标 | 值 | 目标 | 状态 |
 |------|-----|------|------|
@@ -22,7 +27,34 @@
 | MRR | 0.913 | ≥0.85 | ✅ |
 | Precision@3 | 33.3% | ≥80% | ❌ 测量伪影 |
 | Negative Detection | 6.7% | ≥80% | ❌ 真实问题 |
-| Hybrid Latency | 6.1ms | ≤26ms | ✅ |
+| Hybrid Latency | 6.7ms | ≤26ms | ✅ |
+| BM25 Latency | 2.9ms | ≤10ms | ✅ |
+| Vector Latency | 2.5ms | ≤10ms | ✅ |
+
+### Qdrant 端到端测试结果
+
+**Python 3.14 + Qdrant：不兼容**
+- PyTorch 加载模型后所有 socket 连接永久死锁
+- subprocess、multiprocessing、os.system 全部无效
+- 根因：Python 3.14 的 socket 子系统被 PyTorch 破坏
+- 只影响需要 HTTP 的组件（Qdrant、ES），ChromaDB（in-process）不受影响
+
+**Python 3.12 + Qdrant：正常工作**
+- qdrant-client 直接调用，无死锁
+- API 更新：`search()` → `query_points()`（qdrant-client 1.18.0）
+- 需要 `HF_HUB_OFFLINE=1` 或缓存好模型（否则 HuggingFace 下载超时）
+- benchmark 跑 10 个 QA pair 验证通过（Recall@3 = 100%）
+- 完整 benchmark 因 `HF_HUB_OFFLINE=1` 阻断 DeepSeek API 而卡住（LLM classifier 超时）
+
+**Qdrant 正确用法（Python 3.12）：**
+```python
+from qdrant_client import QdrantClient
+client = QdrantClient(url="http://localhost:6333")
+# 创建 collection
+client.create_collection(collection_name="aureon", vectors_config=VectorParams(size=1024, distance=Distance.COSINE))
+# 搜索
+results = client.query_points(collection_name="aureon", query=vector, limit=3)
+```
 
 ### 剩余问题
 
@@ -33,8 +65,13 @@
 
 **问题 2：Negative Detection = 6.7%（真实问题）**
 - 15 个负面查询中只有 1 个被检测到
-- LLM classifier 已实现但未生效（可能未被调用）
+- LLM classifier 已实现但 benchmark 中未被触发（score 阈值条件不满足）
 - 含真实关键词的负面查询（如"Aureon 的 AWS 部署成本"）总能匹配到结果
+
+**问题 3：Python 版本兼容性**
+- 当前默认 Python 3.14.4，与 PyTorch socket 不兼容
+- Qdrant/ES 后端需要 Python 3.12 运行
+- 解决方案：开发用 3.12，或部署时用 Docker（指定 Python 3.12 镜像）
 
 ---
 
@@ -118,12 +155,23 @@ if not results or (len(results) > 0 and results[0].get("score", 0) < _NEGATIVE_T
 
 ### Phase 3：架构扩展（按需）
 
-| 触发条件 | 动作 |
-|---------|------|
-| KB > 2K chunks | 重新评估 reranker 效果 |
-| KB > 10K chunks | 切换 Qdrant（已有实现） |
-| KB > 50K chunks | 切换 Elasticsearch（已有实现） |
-| 并发 > 100 QPS | GPU embedding + 连接池 |
+| 触发条件 | 动作 | 前置条件 |
+|---------|------|---------|
+| KB > 2K chunks | 重新评估 reranker 效果 | 无 |
+| KB > 10K chunks | 切换 Qdrant（已有实现） | 解决 Python 版本问题 |
+| KB > 50K chunks | 切换 Elasticsearch（已有实现） | 解决 Python 版本问题 |
+| 并发 > 100 QPS | GPU embedding + 连接池 | 无 |
+
+**Qdrant 切换步骤（Python 3.12 环境）：**
+1. `docker-compose up -d qdrant`
+2. `VECTOR_BACKEND=qdrant python -c "from app.rag.qa_chain import run_index_pipeline; ..."` 重建索引
+3. `VECTOR_BACKEND=qdrant python tests/run_benchmark.py` 验证
+4. 需要用 Python 3.12 运行（3.14 有 socket 死锁问题）
+
+**Elasticsearch 切换步骤：**
+1. `docker-compose up -d elasticsearch`
+2. `BM25_BACKEND=elasticsearch python ...` 切换后端
+3. 同样需要 Python 3.12
 
 ---
 
@@ -162,10 +210,45 @@ if not results or (len(results) > 0 and results[0].get("score", 0) < _NEGATIVE_T
 1. **Reranker 升级** — 已用 v2-m3，小 KB 下效果已最优
 2. **Embedding 升级** — BGE-large 1024d 对 476 chunks 已足够
 3. **HyDE** — 小 KB 收益有限，+200ms 延迟
-4. **Qdrant/ES 切换** — 当前 ChromaDB 476 chunks 完全够用
+4. **Qdrant/ES 切换** — 当前 ChromaDB 476 chunks 完全够用（代码已就绪，KB 扩展时启用）
 
 ---
 
-*方案版本: v22*
+## 五、已知技术债
+
+| 问题 | 影响 | 解决方案 |
+|------|------|---------|
+| Python 3.14 + PyTorch socket 死锁 | Qdrant/ES 后端不可用 | 降级 Python 3.12 或 Docker 部署 |
+| qdrant-client API 变更 | `search()` → `query_points()` | 已修复（v22 commit） |
+| HuggingFace 模型下载超时 | 离线环境启动慢 | 设置 `HF_HUB_OFFLINE=1` + 确保缓存 |
+| LLM classifier 未被 benchmark 触发 | Negative Detection 6.7% | 调整 score 阈值触发条件 |
+| Precision@3 定义不一致 | 33.3% 看起来很差 | 改为 binary metric |
+
+---
+
+## 六、继续优化的入口
+
+### 下一步（接 v22）
+
+1. **Negative Detection 修复**（最高优先级）
+   - 文件：`backend/app/rag/qa_chain.py`
+   - 当前 `_LOW_SCORE_THRESHOLD = 0.005`，需要降低到 0.003-0.004 以触发 LLM classifier
+   - 或改为无条件对所有负面查询（source_article="none"）触发 classifier
+
+2. **Precision@3 测量修复**
+   - 文件：`backend/tests/run_benchmark.py`
+   - 将 precision 计算从 `correct_count / k` 改为 `1 if expected in sources else 0`
+
+3. **Semantic Cache**（Phase 2）
+   - 文件：`backend/app/rag/qa_chain.py`、`backend/app/cache/`
+   - Redis exact match + embedding similarity > 0.95
+
+4. **Qdrant 完整验证**（需要 Python 3.12 环境）
+   - 用 `TRANSFORMERS_OFFLINE=1`（不是 `HF_HUB_OFFLINE=1`）避免阻断 DeepSeek API
+   - 完整跑 97 QA pairs benchmark
+
+---
+
+*方案版本: v22.1*
 *最后更新: 2026-06-02*
-*基于: 4 份企业级 RAG 研究 + 当前 benchmark 95.1% Recall@3*
+*基于: 4 份企业级 RAG 研究 + benchmark 95.1% Recall@3 + Qdrant 端到端验证*
