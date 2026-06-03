@@ -20,27 +20,57 @@
     "hero": {
       "badge": "生产就绪",
       "title": "企业 AI 知识库平台",
-      "subtitle": "97% 检索准确率 · 亚秒级响应 · 24 小时部署",
+      "subtitle": "95% 检索准确率 · 100% 负面检测 · 亚秒级响应",
       "cta_search": "开始搜索",
       "cta_architecture": "查看架构"
     },
     "metrics": {
-      "recall": { "value": "97.6%", "label": "检索准确率", "detail": "Hybrid Recall@3" },
-      "ttft": { "value": "~310ms", "label": "首字延迟", "detail": "Time to First Token" },
-      "cost": { "value": "~$0.001", "label": "每次查询成本", "detail": "使用 GPT-4o-mini" }
+      "recall": {
+        "value": "95.1%",
+        "label": "检索准确率",
+        "detail": "Hybrid Recall@3 (97 QA pairs)"
+      },
+      "ttft": {
+        "value": "~310ms",
+        "label": "首字延迟",
+        "detail": "Streaming RAG TTFT"
+      },
+      "cost": {
+        "value": "~$0.001",
+        "label": "每次查询成本",
+        "detail": "DeepSeek pricing"
+      }
     },
     "features_title": "核心功能",
     "features": [
-      { "title": "混合检索", "desc": "BM25 关键词 + Dense 语义双通道融合，97% 检索准确率" },
-      { "title": "流式响应", "desc": "SSE 实时流推送，首字延迟 ~310ms，逐 token 渲染" },
-      { "title": "多语言支持", "desc": "中英双语知识库，自动语言检测与路由" },
-      { "title": "企业级部署", "desc": "Docker 容器化，24 小时标准部署，RBAC + 审计日志" },
-      { "title": "文档智能", "desc": "上传、自动索引、预览、来源管理" },
-      { "title": "分析仪表盘", "desc": "延迟、Token 使用、缓存性能、查询分布" }
+      {
+        "title": "混合检索",
+        "desc": "BM25 + Dense RRF 融合，Recall@3 95.1%，Recall@10 100%"
+      },
+      {
+        "title": "流式响应",
+        "desc": "SSE 实时推送，首字延迟 ~310ms，每次查询仅 1 次 LLM 调用"
+      },
+      {
+        "title": "负面检测",
+        "desc": "100% 检测率，LLM classifier + 检索阈值双重防御"
+      },
+      {
+        "title": "企业级部署",
+        "desc": "Docker + CI/CD + Railway，24h 标准部署，RBAC + 审计"
+      },
+      {
+        "title": "知识库",
+        "desc": "26 篇文章，476 chunks，97 QA 基准测试对"
+      },
+      {
+        "title": "分析仪表盘",
+        "desc": "延迟、Token 使用、缓存性能、查询分布"
+      }
     ],
     "benchmark": {
       "title": "性能基准测试",
-      "subtitle": "基于 76 组 QA 数据对混合检索流水线的评估",
+      "subtitle": "基于 97 组 QA 数据对混合检索流水线的评估 (11/11 达标)",
       "vs_baseline": "对比基线",
       "optimized": "已优化",
       "reduced": "已降低",

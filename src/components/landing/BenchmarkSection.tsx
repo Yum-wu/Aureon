@@ -16,9 +16,9 @@ export function BenchmarkSection() {
         {/* Metric cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-white/[0.06] mb-8">
           {[
-            { label: 'Recall@3', value: '96.08%', change: '+12%', sub: t('landing.benchmark.vs_baseline') },
-            { label: 'Full RAG Latency', value: '400ms', change: '-61%', sub: t('landing.benchmark.optimized') },
-            { label: 'Cost per Query', value: '.001', change: '-90%', sub: t('landing.benchmark.reduced') },
+            { label: 'Recall@3', value: '95.1%', change: '97 QA', sub: t('landing.benchmark.vs_baseline') },
+            { label: 'Retrieval Latency', value: '5.8ms', change: 'BM25+Vec', sub: t('landing.benchmark.optimized') },
+            { label: 'Negative Detection', value: '100%', change: '15/15', sub: t('landing.benchmark.reduced') },
           ].map((m) => (
             <div key={m.label} className="bg-[var(--bg-primary)] p-6">
               <p className="text-xs text-[var(--text-tertiary)] uppercase tracking-wider mb-4">
@@ -40,9 +40,9 @@ export function BenchmarkSection() {
           </h3>
           <div className="space-y-4">
             {[
-              { label: 'TTFT', before: '800ms', after: '310ms' },
-              { label: t('landing.benchmark.cache_hit_rate'), before: '0%', after: '92%' },
-              { label: t('landing.benchmark.cost_per_query'), before: '.01', after: '.001' },
+              { label: 'TTFT', before: '800ms', after: '~310ms' },
+              { label: t('landing.benchmark.cache_hit_rate'), before: '153ms', after: '5.8ms' },
+              { label: t('landing.benchmark.cost_per_query'), before: '.01', after: '100%' },
             ].map((item) => (
               <div key={item.label} className="flex justify-between items-center py-2 border-b border-white/[0.04] last:border-0">
                 <span className="text-sm text-[var(--text-secondary)]">{item.label}</span>
@@ -59,3 +59,4 @@ export function BenchmarkSection() {
     </section>
   );
 }
+
