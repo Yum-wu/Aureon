@@ -127,23 +127,40 @@ async def logging_middleware(request: Request, call_next):
 def _warmup_bm25():
     """Build BM25 index in background thread. Non-blocking.
 
-    ChromaDB auto-rebuild is SKIPPED here — on Railway's ephemeral filesystem,
-    loading the BGE embedding model + generating 476 embeddings exceeds the
-    container memory limit, causing OOM kill → restart loop.
-    Instead, users should call POST /api/rag/index after deploy.
+    Also checks if the article index is stale (empty or files changed)
+    and auto-rebuilds when AUTO_INDEX_ENABLED is true.
     """
-    global _bm25_warmup_done
+    global _bm25_warmup_done, _index_ready
     try:
-        from app.rag.vector_store import _build_kw_index
+        from app.rag.vector_store import _build_kw_index, check_index_stale, get_collection_stats
         _build_kw_index()
         logger.info("BM25 index warmup complete")
+
+        # Check if vector index needs rebuild
+        if settings.auto_index_enabled:
+            base_dir = os.path.dirname(os.path.dirname(__file__))
+            articles_dir = os.path.join(base_dir, "data", "articles")
+            status = check_index_stale(articles_dir)
+            if status["stale"]:
+                logger.info("Index is stale (%s), auto-rebuilding...", status["reason"])
+                from app.rag.qa_chain import run_index_pipeline
+                result = run_index_pipeline(articles_dir)
+                logger.info("Auto-rebuild complete: %s docs, %d chunks",
+                            result.get("documents_indexed", 0),
+                            result.get("chunks_created", 0))
+            else:
+                doc_count, chunk_count = get_collection_stats()
+                logger.info("Index OK: %d docs, %d chunks", doc_count, chunk_count)
     except Exception as e:
-        logger.warning("BM25 warmup failed (non-fatal): %s", e)
+        logger.warning("BM25 warmup / index check failed (non-fatal): %s", e)
     finally:
+        _index_ready = True
         _bm25_warmup_done = True
 
 
 _bm25_warmup_done = False  # starts False; background thread sets True when ready
+_index_ready = False  # True once index check/rebuild completes
+_index_rebuild_lock = threading.Lock()  # prevent concurrent rebuilds
 
 
 @app.on_event("startup")
@@ -176,7 +193,7 @@ async def startup():
     init_integration_tables()
     memory_manager.init_background_tasks()
 
-    # Background BM25 + ChromaDB warmup (non-blocking — health check can respond immediately)
+    # Background BM25 + ChromaDB warmup + auto-rebuild (non-blocking)
     threading.Thread(target=_warmup_bm25, daemon=True).start()
 
     logger.info("Startup complete")
@@ -321,6 +338,7 @@ async def health():
         "status": "ok" if _bm25_warmup_done else "warming_up",
         "model": settings.llm_model,
         "tools": [t.name for t in ALL_TOOLS] if _bm25_warmup_done else [],
+        "index_ready": _index_ready,
     }
 
 

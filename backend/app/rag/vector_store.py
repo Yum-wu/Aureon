@@ -817,6 +817,110 @@ def get_collection_stats() -> tuple[int, int]:
         return 0, 0
 
 
+def get_indexed_sources() -> set:
+    """Return set of source filenames currently in the Chroma articles collection."""
+    try:
+        client = _get_chroma()
+        collection = _get_collection(client)
+        if collection.count() == 0:
+            return set()
+        all_meta = collection.get(include=["metadatas"])
+        sources = set()
+        for meta in all_meta.get("metadatas", []):
+            if meta and isinstance(meta, dict):
+                src = meta.get("source")
+                if src:
+                    sources.add(src)
+        return sources
+    except Exception:
+        return set()
+
+
+def check_index_stale(articles_dir: str) -> dict:
+    """Check if the article files on disk are out of sync with the Chroma index.
+
+    Returns:
+        {"stale": bool, "reason": str, "fs_count": int, "idx_count": int,
+         "missing_files": list[str], "extra_files": list[str]}
+    """
+    import pathlib
+
+    result = {
+        "stale": False,
+        "reason": "",
+        "fs_count": 0,
+        "idx_count": 0,
+        "missing_files": [],
+        "extra_files": [],
+    }
+
+    try:
+        # Collect all .md files on disk
+        articles_path = pathlib.Path(articles_dir)
+        if not articles_path.is_dir():
+            result["stale"] = True
+            result["reason"] = "articles directory not found"
+            return result
+
+        fs_files = sorted(str(p.relative_to(articles_path))
+                          for p in articles_path.rglob("*.md"))
+        result["fs_count"] = len(fs_files)
+
+        # Collect indexed sources from Chroma
+        indexed = get_indexed_sources()
+        result["idx_count"] = len(indexed)
+
+        # No files but index has data → stale (files were deleted)
+        if len(fs_files) == 0 and len(indexed) > 0:
+            result["stale"] = True
+            result["reason"] = "no articles on disk but index has data"
+            return result
+
+        # Files exist but index is empty → stale
+        if len(fs_files) > 0 and len(indexed) == 0:
+            result["stale"] = True
+            result["reason"] = f"{len(fs_files)} articles found but index is empty"
+            return result
+
+        # Files exist but index is empty
+        if len(fs_files) == 0 and len(indexed) == 0:
+            return result  # both empty, not stale
+
+        # Normalize indexed paths for comparison: strip leading dirs, keep relative
+        # indexed sources may be absolute paths; normalize to relative form
+        normalized_indexed = set()
+        for s in indexed:
+            # Try to extract relative path after "articles/"
+            if "articles" in s:
+                parts = s.replace("\\", "/").split("articles/")
+                if len(parts) > 1:
+                    normalized_indexed.add(parts[-1])
+                    continue
+            # Fallback: use basename
+            normalized_indexed.add(os.path.basename(s))
+
+        # Compare
+        fs_set = set(fs_files)
+        missing = fs_set - normalized_indexed
+        extra = normalized_indexed - fs_set
+
+        if missing or extra:
+            result["stale"] = True
+            result["missing_files"] = sorted(missing)
+            result["extra_files"] = sorted(extra)
+            if missing:
+                result["reason"] = f"{len(missing)} article(s) not in index"
+            else:
+                result["reason"] = f"{len(extra)} orphaned index entries"
+
+        return result
+    except Exception as e:
+        logger.warning("check_index_stale failed: %s", e)
+        result["stale"] = True
+        result["reason"] = f"check failed: {e}"
+        return result
+
+
 # ── Qdrant Backend ──
 _qdrant_client = None
 

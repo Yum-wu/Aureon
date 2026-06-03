@@ -65,6 +65,50 @@ ARTICLES_DIR = os.path.join(BASE_DATA_DIR, "data", "articles")
 UPLOADS_DIR = os.path.join(ARTICLES_DIR, "uploads")
 
 
+async def _ensure_index_ready() -> bool:
+    """Check if RAG index is ready. If stale, trigger async rebuild.
+
+    Returns True if index is ready for queries, False if rebuilding.
+    """
+    from app.main import _index_ready, _index_rebuild_lock
+    from app.rag.vector_store import check_index_stale, get_collection_stats
+    from app.config import settings
+
+    if not settings.auto_index_enabled:
+        return True
+
+    # Fast path: index already marked ready and has data
+    if _index_ready:
+        doc_count, _ = get_collection_stats()
+        if doc_count > 0:
+            return True
+
+    # Check staleness (cheap: scans filenames + Chroma metadata)
+    status = check_index_stale(ARTICLES_DIR)
+    if not status["stale"]:
+        return True
+
+    # Trigger async rebuild if not already in progress
+    if _index_rebuild_lock.locked():
+        return False  # rebuild in progress
+
+    def _background_rebuild():
+        import threading
+        if _index_rebuild_lock.acquire(blocking=False):
+            try:
+                from app.rag.qa_chain import run_index_pipeline
+                logger.info("Query-triggered index rebuild: %s", status["reason"])
+                run_index_pipeline(ARTICLES_DIR)
+                logger.info("Query-triggered rebuild complete")
+            except Exception as e:
+                logger.error("Query-triggered rebuild failed: %s", e)
+            finally:
+                _index_rebuild_lock.release()
+
+    threading.Thread(target=_background_rebuild, daemon=True).start()
+    return False
+
+
 @router.post("/api/rag/query", response_model=RAGQueryResponse)
 @limiter.limit("2/second")
 async def rag_query_endpoint(req: RAGQueryRequest, request: Request):
@@ -77,6 +121,17 @@ async def rag_query_endpoint(req: RAGQueryRequest, request: Request):
         raise HTTPException(
             status_code=503,
             detail="LLM API key not configured. Please set LLM_API_KEY or FALLBACK_API_KEY environment variable."
+        )
+
+    # Check index readiness — if stale, trigger rebuild and return 202
+    if not await _ensure_index_ready():
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=202,
+            content={
+                "status": "index_rebuilding",
+                "message": "索引正在构建中，请稍后重试",
+            },
         )
 
     llm = create_llm(model=req.model)
@@ -122,6 +177,17 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
         raise HTTPException(
             status_code=503,
             detail="LLM API key not configured. Please set LLM_API_KEY or FALLBACK_API_KEY environment variable."
+        )
+
+    # Check index readiness — if stale, trigger rebuild and return 202
+    if not await _ensure_index_ready():
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=202,
+            content={
+                "status": "index_rebuilding",
+                "message": "索引正在构建中，请稍后重试",
+            },
         )
 
     llm = create_llm(model=req.model)
@@ -266,6 +332,27 @@ async def rag_index_endpoint(request: Request):
     _build_kw_index(force=True)
 
     return result
+
+
+@router.get("/api/rag/index/status")
+async def rag_index_status():
+    """Check index health: file count vs indexed count, staleness."""
+    from app.rag.vector_store import check_index_stale, get_collection_stats
+    from app.config import settings
+
+    status = check_index_stale(ARTICLES_DIR)
+    doc_count, chunk_count = get_collection_stats()
+
+    return {
+        "index_ready": status["stale"] is False,
+        "stale": status["stale"],
+        "reason": status["reason"],
+        "articles_on_disk": status["fs_count"],
+        "docs_indexed": doc_count,
+        "chunks_indexed": chunk_count,
+        "missing_files": status["missing_files"],
+        "auto_index_enabled": settings.auto_index_enabled,
+    }
 
 
 @router.post("/api/rag/upload", response_model=RAGUploadResponse)

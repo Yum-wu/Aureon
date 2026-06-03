@@ -56,6 +56,9 @@ class Settings(BaseSettings):
     es_index: str = "aureon"
     bm25_backend: str = "memory"
 
+    # Auto index rebuild on startup when articles change
+    auto_index_enabled: bool = True
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
 
