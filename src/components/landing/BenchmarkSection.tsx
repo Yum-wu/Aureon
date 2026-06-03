@@ -1,6 +1,12 @@
 import { useTranslation } from 'react-i18next';
 import { useBenchmark } from '../../hooks/useBenchmark';
 
+const fmtVal = (v: string | number | null, fallback: string) => {
+  if (v === null) return fallback;
+  const s = String(v);
+  return s.includes('ms') || s.includes('%') || s.includes('$') ? s : s;
+};
+
 export function BenchmarkSection() {
   const { t } = useTranslation();
   const { data: benchmark } = useBenchmark();
@@ -13,17 +19,16 @@ export function BenchmarkSection() {
   const ttftVal = findMetric('TTFT');
   const costVal = findMetric('Cost');
 
-  // Fallback to real values from target doc if API unavailable
   const metrics = [
     {
       label: 'Recall@3 (Hybrid)',
-      value: recallVal ?? '95.1%',
+      value: fmtVal(recallVal, '95.1%'),
       change: '97 QA pairs',
       sub: t('landing.benchmark.vs_baseline'),
     },
     {
       label: 'Retrieval Latency',
-      value: latencyVal ? `${latencyVal}ms` : '5.8ms',
+      value: fmtVal(latencyVal, '5.8ms'),
       change: 'BM25 + Vec + RRF',
       sub: t('landing.benchmark.optimized'),
     },
@@ -36,9 +41,9 @@ export function BenchmarkSection() {
   ];
 
   const optimizations = [
-    { label: 'TTFT', before: '~800ms', after: ttftVal ? `~${ttftVal}ms` : '~310ms' },
-    { label: 'Retrieval Latency', before: '153ms', after: latencyVal ? `${latencyVal}ms` : '5.8ms' },
-    { label: t('landing.benchmark.cost_per_query'), before: '$0.01', after: costVal ? `~$${costVal}` : '~$0.001' },
+    { label: 'TTFT', before: '~800ms', after: fmtVal(ttftVal, '~310ms') },
+    { label: 'Retrieval Latency', before: '153ms', after: fmtVal(latencyVal, '5.8ms') },
+    { label: t('landing.benchmark.cost_per_query'), before: '$0.01', after: fmtVal(costVal, '~$0.001') },
   ];
 
   return (
@@ -81,7 +86,7 @@ export function BenchmarkSection() {
                 <span className="text-sm text-[var(--text-secondary)]">{item.label}</span>
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-[var(--error)] line-through opacity-60 font-mono">{item.before}</span>
-                  <span className="text-[var(--text-tertiary)]">&#8594;</span>
+                  <span className="text-[var(--text-tertiary)]">\u2192</span>
                   <span className="text-xs text-[var(--success)] font-mono font-medium">{item.after}</span>
                 </div>
               </div>
