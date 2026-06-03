@@ -18,7 +18,6 @@ import json
 import logging
 import os
 import sys
-import threading
 import time
 
 from fastapi import APIRouter, Request, UploadFile, File, Form, HTTPException
@@ -67,46 +66,20 @@ UPLOADS_DIR = os.path.join(ARTICLES_DIR, "uploads")
 
 
 async def _ensure_index_ready() -> bool:
-    """Check if RAG index is ready. If stale, trigger async rebuild.
+    """Check if RAG index is ready.
 
-    Returns True if index is ready for queries, False if rebuilding.
+    Returns True if index has data, False if empty/stale.
+    Does NOT trigger rebuild (to avoid OOM on Railway).
+    Use POST /api/rag/index to manually rebuild.
     """
-    from app.main import _index_ready, _index_rebuild_lock
-    from app.rag.vector_store import check_index_stale, get_collection_stats
-    from app.config import settings
+    from app.rag.vector_store import get_collection_stats
 
-    if not settings.auto_index_enabled:
+    doc_count, _ = get_collection_stats()
+    if doc_count > 0:
         return True
 
-    # Fast path: index already marked ready and has data
-    if _index_ready:
-        doc_count, _ = get_collection_stats()
-        if doc_count > 0:
-            return True
-
-    # Check staleness (cheap: scans filenames + Chroma metadata)
-    status = check_index_stale(ARTICLES_DIR)
-    if not status["stale"]:
-        return True
-
-    # Trigger async rebuild if not already in progress
-    if _index_rebuild_lock.locked():
-        return False  # rebuild in progress
-
-    def _background_rebuild():
-        import threading
-        if _index_rebuild_lock.acquire(blocking=False):
-            try:
-                from app.rag.qa_chain import run_index_pipeline
-                logger.info("Query-triggered index rebuild: %s", status["reason"])
-                run_index_pipeline(ARTICLES_DIR)
-                logger.info("Query-triggered rebuild complete")
-            except Exception as e:
-                logger.error("Query-triggered rebuild failed: %s", e)
-            finally:
-                _index_rebuild_lock.release()
-
-    threading.Thread(target=_background_rebuild, daemon=True).start()
+    logger.warning("RAG index is empty — queries will lack RAG context. "
+                   "Call POST /api/rag/index to build.")
     return False
 
 
@@ -124,16 +97,8 @@ async def rag_query_endpoint(req: RAGQueryRequest, request: Request):
             detail="LLM API key not configured. Please set LLM_API_KEY or FALLBACK_API_KEY environment variable."
         )
 
-    # Check index readiness — if stale, trigger rebuild and return 202
-    if not await _ensure_index_ready():
-        from fastapi.responses import JSONResponse
-        return JSONResponse(
-            status_code=202,
-            content={
-                "status": "index_rebuilding",
-                "message": "索引正在构建中，请稍后重试",
-            },
-        )
+    # Log index status (non-blocking)
+    await _ensure_index_ready()
 
     llm = create_llm(model=req.model)
 
@@ -180,16 +145,8 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
             detail="LLM API key not configured. Please set LLM_API_KEY or FALLBACK_API_KEY environment variable."
         )
 
-    # Check index readiness — if stale, trigger rebuild and return 202
-    if not await _ensure_index_ready():
-        from fastapi.responses import JSONResponse
-        return JSONResponse(
-            status_code=202,
-            content={
-                "status": "index_rebuilding",
-                "message": "索引正在构建中，请稍后重试",
-            },
-        )
+    # Log index status (non-blocking)
+    await _ensure_index_ready()
 
     llm = create_llm(model=req.model)
 
