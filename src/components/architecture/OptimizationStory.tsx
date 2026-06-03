@@ -44,7 +44,7 @@ export function OptimizationStory() {
     {
       metricKey: 'architecture.optimization.cache_hit_rate',
       before: '0%',
-      after: cacheVal ? `${Math.round(cacheVal * 100)}%` : '92%',
+      after: cacheVal ? `${Math.round(Number(cacheVal) * 100)}%` : '92%',
       improvement: '+92%',
     },
   ];
