@@ -935,7 +935,10 @@ def _get_qdrant():
     if _qdrant_client is None:
         from qdrant_client import QdrantClient
         from app.config import settings
-        _qdrant_client = QdrantClient(url=settings.qdrant_url)
+        kwargs = {"url": settings.qdrant_url}
+        if settings.qdrant_api_key:
+            kwargs["api_key"] = settings.qdrant_api_key
+        _qdrant_client = QdrantClient(**kwargs)
     return _qdrant_client
 
 
@@ -983,9 +986,7 @@ def retrieve_qdrant(query: str, top_k: int = 3, collection_name: str = "aureon")
     """Retrieve from Qdrant vector store."""
     client = _get_qdrant()
 
-    query_emb = _embed_local([query])
-    if query_emb is None:
-        query_emb = embed_texts_llm([query])
+    query_emb = embed_texts_llm([query])
 
     results = client.query_points(
         collection_name=collection_name,
