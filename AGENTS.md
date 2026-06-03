@@ -100,3 +100,26 @@ cd Aureon && npm test
 | GET | /api/health | 健康检查 |
 
 语言规则：所有回复必须使用中文
+
+## CI/CD 部署流程
+
+**触发条件**：推送代码到 main 分支
+
+**流程**：
+1. **推送** → GitHub Actions 触发 CI/CD
+2. **CI 通过** → 自动部署到 Railway
+3. **部署完成** → 生产环境生效
+
+**关键点**：
+- 只推送 main 分支才会触发部署
+- 必须等 CI 通过后才继续下一步
+- 部署后需验证生产端点确认生效
+
+**推送前检查**：
+`ash
+# 前端测试
+npm test -- --run
+
+# 后端测试
+cd backend && python -m pytest tests/ -v
+`
