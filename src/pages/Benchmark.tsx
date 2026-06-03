@@ -115,7 +115,7 @@ const Benchmark = () => {
             <div>
               <div className="flex justify-between text-sm mb-1">
                 <span className="text-gray-600">优化前</span>
-                <span className="text-red-500 font-medium">800ms</span>
+                <span className="text-red-500 font-medium">153ms</span>
               </div>
               <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
                 <div className="h-full bg-red-400 rounded-full w-full" />
@@ -124,7 +124,7 @@ const Benchmark = () => {
             <div>
               <div className="flex justify-between text-sm mb-1">
                 <span className="text-gray-600">优化后</span>
-                <span className="text-green-600 font-medium">310ms</span>
+                <span className="text-green-600 font-medium">5.8ms</span>
               </div>
               <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
                 <div className="h-full bg-green-500 rounded-full" style={{ width: '39%' }} />
@@ -195,3 +195,4 @@ const Benchmark = () => {
 };
 
 export default Benchmark;
+

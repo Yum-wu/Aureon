@@ -20,27 +20,57 @@
     "hero": {
       "badge": "Production Ready",
       "title": "Enterprise AI Knowledge Base Platform",
-      "subtitle": "97% retrieval accuracy · Sub-second response · 24h deployment",
+      "subtitle": "95% retrieval accuracy · 100% negative detection · Sub-second response",
       "cta_search": "Start Searching",
       "cta_architecture": "View Architecture"
     },
     "metrics": {
-      "recall": { "value": "97.6%", "label": "Retrieval Accuracy", "detail": "Hybrid Recall@3" },
-      "ttft": { "value": "~310ms", "label": "Time to First Token", "detail": "Streaming TTFT" },
-      "cost": { "value": "~$0.001", "label": "Cost per Query", "detail": "GPT-4o-mini" }
+      "recall": {
+        "value": "95.1%",
+        "label": "Retrieval Accuracy",
+        "detail": "Hybrid Recall@3 (97 QA pairs)"
+      },
+      "ttft": {
+        "value": "~310ms",
+        "label": "Time to First Token",
+        "detail": "Streaming RAG TTFT"
+      },
+      "cost": {
+        "value": "~$0.001",
+        "label": "Cost per Query",
+        "detail": "DeepSeek pricing"
+      }
     },
     "features_title": "Core Capabilities",
     "features": [
-      { "title": "Hybrid Search", "desc": "BM25 keyword + Dense semantic dual-channel fusion, 97% accuracy" },
-      { "title": "Streaming Response", "desc": "SSE real-time push, ~310ms TTFT, token-by-token rendering" },
-      { "title": "Multilingual", "desc": "Chinese + English bilingual knowledge base, auto language detection" },
-      { "title": "Enterprise Deploy", "desc": "Docker containerized, 24h standard deployment, RBAC + audit logs" },
-      { "title": "Document Intelligence", "desc": "Upload, auto-index, preview, source management" },
-      { "title": "Analytics Dashboard", "desc": "Latency, token usage, cache performance, query distribution" }
+      {
+        "title": "Hybrid Search",
+        "desc": "BM25 + Dense RRF fusion, 95.1% Recall@3, 100% Recall@10"
+      },
+      {
+        "title": "Streaming Response",
+        "desc": "SSE real-time push, ~310ms TTFT, single LLM call per query"
+      },
+      {
+        "title": "Negative Detection",
+        "desc": "100% detection rate, LLM classifier + retrieval threshold dual defense"
+      },
+      {
+        "title": "Enterprise Deploy",
+        "desc": "Docker + CI/CD + Railway, 24h standard deployment, RBAC + audit"
+      },
+      {
+        "title": "Knowledge Base",
+        "desc": "26 articles, 476 chunks, 97 QA benchmark pairs"
+      },
+      {
+        "title": "Analytics Dashboard",
+        "desc": "Latency, token usage, cache performance, query distribution"
+      }
     ],
     "benchmark": {
       "title": "Performance Benchmark",
-      "subtitle": "Evaluated on 76 QA pairs with hybrid retrieval pipeline",
+      "subtitle": "Evaluated on 97 QA pairs with hybrid retrieval pipeline (11/11 pass)",
       "vs_baseline": "vs baseline",
       "optimized": "optimized",
       "reduced": "reduced",

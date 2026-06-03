@@ -8,7 +8,7 @@ export function FeatureGrid() {
       icon: '01',
       title: t('landing.features.0.title'),
       description: t('landing.features.0.desc'),
-      metric: '96.08% recall',
+      metric: '95.1% recall',
     },
     {
       icon: '02',
@@ -79,3 +79,4 @@ export function FeatureGrid() {
     </section>
   );
 }
+

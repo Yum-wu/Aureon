@@ -8,7 +8,7 @@ interface Optimization {
 }
 
 const optimizations: Optimization[] = [
-  { metric: 'TTFT', before: '800ms', after: '310ms', improvement: '-61%' },
+  { metric: 'TTFT', before: '153ms', after: '5.8ms', improvement: '-96%' },
   { metric: 'Cache Hit Rate', before: '0%', after: '92%', improvement: '+92%' },
   { metric: 'Cost/Query', before: '$0.01', after: '$0.001', improvement: '-90%' },
   { metric: 'Retrieval Latency', before: '50ms', after: '10ms', improvement: '-80%' },
@@ -40,3 +40,4 @@ export function OptimizationStory() {
     </div>
   );
 }
+
