@@ -19,8 +19,8 @@ const Architecture = lazy(() => import("./pages/Architecture").then(m => ({ defa
 
 function PageFallback() {
   return (
-    <div className="flex items-center justify-center h-64">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+    <div className="flex items-center justify-center h-64" style={{background:'var(--bg-primary)'}}>
+      <div className="animate-spin rounded-full h-8 w-8" style={{borderColor:'var(--bg-tertiary)',borderTopColor:'var(--accent)'}} />
     </div>
   );
 }
@@ -46,17 +46,15 @@ function AppLayout() {
   const isLogin = location.pathname === "/login";
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
+    <div className="h-screen flex flex-col" style={{background:'var(--bg-primary)'}}>
       {!isLanding && !isLogin && (
-        <nav className="flex items-center bg-white border-b border-gray-200 px-6 py-0" role="navigation">
+        <nav className="flex items-center border-b px-6 py-0" style={{background:'var(--bg-primary)',borderColor:'var(--border)'}} role="navigation">
           {/* Logo */}
           <button
             onClick={() => navigate("/")}
             className="mr-8 py-3 shrink-0 group"
           >
-            <span className="text-base font-extrabold bg-gradient-to-r from-blue-600 to-amber-500 bg-clip-text text-transparent group-hover:from-blue-700 group-hover:to-amber-600 transition-all">
-              Aureon
-            </span>
+            <span className="text-base font-extrabold" style={{color:'var(--accent)'}}>Aureon</span>
           </button>
 
           {/* Nav links */}
@@ -65,11 +63,11 @@ function AppLayout() {
               <button
                 key={item.path}
                 onClick={() => navigate(item.path)}
-                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  location.pathname.startsWith(item.path)
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
+                className="px-4 py-3 text-sm font-medium border-b-2 transition-colors"
+                style={{
+                  borderColor: location.pathname.startsWith(item.path) ? 'var(--accent)' : 'transparent',
+                  color: location.pathname.startsWith(item.path) ? 'var(--accent)' : 'var(--text-secondary)',
+                }}
               >
                 {t(item.key)}
               </button>
@@ -81,7 +79,7 @@ function AppLayout() {
             <LanguageSwitcher />
             <button
               onClick={() => navigate("/login")}
-              className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="linear-btn linear-btn-secondary !py-1.5 !px-3 !text-xs"
             >
               {t("app.nav.admin")}
             </button>
