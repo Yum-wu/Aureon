@@ -11,7 +11,8 @@ interface MessageItemProps {
   message: Message;
 }
 
-/** Code block rendered with syntax highlighting (lazy loaded) */unction SimpleCode({ language, code }: { language?: string; code: string }) {
+/** Code block rendered with syntax highlighting (lazy loaded) */
+function SimpleCode({ language, code }: { language?: string; code: string }) {
   return (
     <div className="relative group rounded-lg overflow-hidden my-2">
       <div className="flex items-center justify-between bg-[#1a1b26] px-4 py-1.5 text-xs text-[var(--text-tertiary)]">
