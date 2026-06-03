@@ -323,7 +323,7 @@ def retrieve_keyword(query: str, top_k: int = 3, lang_filter: str = None) -> Lis
     ]
 
 
-def _embed_api(texts: List[str], provider: str, batch_size: int = 20) -> np.ndarray:
+def _embed_api(texts: List[str], provider: str, batch_size: int = 10) -> np.ndarray:
     """Call a single embedding API provider. Returns (N, dim) array.
 
     Raises on failure — caller decides fallback strategy.
@@ -384,7 +384,7 @@ def _embed_api(texts: List[str], provider: str, batch_size: int = 20) -> np.ndar
     return result
 
 
-def embed_texts_llm(texts: List[str], batch_size: int = 20) -> np.ndarray:
+def embed_texts_llm(texts: List[str], batch_size: int = 10) -> np.ndarray:
     """Multi-provider embedding with fallback chain.
 
     Priority: local BGE (512d) → DashScope (512d) → SiliconFlow → Zhipu.
