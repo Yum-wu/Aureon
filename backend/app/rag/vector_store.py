@@ -365,6 +365,8 @@ def _embed_api(texts: List[str], provider: str, batch_size: int = 20) -> np.ndar
             payload["dimensions"] = dim
             payload["encoding_format"] = "float"  # DashScope needs this for non-default dimensions
         resp = requests.post(url, headers=headers, json=payload, timeout=60)
+        if not resp.ok:
+            logger.error("Embedding API %s error %d: %s", provider, resp.status_code, resp.text[:500])
         resp.raise_for_status()
         data = resp.json()
         batch_embs = [d["embedding"] for d in sorted(data["data"], key=lambda x: x["index"])]
