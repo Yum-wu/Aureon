@@ -26,7 +26,7 @@ _local_embed_model = None
 _LOCAL_MODEL_NAME = "BAAI/bge-large-zh-v1.5"
 _LOCAL_MODEL_DIM = 1024
 # Set True if collection was built with API (different dim than local model)
-_skip_local_embed = False
+_skip_local_embed = os.getenv("SKIP_LOCAL_EMBED", "").lower() in ("1", "true", "yes")
 
 
 def _cache_key(text: str) -> str:
@@ -404,10 +404,12 @@ def embed_texts_llm(texts: List[str], batch_size: int = 20) -> np.ndarray:
 
     uncached_texts = [t for _, t in uncached]
 
-    # 2. Try local BGE model (skip if collection uses different dimensions)
+    # 2. Try local BGE model (skip if _skip_local_embed or collection uses different dims)
     embeddings = None
     if not _skip_local_embed:
         embeddings = _embed_local(uncached_texts)
+    else:
+        logger.info("Skipping local BGE embed (SKIP_LOCAL_EMBED=true), using API")
 
     # 3. API fallback chain
     if embeddings is None:
