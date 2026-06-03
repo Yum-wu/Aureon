@@ -18,6 +18,7 @@ async def test_rag_query_returns_response():
     with patch("app.routers.rag.rag_query_with_cache", new_callable=AsyncMock, return_value=mock_result), \
          patch("app.agent.llm.create_llm", return_value=MagicMock()), \
          patch("app.routers.rag.record_query", new_callable=AsyncMock), \
+         patch("app.routers.rag._ensure_index_ready", new_callable=AsyncMock, return_value=True), \
          patch("app.config.settings") as mock_settings:
         mock_settings.llm_api_key = "test-key"
         mock_settings.fallback_api_key = None
@@ -47,6 +48,7 @@ async def test_rag_query_stream_returns_sse():
     with patch("app.routers.rag.rag_query_astream", side_effect=fake_astream), \
          patch("app.agent.llm.create_llm", return_value=MagicMock()), \
          patch("app.routers.rag.record_query", new_callable=AsyncMock), \
+         patch("app.routers.rag._ensure_index_ready", new_callable=AsyncMock, return_value=True), \
          patch("app.cache.redis_client.get_cached", new_callable=AsyncMock, return_value=None), \
          patch("app.cache.redis_client.set_cached", new_callable=AsyncMock), \
          patch("app.config.settings") as mock_settings:
