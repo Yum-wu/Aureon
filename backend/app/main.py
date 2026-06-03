@@ -127,8 +127,9 @@ async def logging_middleware(request: Request, call_next):
 def _warmup_bm25():
     """Build BM25 index in background thread. Non-blocking.
 
-    Also checks if the article index is stale (empty or files changed)
-    and auto-rebuilds when AUTO_INDEX_ENABLED is true.
+    Checks if the article index is stale and logs status.
+    Actual rebuild is triggered on first query (query-time rebuild)
+    to avoid OOM on resource-limited platforms like Railway.
     """
     global _bm25_warmup_done, _index_ready
     try:
@@ -136,21 +137,13 @@ def _warmup_bm25():
         _build_kw_index()
         logger.info("BM25 index warmup complete")
 
-        # Check if vector index needs rebuild
-        if settings.auto_index_enabled:
-            base_dir = os.path.dirname(os.path.dirname(__file__))
-            articles_dir = os.path.join(base_dir, "data", "articles")
-            status = check_index_stale(articles_dir)
-            if status["stale"]:
-                logger.info("Index is stale (%s), auto-rebuilding...", status["reason"])
-                from app.rag.qa_chain import run_index_pipeline
-                result = run_index_pipeline(articles_dir)
-                logger.info("Auto-rebuild complete: %s docs, %d chunks",
-                            result.get("documents_indexed", 0),
-                            result.get("chunks_created", 0))
-            else:
-                doc_count, chunk_count = get_collection_stats()
-                logger.info("Index OK: %d docs, %d chunks", doc_count, chunk_count)
+        # Check index status (lightweight — no rebuild here)
+        base_dir = os.path.dirname(os.path.dirname(__file__))
+        articles_dir = os.path.join(base_dir, "data", "articles")
+        status = check_index_stale(articles_dir)
+        doc_count, chunk_count = get_collection_stats()
+        logger.info("Index status: %d docs, %d chunks, stale=%s, reason=%s",
+                    doc_count, chunk_count, status["stale"], status["reason"] or "n/a")
     except Exception as e:
         logger.warning("BM25 warmup / index check failed (non-fatal): %s", e)
     finally:
