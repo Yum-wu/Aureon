@@ -60,8 +60,9 @@ class TestRagQuery:
         result = rag_query("test", llm_fn, lang="en")
         assert "No relevant content" in result.answer
 
+    @patch("app.rag.qa_chain.classify_query_answerable_sync", return_value=True)
     @patch("app.rag.qa_chain.hybrid_retrieve")
-    def test_with_chunks(self, mock_hybrid):
+    def test_with_chunks(self, mock_hybrid, mock_classify):
         mock_hybrid.return_value = [
             {"text": "RAG is retrieval augmented generation", "metadata": {"title": "RAG Guide", "slug": "rag"}, "score": 0.9}
         ]
@@ -71,8 +72,9 @@ class TestRagQuery:
         assert len(result.sources) == 1
         assert result.sources[0].title == "RAG Guide"
 
+    @patch("app.rag.qa_chain.classify_query_answerable_sync", return_value=True)
     @patch("app.rag.qa_chain.hybrid_retrieve")
-    def test_long_chunk_truncated(self, mock_hybrid):
+    def test_long_chunk_truncated(self, mock_hybrid, mock_classify):
         long_text = "x" * 300
         mock_hybrid.return_value = [
             {"text": long_text, "metadata": {"title": "T", "slug": "s"}, "score": 0.8}
@@ -105,9 +107,10 @@ class TestRagQueryAstream:
         assert "No relevant content" in next(e["content"] for e in events if e["type"] == "text")
 
     @pytest.mark.asyncio
+    @patch("app.rag.qa_chain.classify_query_answerable", new_callable=AsyncMock, return_value=True)
     @patch("app.rag.qa_chain.assess_retrieval_quality", return_value=4)
     @patch("app.rag.qa_chain.hybrid_retrieve")
-    async def test_with_chunks(self, mock_hybrid, mock_assess):
+    async def test_with_chunks(self, mock_hybrid, mock_assess, mock_classify):
         mock_hybrid.return_value = [
             {"text": "RAG content", "metadata": {"title": "Guide", "slug": "g"}, "score": 0.9}
         ]
@@ -205,8 +208,9 @@ class TestRagQueryWithCache:
     @patch("app.cache.redis_client.get_redis", return_value=None)
     @patch("app.cache.redis_client.set_cached", new_callable=AsyncMock)
     @patch("app.cache.redis_client.get_cached", new_callable=AsyncMock, return_value=None)
+    @patch("app.rag.qa_chain.classify_query_answerable_sync", return_value=True)
     @patch("app.rag.qa_chain.hybrid_retrieve")
-    async def test_miss_then_cache_stores_sources(self, mock_hybrid, mock_get_cached, mock_set_cached, mock_redis):
+    async def test_miss_then_cache_stores_sources(self, mock_hybrid, mock_classify, mock_get_cached, mock_set_cached, mock_redis):
         mock_hybrid.return_value = [
             {"text": "RAG content", "metadata": {"title": "Guide", "slug": "g"}, "score": 0.9}
         ]
