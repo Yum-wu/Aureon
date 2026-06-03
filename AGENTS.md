@@ -119,6 +119,13 @@ cd Aureon && npm test
 - 部署后必须验证生产端点，不能假设 push = 已部署
 - Railway 健康检查超时 120s，部署通常 2-5 分钟
 
+**耗时参考**（2026-06-03 实测）：
+- CI 前端测试：~28s（49 tests）
+- CI 后端测试：~2m（426 tests）
+- Railway 构建：~3m（Dockerfile Docker build）
+- Railway 部署：~4m（健康检查 + 流量切换）
+- 全流程（push → 生产就绪）：~8-10 分钟
+
 **生产环境**：
 - URL: `https://aureon-production-1247.up.railway.app`
 - 健康检查: `GET /api/health`
@@ -138,3 +145,4 @@ railway logs --latest
 # 生产端点验证
 curl -s https://aureon-production-1247.up.railway.app/api/health | jq .
 ```
+
