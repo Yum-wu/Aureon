@@ -335,17 +335,17 @@ def _embed_api(texts: List[str], provider: str, batch_size: int = 20) -> np.ndar
     import requests
 
     if provider == "dashscope":
-        url = f"{settings.dashscope_base_url}/embeddings"
+        url = f"{settings.dashscope_base_url.rstrip('/')}/embeddings"
         api_key = settings.dashscope_api_key
         model = settings.dashscope_model
         dim = settings.dashscope_dimensions
     elif provider == "siliconflow":
-        url = f"{settings.siliconflow_base_url}/embeddings"
+        url = f"{settings.siliconflow_base_url.rstrip('/')}/embeddings"
         api_key = settings.siliconflow_api_key
         model = settings.siliconflow_model
         dim = None  # model-determined
     elif provider == "zhipu":
-        url = f"{settings.embedding_base_url}/embeddings"
+        url = f"{settings.embedding_base_url.rstrip('/')}/embeddings"
         api_key = settings.embedding_api_key or settings.llm_api_key
         model = settings.embedding_model or "embedding-2"
         dim = None
