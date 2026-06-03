@@ -9,13 +9,7 @@ interface CardProps {
 export function Card({ children, className = '', hover = false }: CardProps) {
   return (
     <div
-      className={`
-        bg-[var(--bg-secondary)]
-        border border-[var(--border)]
-        rounded-lg p-6
-        ${hover ? 'hover:border-[var(--border-hover)] transition-colors' : ''}
-        ${className}
-      `}
+      className={`glass-card rounded-xl p-6 ${hover ? 'hover:scale-[1.02] transition-all duration-300' : ''} ${className}`}
     >
       {children}
     </div>

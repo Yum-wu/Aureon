@@ -13,12 +13,12 @@ export function Button({
   children,
   ...props
 }: ButtonProps) {
-  const baseStyles = 'rounded-md font-medium transition-colors';
+  const baseStyles = 'rounded-lg font-medium transition-all duration-300';
 
   const variants = {
-    primary: 'bg-[var(--accent)] text-white hover:bg-blue-600',
-    secondary: 'bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border)] hover:border-[var(--border-hover)]',
-    ghost: 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]',
+    primary: 'glow-btn text-white',
+    secondary: 'glow-btn-outline',
+    ghost: 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/[0.05]',
   };
 
   const sizes = {
