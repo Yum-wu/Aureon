@@ -54,7 +54,7 @@ _VECTOR_CONFIDENCE_THRESHOLD = float(os.getenv("VECTOR_CONFIDENCE_THRESHOLD", "0
 
 # LLM-based negative detection: when top retrieval score is below this threshold,
 # use an LLM classifier to decide if the query is answerable by the knowledge base.
-_LOW_SCORE_THRESHOLD = float(os.getenv("LOW_SCORE_THRESHOLD", "0.005"))
+_LOW_SCORE_THRESHOLD = float(os.getenv("LOW_SCORE_THRESHOLD", "0.004"))
 _NEGATIVE_DETECTION_ENABLED = os.getenv("NEGATIVE_DETECTION_ENABLED", "true").lower() == "true"
 
 
@@ -82,6 +82,29 @@ async def classify_query_answerable(query: str, model: str = None) -> bool:
         return "YES" in response.content.upper()
     except Exception as e:
         logger.warning("LLM classifier failed: %s, defaulting to answerable", e)
+        return True
+
+
+def classify_query_answerable_sync(query: str, llm_call_fn) -> bool:
+    """Sync version: use LLM to determine if a query can be answered by the knowledge base."""
+    prompt = (
+        "你是一个企业知识库的查询分类器。判断以下查询是否能在"
+        "\"AI技术、开发经验、部署实践\"相关的知识库中找到答案。\n\n"
+        f"查询：{query}\n\n"
+        "只回答 YES 或 NO。如果查询涉及以下内容，回答 NO：\n"
+        "- 未在知识库中覆盖的具体技术细节（如特定云服务商配置、定价、团队规模）\n"
+        "- 与知识库主题无关的领域（如量子计算、生物医学）\n"
+        "- 要求最新实时信息的问题（如当前股价、今日天气）\n\n"
+        "如果查询涉及以下内容，回答 YES：\n"
+        "- RAG、LangChain、LangGraph、BM25、向量检索等 AI 技术\n"
+        "- 开发流程、部署实践、性能优化\n"
+        "- 知识库中可能涵盖的通用技术问题"
+    )
+    try:
+        response = llm_call_fn([{"role": "user", "content": prompt}])
+        return "YES" in str(response).upper()
+    except Exception as e:
+        logger.warning("Sync LLM classifier failed: %s, defaulting to answerable", e)
         return True
 
 
@@ -538,11 +561,21 @@ def rag_query(
     # 1. Hybrid retrieval: BM25 keyword + vector search, RRF fusion
     chunks = multi_query_retrieve(query, top_k=top_k, lang_filter=filter_lang)
 
-    # 2. CRAG assessment disabled for production — too many false positives.
-    #    The LLM scores even valid queries as "partially relevant" (3-4),
-    #    and the strict threshold blocks legitimate searches.
-    #    CRAG is kept for benchmark evaluation only.
-    #    TODO: calibrate CRAG threshold after collecting production data.
+    # 2. Negative detection: LLM classifier for queries the KB can't answer.
+    #    Score thresholds are unreliable (negative queries can have high scores
+    #    when they contain real keywords). Use LLM classifier unconditionally.
+    #    For production, consider adding a score >= 0.1 fast-path to skip
+    #    classification when retrieval confidence is very high.
+    if _NEGATIVE_DETECTION_ENABLED and chunks:
+        if not classify_query_answerable_sync(query, llm_call_fn):
+            return RAGQueryResponse(
+                answer=(
+                    "抱歉，该问题超出了知识库的覆盖范围。"
+                    if lang == "zh"
+                    else "Sorry, this question is outside the scope of the knowledge base."
+                ),
+                sources=[],
+            )
 
     if not chunks:
         no_result_msg = (
@@ -619,11 +652,10 @@ async def rag_query_astream(
         yield {"type": "text", "content": no_result_msg}
         return
 
-    # LLM Negative Detection: when top retrieval score is very low, use an LLM
-    # classifier to decide if the query is answerable by the knowledge base.
-    # This catches cases where score-based thresholds alone give false positives
-    # on queries that contain real keywords but are outside the KB scope.
-    if _NEGATIVE_DETECTION_ENABLED and chunks[0].get("score", 0) < _LOW_SCORE_THRESHOLD:
+    # LLM Negative Detection: unconditionally classify queries when enabled.
+    # Score thresholds are unreliable — negative queries with real keywords
+    # can score high. The LLM classifier is the real quality gate.
+    if _NEGATIVE_DETECTION_ENABLED and chunks:
         answerable = await classify_query_answerable(query, model=model)
         if not answerable:
             yield {"type": "sources", "sources": []}
