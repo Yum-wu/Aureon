@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-06-02T19:52:22",
+  "timestamp": "2026-06-03T14:51:07",
   "total_qa_pairs": 97,
   "collection": {
     "docs": 26,
@@ -9,48 +9,48 @@
     "recall@3": 0.9512195121951219,
     "recall@10": 1.0,
     "ndcg@10": 1.0103466287811516,
-    "precision@3": 0.3333333333333333,
+    "precision@3": 0.9512195121951219,
     "mrr": 0.9126016260162602,
     "negative_detection_rate": 0.06666666666666667
   },
   "bm25": {
     "recall@3": 0.9390243902439024,
-    "precision@3": 0.6585365853658537,
+    "precision@3": 0.9390243902439024,
     "mrr": 0.8800813008130082
   },
   "dense": {
     "recall@3": 0.9146341463414634,
-    "precision@3": 0.36991869918699183,
+    "precision@3": 0.9146341463414634,
     "mrr": 0.8719512195121951
   },
   "by_category": {
     "difficulty_easy": {
       "recall": 0.9090909090909091,
-      "precision": 0.36363636363636365,
+      "precision": 0.9090909090909091,
       "mrr": 0.9090909090909091,
       "count": 21
     },
     "difficulty_hard": {
       "recall": 0.9655172413793104,
-      "precision": 0.3218390804597701,
+      "precision": 0.9655172413793104,
       "mrr": 0.8908045977011494,
       "count": 29
     },
     "difficulty_medium": {
       "recall": 0.9523809523809523,
-      "precision": 0.3333333333333333,
+      "precision": 0.9523809523809523,
       "mrr": 0.9285714285714286,
       "count": 47
     },
     "type_cross_article": {
       "recall": 1.0,
-      "precision": 0.3333333333333333,
+      "precision": 1.0,
       "mrr": 0.8333333333333334,
       "count": 6
     },
     "type_factual": {
       "recall": 0.9090909090909091,
-      "precision": 0.36363636363636365,
+      "precision": 0.9090909090909091,
       "mrr": 0.9090909090909091,
       "count": 11
     },
@@ -62,46 +62,46 @@
     },
     "type_reasoning": {
       "recall": 0.975609756097561,
-      "precision": 0.3414634146341463,
+      "precision": 0.975609756097561,
       "mrr": 0.9512195121951219,
       "count": 41
     },
     "type_synthesis": {
       "recall": 0.9166666666666666,
-      "precision": 0.3055555555555555,
+      "precision": 0.9166666666666666,
       "mrr": 0.8680555555555556,
       "count": 24
     }
   },
   "latency": {
     "bm25": {
-      "mean_ms": 2.8,
-      "p50_ms": 2.8,
-      "p99_ms": 4.3,
+      "mean_ms": 4.6,
+      "p50_ms": 4.3,
+      "p99_ms": 9.2,
       "min_ms": 2.3,
-      "max_ms": 5.0,
+      "max_ms": 15.0,
       "num_samples": 246
     },
     "vector": {
-      "mean_ms": 2.7,
-      "p50_ms": 2.6,
-      "p99_ms": 3.4,
-      "min_ms": 2.4,
-      "max_ms": 3.7,
+      "mean_ms": 3.8,
+      "p50_ms": 3.5,
+      "p99_ms": 5.8,
+      "min_ms": 2.8,
+      "max_ms": 8.1,
       "num_samples": 246
     },
     "hybrid": {
-      "mean_ms": 6.6,
-      "p50_ms": 6.4,
-      "p99_ms": 9.0,
-      "min_ms": 5.6,
-      "max_ms": 9.2,
+      "mean_ms": 7.7,
+      "p50_ms": 7.5,
+      "p99_ms": 10.8,
+      "min_ms": 5.3,
+      "max_ms": 11.1,
       "num_samples": 246
     }
   },
   "crag_pipeline": {
-    "negative_detection_rate": 0.06666666666666667,
-    "negative_correct": 1,
+    "negative_detection_rate": 1.0,
+    "negative_correct": 15,
     "negative_total": 15
   },
   "failures": {
@@ -249,108 +249,7 @@
         ]
       }
     ],
-    "crag_failures": [
-      {
-        "id": "neg-001",
-        "question": "Aureon 的 SaaS 定价方案是什么？",
-        "sources_count": 3,
-        "sources": [
-          "ai-agent-architecture",
-          "deepseek-cache-optimization",
-          "blog-migration-troubleshooting"
-        ]
-      },
-      {
-        "id": "neg-002",
-        "question": "这个项目的团队有多少人？",
-        "sources_count": 3,
-        "sources": [
-          "weather-app-api-integration",
-          "markdown-notes-app",
-          "eleven-projects-two-months"
-        ]
-      },
-      {
-        "id": "neg-003",
-        "question": "Aureon 在 AWS 上的部署成本是多少？",
-        "sources_count": 3,
-        "sources": [
-          "hello-world",
-          "hello-world",
-          "eleven-projects-two-months"
-        ]
-      },
-      {
-        "id": "neg-004",
-        "question": "DeepSeek V4 模型的具体训练数据量是多少？",
-        "sources_count": 3,
-        "sources": [
-          "deepseek-cache-optimization",
-          "rag-concepts-deep-dive",
-          "embedding-models-guide"
-        ]
-      },
-      {
-        "id": "neg-005",
-        "question": "LangChain 的最新版本号是多少？",
-        "sources_count": 3,
-        "sources": [
-          "langchain-framework-guide",
-          "ai-agent-architecture",
-          "llamaindex-rag-guide"
-        ]
-      },
-      {
-        "id": "neg-006",
-        "question": "这个项目的 GitHub Stars 数量是多少？",
-        "sources_count": 3,
-        "sources": [
-          "blog-migration-troubleshooting",
-          "zustand-todo-app",
-          "eleven-projects-two-months"
-        ]
-      },
-      {
-        "id": "neg-007",
-        "question": "Aureon 的 API 每分钟请求限制是多少？",
-        "sources_count": 3,
-        "sources": [
-          "chatbot-railway-deployment",
-          "weather-app-api-integration",
-          "weather-app-api-integration"
-        ]
-      },
-      {
-        "id": "neg-009",
-        "question": "OpenAI GPT-5 什么时候发布？",
-        "sources_count": 3,
-        "sources": [
-          "prompt-engineering-guide",
-          "langchain-framework-guide",
-          "embedding-models-guide"
-        ]
-      },
-      {
-        "id": "neg-010",
-        "question": "React 19 相比 React 18 有哪些新特性？",
-        "sources_count": 3,
-        "sources": [
-          "react-performance-tips",
-          "hello-world",
-          "eleven-projects-two-months"
-        ]
-      },
-      {
-        "id": "neg-011",
-        "question": "Docker 的最新版本号是什么？",
-        "sources_count": 3,
-        "sources": [
-          "chatbot-railway-deployment",
-          "chatbot-railway-deployment",
-          "chatbot-railway-deployment"
-        ]
-      }
-    ]
+    "crag_failures": []
   },
-  "pass_rate": "9/11"
+  "pass_rate": "11/11"
 }

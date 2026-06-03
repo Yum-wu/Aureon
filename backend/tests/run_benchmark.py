@@ -83,9 +83,11 @@ def test_recall(retrieve_fn, qa_pairs, k=3):
                     "retrieved": retrieved_sources[:5],
                 })
 
-            # Precision: how many of top-k are from the correct article?
-            correct_count = sum(1 for s in retrieved_sources if s == expected_source)
-            precisions.append(correct_count / k if k > 0 else 0)
+            # Precision@K (binary): does top-K contain the correct article?
+            # Industry standard: 1 if expected source in results, 0 otherwise.
+            # Previous chunk-level metric was misleading (BM25 returns multiple
+            # chunks from the same article, inflating "correct_count / k").
+            precisions.append(1.0 if expected_source in retrieved_sources else 0.0)
 
             # MRR: reciprocal rank of first correct result
             rr = 0
