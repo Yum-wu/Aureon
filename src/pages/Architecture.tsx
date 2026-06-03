@@ -1,45 +1,50 @@
+import { useTranslation } from 'react-i18next';
 import { useBenchmark } from '../hooks/useBenchmark';
 import { ArchitectureFlow } from '../components/architecture/ArchitectureFlow';
 import { OptimizationStory } from '../components/architecture/OptimizationStory';
 import { MetricGrid } from '../components/dashboard/MetricGrid';
 
 export function Architecture() {
+  const { t } = useTranslation();
   const { data: benchmark } = useBenchmark();
 
-  const metrics = benchmark?.metrics?.slice(0, 3).map((m: { label: string; value: string | number }) => ({
-    label: m.label,
-    value: m.value,
-    change: 0,
-    changeLabel: '',
-  })) || [
-    { label: 'Recall@3', value: '98.7%', change: 12, changeLabel: 'vs baseline' },
-    { label: 'TTFT', value: 310, suffix: 'ms', change: -61, changeLabel: 'optimized' },
-    { label: 'Cost/Query', value: '$0.001', change: -90, changeLabel: 'reduced' },
+  // Use real benchmark data if available, fallback to 目标.md v22 values
+  const findMetric = (pat: string) =>
+    benchmark?.metrics?.find((m: { label: string; value: string | number }) => m.label.includes(pat))?.value ?? null;
+
+  const recallVal = findMetric('Recall@3');
+  const latencyVal = findMetric('Retrieval Latency');
+  const ttftVal = findMetric('TTFT');
+
+  const metrics = [
+    { label: 'Recall@3 (Hybrid)', value: recallVal ?? '95.1%' },
+    { label: 'Retrieval Latency', value: latencyVal ? `${latencyVal}ms` : '5.8ms' },
+    { label: 'TTFT', value: ttftVal ? `~${ttftVal}ms` : '~310ms' },
   ];
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)]">
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Architecture & Performance</h1>
+          <h1 className="text-3xl font-bold mb-2">{t('architecture.title')}</h1>
           <p className="text-[var(--text-secondary)]">
-            System architecture, pipeline design, and optimization metrics
+            {t('architecture.subtitle')}
           </p>
         </div>
 
         <div className="space-y-12">
           <section>
-            <h2 className="text-2xl font-semibold mb-6">Runtime Metrics</h2>
+            <h2 className="text-2xl font-semibold mb-6">{t('architecture.runtime_metrics')}</h2>
             <MetricGrid metrics={metrics} columns={3} />
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold mb-6">RAG Pipeline</h2>
+            <h2 className="text-2xl font-semibold mb-6">{t('architecture.rag_pipeline')}</h2>
             <ArchitectureFlow />
           </section>
 
           <section>
-            <h2 className="text-2xl font-semibold mb-6">Optimization Story</h2>
+            <h2 className="text-2xl font-semibold mb-6">{t('architecture.optimization_story')}</h2>
             <OptimizationStory />
           </section>
         </div>

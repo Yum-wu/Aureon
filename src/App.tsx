@@ -13,7 +13,6 @@ const Documents = lazy(() => import("./pages/Documents").then(m => ({ default: m
 const CrewGenerator = lazy(() => import("./components/CrewGenerator").then(m => ({ default: m.CrewGenerator })));
 const Login = lazy(() => import("./pages/Login"));
 const Analytics = lazy(() => import("./pages/Analytics"));
-const Benchmark = lazy(() => import("./pages/Benchmark"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Architecture = lazy(() => import("./pages/Architecture").then(m => ({ default: m.Architecture })));
 
@@ -36,10 +35,8 @@ function AppLayout() {
     { path: "/search", key: "app.nav.search" },
     { path: "/documents", key: "app.nav.documents" },
     { path: "/analytics", key: "app.nav.analytics" },
-    { path: "/benchmark", key: "app.nav.benchmark" },
-    { path: "/admin", key: "app.nav.admin" },
     { path: "/architecture", key: "app.nav.architecture" },
-    // { path: "/crew", key: "app.nav.crew" },  // hidden: CrewAI not production-ready
+    { path: "/admin", key: "app.nav.admin" },
   ];
 
   const isLanding = location.pathname === "/";
@@ -96,7 +93,6 @@ function AppLayout() {
             <Route path="/search" element={<Search />} />
             <Route path="/documents" element={<Documents />} />
             <Route path="/analytics" element={<Analytics />} />
-            <Route path="/benchmark" element={<Benchmark />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/architecture" element={<Architecture />} />
             <Route path="/crew" element={<CrewGenerator />} />

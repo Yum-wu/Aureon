@@ -8,7 +8,7 @@ interface InputAreaProps {
   onStop: () => void;
 }
 
-/** Input area — Enter to send, Shift+Enter for newline, auto-resize */
+/** Input area \u2014 Enter to send, Shift+Enter for newline, auto-resize */
 export function InputArea({ onSend, isLoading, onStop }: InputAreaProps) {
   const { t } = useTranslation();
   const [input, setInput] = useState("");
@@ -41,7 +41,7 @@ export function InputArea({ onSend, isLoading, onStop }: InputAreaProps) {
   }, []);
 
   return (
-    <div className="border-t border-gray-200 bg-white px-4 py-3">
+    <div className="border-t border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-3">
       <div className="flex items-end gap-3 max-w-3xl mx-auto">
         <textarea
           ref={textareaRef}
@@ -51,13 +51,13 @@ export function InputArea({ onSend, isLoading, onStop }: InputAreaProps) {
           onInput={handleInput}
           placeholder={t("chat.inputPlaceholder")}
           rows={1}
-          className="flex-1 resize-none rounded-xl border border-gray-300 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent max-h-32"
+          className="flex-1 resize-none rounded-lg border border-[var(--border)] bg-[var(--bg-primary)] px-4 py-2.5 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent max-h-32"
           style={{ minHeight: "44px" }}
         />
         {isLoading ? (
           <button
             onClick={onStop}
-            className="rounded-xl bg-red-500 px-4 py-2.5 text-sm text-white hover:bg-red-600 transition-colors shrink-0"
+            className="rounded-lg bg-[var(--error)] px-4 py-2.5 text-sm text-white hover:opacity-90 transition-opacity shrink-0"
           >
             {t("chat.stop")}
           </button>
@@ -65,7 +65,7 @@ export function InputArea({ onSend, isLoading, onStop }: InputAreaProps) {
           <button
             onClick={handleSend}
             disabled={!input.trim()}
-            className="rounded-xl bg-blue-500 px-4 py-2.5 text-sm text-white hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+            className="rounded-lg bg-[var(--accent)] px-4 py-2.5 text-sm text-white hover:bg-[var(--accent-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
           >
             {t("chat.send")}
           </button>

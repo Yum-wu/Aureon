@@ -82,7 +82,8 @@
       "title": "Technical Credibility",
       "desc": "All metrics measured in production",
       "link": "View full benchmark →"
-    }
+    },
+    "features_subtitle": "Everything you need for enterprise knowledge management"
   },
   "dashboard": {
     "title": "System Dashboard",
@@ -191,7 +192,18 @@
         "user": "User",
         "details": "Details"
       }
-    }
+    },
+    "loading": "Loading...",
+    "identity_providers": "SSO Identity Providers",
+    "no_providers": "No identity providers configured",
+    "no_providers_desc": "Configure SSO via the API or security settings",
+    "active": "Active",
+    "disabled": "Disabled",
+    "query_audit_log": "Query Audit Log",
+    "no_traces": "No query traces yet",
+    "no_traces_desc": "Traces will appear here as users interact with the system",
+    "configured": "configured",
+    "recent_traces": "recent traces"
   },
   "documents": {
     "title": "Documents",
@@ -223,7 +235,10 @@
       "upload_failed": "Upload failed",
       "unsupported_format": "Unsupported format: {{ext}}",
       "file_too_large": "File size exceeds 10MB limit"
-    }
+    },
+    "open_blog": "Open Blog",
+    "sync_blog": "Sync Blog Docs",
+    "chunks": "chunks"
   },
   "analytics": {
     "title": "Analytics",
@@ -281,6 +296,73 @@
     "tech_stack": "Tech Stack",
     "ttft_before": "Before",
     "ttft_after": "After",
-    "improvement": "improvement"
+    "improvement": "improvement",
+    "loading": "Loading...",
+    "runtime_metrics": "Runtime Metrics",
+    "system_architecture": "System Architecture",
+    "document_input": "Document Input",
+    "local_inference": "512d local inference",
+    "vector_database": "Vector Database",
+    "persistent_local": "Persistent · Local deployment",
+    "realtime_output": "Real-time output",
+    "retrieval_strategy": "Retrieval Strategy",
+    "bm25_dense_fusion": "BM25 + Dense fusion",
+    "caching": "Caching",
+    "multi_level_cache": "Multi-level cache · 78% hit rate",
+    "ttft_optimization": "TTFT Optimization",
+    "before_optimization": "Before",
+    "after_optimization": "After",
+    "ttft_improvement_detail": "61% improvement: retrieval-generation parallelization + cache warmup + streaming architecture",
+    "retrieval_accuracy": "Retrieval Accuracy",
+    "qa_benchmark_detail": "76 QA Pairs benchmark · 95% CI: 98-99%"
+  },
+  "architecture": {
+    "title": "Architecture & Performance",
+    "subtitle": "System architecture, pipeline design, and optimization metrics",
+    "runtime_metrics": "Runtime Metrics",
+    "rag_pipeline": "RAG Pipeline",
+    "optimization_story": "Optimization Story",
+    "flow": {
+      "user_query": "User Query",
+      "user_query_desc": "Natural language input",
+      "intent_classifier": "Intent Classifier",
+      "intent_classifier_desc": "Route to appropriate handler",
+      "hybrid_retrieval": "Hybrid Retrieval",
+      "hybrid_retrieval_desc": "BM25+ + RRF + Parent-Child",
+      "mmr_reranking": "MMR Re-ranking",
+      "mmr_reranking_desc": "Maximal Marginal Relevance",
+      "prompt_assembly": "Prompt Assembly",
+      "prompt_assembly_desc": "Context + query formatting",
+      "llm_generation": "LLM Generation",
+      "llm_generation_desc": "Streaming token generation",
+      "citation_injection": "Citation Injection",
+      "citation_injection_desc": "Source mapping & markers",
+      "sse_streaming": "SSE Streaming",
+      "sse_streaming_desc": "Real-time token delivery"
+    },
+    "optimization": {
+      "before": "Before",
+      "after": "After",
+      "improvement_label": "Improvement",
+      "ttft": "TTFT",
+      "cache_hit_rate": "Cache Hit Rate",
+      "cost_per_query": "Cost/Query",
+      "retrieval_latency": "Retrieval Latency"
+    }
+  },
+  "login": {
+    "email": "Email",
+    "email_hint": "Corporate email or admin account",
+    "password": "Password",
+    "password_hint": "At least 8 characters",
+    "remember_me": "Remember me",
+    "forgot_password": "Forgot password?",
+    "logging_in": "Signing in...",
+    "submit": "Sign in",
+    "or_use": "Or continue with",
+    "google": "Sign in with Google",
+    "github": "Sign in with GitHub",
+    "no_account": "Don't have an account?",
+    "signup": "Request trial"
   }
 }

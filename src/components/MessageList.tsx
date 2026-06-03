@@ -28,10 +28,10 @@ export function MessageList({ messages, isLoading }: MessageListProps) {
 
   if (messages.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center text-gray-400">
+      <div className="flex-1 flex items-center justify-center text-[var(--text-tertiary)]">
         <div className="text-center">
           <div className="text-5xl mb-4">{t("chat.emptyTitle")}</div>
-          <p className="text-lg">{t("chat.emptySubtitle")}</p>
+          <p className="text-lg text-[var(--text-secondary)]">{t("chat.emptySubtitle")}</p>
           <p className="text-sm mt-2">{t("chat.emptyHint")}</p>
         </div>
       </div>
@@ -47,18 +47,18 @@ export function MessageList({ messages, isLoading }: MessageListProps) {
         messages[messages.length - 1]?.role === "assistant" &&
         !messages[messages.length - 1]?.content && (
           <div className="flex justify-start mb-4">
-            <div className="bg-white rounded-2xl px-4 py-3 shadow-sm border border-gray-100">
+            <div className="bg-[var(--bg-secondary)] rounded-2xl px-4 py-3 border border-[var(--border)]">
               <div className="flex space-x-1">
                 <span
-                  className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                  className="w-2 h-2 bg-[var(--text-tertiary)] rounded-full animate-bounce"
                   style={{ animationDelay: "0ms" }}
                 />
                 <span
-                  className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                  className="w-2 h-2 bg-[var(--text-tertiary)] rounded-full animate-bounce"
                   style={{ animationDelay: "150ms" }}
                 />
                 <span
-                  className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                  className="w-2 h-2 bg-[var(--text-tertiary)] rounded-full animate-bounce"
                   style={{ animationDelay: "300ms" }}
                 />
               </div>

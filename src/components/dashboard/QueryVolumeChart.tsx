@@ -16,19 +16,29 @@ export function QueryVolumeChart({ data = [], title = 'Query Volume' }: QueryVol
 
   return (
     <Card>
-      <h3 className="text-lg font-semibold mb-4">{title}</h3>
-      <div className="flex items-end gap-2 h-48">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+          {title}
+        </h3>
+        <span className="text-xs text-[var(--text-tertiary)]">
+          {safeData.length} data points
+        </span>
+      </div>
+      <div className="flex items-end gap-1.5 h-44">
         {safeData.length === 0 ? (
           <div className="flex-1 flex items-center justify-center text-[var(--text-tertiary)] text-sm">
             No data available
           </div>
         ) : (
           safeData.map((point, index) => (
-            <div key={index} className="flex-1 flex flex-col items-center gap-2">
-              <div className="w-full bg-[var(--accent)] rounded-t opacity-80 hover:opacity-100 transition-opacity"
-                   style={{ height: `${(point.count / maxCount) * 100}%` }}
-              />
-              <span className="text-xs text-[var(--text-tertiary)]">
+            <div key={index} className="flex-1 flex flex-col items-center gap-2 group">
+              <div className="relative w-full">
+                <div
+                  className="w-full rounded-sm bg-[var(--accent)]/60 group-hover:bg-[var(--accent)] transition-colors duration-150"
+                  style={{ height: `${Math.max((point.count / maxCount) * 100, 4)}%` }}
+                />
+              </div>
+              <span className="text-[10px] text-[var(--text-tertiary)] whitespace-nowrap">
                 {new Date(point.date).toLocaleDateString('en', { weekday: 'short' })}
               </span>
             </div>

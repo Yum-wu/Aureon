@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useBenchmark } from '../hooks/useBenchmark';
 
 const colorMap: Record<string, string> = {
@@ -18,16 +19,17 @@ const borderMap: Record<string, string> = {
 };
 
 const Benchmark = () => {
+  const { t } = useTranslation();
   const { data: benchmark, loading } = useBenchmark();
 
-  if (loading) return <div className="flex items-center justify-center h-full text-gray-400">加载中...</div>;
+  if (loading) return <div className="flex items-center justify-center h-full text-[var(--text-tertiary)]">{t('benchmark.loading')}</div>;
 
   return (
     <div className="overflow-y-auto p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Architecture & Performance</h1>
-        <p className="text-gray-500 text-sm">Production RAG 系统架构与性能指标</p>
+        <h1 className="text-2xl font-bold text-[var(--text-primary)]">{t('benchmark.title')}</h1>
+        <p className="text-[var(--text-tertiary)] text-sm">{t('benchmark.subtitle')}</p>
       </div>
 
       {/* Runtime Metrics Hero */}
@@ -44,60 +46,60 @@ const Benchmark = () => {
       </div>
 
       {/* Architecture Diagram */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6 mb-8">
-        <h3 className="font-semibold text-gray-900 mb-4 md:mb-6">系统架构</h3>
+      <div className="bg-[var(--bg-secondary)] rounded-xl border border-[var(--border)] p-4 md:p-6 mb-8">
+        <h3 className="font-semibold text-[var(--text-primary)] mb-4 md:mb-6">{t('benchmark.system_architecture')}</h3>
         {/* Desktop: Horizontal */}
         <div className="hidden md:flex items-center justify-center gap-3 lg:gap-4 flex-wrap text-sm">
           <div className="bg-blue-100 text-blue-700 px-4 py-3 rounded-lg border-2 border-blue-300">
-            <div className="font-semibold">文档输入</div>
+            <div className="font-semibold">{t('benchmark.document_input')}</div>
             <div className="text-xs opacity-75">PDF / MD / TXT</div>
           </div>
-          <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-6 h-6 text-[var(--text-tertiary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
           <div className="bg-purple-100 text-purple-700 px-4 py-3 rounded-lg border-2 border-purple-300">
             <div className="font-semibold">BGE Embedding</div>
-            <div className="text-xs opacity-75">512d 本地推理</div>
+            <div className="text-xs opacity-75">{t('benchmark.local_inference')}</div>
           </div>
-          <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-6 h-6 text-[var(--text-tertiary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
           <div className="bg-cyan-100 text-cyan-700 px-4 py-3 rounded-lg border-2 border-cyan-300">
             <div className="font-semibold">Chroma DB</div>
-            <div className="text-xs opacity-75">向量数据库</div>
+            <div className="text-xs opacity-75">{t('benchmark.vector_database')}</div>
           </div>
-          <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-6 h-6 text-[var(--text-tertiary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
           <div className="bg-green-100 text-green-700 px-4 py-3 rounded-lg border-2 border-green-300">
             <div className="font-semibold">Hybrid Search</div>
             <div className="text-xs opacity-75">BM25 + Dense</div>
           </div>
-          <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-6 h-6 text-[var(--text-tertiary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
           <div className="bg-amber-100 text-amber-700 px-4 py-3 rounded-lg border-2 border-amber-300">
             <div className="font-semibold">LLM</div>
             <div className="text-xs opacity-75">{benchmark?.services?.llm || 'LLM'}</div>
           </div>
-          <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-6 h-6 text-[var(--text-tertiary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
           <div className="bg-rose-100 text-rose-700 px-4 py-3 rounded-lg border-2 border-rose-300">
             <div className="font-semibold">SSE Streaming</div>
-            <div className="text-xs opacity-75">实时输出</div>
+            <div className="text-xs opacity-75">{t('benchmark.realtime_output')}</div>
           </div>
         </div>
 
         {/* Mobile: Vertical */}
         <div className="md:hidden space-y-2">
           {[
-            { name: '文档输入', detail: 'PDF / MD / TXT', color: 'blue' },
-            { name: 'BGE Embedding', detail: '512d 本地推理', color: 'purple' },
-            { name: 'Chroma DB', detail: '向量数据库', color: 'cyan' },
+            { name: t('benchmark.document_input'), detail: 'PDF / MD / TXT', color: 'blue' },
+            { name: 'BGE Embedding', detail: t('benchmark.local_inference'), color: 'purple' },
+            { name: 'Chroma DB', detail: t('benchmark.vector_database'), color: 'cyan' },
             { name: 'Hybrid Search', detail: 'BM25 + Dense', color: 'green' },
             { name: 'LLM', detail: benchmark?.services?.llm || 'LLM', color: 'amber' },
-            { name: 'SSE Streaming', detail: '实时输出', color: 'rose' },
+            { name: 'SSE Streaming', detail: t('benchmark.realtime_output'), color: 'rose' },
           ].map((item, i) => (
             <div key={i} className={`${colorMap[item.color]} px-4 py-3 rounded-lg border-2 ${borderMap[item.color]}`}>
               <div className="font-semibold">{item.name}</div>
@@ -109,84 +111,84 @@ const Benchmark = () => {
 
       {/* Optimization Story */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="font-semibold text-gray-900 mb-4">TTFT 优化历程</h3>
+        <div className="bg-[var(--bg-secondary)] rounded-xl border border-[var(--border)] p-6">
+          <h3 className="font-semibold text-[var(--text-primary)] mb-4">{t('benchmark.ttft_optimization')}</h3>
           <div className="space-y-4">
             <div>
               <div className="flex justify-between text-sm mb-1">
-                <span className="text-gray-600">优化前</span>
-                <span className="text-red-500 font-medium">153ms</span>
+                <span className="text-[var(--text-secondary)]">{t('benchmark.before_optimization')}</span>
+                <span className="text-[var(--error)] font-medium">153ms</span>
               </div>
-              <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-3 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
                 <div className="h-full bg-red-400 rounded-full w-full" />
               </div>
             </div>
             <div>
               <div className="flex justify-between text-sm mb-1">
-                <span className="text-gray-600">优化后</span>
-                <span className="text-green-600 font-medium">5.8ms</span>
+                <span className="text-[var(--text-secondary)]">{t('benchmark.after_optimization')}</span>
+                <span className="text-[var(--success)] font-medium">5.8ms</span>
               </div>
-              <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-3 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
                 <div className="h-full bg-green-500 rounded-full" style={{ width: '39%' }} />
               </div>
             </div>
-            <div className="text-xs text-gray-400 mt-3">
-              提升 61%：检索-生成并行化 + 缓存预热 + 流式架构
+            <div className="text-xs text-[var(--text-tertiary)] mt-3">
+              {t('benchmark.ttft_improvement_detail')}
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="font-semibold text-gray-900 mb-4">检索准确率</h3>
+        <div className="bg-[var(--bg-secondary)] rounded-xl border border-[var(--border)] p-6">
+          <h3 className="font-semibold text-[var(--text-primary)] mb-4">{t('benchmark.retrieval_accuracy')}</h3>
           <div className="space-y-4">
             <div>
               <div className="flex justify-between text-sm mb-1">
-                <span className="text-gray-600">Dense Only</span>
+                <span className="text-[var(--text-secondary)]">Dense Only</span>
                 <span className="text-blue-500 font-medium">90.2%</span>
               </div>
-              <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-3 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
                 <div className="h-full bg-blue-400 rounded-full" style={{ width: '90.2%' }} />
               </div>
             </div>
             <div>
               <div className="flex justify-between text-sm mb-1">
-                <span className="text-gray-600">Hybrid (BM25+ + RRF)</span>
-                <span className="text-green-600 font-medium">98.7%</span>
+                <span className="text-[var(--text-secondary)]">Hybrid (BM25+ + RRF)</span>
+                <span className="text-[var(--success)] font-medium">98.7%</span>
               </div>
-              <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-3 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
                 <div className="h-full bg-green-500 rounded-full" style={{ width: '98.7%' }} />
               </div>
             </div>
-            <div className="text-xs text-gray-400 mt-3">
-              76 QA Pairs 基准测试 · 95% CI: 98-99%
+            <div className="text-xs text-[var(--text-tertiary)] mt-3">
+              {t('benchmark.qa_benchmark_detail')}
             </div>
           </div>
         </div>
       </div>
 
       {/* Technical Details */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h3 className="font-semibold text-gray-900 mb-4">技术栈</h3>
+      <div className="bg-[var(--bg-secondary)] rounded-xl border border-[var(--border)] p-6">
+        <h3 className="font-semibold text-[var(--text-primary)] mb-4">{t('architecture.tech_stack')}</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          <div className="p-3 bg-gray-50 rounded-lg">
-            <div className="font-medium text-gray-900 mb-1">Embedding</div>
-            <div className="text-gray-600">BGE-large-zh-v1.5</div>
-            <div className="text-xs text-gray-400">512d · 本地推理 · ~7ms</div>
+          <div className="p-3 bg-[var(--bg-tertiary)] rounded-lg">
+            <div className="font-medium text-[var(--text-primary)] mb-1">Embedding</div>
+            <div className="text-[var(--text-secondary)]">BGE-large-zh-v1.5</div>
+            <div className="text-xs text-[var(--text-tertiary)]">512d · {t('benchmark.local_inference')} · ~7ms</div>
           </div>
-          <div className="p-3 bg-gray-50 rounded-lg">
-            <div className="font-medium text-gray-900 mb-1">向量数据库</div>
-            <div className="text-gray-600">ChromaDB</div>
-            <div className="text-xs text-gray-400">持久化 · 本地部署</div>
+          <div className="p-3 bg-[var(--bg-tertiary)] rounded-lg">
+            <div className="font-medium text-[var(--text-primary)] mb-1">{t('benchmark.vector_database')}</div>
+            <div className="text-[var(--text-secondary)]">ChromaDB</div>
+            <div className="text-xs text-[var(--text-tertiary)]">{t('benchmark.persistent_local')}</div>
           </div>
-          <div className="p-3 bg-gray-50 rounded-lg">
-            <div className="font-medium text-gray-900 mb-1">检索策略</div>
-            <div className="text-gray-600">Hybrid Search</div>
-            <div className="text-xs text-gray-400">BM25 + Dense 融合</div>
+          <div className="p-3 bg-[var(--bg-tertiary)] rounded-lg">
+            <div className="font-medium text-[var(--text-primary)] mb-1">{t('benchmark.retrieval_strategy')}</div>
+            <div className="text-[var(--text-secondary)]">Hybrid Search</div>
+            <div className="text-xs text-[var(--text-tertiary)]">{t('benchmark.bm25_dense_fusion')}</div>
           </div>
-          <div className="p-3 bg-gray-50 rounded-lg">
-            <div className="font-medium text-gray-900 mb-1">缓存</div>
-            <div className="text-gray-600">Redis + In-memory</div>
-            <div className="text-xs text-gray-400">多级缓存 · 78% 命中率</div>
+          <div className="p-3 bg-[var(--bg-tertiary)] rounded-lg">
+            <div className="font-medium text-[var(--text-primary)] mb-1">{t('benchmark.caching')}</div>
+            <div className="text-[var(--text-secondary)]">Redis + In-memory</div>
+            <div className="text-xs text-[var(--text-tertiary)]">{t('benchmark.multi_level_cache')}</div>
           </div>
         </div>
       </div>
@@ -195,4 +197,3 @@ const Benchmark = () => {
 };
 
 export default Benchmark;
-

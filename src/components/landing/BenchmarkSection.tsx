@@ -1,11 +1,54 @@
 import { useTranslation } from 'react-i18next';
+import { useBenchmark } from '../../hooks/useBenchmark';
 
 export function BenchmarkSection() {
   const { t } = useTranslation();
+  const { data: benchmark } = useBenchmark();
+
+  const findMetric = (pat: string) =>
+    benchmark?.metrics?.find((m: { label: string; value: string | number }) => m.label.includes(pat))?.value ?? null;
+
+  const recallVal = findMetric('Recall@3');
+  const latencyVal = findMetric('Retrieval Latency');
+  const ttftVal = findMetric('TTFT');
+  const costVal = findMetric('Cost');
+
+  // Fallback to real values from target doc if API unavailable
+  const metrics = [
+    {
+      label: 'Recall@3 (Hybrid)',
+      value: recallVal ?? '95.1%',
+      change: '97 QA pairs',
+      sub: t('landing.benchmark.vs_baseline'),
+    },
+    {
+      label: 'Retrieval Latency',
+      value: latencyVal ? `${latencyVal}ms` : '5.8ms',
+      change: 'BM25 + Vec + RRF',
+      sub: t('landing.benchmark.optimized'),
+    },
+    {
+      label: 'Negative Detection',
+      value: '100%',
+      change: '15/15',
+      sub: t('landing.benchmark.reduced'),
+    },
+  ];
+
+  const optimizations = [
+    { label: 'TTFT', before: '~800ms', after: ttftVal ? `~${ttftVal}ms` : '~310ms' },
+    { label: 'Retrieval Latency', before: '153ms', after: latencyVal ? `${latencyVal}ms` : '5.8ms' },
+    { label: t('landing.benchmark.cost_per_query'), before: '$0.01', after: costVal ? `~$${costVal}` : '~$0.001' },
+  ];
 
   return (
-    <section className="py-20 px-6 bg-[var(--bg-primary)]">
-      <div className="max-w-5xl mx-auto">
+    <section className="relative py-20 px-6" style={{ background: 'var(--bg-primary)' }}>
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{ background: 'var(--gradient-glow)' }}
+      />
+
+      <div className="relative max-w-5xl mx-auto">
         <h2 className="text-2xl font-bold tracking-[-0.02em] mb-2 text-white">
           {t('landing.benchmark.title')}
         </h2>
@@ -13,14 +56,9 @@ export function BenchmarkSection() {
           {t('landing.benchmark.subtitle')}
         </p>
 
-        {/* Metric cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-white/[0.06] mb-8">
-          {[
-            { label: 'Recall@3', value: '95.1%', change: '97 QA', sub: t('landing.benchmark.vs_baseline') },
-            { label: 'Retrieval Latency', value: '5.8ms', change: 'BM25+Vec', sub: t('landing.benchmark.optimized') },
-            { label: 'Negative Detection', value: '100%', change: '15/15', sub: t('landing.benchmark.reduced') },
-          ].map((m) => (
-            <div key={m.label} className="bg-[var(--bg-primary)] p-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          {metrics.map((m) => (
+            <div key={m.label} className="metric-card">
               <p className="text-xs text-[var(--text-tertiary)] uppercase tracking-wider mb-4">
                 {m.label}
               </p>
@@ -33,18 +71,13 @@ export function BenchmarkSection() {
           ))}
         </div>
 
-        {/* Optimization story */}
         <div className="linear-card p-6">
           <h3 className="text-sm font-semibold text-white mb-6">
             {t('landing.benchmark.optimization_story')}
           </h3>
           <div className="space-y-4">
-            {[
-              { label: 'TTFT', before: '800ms', after: '~310ms' },
-              { label: t('landing.benchmark.cache_hit_rate'), before: '153ms', after: '5.8ms' },
-              { label: t('landing.benchmark.cost_per_query'), before: '.01', after: '100%' },
-            ].map((item) => (
-              <div key={item.label} className="flex justify-between items-center py-2 border-b border-white/[0.04] last:border-0">
+            {optimizations.map((item) => (
+              <div key={item.label} className="flex justify-between items-center py-2 border-b border-[var(--border-subtle)] last:border-0">
                 <span className="text-sm text-[var(--text-secondary)]">{item.label}</span>
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-[var(--error)] line-through opacity-60 font-mono">{item.before}</span>
@@ -59,4 +92,3 @@ export function BenchmarkSection() {
     </section>
   );
 }
-
