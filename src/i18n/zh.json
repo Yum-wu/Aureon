@@ -82,7 +82,8 @@
       "title": "技术可信度",
       "desc": "所有指标来自生产环境实测",
       "link": "查看完整性能数据 →"
-    }
+    },
+    "features_subtitle": "企业知识管理所需的全部能力"
   },
   "dashboard": {
     "title": "系统总览",
@@ -191,7 +192,18 @@
         "user": "用户",
         "details": "详情"
       }
-    }
+    },
+    "loading": "加载中...",
+    "identity_providers": "SSO 身份提供商",
+    "no_providers": "暂未配置身份提供商",
+    "no_providers_desc": "通过 API 或安全设置配置 SSO",
+    "active": "启用",
+    "disabled": "禁用",
+    "query_audit_log": "查询审计日志",
+    "no_traces": "暂无查询记录",
+    "no_traces_desc": "用户交互后记录将显示在此处",
+    "configured": "已配置",
+    "recent_traces": "最近记录"
   },
   "documents": {
     "title": "文档管理",
@@ -223,7 +235,10 @@
       "upload_failed": "上传失败",
       "unsupported_format": "不支持的格式: {{ext}}",
       "file_too_large": "文件大小超过 10MB 限制"
-    }
+    },
+    "open_blog": "打开博客",
+    "sync_blog": "同步博客文档",
+    "chunks": "片段"
   },
   "analytics": {
     "title": "分析",
@@ -281,6 +296,73 @@
     "tech_stack": "技术栈",
     "ttft_before": "优化前",
     "ttft_after": "优化后",
-    "improvement": "提升"
+    "improvement": "提升",
+    "loading": "加载中...",
+    "runtime_metrics": "运行时指标",
+    "system_architecture": "系统架构",
+    "document_input": "文档输入",
+    "local_inference": "512d 本地推理",
+    "vector_database": "向量数据库",
+    "persistent_local": "持久化 · 本地部署",
+    "realtime_output": "实时输出",
+    "retrieval_strategy": "检索策略",
+    "bm25_dense_fusion": "BM25 + Dense 融合",
+    "caching": "缓存",
+    "multi_level_cache": "多级缓存 · 78% 命中率",
+    "ttft_optimization": "TTFT 优化历程",
+    "before_optimization": "优化前",
+    "after_optimization": "优化后",
+    "ttft_improvement_detail": "提升 61%：检索-生成并行化 + 缓存预热 + 流式架构",
+    "retrieval_accuracy": "检索准确率",
+    "qa_benchmark_detail": "76 QA Pairs 基准测试 · 95% CI: 98-99%"
+  },
+  "architecture": {
+    "title": "架构与性能",
+    "subtitle": "系统架构、流水线设计与优化指标",
+    "runtime_metrics": "运行时指标",
+    "rag_pipeline": "RAG 流水线",
+    "optimization_story": "优化历程",
+    "flow": {
+      "user_query": "用户查询",
+      "user_query_desc": "自然语言输入",
+      "intent_classifier": "意图分类",
+      "intent_classifier_desc": "路由到对应处理器",
+      "hybrid_retrieval": "混合检索",
+      "hybrid_retrieval_desc": "BM25+ + RRF + Parent-Child",
+      "mmr_reranking": "MMR 重排序",
+      "mmr_reranking_desc": "最大边际相关性",
+      "prompt_assembly": "提示词组装",
+      "prompt_assembly_desc": "上下文 + 查询格式化",
+      "llm_generation": "LLM 生成",
+      "llm_generation_desc": "流式 Token 生成",
+      "citation_injection": "引用注入",
+      "citation_injection_desc": "来源映射与标记",
+      "sse_streaming": "SSE 流式传输",
+      "sse_streaming_desc": "实时 Token 推送"
+    },
+    "optimization": {
+      "before": "优化前",
+      "after": "优化后",
+      "improvement_label": "提升",
+      "ttft": "首字延迟",
+      "cache_hit_rate": "缓存命中率",
+      "cost_per_query": "每次查询成本",
+      "retrieval_latency": "检索延迟"
+    }
+  },
+  "login": {
+    "email": "邮箱",
+    "email_hint": "企业邮箱或管理员账号",
+    "password": "密码",
+    "password_hint": "至少 8 位字符",
+    "remember_me": "记住我",
+    "forgot_password": "忘记密码？",
+    "logging_in": "登录中...",
+    "submit": "登录",
+    "or_use": "或使用",
+    "google": "使用 Google 登录",
+    "github": "使用 GitHub 登录",
+    "no_account": "还没有账号？",
+    "signup": "申请试用"
   }
 }

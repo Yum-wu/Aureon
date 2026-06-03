@@ -97,7 +97,7 @@ export function Search() {
               <button
                 key={i}
                 onClick={() => { setQuery(s.query); }}
-                className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-800 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+                className="px-3 py-1.5 text-sm bg-[var(--bg-secondary)] border border-[var(--border)] rounded-full hover:bg-[var(--bg-tertiary)] hover:border-[var(--border-hover)] transition-colors text-[var(--text-secondary)]"
               >
                 {s.query}
               </button>

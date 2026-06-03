@@ -4,29 +4,28 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Message } from "../types/message";
 
-/** Lazy-loaded syntax highlighter wrapper — 760KB chunk only loaded when code block appears */
+/** Lazy-loaded syntax highlighter wrapper \u2014 760KB chunk only loaded when code block appears */
 const Highlighter = lazy(() => import("./SyntaxHighlighterWrapper"));
 
 interface MessageItemProps {
   message: Message;
 }
 
-/** Code block rendered with syntax highlighting (lazy loaded) */
-function SimpleCode({ language, code }: { language?: string; code: string }) {
+/** Code block rendered with syntax highlighting (lazy loaded) */unction SimpleCode({ language, code }: { language?: string; code: string }) {
   return (
     <div className="relative group rounded-lg overflow-hidden my-2">
-      <div className="flex items-center justify-between bg-[#2d323b] px-4 py-1.5 text-xs text-gray-400">
+      <div className="flex items-center justify-between bg-[#1a1b26] px-4 py-1.5 text-xs text-[var(--text-tertiary)]">
         <span>{language || "code"}</span>
         <button
           onClick={() => navigator.clipboard.writeText(code)}
-          className="text-gray-500 hover:text-gray-300 transition-colors"
+          className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
         >
-          📋
+          \ud83d\udccb
         </button>
       </div>
       <Suspense
         fallback={
-          <pre className="bg-[#1e1e1e] text-gray-300 p-4 text-sm overflow-x-auto m-0">
+          <pre className="bg-[#111118] text-[var(--text-secondary)] p-4 text-sm overflow-x-auto m-0">
             <code>{code}</code>
           </pre>
         }
@@ -41,7 +40,7 @@ function SimpleCode({ language, code }: { language?: string; code: string }) {
   );
 }
 
-/** Single message bubble — user plain text, AI rendered markdown + copy */
+/** Single message bubble \u2014 user plain text, AI rendered markdown + copy */
 export const MessageItem = memo(function MessageItem({ message }: MessageItemProps) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
@@ -77,7 +76,7 @@ export const MessageItem = memo(function MessageItem({ message }: MessageItemPro
         return (
           <code
             className={`px-1.5 py-0.5 rounded text-sm font-mono ${
-              isUser ? "bg-blue-600 text-blue-100" : "bg-gray-100 text-gray-800"
+              isUser ? "bg-white/20 text-white" : "bg-[var(--accent-soft)] text-[var(--accent)]"
             }`}
             {...props}
           >
@@ -97,8 +96,8 @@ export const MessageItem = memo(function MessageItem({ message }: MessageItemPro
       <div
         className={`relative max-w-[75%] rounded-2xl px-4 py-3 ${
           isUser
-            ? "bg-blue-500 text-white"
-            : "bg-white text-gray-800 shadow-sm border border-gray-100"
+            ? "bg-[var(--accent)] text-white"
+            : "bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border)]"
         }`}
       >
         {isUser ? (
@@ -118,14 +117,14 @@ export const MessageItem = memo(function MessageItem({ message }: MessageItemPro
 
             {/* RAG Sources */}
             {message.sources && message.sources.length > 0 && (
-              <div className="mt-3 pt-2 border-t border-gray-100">
-                <p className="text-xs text-gray-400 mb-1.5">📚 参考来源</p>
+              <div className="mt-3 pt-2 border-t border-[var(--border)]">
+                <p className="text-xs text-[var(--text-tertiary)] mb-1.5">\ud83d\udcda \u53c2\u8003\u6765\u6e90</p>
                 <div className="space-y-1">
                   {message.sources.map((src, i) => (
                     <div key={i} className="flex items-center gap-2 text-xs">
-                      <span className="text-blue-600 truncate">{src.title}</span>
+                      <span className="text-[var(--accent)] truncate">{src.title}</span>
                       {src.score !== undefined && (
-                        <span className="text-gray-300 shrink-0">
+                        <span className="text-[var(--text-tertiary)] shrink-0">
                           {(src.score * 100).toFixed(0)}%
                         </span>
                       )}
@@ -138,8 +137,8 @@ export const MessageItem = memo(function MessageItem({ message }: MessageItemPro
             {/* Intent badge */}
             {message.intent && message.intent !== "chat" && (
               <div className="mt-2">
-                <span className="inline-block text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">
-                  {message.intent === "rag" ? "📚 知识问答" : message.intent === "mixed" ? "🔗 混合" : "🤖 工具"}
+                <span className="inline-block text-xs px-2 py-0.5 rounded-full bg-[var(--accent-soft)] text-[var(--accent)]">
+                  {message.intent === "rag" ? "\ud83d\udcda \u77e5\u8bc6\u95ee\u7b54" : message.intent === "mixed" ? "\ud83d\udd17 \u6df7\u5408" : "\ud83e\udd16 \u5de5\u5177"}
                 </span>
               </div>
             )}
@@ -149,7 +148,7 @@ export const MessageItem = memo(function MessageItem({ message }: MessageItemPro
         {!isUser && message.content && (
           <button
             onClick={handleCopy}
-            className="absolute -bottom-6 right-2 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+            className="absolute -bottom-6 right-2 text-xs text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
           >
             {copied ? t("chat.copied") : t("chat.copy")}
           </button>

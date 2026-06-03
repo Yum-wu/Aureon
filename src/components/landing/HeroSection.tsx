@@ -6,18 +6,28 @@ export function HeroSection() {
   const { t } = useTranslation();
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      {/* Multi-layer gradient background */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{ background: 'var(--gradient-hero-bg)' }}
+      />
+
+      {/* Subtle noise texture */}
+      <div className="absolute inset-0 noise-overlay pointer-events-none" />
+
+      {/* Content */}
       <div className="relative z-10 text-center px-6 max-w-3xl mx-auto pt-12">
         {/* Badge */}
         <div className="inline-flex items-center gap-2 mb-8">
           <span className="linear-tag">
-            <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)]" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)] shadow-[0_0_6px_var(--success)]" />
             {t('landing.hero.badge')}
           </span>
         </div>
 
-        {/* Title */}
-        <h1 className="text-5xl md:text-6xl font-bold tracking-[-0.03em] mb-5 text-white leading-[1.1] text-balance">
+        {/* Title with gradient text */}
+        <h1 className="hero-title text-5xl md:text-6xl font-bold tracking-[-0.03em] mb-5 leading-[1.1] text-balance">
           {t('landing.hero.title')}
         </h1>
 
@@ -42,15 +52,15 @@ export function HeroSection() {
           </button>
         </div>
 
-        {/* Metrics row */}
-        <div className="flex gap-16 justify-center">
+        {/* Metrics row — elevated cards */}
+        <div className="flex gap-6 justify-center">
           {[
             { value: t('landing.metrics.recall.value'), label: t('landing.metrics.recall.label') },
             { value: t('landing.metrics.ttft.value'), label: t('landing.metrics.ttft.label') },
             { value: t('landing.metrics.cost.value'), label: t('landing.metrics.cost.label') },
           ].map((m) => (
-            <div key={m.label} className="text-center">
-              <p className="metric-value text-3xl">{m.value}</p>
+            <div key={m.label} className="metric-card text-center px-8 py-5">
+              <p className="metric-value text-2xl">{m.value}</p>
               <p className="metric-label">{m.label}</p>
             </div>
           ))}
