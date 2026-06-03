@@ -152,8 +152,7 @@ def _warmup_bm25():
 
 
 _bm25_warmup_done = False  # starts False; background thread sets True when ready
-_index_ready = False  # True once index check/rebuild completes
-_index_rebuild_lock = threading.Lock()  # prevent concurrent rebuilds
+_index_ready = False  # True once index check completes
 
 
 @app.on_event("startup")
