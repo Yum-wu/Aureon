@@ -105,21 +105,36 @@ cd Aureon && npm test
 
 **触发条件**：推送代码到 main 分支
 
-**流程**：
-1. **推送** → GitHub Actions 触发 CI/CD
-2. **CI 通过** → 自动部署到 Railway
-3. **部署完成** → 生产环境生效
+**完整流程**：
+1. **本地测试** → 前端 `npm test -- --run` + 后端 `cd backend && python -m pytest tests/ -v`
+2. **推送** → `git push` 触发 GitHub Actions CI
+3. **CI 通过** → `gh run view` 确认前端 + 后端测试全部通过
+4. **Railway 自动部署** → 推送到 main 后自动触发
+5. **部署完成** → `railway status` 确认 deployment status = SUCCESS
+6. **生产验证** → `curl https://aureon-production-1247.up.railway.app/api/health` 确认 `status: ok`
 
 **关键点**：
 - 只推送 main 分支才会触发部署
-- 必须等 CI 通过后才继续下一步
-- 部署后需验证生产端点确认生效
+- CI 失败 → 立即修，不能跳过
+- 部署后必须验证生产端点，不能假设 push = 已部署
+- Railway 健康检查超时 120s，部署通常 2-5 分钟
 
-**推送前检查**：
-`ash
-# 前端测试
-npm test -- --run
+**生产环境**：
+- URL: `https://aureon-production-1247.up.railway.app`
+- 健康检查: `GET /api/health`
+- 服务: Aureon (Dockerfile) + Redis
+- 区域: Southeast Asia
 
-# 后端测试
-cd backend && python -m pytest tests/ -v
-`
+**监控命令**：
+```bash
+# CI 状态
+gh run list --limit 3
+gh run view <run-id>
+
+# Railway 部署状态
+railway status
+railway logs --latest
+
+# 生产端点验证
+curl -s https://aureon-production-1247.up.railway.app/api/health | jq .
+```
