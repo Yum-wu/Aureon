@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import sys
+import threading
 import time
 import uuid
 
@@ -124,9 +125,20 @@ async def logging_middleware(request: Request, call_next):
 
 
 def _warmup_bm25():
-    """Build BM25 index in background thread. Non-blocking."""
+    """Build BM25 index + auto-rebuild ChromaDB in background thread. Non-blocking."""
     global _bm25_warmup_done
     try:
+        # Auto-rebuild index if ChromaDB is empty (Railway ephemeral filesystem)
+        from app.rag.vector_store import get_collection_stats
+        _, chunks = get_collection_stats()
+        if chunks == 0:
+            logger.info("ChromaDB empty — auto-rebuilding index...")
+            from app.rag.qa_chain import run_index_pipeline
+            articles_dir = os.path.join(os.path.dirname(__file__), "..", "data", "articles")
+            if os.path.isdir(articles_dir):
+                result = run_index_pipeline(articles_dir)
+                logger.info("Auto-index: %s", result)
+        # Build BM25 keyword index
         from app.rag.vector_store import _build_kw_index
         _build_kw_index()
         logger.info("BM25 index warmup complete")
@@ -136,7 +148,7 @@ def _warmup_bm25():
         _bm25_warmup_done = True
 
 
-_bm25_warmup_done = True  # set False during startup warmup
+_bm25_warmup_done = False  # starts False; background thread sets True when ready
 
 
 @app.on_event("startup")
@@ -169,19 +181,8 @@ async def startup():
     init_integration_tables()
     memory_manager.init_background_tasks()
 
-    # Auto-rebuild index if ChromaDB is empty (Railway ephemeral filesystem)
-    try:
-        from app.rag.vector_store import get_collection_stats
-        _, chunks = get_collection_stats()
-        if chunks == 0:
-            logger.info("ChromaDB empty — auto-rebuilding index...")
-            from app.rag.qa_chain import run_index_pipeline
-            articles_dir = os.path.join(os.path.dirname(__file__), "..", "data", "articles")
-            if os.path.isdir(articles_dir):
-                result = run_index_pipeline(articles_dir)
-                logger.info("Auto-index: %s", result)
-    except Exception as e:
-        logger.warning("Auto-index failed (non-fatal): %s", e)
+    # Background BM25 + ChromaDB warmup (non-blocking — health check can respond immediately)
+    threading.Thread(target=_warmup_bm25, daemon=True).start()
 
     logger.info("Startup complete")
 
@@ -321,17 +322,10 @@ async def crew_health():
 
 @app.get("/api/health")
 async def health():
-    from fastapi.responses import JSONResponse
-    # Return 503 only while BM25 warmup is still running
-    if not _bm25_warmup_done:
-        return JSONResponse(
-            status_code=503,
-            content={"status": "warming_up", "model": settings.llm_model},
-        )
     return {
-        "status": "ok",
+        "status": "ok" if _bm25_warmup_done else "warming_up",
         "model": settings.llm_model,
-        "tools": [t.name for t in ALL_TOOLS],
+        "tools": [t.name for t in ALL_TOOLS] if _bm25_warmup_done else [],
     }
 
 
