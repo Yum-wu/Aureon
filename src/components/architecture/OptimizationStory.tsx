@@ -9,13 +9,6 @@ interface Optimization {
   improvement: string;
 }
 
-// Default values from 目标.md optimization history
-const defaultOptimizations: Optimization[] = [
-  { metricKey: 'architecture.optimization.ttft', before: '~800ms', after: '~310ms', improvement: '-61%' },
-  { metricKey: 'architecture.optimization.retrieval_latency', before: '153ms', after: '5.8ms', improvement: '-96%' },
-  { metricKey: 'architecture.optimization.cost_per_query', before: '$0.01', after: '$0.001', improvement: '-90%' },
-  { metricKey: 'architecture.optimization.cache_hit_rate', before: '0%', after: '92%', improvement: '+92%' },
-];
 
 export function OptimizationStory() {
   const { t } = useTranslation();
