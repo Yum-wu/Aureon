@@ -14,20 +14,21 @@ def _clear_overrides():
     app.dependency_overrides.clear()
 
 
-# ── Health endpoints ──
+# -- Health endpoints --
 
 
 @pytest.mark.asyncio
 async def test_health_endpoint():
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        resp = await ac.get("/api/health")
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["status"] == "ok"
-    assert "model" in data
-    assert "tools" in data
-    assert isinstance(data["tools"], list)
+    with patch("app.main._bm25_warmup_done", True):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.get("/api/health")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "ok"
+        assert "model" in data
+        assert "tools" in data
+        assert isinstance(data["tools"], list)
 
 
 @pytest.mark.asyncio
@@ -35,13 +36,13 @@ async def test_crew_health_endpoint():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         resp = await ac.get("/api/crew/health")
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["status"] == "ok"
-    assert data["service"] == "crew-generator"
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "ok"
+        assert data["service"] == "crew-generator"
 
 
-# ── LangGraph run ──
+# -- LangGraph run --
 
 
 @pytest.mark.asyncio
@@ -62,12 +63,12 @@ async def test_langgraph_run_success(mock_workflow):
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         resp = await ac.post("/api/langgraph/run", json={"query": "What is RAG?"})
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["answer"] == "42"
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["answer"] == "42"
 
 
-# ── CrewAI generate (import error) ──
+# -- CrewAI generate (import error) --
 
 
 @pytest.mark.asyncio
@@ -80,7 +81,7 @@ async def test_crew_generate_import_error():
     assert resp.status_code in (500, 503)
 
 
-# ── Exception handler ──
+# -- Exception handler --
 
 
 @pytest.mark.asyncio
@@ -106,19 +107,20 @@ async def test_aureon_exception_handler():
     assert "total_chunks" in data
 
 
-# ── Middleware ──
+# -- Middleware --
 
 
 @pytest.mark.asyncio
 async def test_request_id_in_response():
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        resp = await ac.get("/api/health")
-    assert resp.status_code == 200
-    # Middleware should complete without error
+    with patch("app.main._bm25_warmup_done", True):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.get("/api/health")
+        assert resp.status_code == 200
+        # Middleware should complete without error
 
 
-# ── Metrics endpoint ──
+# -- Metrics endpoint --
 
 
 @pytest.mark.asyncio
@@ -126,4 +128,4 @@ async def test_metrics_endpoint():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         resp = await ac.get("/metrics")
-    assert resp.status_code == 200
+        assert resp.status_code == 200
