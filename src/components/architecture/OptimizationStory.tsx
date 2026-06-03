@@ -9,6 +9,11 @@ interface Optimization {
   improvement: string;
 }
 
+const fmtVal = (v: string | number | null, fallback: string) => {
+  if (v === null) return fallback;
+  const s = String(v);
+  return s.includes('ms') || s.includes('%') || s.includes('$') ? s : s;
+};
 
 export function OptimizationStory() {
   const { t } = useTranslation();
@@ -26,19 +31,19 @@ export function OptimizationStory() {
     {
       metricKey: 'architecture.optimization.ttft',
       before: '~800ms',
-      after: ttftVal ? `~${ttftVal}ms` : '~310ms',
+      after: fmtVal(ttftVal, '~310ms'),
       improvement: '-61%',
     },
     {
       metricKey: 'architecture.optimization.retrieval_latency',
       before: '153ms',
-      after: latencyVal ? `${latencyVal}ms` : '5.8ms',
+      after: fmtVal(latencyVal, '5.8ms'),
       improvement: '-96%',
     },
     {
       metricKey: 'architecture.optimization.cost_per_query',
       before: '$0.01',
-      after: costVal ? `~$${costVal}` : '~$0.001',
+      after: fmtVal(costVal, '~$0.001'),
       improvement: '-90%',
     },
     {
@@ -59,7 +64,7 @@ export function OptimizationStory() {
               <p className="text-sm text-[var(--text-tertiary)]">{t('architecture.optimization.before')}</p>
               <p className="text-2xl font-bold text-[var(--error)]">{opt.before}</p>
             </div>
-            <div className="text-4xl text-[var(--text-tertiary)]">→</div>
+            <div className="text-4xl text-[var(--text-tertiary)]">\u2192</div>
             <div className="text-center">
               <p className="text-sm text-[var(--text-tertiary)]">{t('architecture.optimization.after')}</p>
               <p className="text-2xl font-bold text-[var(--success)]">{opt.after}</p>

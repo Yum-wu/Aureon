@@ -8,7 +8,6 @@ export function Architecture() {
   const { t } = useTranslation();
   const { data: benchmark } = useBenchmark();
 
-  // Use real benchmark data if available, fallback to 目标.md v22 values
   const findMetric = (pat: string) =>
     benchmark?.metrics?.find((m: { label: string; value: string | number }) => m.label.includes(pat))?.value ?? null;
 
@@ -16,10 +15,16 @@ export function Architecture() {
   const latencyVal = findMetric('Retrieval Latency');
   const ttftVal = findMetric('TTFT');
 
+  const fmtVal = (v: string | number | null, fallback: string) => {
+    if (v === null) return fallback;
+    const s = String(v);
+    return s.includes('ms') || s.includes('%') || s.includes('$') ? s : `${s}`;
+  };
+
   const metrics = [
-    { label: 'Recall@3 (Hybrid)', value: recallVal ?? '95.1%' },
-    { label: 'Retrieval Latency', value: latencyVal ? `${latencyVal}ms` : '5.8ms' },
-    { label: 'TTFT', value: ttftVal ? `~${ttftVal}ms` : '~310ms' },
+    { label: 'Recall@3 (Hybrid)', value: fmtVal(recallVal, '95.1%') },
+    { label: 'Retrieval Latency', value: fmtVal(latencyVal, '5.8ms') },
+    { label: 'TTFT', value: fmtVal(ttftVal, '~310ms') },
   ];
 
   return (

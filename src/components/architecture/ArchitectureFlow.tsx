@@ -9,7 +9,6 @@ interface PipelineStep {
   latency: string;
 }
 
-// Latency values from 目标.md v22
 const stepKeys: PipelineStep[] = [
   { id: 'query', labelKey: 'architecture.flow.user_query', descKey: 'architecture.flow.user_query_desc', latency: '0ms' },
   { id: 'intent', labelKey: 'architecture.flow.intent_classifier', descKey: 'architecture.flow.intent_classifier_desc', latency: '<1ms' },
@@ -20,6 +19,12 @@ const stepKeys: PipelineStep[] = [
   { id: 'citation', labelKey: 'architecture.flow.citation_injection', descKey: 'architecture.flow.citation_injection_desc', latency: '5ms' },
   { id: 'sse', labelKey: 'architecture.flow.sse_streaming', descKey: 'architecture.flow.sse_streaming_desc', latency: '5ms' },
 ];
+
+const fmtVal = (v: string | number | null, fallback: string) => {
+  if (v === null) return fallback;
+  const s = String(v);
+  return s.includes('ms') || s.includes('%') || s.includes('$') ? s : s;
+};
 
 export function ArchitectureFlow() {
   const { t } = useTranslation();
@@ -34,8 +39,7 @@ export function ArchitectureFlow() {
     ...step,
     label: t(step.labelKey),
     description: t(step.descKey),
-    // Override retrieval latency with real data if available
-    latency: step.id === 'retrieval' && retrievalLatency ? `${retrievalLatency}ms` : step.latency,
+    latency: step.id === 'retrieval' ? fmtVal(retrievalLatency, step.latency) : step.latency,
   }));
 
   return (
@@ -55,7 +59,7 @@ export function ArchitectureFlow() {
             </Card>
             {index < pipelineSteps.length - 1 && (
               <div className="hidden md:block absolute top-1/2 -right-2 transform -translate-y-1/2 text-[var(--text-tertiary)]">
-                →
+                \u2192
               </div>
             )}
           </div>

@@ -1,6 +1,12 @@
 import { useTranslation } from 'react-i18next';
 import { useBenchmark } from '../../hooks/useBenchmark';
 
+const fmtVal = (v: string | number | null, fallback: string) => {
+  if (v === null) return fallback;
+  const s = String(v);
+  return s.includes('ms') || s.includes('%') || s.includes('$') ? s : s;
+};
+
 export function FeatureGrid() {
   const { t } = useTranslation();
   const { data: benchmark } = useBenchmark();
@@ -17,13 +23,13 @@ export function FeatureGrid() {
       icon: '01',
       title: t('landing.features.0.title'),
       description: t('landing.features.0.desc'),
-      metric: recallVal ? `${recallVal}% recall` : '95.1% recall',
+      metric: `${fmtVal(recallVal, '95.1%')} recall`,
     },
     {
       icon: '02',
       title: t('landing.features.1.title'),
       description: t('landing.features.1.desc'),
-      metric: ttftVal ? `~${ttftVal}ms TTFT` : '~310ms TTFT',
+      metric: `${fmtVal(ttftVal, '~310ms')} TTFT`,
     },
     {
       icon: '03',
@@ -47,7 +53,7 @@ export function FeatureGrid() {
       icon: '06',
       title: t('landing.features.5.title'),
       description: t('landing.features.5.desc'),
-      metric: latencyVal ? `${latencyVal}ms latency` : '5.8ms latency',
+      metric: `${fmtVal(latencyVal, '5.8ms')} latency`,
     },
   ];
 
