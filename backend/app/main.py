@@ -125,20 +125,15 @@ async def logging_middleware(request: Request, call_next):
 
 
 def _warmup_bm25():
-    """Build BM25 index + auto-rebuild ChromaDB in background thread. Non-blocking."""
+    """Build BM25 index in background thread. Non-blocking.
+
+    ChromaDB auto-rebuild is SKIPPED here — on Railway's ephemeral filesystem,
+    loading the BGE embedding model + generating 476 embeddings exceeds the
+    container memory limit, causing OOM kill → restart loop.
+    Instead, users should call POST /api/rag/index after deploy.
+    """
     global _bm25_warmup_done
     try:
-        # Auto-rebuild index if ChromaDB is empty (Railway ephemeral filesystem)
-        from app.rag.vector_store import get_collection_stats
-        _, chunks = get_collection_stats()
-        if chunks == 0:
-            logger.info("ChromaDB empty — auto-rebuilding index...")
-            from app.rag.qa_chain import run_index_pipeline
-            articles_dir = os.path.join(os.path.dirname(__file__), "..", "data", "articles")
-            if os.path.isdir(articles_dir):
-                result = run_index_pipeline(articles_dir)
-                logger.info("Auto-index: %s", result)
-        # Build BM25 keyword index
         from app.rag.vector_store import _build_kw_index
         _build_kw_index()
         logger.info("BM25 index warmup complete")
