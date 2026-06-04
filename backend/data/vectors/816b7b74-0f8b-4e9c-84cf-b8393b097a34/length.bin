@@ -1,0 +1,16 @@
+## 测试实践
+
+项目还覆盖了单元测试和组件测试：
+
+```typescript
+describe("TodoStore", () => {
+  it("should add a todo", () => {
+    const { getState, setState } = useTodoStore;
+    // ...
+  });
+});
+```
+
+## 总结
+
+Zustand 用极简的 API 解决了 React 状态管理的核心问题，非常适合中小型项目。如果你想看完整代码，可以访问我的 GitHub 仓库。 �
