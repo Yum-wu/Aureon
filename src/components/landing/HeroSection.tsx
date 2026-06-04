@@ -13,13 +13,26 @@ export function HeroSection() {
         style={{ background: 'var(--gradient-hero-bg)' }}
       />
 
+      {/* Ambient glow decorations */}
+      <div className="ambient-glow ambient-glow-accent w-[500px] h-[500px] top-[10%] left-[50%] -translate-x-1/2" />
+      <div className="ambient-glow ambient-glow-purple w-[300px] h-[300px] top-[25%] left-[20%]" />
+
       {/* Subtle noise texture */}
       <div className="absolute inset-0 noise-overlay pointer-events-none" />
+
+      {/* Grid pattern overlay */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-[0.03]"
+        style={{
+          backgroundImage: `linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)`,
+          backgroundSize: '60px 60px',
+        }}
+      />
 
       {/* Content */}
       <div className="relative z-10 text-center px-6 max-w-3xl mx-auto pt-12">
         {/* Badge */}
-        <div className="inline-flex items-center gap-2 mb-8">
+        <div className="inline-flex items-center gap-2 mb-8 animate-fade-up">
           <span className="linear-tag">
             <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)] shadow-[0_0_6px_var(--success)]" />
             {t('landing.hero.badge')}
@@ -27,33 +40,34 @@ export function HeroSection() {
         </div>
 
         {/* Title with gradient text */}
-        <h1 className="hero-title text-5xl md:text-6xl font-bold tracking-[-0.03em] mb-5 leading-[1.1] text-balance">
+        <h1 className="hero-title text-5xl md:text-7xl font-bold tracking-[-0.03em] mb-6 leading-[1.05] text-balance"
+            style={{ fontFamily: 'var(--font-display)' }}>
           {t('landing.hero.title')}
         </h1>
 
         {/* Subtitle */}
-        <p className="text-base md:text-lg text-[var(--text-secondary)] max-w-xl mx-auto mb-10 leading-relaxed text-balance">
+        <p className="text-base md:text-lg text-[var(--text-secondary)] max-w-xl mx-auto mb-10 leading-relaxed text-balance animate-fade-up delay-100">
           {t('landing.hero.subtitle')}
         </p>
 
         {/* CTA */}
-        <div className="flex gap-3 justify-center mb-16">
+        <div className="flex gap-3 justify-center mb-16 animate-fade-up delay-200">
           <button
             onClick={() => navigate('/search')}
-            className="linear-btn linear-btn-primary px-6 py-2.5"
+            className="glow-btn px-7 py-3 text-sm"
           >
             {t('landing.hero.cta_search')}
           </button>
           <button
             onClick={() => navigate('/architecture')}
-            className="linear-btn linear-btn-secondary px-6 py-2.5"
+            className="glow-btn-outline px-7 py-3 text-sm"
           >
             {t('landing.hero.cta_architecture')}
           </button>
         </div>
 
         {/* Metrics row — elevated cards */}
-        <div className="flex gap-6 justify-center">
+        <div className="flex gap-5 justify-center animate-fade-up delay-300">
           {[
             { value: t('landing.metrics.recall.value'), label: t('landing.metrics.recall.label') },
             { value: t('landing.metrics.ttft.value'), label: t('landing.metrics.ttft.label') },

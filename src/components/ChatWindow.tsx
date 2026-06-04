@@ -20,7 +20,7 @@ export function ChatWindow() {
 
   return (
     <div className="flex flex-col h-full bg-[var(--bg-primary)]">
-      <header className="flex items-center justify-between bg-[var(--bg-secondary)] border-b border-[var(--border)] px-6 py-3">
+      <header className="flex items-center justify-between border-b border-[var(--border)] px-6 py-3 glass-strong">
         <h1 className="text-lg font-semibold text-[var(--text-primary)]">
           <span role="img" aria-label="robot">\ud83e\udd16</span> {t("chat.title")}
         </h1>

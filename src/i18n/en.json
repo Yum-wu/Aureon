@@ -365,4 +365,25 @@
     "no_account": "Don't have an account?",
     "signup": "Request trial"
   }
+,
+  "chat": {
+    "title": "AI Assistant",
+    "clear": "Clear",
+    "emptyTitle": "How can I help you today?",
+    "emptySubtitle": "Ask me anything about your knowledge base",
+    "emptyHint": "I can search documents, analyze data, and generate reports",
+    "inputPlaceholder": "Ask anything...",
+    "send": "Send",
+    "stop": "Stop",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "regenerate": "Regenerate",
+    "attach": "Attach file",
+    "quickStart": [
+      "Search latest technical docs",
+      "Analyze system performance metrics",
+      "Explain how RAG retrieval works",
+      "Generate a project summary report"
+    ]
+  }
 }

@@ -60,16 +60,16 @@ export function FeatureGrid() {
   return (
     <section className="section-alt relative py-20 px-6">
       <div className="max-w-5xl mx-auto">
-        <h2 className="text-2xl font-bold tracking-[-0.02em] mb-2 text-white">
+        <h2 className="text-2xl font-bold tracking-[-0.02em] mb-2 text-white animate-fade-up">
           {t('landing.features_title')}
         </h2>
-        <p className="text-sm text-[var(--text-tertiary)] mb-12">
+        <p className="text-sm text-[var(--text-tertiary)] mb-12 animate-fade-up delay-100">
           {t('landing.features_subtitle')}
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {features.map((feature) => (
-            <div key={feature.title} className="feature-card">
+          {features.map((feature, idx) => (
+            <div key={feature.title} className="feature-card animate-slide-up" style={{ animationDelay: `${idx * 0.1}s` }}>
               <div className="text-xs font-mono text-[var(--accent)] mb-4 opacity-60">
                 {feature.icon}
               </div>

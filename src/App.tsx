@@ -3,6 +3,7 @@ import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { Toaster } from "sonner";
 import { LanguageSwitcher } from "./i18n/LanguageSwitcher";
 
 // Route-level code splitting — each page is a separate chunk
@@ -45,30 +46,33 @@ function AppLayout() {
   return (
     <div className="h-screen flex flex-col" style={{background:'var(--bg-primary)'}}>
       {!isLanding && !isLogin && (
-        <nav className="flex items-center border-b px-6 py-0" style={{background:'var(--bg-primary)',borderColor:'var(--border)'}} role="navigation">
+        <nav className="flex items-center border-b px-6 py-0 glass sticky top-0 z-40" style={{borderColor:'var(--border)'}} role="navigation">
           {/* Logo */}
           <button
             onClick={() => navigate("/")}
             className="mr-8 py-3 shrink-0 group"
           >
-            <span className="text-base font-extrabold" style={{color:'var(--accent)'}}>Aureon</span>
+            <span className="text-base font-extrabold tracking-tight" style={{color:'var(--accent)'}}>Aureon</span>
           </button>
 
           {/* Nav links */}
           <div className="flex items-center gap-1">
-            {navItems.map((item) => (
-              <button
-                key={item.path}
-                onClick={() => navigate(item.path)}
-                className="px-4 py-3 text-sm font-medium border-b-2 transition-colors"
-                style={{
-                  borderColor: location.pathname.startsWith(item.path) ? 'var(--accent)' : 'transparent',
-                  color: location.pathname.startsWith(item.path) ? 'var(--accent)' : 'var(--text-secondary)',
-                }}
-              >
-                {t(item.key)}
-              </button>
-            ))}
+            {navItems.map((item) => {
+              const isActive = location.pathname.startsWith(item.path);
+              return (
+                <button
+                  key={item.path}
+                  onClick={() => navigate(item.path)}
+                  className="relative px-4 py-3 text-sm font-medium transition-colors rounded-md"
+                  style={{
+                    color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    background: isActive ? 'var(--accent-soft)' : 'transparent',
+                  }}
+                >
+                  {t(item.key)}
+                </button>
+              );
+            })}
           </div>
 
           {/* Right side */}
@@ -76,7 +80,7 @@ function AppLayout() {
             <LanguageSwitcher />
             <button
               onClick={() => navigate("/login")}
-              className="linear-btn linear-btn-secondary !py-1.5 !px-3 !text-xs"
+              className="glow-btn-outline !py-1.5 !px-3 !text-xs"
             >
               {t("app.nav.admin")}
             </button>
@@ -106,6 +110,7 @@ function AppLayout() {
 function App() {
   return (
     <ErrorBoundary>
+      <Toaster theme="dark" position="top-center" richColors closeButton />
       <BrowserRouter>
         <AppLayout />
       </BrowserRouter>

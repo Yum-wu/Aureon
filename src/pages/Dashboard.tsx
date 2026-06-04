@@ -79,7 +79,7 @@ export function Dashboard() {
         {/* Header */}
         <div className="flex items-end justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-[var(--text-primary)] tracking-tight">
+            <h1 className="text-2xl font-bold text-[var(--text-primary)] tracking-tight animate-fade-up" style={{ fontFamily: "var(--font-display)" }}>
               {t('dashboard.title')}
             </h1>
             <p className="text-sm text-[var(--text-tertiary)] mt-1">

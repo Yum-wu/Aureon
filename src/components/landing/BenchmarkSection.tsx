@@ -54,16 +54,16 @@ export function BenchmarkSection() {
       />
 
       <div className="relative max-w-5xl mx-auto">
-        <h2 className="text-2xl font-bold tracking-[-0.02em] mb-2 text-white">
+        <h2 className="text-2xl font-bold tracking-[-0.02em] mb-2 text-white animate-fade-up">
           {t('landing.benchmark.title')}
         </h2>
-        <p className="text-sm text-[var(--text-tertiary)] mb-12">
+        <p className="text-sm text-[var(--text-tertiary)] mb-12 animate-fade-up delay-100">
           {t('landing.benchmark.subtitle')}
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          {metrics.map((m) => (
-            <div key={m.label} className="metric-card">
+          {metrics.map((m, idx) => (
+            <div key={m.label} className="metric-card animate-slide-up" style={{ animationDelay: `${idx * 0.1 + 0.2}s` }}>
               <p className="text-xs text-[var(--text-tertiary)] uppercase tracking-wider mb-4">
                 {m.label}
               </p>
@@ -86,7 +86,7 @@ export function BenchmarkSection() {
                 <span className="text-sm text-[var(--text-secondary)]">{item.label}</span>
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-[var(--error)] line-through opacity-60 font-mono">{item.before}</span>
-                  <span className="text-[var(--text-tertiary)]">\u2192</span>
+                  <span className="text-[var(--text-tertiary)]">→</span>
                   <span className="text-xs text-[var(--success)] font-mono font-medium">{item.after}</span>
                 </div>
               </div>

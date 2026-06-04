@@ -12,19 +12,19 @@ export function Landing() {
   return (
     <div className="min-h-screen">
       {/* Minimal top bar */}
-      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 h-12 border-b border-[var(--border)] bg-[var(--bg-primary)]/80 backdrop-blur-sm">
+      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 h-12 border-b border-[var(--border-subtle)] glass-strong">
         <span className="text-sm font-semibold text-white/90 tracking-tight">Aureon</span>
         <div className="flex items-center gap-3">
           <LanguageSwitcher />
           <button
             onClick={() => navigate('/search')}
-            className="linear-btn linear-btn-secondary !py-1 !px-3 !text-xs"
+            className="glow-btn-outline !py-1 !px-3 !text-xs"
           >
             {t('landing.hero.cta_search')}
           </button>
           <button
             onClick={() => navigate('/login')}
-            className="linear-btn linear-btn-primary !py-1 !px-3 !text-xs"
+            className="glow-btn !py-1 !px-3 !text-xs"
           >
             {t('app.nav.admin')}
           </button>
@@ -40,6 +40,35 @@ export function Landing() {
       <div className="gradient-divider" />
       <BenchmarkSection />
 
+      
+      {/* Trust bar */}
+      <section className="py-16 px-6">
+        <div className="max-w-5xl mx-auto text-center">
+          <p className="text-xs text-[var(--text-tertiary)] uppercase tracking-widest mb-8">
+            {t('landing.trusted_by', { defaultValue: 'Built with industry-leading technology' })}
+          </p>
+          <div className="flex items-center justify-center gap-10 flex-wrap opacity-40">
+            {['Python', 'LangChain', 'ChromaDB', 'FastAPI', 'React', 'Tailwind CSS'].map((name) => (
+              <span key={name} className="text-sm font-medium text-[var(--text-secondary)] tracking-wide">
+                {name}
+              </span>
+            ))}
+          </div>
+          <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-6 max-w-2xl mx-auto">
+            {[
+              { value: '390+', label: t('landing.trust.tests', { defaultValue: 'Tests' }) },
+              { value: '26', label: t('landing.trust.articles', { defaultValue: 'Articles' }) },
+              { value: '476', label: t('landing.trust.chunks', { defaultValue: 'Chunks Indexed' }) },
+              { value: '24h', label: t('landing.trust.deploy', { defaultValue: 'Deploy Time' }) },
+            ].map((item) => (
+              <div key={item.label} className="text-center">
+                <p className="text-xl font-bold text-[var(--text-primary)] tabular-nums">{item.value}</p>
+                <p className="text-xs text-[var(--text-tertiary)] mt-1">{item.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
       {/* Footer */}
       <footer className="py-10 px-6 border-t border-[var(--border-subtle)]">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
