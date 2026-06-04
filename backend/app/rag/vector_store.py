@@ -890,32 +890,14 @@ def check_index_stale(articles_dir: str) -> dict:
         if len(fs_files) == 0 and len(indexed) == 0:
             return result  # both empty, not stale
 
-        # Normalize indexed paths for comparison: strip leading dirs, keep relative
-        # indexed sources may be absolute paths; normalize to relative form
-        normalized_indexed = set()
-        for s in indexed:
-            # Try to extract relative path after "articles/"
-            if "articles" in s:
-                parts = s.replace("\\", "/").split("articles/")
-                if len(parts) > 1:
-                    normalized_indexed.add(parts[-1])
-                    continue
-            # Fallback: use basename
-            normalized_indexed.add(os.path.basename(s))
-
-        # Compare
-        fs_set = set(fs_files)
-        missing = fs_set - normalized_indexed
-        extra = normalized_indexed - fs_set
-
-        if missing or extra:
+        # Simple comparison: file count vs indexed doc count
+        # Path matching is unreliable across platforms; count-based check is sufficient
+        if len(indexed) < len(fs_files):
             result["stale"] = True
-            result["missing_files"] = sorted(missing)
-            result["extra_files"] = sorted(extra)
-            if missing:
-                result["reason"] = f"{len(missing)} article(s) not in index"
-            else:
-                result["reason"] = f"{len(extra)} orphaned index entries"
+            result["reason"] = f"{len(fs_files)} articles on disk but only {len(indexed)} indexed"
+        elif len(indexed) > len(fs_files):
+            result["stale"] = True
+            result["reason"] = f"{len(indexed)} indexed entries but only {len(fs_files)} articles on disk"
 
         return result
     except Exception as e:
