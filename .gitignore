@@ -43,7 +43,6 @@ Thumbs.db
 backend/offloads/refs/
 backend/offloads/scenarios/
 backend/offloads/memory.db*
-backend/data/vectors/
 
 # Generated
 coverage/
@@ -65,3 +64,6 @@ docker-compose.override.yml
 # Railway
 .railway/
 .gstack/
+
+# 本地目标文档（不提交）
+目标.md
