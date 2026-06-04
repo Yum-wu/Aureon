@@ -409,7 +409,7 @@ def embed_texts_llm(texts: List[str], batch_size: int = 10) -> np.ndarray:
     """
     from app.config import settings
 
-    # 1. Check cache
+    # 1. Check in-memory cache first (fastest)
     uncached: List[tuple[int, str]] = []
     result = [None] * len(texts)
     for i, t in enumerate(texts):
@@ -420,6 +420,26 @@ def embed_texts_llm(texts: List[str], batch_size: int = 10) -> np.ndarray:
             uncached.append((i, t))
     if not uncached:
         return np.array(result, dtype=np.float32)
+
+    # 2. Check Redis cache for remaining texts
+    try:
+        from app.cache.redis_client import get_redis
+        redis = get_redis()
+        if redis:
+            still_uncached = []
+            for idx, t in uncached:
+                key = _cache_key(t)
+                cached = redis.get(f"embed:{key}")
+                if cached:
+                    result[idx] = np.frombuffer(cached, dtype=np.float32)
+                    _embed_cache[key] = result[idx]
+                else:
+                    still_uncached.append((idx, t))
+            uncached = still_uncached
+            if not uncached:
+                return np.array(result, dtype=np.float32)
+    except Exception:
+        pass  # Redis unavailable, continue with API
 
     uncached_texts = [t for _, t in uncached]
 
@@ -461,7 +481,16 @@ def embed_texts_llm(texts: List[str], batch_size: int = 10) -> np.ndarray:
     # 4. Fill results + update cache
     for (idx, text), emb in zip(uncached, embeddings):
         result[idx] = emb
-        _embed_cache[_cache_key(text)] = emb
+        key = _cache_key(text)
+        _embed_cache[key] = emb
+        # Store in Redis for persistence across restarts
+        try:
+            from app.cache.redis_client import get_redis
+            redis = get_redis()
+            if redis:
+                redis.setex(f"embed:{key}", 86400 * 7, emb.astype(np.float32).tobytes())
+        except Exception:
+            pass
 
     # Evict if over limit
     if len(_embed_cache) > _EMBED_CACHE_MAX:
