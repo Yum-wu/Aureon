@@ -7,6 +7,7 @@ Falls back to Zhipu AI embedding API if local model unavailable.
 import logging
 import os
 import hashlib
+import time
 import numpy as np
 from typing import List, Dict, Any, Optional
 
@@ -364,10 +365,26 @@ def _embed_api(texts: List[str], provider: str, batch_size: int = 10) -> np.ndar
         if dim and dim != 1024:
             payload["dimensions"] = dim
             payload["encoding_format"] = "float"  # DashScope needs this for non-default dimensions
-        resp = requests.post(url, headers=headers, json=payload, timeout=60)
-        if not resp.ok:
-            logger.error("Embedding API %s error %d: %s", provider, resp.status_code, resp.text[:500])
-        resp.raise_for_status()
+
+        # Retry with backoff for transient SSL/connection errors
+        last_err = None
+        for attempt in range(3):
+            try:
+                resp = requests.post(url, headers=headers, json=payload, timeout=90)
+                if not resp.ok:
+                    logger.error("Embedding API %s error %d: %s", provider, resp.status_code, resp.text[:300])
+                resp.raise_for_status()
+                break
+            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout,
+                    requests.exceptions.SSLError) as e:
+                last_err = e
+                wait = 2 ** attempt * 5
+                logger.warning("Embedding API %s attempt %d failed: %s, retrying in %ds",
+                               provider, attempt + 1, e, wait)
+                time.sleep(wait)
+        else:
+            raise last_err
+
         data = resp.json()
         batch_embs = [d["embedding"] for d in sorted(data["data"], key=lambda x: x["index"])]
         all_embeddings.extend(batch_embs)
