@@ -1,0 +1,1 @@
+invalid type: string "## 测试实践\n\n项目还覆盖了单元测试和组件测试：\n\n```typescript\ndescribe(\"TodoStore\", () => {\n  it(\"should add a todo\", () => {\n    const { getState, setState } = useTodoStore;\n    // ...\n  });\n});\n```\n\n## 总结\n\n�增删改查，Todo Manager 还有一些实用的功能：\n\n### 分类筛选\n\nion TaskItem({ id }: { id: string }) {", expe
