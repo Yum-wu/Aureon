@@ -64,7 +64,7 @@ export function OptimizationStory() {
               <p className="text-sm text-[var(--text-tertiary)]">{t('architecture.optimization.before')}</p>
               <p className="text-2xl font-bold text-[var(--error)]">{opt.before}</p>
             </div>
-            <div className="text-4xl text-[var(--text-tertiary)]">\u2192</div>
+            <div className="text-4xl text-[var(--text-tertiary)]">→</div>
             <div className="text-center">
               <p className="text-sm text-[var(--text-tertiary)]">{t('architecture.optimization.after')}</p>
               <p className="text-2xl font-bold text-[var(--success)]">{opt.after}</p>

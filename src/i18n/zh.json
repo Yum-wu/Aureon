@@ -365,4 +365,25 @@
     "no_account": "还没有账号？",
     "signup": "申请试用"
   }
+,
+  "chat": {
+    "title": "AI 助手",
+    "clear": "清空",
+    "emptyTitle": "今天有什么可以帮你的？",
+    "emptySubtitle": "问我任何关于知识库的问题",
+    "emptyHint": "我可以搜索文档、分析数据、生成报告",
+    "inputPlaceholder": "随便问点什么...",
+    "send": "发送",
+    "stop": "停止",
+    "copy": "复制",
+    "copied": "已复制！",
+    "regenerate": "重新生成",
+    "attach": "添加附件",
+    "quickStart": [
+      "帮我搜索最新的技术文档",
+      "分析当前系统的性能指标",
+      "解释 RAG 检索的工作原理",
+      "生成一份项目总结报告"
+    ]
+  }
 }

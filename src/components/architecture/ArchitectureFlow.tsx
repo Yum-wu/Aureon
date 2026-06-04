@@ -59,7 +59,7 @@ export function ArchitectureFlow() {
             </Card>
             {index < pipelineSteps.length - 1 && (
               <div className="hidden md:block absolute top-1/2 -right-2 transform -translate-y-1/2 text-[var(--text-tertiary)]">
-                \u2192
+                →
               </div>
             )}
           </div>
