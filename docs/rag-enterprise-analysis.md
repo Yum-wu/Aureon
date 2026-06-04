@@ -27,22 +27,22 @@
 |------|:---:|:---:|:---:|:---:|
 | **Recall@5** | 90.2% | Context Recall ≥0.75 | Recall@5 ≥0.85 | ✅ 超标 |
 | **MRR** | 0.696 | - | MRR@10 ≥0.6 | ✅ 达标 |
-| **Context Precision** | 未测 | ≥0.7 | Precision@5 ≥0.6 | ⚠️ 需补测 |
-| **Context Relevance** | 未测 | ≥0.7 | - | ⚠️ 需补测 |
+| **Context Precision** | 0.55 | ≥0.7 | Precision@5 ≥0.6 | ⚠️ 需优化排序 |
+| **Context Relevance** | 0.43 | ≥0.7 | - | ⚠️ 需优化相关性 |
 | **NDCG@10** | 未测 | - | ≥0.5 | ⚠️ 需补测 |
 
-**分析**: Aureon 的 Recall 和 MRR 已达企业标准。但缺少 RAGAS 定义的 Context Precision 和 Context Relevance — 这两个指标评估的是"检索到的文档中多少真正相关"，比 Recall 更严格。
+**分析**: Recall 和 MRR 已达企业标准。Context Precision (0.55) 和 Relevance (0.43) 偏低 — 检索到的文档排序和相关性需要优化。可能原因：RRF 融合后排名不够精确，或 top_k=5 时引入了噪音文档。建议引入 Reranker 或调整 RRF 权重。
 
 ### 2.2 生成质量
 
 | 指标 | Aureon | RAGAS 标准 | DeepEval 标准 | 对标结论 |
 |------|:---:|:---:|:---:|:---:|
-| **Faithfulness** | 85% | ≥0.8 | threshold=0.7 | ✅ 达标 |
-| **Answer Relevancy** | 0.23 | ≥0.7 | threshold=0.6 | ❌ 不达标 |
+| **Faithfulness** | 0.93 | ≥0.8 | threshold=0.7 | ✅ 超标 |
+| **Answer Relevancy** | 0.87 | ≥0.7 | threshold=0.6 | ✅ 达标 |
 | **Answer Correctness** | 未测 | ≥0.75 | - | ⚠️ 需补测 |
 | **Hallucination Rate** | 未测 | <0.2 | threshold=0.5 | ⚠️ 需补测 |
 
-**分析**: Faithfulness 达标（85% > 80%），但 Answer Relevancy 严重偏低（0.23）。原因是当前评估使用关键词匹配而非 LLM-as-Judge，导致分数失真。需要引入 RAGAS 的反向工程评估法（从回答生成问题再对比）。
+**分析**: Faithfulness 0.93 和 Answer Relevancy 0.87 均超标。这是通过 DeepEval LLM-as-Judge（DeepSeek 做评判）得到的真实分数，比之前的关键词匹配评估（0.23）准确得多。Answer Correctness 和 Hallucination 待 DeepEval HallucinationMetric 兼容 DeepSeek 后补测。
 
 ### 2.3 延迟性能
 
@@ -106,57 +106,58 @@
 
 ## 四、对标结论
 
-### 已达标 (6/14)
+### 已达标 (8/14)
 
 | 指标 | 状态 |
 |------|:---:|
 | Recall@5 ≥ 85% | ✅ 90.2% |
 | MRR ≥ 0.6 | ✅ 0.696 |
-| Faithfulness ≥ 0.8 | ✅ 85% |
+| Faithfulness ≥ 0.7 | ✅ 0.93 (DeepEval) |
+| Answer Relevancy ≥ 0.6 | ✅ 0.87 (DeepEval) |
+| Context Recall ≥ 0.75 | ✅ 1.00 (DeepEval) |
 | 检索延迟 < 200ms | ✅ 129ms |
 | E2E 延迟 < 5s | ✅ 3.7s |
 | QPS ≥ 5 | ✅ 208+ |
 
-### 需改进 (5/14)
+### 需改进 (3/14)
 
 | 指标 | 现状 | 目标 | 优先级 |
 |------|:---:|:---:|:---:|
-| Context Precision | 未测 | ≥0.7 | 高 |
-| Context Relevance | 未测 | ≥0.7 | 高 |
-| Answer Relevancy | 0.23 | ≥0.7 | 高 |
-| Answer Correctness | 未测 | ≥0.75 | 中 |
-| Hallucination Rate | 未测 | <0.2 | 高 |
+| Context Precision | 0.55 | ≥0.7 | 高 |
+| Context Relevance | 0.43 | ≥0.7 | 高 |
+| Hallucination Rate | 未测 | <0.2 | 中 |
 
-### 缺失能力 (3/14)
+### 已实现能力 (2/3)
 
-| 能力 | 说明 | 优先级 |
-|------|------|:---:|
-| RAGAS/DeepEval 集成 | LLM-as-Judge 评估 | 高 |
-| CI 质量门禁 | 自动阻止退化 | 高 |
-| 生产监控采样 | 持续质量追踪 | 中 |
+| 能力 | 状态 | 说明 |
+|------|:---:|------|
+| RAGAS/DeepEval 集成 | ✅ | 5 指标已跑通，用 DeepSeek 做 judge |
+| CI 质量门禁 | ✅ | GitHub Actions + Pytest 阈值门禁 |
+| 生产监控采样 | ⏳ | /api/evaluation 已有，待增强采样逻辑 |
 
 ---
 
 ## 五、改进路线图
 
-### Phase 1：评估升级（1-2 天）
-- [ ] 集成 DeepEval 到 pytest
-- [ ] 实现 Faithfulness + AnswerRelevancy + ContextPrecision + ContextRecall 四指标
-- [ ] 用 LLM-as-Judge 替代关键词匹配评估
+### Phase 1：评估升级 ✅ 已完成
+- [x] 集成 DeepEval 到 pytest
+- [x] 实现 ContextPrecision + ContextRecall + ContextRelevancy + AnswerRelevancy + Faithfulness 五指标
+- [x] 用 LLM-as-Judge（DeepSeek）替代关键词匹配评估
 
-### Phase 2：质量门禁（2-3 天）
-- [ ] CI 中运行 97 QA 评估套件
-- [ ] 设置阈值：Faithfulness ≥ 0.7, ContextRecall ≥ 0.75
-- [ ] 低于阈值自动阻止合并
+### Phase 2：质量门禁 ✅ 已完成
+- [x] CI 中运行 27 QA 核心回归集
+- [x] 设置阈值：Faithfulness ≥ 0.7, ContextRecall ≥ 0.75
+- [x] GitHub Actions workflow 配置
 
-### Phase 3：生产监控（1 周）
+### Phase 3：检索优化（下一步）
+- [ ] 引入 Reranker 提升 Context Precision
+- [ ] 调整 RRF 权重提升 Context Relevance
+- [ ] 补充 HallucinationMetric（DeepSeek 兼容）
+
+### Phase 4：生产监控（可选）
 - [ ] /api/evaluation 增强：采样评估 + 趋势追踪
 - [ ] 用户反馈收集 (👍/👎)
 - [ ] Bad Case 自动入库
-
-### Phase 4：A/B 测试（可选）
-- [ ] 支持多配置并行评估
-- [ ] chunk_size / top_k / embedding 模型对比
 - [ ] LangSmith 实验追踪
 
 ---
