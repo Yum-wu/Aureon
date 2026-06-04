@@ -32,10 +32,10 @@ Aureon/
 │   ├── api/          # 模型 + Analytics
 │   ├── config.py     # pydantic_settings
 │   └── main.py       # FastAPI 入口
-├── backend/tests/     # 390 tests
+├── backend/tests/     # 426 tests
 ├── src/               # React 前端
 │   ├── components/ hooks/ pages/ services/ i18n/ types/
-│   └── (49 tests)
+│   └── (49 tests, 10 files)
 ├── crew/              # CrewAI 文章生成
 └── docker-compose.yml
 ```
@@ -51,9 +51,15 @@ Aureon/
 - API Key 仅存 `.env`
 
 ### 前端
-- TypeScript + Tailwind CSS
+- TypeScript + Tailwind CSS 4 + tailwindcss-animate
+- Design Token 体系（index.css :root 变量，oklch 色阶）
+- 组件：components/ui/ 通用 + components/landing/ 落地页 + components/search/ 搜索 + components/dashboard/ 仪表盘
+- Chat：容器式输入框、消息 hover 工具栏（复制/重新生成/投票）、空状态快捷提问
+- i18n：src/i18n/en.json + zh.json，useTranslation() hook
 - SSE 事件：session/text/tool_start/tool_end/done/error
+- Toast：sonner（App.tsx 根级 Toaster）
 - API Key 从后端读取
+- 字体：Plus Jakarta Sans（display）+ Inter（body）+ JetBrains Mono（code）
 
 ### 代码质量
 - 类型注解完整：`def foo(x: int) -> str:`
@@ -76,10 +82,17 @@ Aureon/
 ## 构建
 
 ```bash
+# 后端
 cd backend && uvicorn app.main:app --reload --port 8000
-cd Aureon && npm install && npm run dev
-cd Aureon/backend && python -m pytest tests/ -v
-cd Aureon && npm test
+cd backend && python -m pytest tests/ -v
+
+# 前端
+npm install && npm run dev
+npm test -- --run
+npm run build
+
+# 预览构建产物
+npx vite preview --port 5174 --host 127.0.0.1
 ```
 
 ## API 端点
@@ -119,9 +132,9 @@ cd Aureon && npm test
 - 部署后必须验证生产端点，不能假设 push = 已部署
 - Railway 健康检查超时 120s，部署通常 2-5 分钟
 
-**耗时参考**（2026-06-03 实测）：
-- CI 前端测试：~28s（49 tests）
-- CI 后端测试：~2m（426 tests）
+**耗时参考**（2026-06-04 实测）：
+- CI 前端：~1m19s（49 tests + lint + build）
+- CI 后端：~2m1s（426 tests）
 - Railway 构建：~3m（Dockerfile Docker build）
 - Railway 部署：~4m（健康检查 + 流量切换）
 - 全流程（push → 生产就绪）：~8-10 分钟
