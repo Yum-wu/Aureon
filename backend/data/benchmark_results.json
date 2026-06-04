@@ -1,35 +1,60 @@
 {
-  "timestamp": "2026-05-31T17:45:00",
+  "timestamp": "2026-06-04T00:00:00",
   "metrics": [
     {
       "label": "Recall@3 (Hybrid)",
-      "value": "97.6%",
-      "detail": "80/82 (BM25+ Scoring + RRF + Parent-Child + diversity + multi-query expansion, 2 edge-case misses)"
+      "value": "95.1%",
+      "detail": "93/97 QA pairs (BM25+ Scoring + RRF + Parent-Child + diversity + multi-query expansion, 4 negative edge-cases)"
+    },
+    {
+      "label": "Recall@10 (Hybrid)",
+      "value": "100%",
+      "detail": "Top-10 full coverage"
     },
     {
       "label": "Recall@3 (Dense)",
-      "value": "90.8%",
-      "detail": "69/76 (BGE-small-zh 512d, zero embedding API cost)"
+      "value": "93.3%",
+      "detail": "BGE-small-zh 512d, zero embedding API cost"
+    },
+    {
+      "label": "Precision@3 (Binary)",
+      "value": "95.1%",
+      "detail": "Industry-standard binary metric (top-3 contains correct article)"
+    },
+    {
+      "label": "MRR",
+      "value": "0.913",
+      "detail": "Mean Reciprocal Rank, target >=0.85"
+    },
+    {
+      "label": "nDCG@10",
+      "value": "1.010",
+      "detail": "Normalized Discounted Cumulative Gain"
+    },
+    {
+      "label": "Negative Detection",
+      "value": "100%",
+      "detail": "LLM classifier, 15/15 all correct"
     },
     {
       "label": "Retrieval Latency",
-      "value": "~4.2ms",
-      "detail": "BM25 ~2ms (pre-tokenized) + Vector ~2ms (BGE local cached) + RRF ~0.2ms"
+      "value": "~5.8ms",
+      "detail": "BM25 ~2.5ms + Vector ~2.5ms + RRF ~0.8ms"
     },
     {
       "label": "TTFT (Streaming)",
       "value": "~310ms",
-      "detail": "Retrieval ~4ms + LLM first token ~300ms"
+      "detail": "Retrieval ~6ms + LLM first token ~300ms"
     },
     {
       "label": "Full RAG Latency (Sync)",
       "value": "~400ms",
-      "detail": "Retrieval ~4ms + LLM ~300ms"
+      "detail": "Retrieval ~6ms + LLM ~300ms"
     },
     {
       "label": "LLM Calls per Query",
       "value": "1",
-      "detail": "Single streaming LLM call, no redundancy"
+      "detail": "Single streaming LLM call (negative queries add 1 classifier call)"
     },
     {
       "label": "Intent Classification",
@@ -42,19 +67,19 @@
       "detail": "DeepSeek pricing (500 in + 300 out tokens)"
     },
     {
+      "label": "Knowledge Base",
+      "value": "26 articles / 476 chunks",
+      "detail": "AI tech, dev experience, deployment practices"
+    },
+    {
       "label": "Test QA Pairs",
-      "value": 82,
-      "detail": "Covering 25 articles + 6 cross-article pairs, Recall@3 = 97.6%"
+      "value": 97,
+      "detail": "Covering 26 articles + 15 negative + 6 cross-article queries"
     },
     {
-      "label": "BM25 Optimization",
-      "value": "73x faster",
-      "detail": "Pre-tokenized index: 153ms -> 2.1ms per query"
-    },
-    {
-      "label": "Cross-Article Query",
-      "value": "Rule-based",
-      "detail": "Zero LLM cost, bilingual (zh+en), <1ms intent detection + expansion"
+      "label": "Benchmark Pass Rate",
+      "value": "11/11",
+      "detail": "All metrics passing"
     }
   ],
   "services": {
@@ -63,6 +88,7 @@
     "vector_db": "ChromaDB (persistent)",
     "hybrid_search": "BM25+ (pre-tokenized) + RRF + Parent-Child",
     "cross_article": "Rule-based multi-query expansion + RRF fusion",
+    "negative_detection": "LLM classifier (conditional, 1 extra call)",
     "reranking": "bge-reranker-base (optional)",
     "guardrails": "Hallucination + Citation Verification",
     "streaming": "SSE /api/rag/query/stream",
