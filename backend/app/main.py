@@ -125,11 +125,11 @@ async def logging_middleware(request: Request, call_next):
 
 
 def _warmup_bm25():
-    """Build BM25 index in background thread. Non-blocking.
+    """Build BM25 index and auto-rebuild vector index if empty.
 
-    Checks if the article index is stale and logs status.
-    Actual rebuild is triggered on first query (query-time rebuild)
-    to avoid OOM on resource-limited platforms like Railway.
+    Runs in background thread at startup. Non-blocking.
+    When index is empty (e.g. after Railway restart), automatically
+    rebuilds using API embedding — no local BGE model, no OOM.
     """
     global _bm25_warmup_done, _index_ready
     try:
@@ -137,13 +137,26 @@ def _warmup_bm25():
         _build_kw_index()
         logger.info("BM25 index warmup complete")
 
-        # Check index status (lightweight — no rebuild here)
+        # Check if vector index needs rebuild
         base_dir = os.path.dirname(os.path.dirname(__file__))
         articles_dir = os.path.join(base_dir, "data", "articles")
         status = check_index_stale(articles_dir)
         doc_count, chunk_count = get_collection_stats()
-        logger.info("Index status: %d docs, %d chunks, stale=%s, reason=%s",
-                    doc_count, chunk_count, status["stale"], status["reason"] or "n/a")
+
+        if status["stale"] and doc_count == 0:
+            # Index empty — auto-rebuild via API embedding (no local model, no OOM)
+            logger.info("Index empty, auto-rebuilding via API embedding...")
+            try:
+                from app.rag.qa_chain import run_index_pipeline
+                result = run_index_pipeline(articles_dir)
+                logger.info("Auto-rebuild complete: %d docs, %d chunks, %.1fs",
+                            result.get("documents_indexed", 0),
+                            result.get("chunks_created", 0),
+                            result.get("elapsed_seconds", 0))
+            except Exception as e:
+                logger.error("Auto-rebuild failed: %s", e)
+        else:
+            logger.info("Index OK: %d docs, %d chunks", doc_count, chunk_count)
     except Exception as e:
         logger.warning("BM25 warmup / index check failed (non-fatal): %s", e)
     finally:
