@@ -2,7 +2,7 @@
 
 import asyncio
 import time
-import logging
+import structlog
 
 from app.langgraph.state import AgentState, initial_state
 from app.langgraph.nodes.intent import run_intent_node
@@ -11,7 +11,7 @@ from app.langgraph.nodes.agent import run_agent_node
 from app.langgraph.nodes.generate import run_generate_node
 from app.langgraph.mcp.server import register_all_tools
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger()
 
 # Initialize MCP tools once at module load
 register_all_tools()

@@ -17,10 +17,11 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# 系统依赖：nginx + sqlite（Chroma 需要）
+# 系统依赖：nginx + sqlite（Chroma 需要）+ gosu（进程降权）
 RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx \
     sqlite3 \
+    gosu \
     && rm -rf /var/lib/apt/lists/* \
     && ln -sf /dev/stdout /var/log/nginx/access.log \
     && ln -sf /dev/stderr /var/log/nginx/error.log
@@ -37,7 +38,11 @@ RUN python3 -c "from sentence_transformers import SentenceTransformer; SentenceT
 COPY backend/ .
 
 # Chroma 向量库持久化目录
-RUN mkdir -p /app/data/vectors
+RUN mkdir -p /app/data/vectors /app/offloads
+
+# 创建非 root 用户
+RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser \
+    && chown -R appuser:appuser /app /usr/share/nginx /var/log/nginx /run
 
 # 从前端构建阶段复制静态文件
 COPY --from=frontend-builder /app/dist /usr/share/nginx/html

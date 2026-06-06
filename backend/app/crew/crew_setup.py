@@ -1,6 +1,6 @@
 """Multi-Agent Article Generator — Crew Orchestration with SSE support (crewai 0.80+)"""
 
-import logging
+import structlog
 import time
 import re
 from typing import Callable
@@ -9,7 +9,7 @@ from app.crew.agents import create_researcher, create_writer, create_editor
 from app.crew.tasks import create_research_task, create_write_task, create_review_task
 from app.utils.lang_detect import detect_language
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger()
 
 
 def _clean_detail(text: str, max_len: int = 200) -> str:

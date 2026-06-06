@@ -1,4 +1,7 @@
-"""Reliability & Resilience - Backup, Failover, SLO"""
+"""Reliability & Resilience - Backup, Failover, SLO
+
+EXPERIMENTAL: Not connected to core paths. CircuitBreaker exists but unused.
+"""
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 from pydantic import BaseModel, Field
@@ -55,6 +58,8 @@ class SLOStatus(BaseModel):
 
 
 # ── Circuit Breaker ──
+# EXPERIMENTAL: Not connected to any core path (LLM/Embedding calls).
+# To enable: wrap external calls with circuit_breaker.can_execute() check.
 
 class CircuitBreaker:
     """熔断器"""

@@ -5,11 +5,11 @@ Compares Direct / CoT / Few-shot strategies on same questions.
 
 import time
 import statistics
-import logging
+import structlog
 from typing import List, Dict, Any, Callable
 from app.utils.lang_detect import lang_instruction
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger()
 
 # ── System Prompt templates (Chinese) ──
 

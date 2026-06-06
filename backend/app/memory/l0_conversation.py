@@ -1,8 +1,8 @@
-import logging
+import structlog
 from app.memory.db import get_db
 from app.config import settings
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger()
 
 
 def record_message(

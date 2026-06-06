@@ -21,6 +21,8 @@ from app.agent.agent import create_chat_agent
 from app.agent.executor import stream_agent_with_memory
 from app.memory.manager import manager as memory_manager
 from app.utils.lang_detect import detect_language
+from app.common import SSE_HEADERS, sse_event
+from app.rag.guardrails import detect_prompt_injection, sanitize_input
 
 logger = structlog.get_logger()
 
@@ -45,21 +47,28 @@ async def _get_agent(lang: str = "zh", model: str = None):
 
 @router.post("/api/chat/stream")
 async def chat_stream(req: ChatRequest, request: Request):
-    lang = detect_language(req.message)
+    # Prompt injection check (< 1ms, regex-based)
+    injection = detect_prompt_injection(req.message)
+    if injection["detected"]:
+        logger.warning("Prompt injection detected", pattern=injection["pattern"], risk=injection["risk_level"])
+        if injection["risk_level"] == "high":
+            from fastapi import HTTPException
+            raise HTTPException(status_code=400, detail="Potentially harmful input detected.")
+
+    # Sanitize input
+    sanitized_message = sanitize_input(req.message)
+
+    lang = detect_language(sanitized_message)
     agent = await _get_agent(lang, model=req.model)
     return StreamingResponse(
         stream_agent_with_memory(
             agent,
-            req.message,
+            sanitized_message,
             req.session_id or "",
             memory_manager=memory_manager,
         ),
         media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
+        headers=SSE_HEADERS,
     )
 
 
@@ -68,28 +77,34 @@ async def chat_enhanced_stream(req: ChatRequest, request: Request):
     """Enhanced chat with automatic RAG integration via LangGraph intent routing."""
     from app.langgraph.streaming import stream_workflow
 
+    # Prompt injection check (< 1ms, regex-based)
+    injection = detect_prompt_injection(req.message)
+    if injection["detected"]:
+        logger.warning("Prompt injection detected", pattern=injection["pattern"], risk=injection["risk_level"])
+        if injection["risk_level"] == "high":
+            from fastapi import HTTPException
+            raise HTTPException(status_code=400, detail="Potentially harmful input detected.")
+
+    sanitized_message = sanitize_input(req.message)
+
     llm = create_llm(model=req.model)
 
     async def event_stream():
         try:
             async for event in stream_workflow(
-                query=req.message,
+                query=sanitized_message,
                 llm=llm,
                 session_id=req.session_id or "",
             ):
-                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+                yield sse_event(event)
         except Exception as e:
             logger.error("enhanced_stream_error: %s", e)
-            yield f"data: {json.dumps({'type': 'error', 'content': 'An error occurred while processing your request'}, ensure_ascii=False)}\n\n"
+            yield sse_event({'type': 'error', 'content': 'An error occurred while processing your request'})
 
     return StreamingResponse(
         event_stream(),
         media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
+        headers=SSE_HEADERS,
     )
 
 

@@ -1,10 +1,10 @@
 """MCP Client — 调用其他 MCP Server"""
 
-import logging
+import structlog
 import requests
 from typing import Optional
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger()
 
 
 class MCPClient:

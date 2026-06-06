@@ -1,18 +1,15 @@
-"""AI Platform Layer - Multi-LLM Router & Confidence Scoring"""
+"""AI Platform Layer - Multi-LLM Router & Confidence Scoring
+
+EXPERIMENTAL: Not connected to core paths. Models/Routes exist but unused by production flow.
+"""
 from datetime import datetime, timezone
 from typing import Optional
 from pydantic import BaseModel, Field
 import structlog
 
+from app.common import mask_secret
+
 logger = structlog.get_logger()
-
-
-def _mask_secret(value: str | None, show_chars: int = 4) -> str | None:
-    if not value:
-        return value
-    if len(value) <= show_chars:
-        return "****"
-    return value[:show_chars] + "****"
 
 
 class LLMProvider(BaseModel):
@@ -224,7 +221,7 @@ def list_llm_providers() -> list[LLMProvider]:
             id=row["id"],
             name=row["name"],
             provider_type=row["provider_type"],
-            api_key=_mask_secret(row["api_key"]),
+            api_key=mask_secret(row["api_key"]),
             base_url=row["base_url"],
             model_name=row["model_name"],
             enabled=bool(row["enabled"]),
@@ -254,7 +251,7 @@ def get_llm_provider(name: str) -> Optional[LLMProvider]:
         id=row["id"],
         name=row["name"],
         provider_type=row["provider_type"],
-        api_key=_mask_secret(row["api_key"]),
+        api_key=mask_secret(row["api_key"]),
         base_url=row["base_url"],
         model_name=row["model_name"],
         enabled=bool(row["enabled"]),

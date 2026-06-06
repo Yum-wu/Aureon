@@ -1,4 +1,7 @@
-"""Evaluation Dashboard - RAG 质量评估展示"""
+"""Evaluation Dashboard - RAG 质量评估展示
+
+EXPERIMENTAL: Not connected to core paths. Models/Routes exist but unused by production flow.
+"""
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 from pydantic import BaseModel, Field

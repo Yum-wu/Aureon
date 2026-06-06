@@ -1,18 +1,63 @@
-"""Security Hardening - SSO, PII Detection, Rate Limiting"""
+"""Security Hardening - SSO, PII Detection, Rate Limiting
+
+EXPERIMENTAL: PII detection and SSO not connected to core paths.
+Encryption utilities (encrypt_secret/decrypt_secret) ARE used by SSO.
+"""
+import os
 import re
 from typing import Optional
 from pydantic import BaseModel, Field
 import structlog
 
+from app.common import mask_secret
+
 logger = structlog.get_logger()
 
 
-def _mask_secret(value: str | None, show_chars: int = 4) -> str | None:
+# -- Secret Encryption (Fernet symmetric encryption) --
+
+_fernet = None
+
+
+def _get_fernet():
+    """Lazy-init Fernet cipher. Key from ENCRYPTION_KEY env or auto-generate."""
+    global _fernet
+    if _fernet is not None:
+        return _fernet
+    try:
+        from cryptography.fernet import Fernet
+        key = os.environ.get("ENCRYPTION_KEY")
+        if not key:
+            key = Fernet.generate_key()
+            logger.warning("ENCRYPTION_KEY not set, generated ephemeral key (lost on restart)")
+        _fernet = Fernet(key.encode() if isinstance(key, str) else key)
+    except ImportError:
+        logger.warning("cryptography not installed, secret encryption disabled")
+        _fernet = False
+    return _fernet if _fernet is not False else None
+
+
+def encrypt_secret(value: str | None) -> str | None:
+    """Encrypt a secret value with Fernet. Returns base64 ciphertext."""
     if not value:
         return value
-    if len(value) <= show_chars:
-        return "****"
-    return value[:show_chars] + "****"
+    f = _get_fernet()
+    if f is None:
+        return value  # fallback: store plaintext if encryption unavailable
+    return f.encrypt(value.encode()).decode()
+
+
+def decrypt_secret(value: str | None) -> str | None:
+    """Decrypt a Fernet-encrypted secret. Returns plaintext."""
+    if not value:
+        return value
+    f = _get_fernet()
+    if f is None:
+        return value  # fallback: assume plaintext
+    try:
+        return f.decrypt(value.encode()).decode()
+    except Exception:
+        return value  # not encrypted or wrong key, return as-is
 
 
 # ── PII Detection ──
@@ -203,7 +248,7 @@ def create_sso_provider(provider: SSOProvider) -> SSOProvider:
             provider.name,
             provider.provider_type,
             provider.client_id,
-            provider.client_secret,
+            encrypt_secret(provider.client_secret),
             provider.metadata_url,
             provider.enabled,
             now,
@@ -236,7 +281,7 @@ def list_sso_providers() -> list[SSOProvider]:
             name=row["name"],
             provider_type=row["provider_type"],
             client_id=row["client_id"],
-            client_secret=_mask_secret(row["client_secret"]),
+            client_secret=mask_secret(decrypt_secret(row["client_secret"])),
             metadata_url=row["metadata_url"],
             enabled=bool(row["enabled"]),
             created_at=row["created_at"],
@@ -263,7 +308,7 @@ def get_sso_provider(name: str) -> Optional[SSOProvider]:
         name=row["name"],
         provider_type=row["provider_type"],
         client_id=row["client_id"],
-        client_secret=_mask_secret(row["client_secret"]),
+        client_secret=mask_secret(decrypt_secret(row["client_secret"])),
         metadata_url=row["metadata_url"],
         enabled=bool(row["enabled"]),
         created_at=row["created_at"],

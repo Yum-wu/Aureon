@@ -30,6 +30,7 @@ from app.api.models import StatusResponse
 from app.api.rag_stats import record_query
 from app.config import settings
 from app.dependencies import get_redis_or_none
+from app.common import SSE_HEADERS, sse_event
 from app.rag.models import (
     RAGQueryRequest,
     RAGQueryResponse,
@@ -208,9 +209,9 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
             except (json.JSONDecodeError, TypeError):
                 answer_text = cached
                 cached_sources = []
-            yield f"data: {json.dumps({'type': 'sources', 'sources': cached_sources}, ensure_ascii=False)}\n\n"
-            yield f"data: {json.dumps({'type': 'text', 'content': answer_text}, ensure_ascii=False)}\n\n"
-            yield 'data: {"type": "cache_hit"}\n\n'
+            yield sse_event({'type': 'sources', 'sources': cached_sources})
+            yield sse_event({'type': 'text', 'content': answer_text})
+            yield sse_event({'type': 'cache_hit'})
             latency_ms = int((time.time() - start_time) * 1000)
             asyncio.create_task(record_query(req.query, len(cached_sources), latency_ms))
             return
@@ -238,9 +239,9 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
                 elif event.get("type") == "sources":
                     sources_count = len(event.get("sources", []))
                     sources_data = event.get("sources", [])
-                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+                yield sse_event(event)
         except Exception as e:
-            yield f"data: {json.dumps({'type': 'error', 'content': str(e)}, ensure_ascii=False)}\n\n"
+            yield sse_event({'type': 'error', 'content': str(e)})
         finally:
             # 3. Cache as JSON (answer + sources) for cross-endpoint compatibility
             from app.rag.vector_store import _kw_docs as _bm25_docs
@@ -254,16 +255,12 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
                 req.query, sources_count, latency_ms,
                 input_tokens=input_tokens, output_tokens=output_tokens
             ))
-            yield 'data: {"type": "done"}\n\n'
+            yield sse_event({'type': 'done'})
 
     return StreamingResponse(
         event_stream(),
         media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
+        headers=SSE_HEADERS,
     )
 
 
@@ -283,16 +280,9 @@ async def rag_index_endpoint(request: Request):
     result = run_index_pipeline(ARTICLES_DIR, llm_call_fn=llm_call_fn, enable_contextual=True)
 
     # Clear all caches so fresh results are served
-    from app.cache.redis_client import get_redis, _mem_cache
+    from app.cache.redis_client import clear_cache_by_prefix, _mem_cache
     _mem_cache.clear()
-    try:
-        redis = get_redis()
-        if redis:
-            keys = redis.keys("llm_cache:*")
-            if keys:
-                redis.delete(*keys)
-    except Exception:
-        pass
+    await clear_cache_by_prefix("llm_cache:")
 
     # Force BM25 rebuild from Chroma
     from app.rag.vector_store import _build_kw_index
@@ -537,18 +527,9 @@ async def rag_benchmark():
 @router.post("/api/rag/cache/clear")
 async def rag_cache_clear():
     """Clear all RAG query caches (Redis + in-memory)."""
-    from app.cache.redis_client import get_redis, _mem_cache
-    cleared = 0
-    # Clear in-memory cache
+    from app.cache.redis_client import clear_cache_by_prefix, _mem_cache
     _mem_cache.clear()
-    try:
-        redis = get_redis()
-        if redis:
-            keys = redis.keys("llm_cache:*")
-            if keys:
-                cleared = redis.delete(*keys)
-    except Exception as e:
-        logger.warning("Redis cache clear failed: %s", e)
+    cleared = await clear_cache_by_prefix("llm_cache:")
     return {"status": "ok", "cleared_keys": cleared}
 
 

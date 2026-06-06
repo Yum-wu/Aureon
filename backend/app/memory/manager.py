@@ -1,7 +1,7 @@
 import asyncio
-import logging
 import time
 from pathlib import Path
+import structlog
 
 from app.memory import l0_conversation
 from app.memory import l1_atom
@@ -10,7 +10,7 @@ from app.memory import l3_persona
 from app.memory import offload
 from app.config import settings
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger()
 
 # ── Constants ──
 _INACTIVE_TIMEOUT = 30 * 60        # 30 minutes → auto-finalize

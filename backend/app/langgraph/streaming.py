@@ -1,6 +1,6 @@
 """LangGraph 流式工作流 — intent -> RAG -> stream generate"""
 
-import logging
+import structlog
 import time
 from typing import Any, AsyncGenerator
 
@@ -9,7 +9,7 @@ from app.rag.vector_store import retrieve_keyword, format_context
 from app.rag.qa_chain import QA_SYSTEM_PROMPT, QA_SYSTEM_PROMPT_EN
 from app.utils.lang_detect import detect_language, lang_instruction
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger()
 
 
 async def stream_workflow(

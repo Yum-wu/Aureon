@@ -20,7 +20,7 @@ from app.agent.agent import (
 from app.agent.executor import (
     stream_agent,
     stream_agent_with_memory,
-    _sse,
+    sse_event,
 )
 
 
@@ -65,22 +65,22 @@ def _tool_end_event(name="calculator", output="2"):
 
 class TestSSEHelper:
     def test_sse_format(self):
-        """_sse returns 'data: JSON\\n\\n' format."""
-        result = _sse({"type": "text", "content": "hi"})
+        """sse_event returns 'data: JSON\n\n' format."""
+        result = sse_event({"type": "text", "content": "hi"})
         assert result.startswith("data: ")
         assert result.endswith("\n\n")
 
     def test_sse_json_parseable(self):
-        """_sse output is valid JSON after stripping prefix."""
-        result = _sse({"type": "done", "content": None})
+        """sse_event output is valid JSON after stripping prefix."""
+        result = sse_event({"type": "done", "content": None})
         json_str = result[len("data: "):].strip()
         data = json.loads(json_str)
         assert data["type"] == "done"
         assert data["content"] is None
 
     def test_sse_unicode(self):
-        """_sse handles Chinese characters."""
-        result = _sse({"type": "text", "content": "你好世界"})
+        """sse_event handles Chinese characters."""
+        result = sse_event({"type": "text", "content": "你好世界"})
         assert "你好世界" in result
 
 

@@ -1,18 +1,15 @@
-"""Integration Ecosystem - Enterprise Connectors & IM Bot"""
+"""Integration Ecosystem - Enterprise Connectors & IM Bot
+
+EXPERIMENTAL: Not connected to core paths. Models/Routes exist but unused by production flow.
+"""
 from datetime import datetime, timezone
 from typing import Optional
 from pydantic import BaseModel, Field
 import structlog
 
+from app.common import mask_secret
+
 logger = structlog.get_logger()
-
-
-def _mask_secret(value: str | None, show_chars: int = 4) -> str | None:
-    if not value:
-        return value
-    if len(value) <= show_chars:
-        return "****"
-    return value[:show_chars] + "****"
 
 
 class IntegrationConnector(BaseModel):
@@ -365,7 +362,7 @@ def list_im_bots(workspace_id: str = None) -> list[IMBotConfig]:
         IMBotConfig(
             id=row["id"],
             platform=row["platform"],
-            bot_token=_mask_secret(row["bot_token"]),
+            bot_token=mask_secret(row["bot_token"]),
             webhook_url=row["webhook_url"],
             workspace_id=row["workspace_id"],
             enabled=bool(row["enabled"]),
@@ -391,7 +388,7 @@ def get_im_bot_config(platform: str, workspace_id: str) -> Optional[IMBotConfig]
     return IMBotConfig(
         id=row["id"],
         platform=row["platform"],
-        bot_token=_mask_secret(row["bot_token"]),
+        bot_token=mask_secret(row["bot_token"]),
         webhook_url=row["webhook_url"],
         workspace_id=row["workspace_id"],
         enabled=bool(row["enabled"]),

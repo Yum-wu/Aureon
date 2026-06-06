@@ -108,9 +108,8 @@ class TestRagQueryAstream:
 
     @pytest.mark.asyncio
     @patch("app.rag.qa_chain.classify_query_answerable", new_callable=AsyncMock, return_value=True)
-    @patch("app.rag.qa_chain.assess_retrieval_quality", return_value=4)
     @patch("app.rag.qa_chain.hybrid_retrieve")
-    async def test_with_chunks(self, mock_hybrid, mock_assess, mock_classify):
+    async def test_with_chunks(self, mock_hybrid, mock_classify):
         mock_hybrid.return_value = [
             {"text": "RAG content", "metadata": {"title": "Guide", "slug": "g"}, "score": 0.9}
         ]

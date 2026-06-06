@@ -1,9 +1,9 @@
 """RAG 系统统计 + 文档管理 API — Dashboard / Documents 数据源"""
-import logging
 import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Optional
+import structlog
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
@@ -12,7 +12,7 @@ from ..dependencies import get_redis_or_none
 from ..exceptions import AureonException, RedisUnavailableError, VectorStoreError
 from ..rag.vector_store import get_collection_stats
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger()
 
 router = APIRouter()
 

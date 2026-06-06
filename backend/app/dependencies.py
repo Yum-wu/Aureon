@@ -1,6 +1,7 @@
-"""FastAPI dependency injection for Redis.
+# -*- coding: utf-8 -*-
+"""FastAPI dependency injection for Redis and Authentication.
 
-Provides reusable Redis dependencies for route handlers,
+Provides reusable dependencies for route handlers,
 eliminating duplicate imports across router modules.
 """
 

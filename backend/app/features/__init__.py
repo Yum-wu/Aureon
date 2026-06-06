@@ -1,4 +1,7 @@
-"""Feature Flag System - 数据库模型和 API"""
+"""Feature Flag System - 数据库模型和 API
+
+EXPERIMENTAL: Not connected to core paths. Models/Routes exist but unused by production flow.
+"""
 import hashlib
 import sqlite3
 import json
