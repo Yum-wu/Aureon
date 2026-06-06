@@ -401,6 +401,18 @@ def _embed_api(texts: List[str], provider: str, batch_size: int = 10) -> np.ndar
     return result
 
 
+def embed_texts_as_list(texts: List[str]) -> List[np.ndarray]:
+    """Embed texts and return as list of vectors (for SemanticTextSplitter).
+
+    Wrapper around embed_texts_llm that returns a list of individual vectors
+    instead of a 2D numpy array.
+    """
+    if not texts:
+        return []
+    result = embed_texts_llm(texts)
+    return [result[i] for i in range(len(texts))]
+
+
 def embed_texts_llm(texts: List[str], batch_size: int = 10) -> np.ndarray:
     """Multi-provider embedding with fallback chain.
 
@@ -824,8 +836,6 @@ def rerank(query: str, chunks: List[Dict[str, Any]], top_k: int = 3) -> List[Dic
     # No score threshold or cliff detection — let CRAG handle relevance filtering.
     # The reranker's job is RANKING only: better results first.
     return reranked[:top_k]
-
-    return filtered[:top_k]
 
 
 def get_bm25_stats() -> dict:

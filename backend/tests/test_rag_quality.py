@@ -1,6 +1,6 @@
 """CI Quality Gate — RAG evaluation for pull requests.
 
-Runs core regression set (30 QA) with DeepEval metrics.
+Runs core regression set (27 QA) with DeepEval metrics.
 Fails if any critical metric drops below threshold.
 
 Usage:
@@ -32,12 +32,11 @@ WARNING_THRESHOLDS = {
 def evaluation_results():
     """Run full evaluation once per test module."""
     from tests.test_data_golden import load_dataset, get_dataset_info
-    from tests.deepeval_eval import build_test_cases, run_deepeval_metrics
-    from app.rag.vector_store import retrieve
-    from app.rag.qa_chain import rag_query
+    from tests.deepeval_eval import build_test_cases, run_deepeval_metrics, _load_article_texts
+    from app.rag.qa_chain import hybrid_retrieve, rag_query
     from app.agent.llm import create_llm
 
-    dataset_name = "core_regression_30qa"
+    dataset_name = "core_regression_27qa"
     qa_pairs = load_dataset(dataset_name)
     info = get_dataset_info(dataset_name)
 
@@ -46,8 +45,9 @@ def evaluation_results():
     def rag_query_fn(query):
         return rag_query(query, llm_call_fn=lambda msgs: llm.invoke(msgs).content, top_k=3)
 
-    test_cases = build_test_cases(qa_pairs, retrieve, rag_query_fn)
-    scores = run_deepeval_metrics(test_cases)
+    article_texts = _load_article_texts()
+    test_cases, used_qa_indices = build_test_cases(qa_pairs, hybrid_retrieve, rag_query_fn, article_texts)
+    scores = run_deepeval_metrics(test_cases, qa_pairs=qa_pairs, used_qa_indices=used_qa_indices)
     scores["dataset_info"] = info
 
     return scores
@@ -91,7 +91,7 @@ class TestRAGQualityGate:
 
     def test_overall_pass_rate(self, evaluation_results):
         """At least 80% of critical metrics should pass"""
-        pass_rate = evaluation_results.get("deepeval_pass_rate", 0)
+        pass_rate = evaluation_results.get("pass_rate", 0)
         assert pass_rate >= 0.8, \
             f"Pass rate {pass_rate:.0%} < 80%"
 

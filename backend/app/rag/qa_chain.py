@@ -22,6 +22,7 @@ _RRF_K = int(os.getenv("RRF_K", "200"))
 _RETRIEVAL_MULTIPLIER = int(os.getenv("RETRIEVAL_MULTIPLIER", "7"))
 _RERANK_CANDIDATES = int(os.getenv("RERANK_CANDIDATES", "20"))
 MULTI_QUERY_ENABLED = os.getenv("MULTI_QUERY_ENABLED", "true").lower() == "true"
+SEMANTIC_CHUNKING_ENABLED = os.getenv("SEMANTIC_CHUNKING_ENABLED", "false").lower() == "true"
 
 # Keywords that uniquely identify specific articles — used for title/slug boost.
 # Only terms that are specific enough to disambiguate between articles.
@@ -49,8 +50,8 @@ _VECTOR_MIN_COSINE = float(os.getenv("VECTOR_MIN_COSINE", "0.001"))
 
 # Vector RRF contribution cap: limit how many vector results enter RRF fusion.
 # Prevents low-confidence vector matches from drowning precise BM25 results.
-_VECTOR_MAX_CONTRIB = int(os.getenv("VECTOR_MAX_CONTRIB", "3"))
-_VECTOR_CONFIDENCE_THRESHOLD = float(os.getenv("VECTOR_CONFIDENCE_THRESHOLD", "0.05"))
+_VECTOR_MAX_CONTRIB = int(os.getenv("VECTOR_MAX_CONTRIB", "10"))
+_VECTOR_CONFIDENCE_THRESHOLD = float(os.getenv("VECTOR_CONFIDENCE_THRESHOLD", "0.01"))
 
 # LLM-based negative detection: when top retrieval score is below this threshold,
 # use an LLM classifier to decide if the query is answerable by the knowledge base.
@@ -60,6 +61,10 @@ _NEGATIVE_DETECTION_ENABLED = os.getenv("NEGATIVE_DETECTION_ENABLED", "true").lo
 
 async def classify_query_answerable(query: str, model: str = None) -> bool:
     """Use LLM to determine if a query can be answered by the knowledge base."""
+    # Fast-path: keyword heuristic before LLM call
+    if _is_negative_by_keywords(query):
+        return False
+
     from app.agent.llm import create_llm
 
     llm = create_llm(model=model, temperature=0.0, streaming=False)
@@ -85,8 +90,47 @@ async def classify_query_answerable(query: str, model: str = None) -> bool:
         return True
 
 
+# ── Negative detection: keyword fast-path ──
+# Queries matching these patterns are almost certainly unanswerable by the KB.
+# Checked BEFORE the LLM classifier to save API calls and improve accuracy.
+_NEGATIVE_KEYWORDS_ZH = [
+    "定价", "价格", "收费", "费用", "免费额度",
+    "团队有多少人", "团队规模", "多少人",
+    "训练数据量", "训练数据", "数据量是多少",
+    "版本号", "最新版本", "当前版本",
+    "什么时候发布", "发布时间", "发布日期",
+    "毕业于", "教育背景", "学历",
+    "创始人", "CEO", "公司地址",
+]
+_NEGATIVE_KEYWORDS_EN = [
+    "pricing", "price", "cost", "how much",
+    "team size", "how many people",
+    "training data size", "training data volume",
+    "version number", "latest version",
+    "when was", "release date",
+    "university", "education",
+    "founder", "CEO", "headquarters",
+]
+
+
+def _is_negative_by_keywords(query: str) -> bool:
+    """Fast heuristic: detect obviously unanswerable queries by keywords."""
+    q = query.lower()
+    for kw in _NEGATIVE_KEYWORDS_ZH:
+        if kw in q:
+            return True
+    for kw in _NEGATIVE_KEYWORDS_EN:
+        if kw in q:
+            return True
+    return False
+
+
 def classify_query_answerable_sync(query: str, llm_call_fn) -> bool:
     """Sync version: use LLM to determine if a query can be answered by the knowledge base."""
+    # Fast-path: keyword heuristic before LLM call
+    if _is_negative_by_keywords(query):
+        return False
+
     prompt = (
         "你是一个企业知识库的查询分类器。判断以下查询是否能在"
         "\"AI技术、开发经验、部署实践\"相关的知识库中找到答案。\n\n"
@@ -175,7 +219,7 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
 
     for rank, doc in enumerate(bm25_deduped, 1):
         key = _doc_key(doc)
-        rrf_scores[key] = rrf_scores.get(key, 0) + 1.0 / (_RRF_K + rank) * 1.1
+        rrf_scores[key] = rrf_scores.get(key, 0) + 1.0 / (_RRF_K + rank)
         doc_map[key] = doc
 
     _vector_contrib_count = 0
@@ -215,8 +259,11 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
         doc["score"] = score
         candidates.append(doc)
 
-    # Reranker disabled — RRF scores alone give better recall (93.9% vs 87.8%).
-    # CRAG assessment in rag_query handles quality filtering.
+    # Rerank BEFORE diversity selection: cross-encoder re-scores candidates
+    # for precise relevance. Keep enough candidates for diversity selection.
+    if len(candidates) > top_k:
+        rerank_limit = max(top_k * 5, 15)  # keep more candidates for diversity
+        candidates = rerank(query, candidates, top_k=min(len(candidates), rerank_limit))
 
     # Diversity selection: only for cross-article queries (comparisons, summaries).
     # For simple factual queries, return top-k by score — this maximizes precision
@@ -242,14 +289,7 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
     else:
         selected = candidates[:top_k]
 
-    # Rerank: cross-encoder 精排 top-20 → top-3
-    if len(selected) > top_k:
-        selected = rerank(query, selected, top_k=top_k)
-
-    # Reranker is for ranking only — no score threshold here.
-    # CRAG assessment (below) handles relevance filtering.
-
-    # Relevance gate: if best RRF score is too low, both retrievers failed
+    # Relevance gate: if best score is too low, both retrievers failed
     if selected and selected[0].get("score", 0) < _MIN_RELEVANCE_SCORE:
         logger.info("All results below relevance threshold (max=%.4f < %.4f), returning empty",
                      selected[0]["score"], _MIN_RELEVANCE_SCORE)
@@ -426,9 +466,10 @@ QA_SYSTEM_PROMPT = """你是知识库问答助手。基于提供的参考文档�
 
 规则：
 1. 只基于参考文档内容回答。参考文档中没有的信息，说"文档中未提及"。
-2. 在回答末尾标注引用来源，格式：引用文章标题。
+2. 回答必须直接针对用户问题，不要添加与问题无关的额外信息。
 3. 如果问题与文档无关，礼貌说明无法回答。
-4. 回答简洁准确。
+4. 回答简洁准确，每个句子都必须直接回答用户的问题。
+5. 在回答末尾标注引用来源，格式：[来源: 文章标题]。
 {lang_instruction}
 
 参考文档中每段以 [Source N: 文章标题] 开头。引用时用自然方式标注来源，例如：[来源: Hermes Agent 实战]。
@@ -441,9 +482,10 @@ QA_SYSTEM_PROMPT_EN = """You are a knowledge base QA assistant. Answer user ques
 
 Rules:
 1. Only answer based on the reference documents. If information is not in the documents, say "not mentioned in the documents".
-2. Cite sources at the end of your answer, format: article title.
+2. Your answer must directly address the user's question. Do not include information unrelated to the question.
 3. If the question is unrelated to the documents, politely explain that you cannot answer.
-4. Keep answers concise and accurate.
+4. Keep answers concise and focused. Every sentence must directly answer the user's question.
+5. Cite sources at the end of your answer, format: [Source: Article Title].
 {lang_instruction}
 
 Each paragraph in the reference documents starts with [Source N: Article Title]. When citing, naturally mention the source, e.g., [Source: Hermes Agent in Practice].
@@ -797,8 +839,8 @@ def run_incremental_index(filepath: str) -> dict:
         separators=["\n## ", "\n### ", "\n\n", "\n", " ", ""],
     )
     child_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=300,
-        chunk_overlap=30,
+        chunk_size=512,
+        chunk_overlap=50,
         separators=["\n", " ", ""],
     )
 
@@ -833,11 +875,112 @@ def run_incremental_index(filepath: str) -> dict:
     }
 
 
+# ── Contextual Retrieval: LLM-generated context prefixes ──
+# Anthropic's technique: prepend each chunk with a brief context explaining
+# its source document and position. Reduces retrieval errors by up to 49%.
+# Reference: https://www.anthropic.com/news/contextual-retrieval
+
+_CONTEXTUAL_PROMPT_TEMPLATE = """Generate a short context prefix (1-2 sentences) for the following text chunk. The prefix should explain:
+1. Which document this chunk comes from (use the document title)
+2. What topic/section this chunk covers within that document
+
+Keep the prefix under 50 words. Write in the same language as the chunk (Chinese or English).
+
+Document title: {title}
+Full document (for reference):
+{document}
+
+Text chunk:
+{chunk}
+
+Context prefix:"""
+
+
+def _add_contextual_prefixes(
+    chunks: List[Dict[str, Any]],
+    docs: List[Dict[str, Any]],
+    llm_call_fn,
+    batch_size: int = 10,
+) -> List[Dict[str, Any]]:
+    """Add LLM-generated context prefixes to each chunk.
+
+    For each chunk, generates a brief prefix explaining its source document
+    and position within the document. The prefix is prepended to the chunk text
+    for embedding, and stored in metadata for display.
+
+    Args:
+        chunks: List of chunk dicts with "text" and "metadata" fields
+        docs: List of document dicts with "metadata" and "content" fields
+        llm_call_fn: LLM invocation function (messages -> response)
+        batch_size: Number of chunks to process per LLM call (for efficiency)
+
+    Returns:
+        Chunks with contextual prefixes added to text and metadata
+    """
+    # Build doc lookup by slug
+    doc_map = {doc["metadata"]["slug"]: doc for doc in docs}
+
+    # Group chunks by source document for batch processing
+    doc_chunks: Dict[str, List[int]] = {}
+    for i, chunk in enumerate(chunks):
+        slug = chunk["metadata"].get("slug", "")
+        if slug not in doc_chunks:
+            doc_chunks[slug] = []
+        doc_chunks[slug].append(i)
+
+    total_prefixes = 0
+    for slug, chunk_indices in doc_chunks.items():
+        doc = doc_map.get(slug)
+        if not doc:
+            continue
+
+        doc_title = doc["metadata"].get("title", slug)
+        doc_content = doc["content"][:2000]  # truncate for prompt
+
+        # Process chunks in batches
+        for batch_start in range(0, len(chunk_indices), batch_size):
+            batch_indices = chunk_indices[batch_start:batch_start + batch_size]
+
+            for idx in batch_indices:
+                chunk_text = chunks[idx]["text"][:300]  # truncate for prompt
+
+                prompt = _CONTEXTUAL_PROMPT_TEMPLATE.format(
+                    title=doc_title,
+                    document=doc_content,
+                    chunk=chunk_text,
+                )
+
+                try:
+                    response = llm_call_fn([{"role": "user", "content": prompt}])
+                    prefix = str(response).strip()
+                    if prefix and len(prefix) < 200:  # sanity check
+                        chunks[idx]["metadata"]["contextual_prefix"] = prefix
+                        # Prepend prefix to text for embedding
+                        chunks[idx]["text"] = f"{prefix}\n\n{chunks[idx]['text']}"
+                        total_prefixes += 1
+                except Exception as e:
+                    logger.warning("Contextual prefix generation failed for chunk %d: %s", idx, e)
+
+            logger.info("Contextual prefixes: %d/%d chunks processed for %s",
+                       min(batch_start + batch_size, len(chunk_indices)),
+                       len(chunk_indices), doc_title)
+
+    logger.info("Contextual Retrieval: added %d prefixes to %d chunks", total_prefixes, len(chunks))
+    return chunks
+
+
 def run_index_pipeline(
     articles_dir: str,
     llm_call_fn = None,
+    enable_contextual: bool = True,
 ) -> dict:
-    """Full index pipeline: load → split → embed → store."""
+    """Full index pipeline: load → split → [contextual prefix] → embed → store.
+
+    When enable_contextual=True and llm_call_fn is provided, each chunk gets
+    an LLM-generated context prefix explaining its source document and position.
+    This is Anthropic's Contextual Retrieval technique — reduces retrieval errors
+    by up to 49% (https://www.anthropic.com/news/contextual-retrieval).
+    """
     start = time.time()
 
     from app.rag.loader import load_markdown_files
@@ -859,15 +1002,15 @@ def run_index_pipeline(
 
     # 2. Split into parent-child structure
     # Parent: 1500 chars (rich context for LLM)
-    # Child:  300 chars (small chunks for precise retrieval)
+    # Child:  512 chars (small chunks for precise retrieval)
     parent_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1500,
         chunk_overlap=100,
         separators=["\n## ", "\n### ", "\n\n", "\n", " ", ""],
     )
     child_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=300,
-        chunk_overlap=30,
+        chunk_size=512,
+        chunk_overlap=50,
         separators=["\n", " ", ""],
     )
 
@@ -875,7 +1018,23 @@ def run_index_pipeline(
     for doc in docs:
         parents = parent_splitter.split_text(doc["content"])
         for parent_idx, parent_text in enumerate(parents):
-            children = child_splitter.split_text(parent_text)
+            # Use semantic chunking if enabled, otherwise fixed-size splitting
+            if SEMANTIC_CHUNKING_ENABLED:
+                try:
+                    from app.rag.semantic_splitter import SemanticTextSplitter
+                    from app.rag.vector_store import embed_texts_as_list
+                    semantic_splitter = SemanticTextSplitter(
+                        embed_fn=embed_texts_as_list,
+                        breakpoint_threshold=80.0,
+                        max_chunk_size=800,
+                        min_chunk_size=100,
+                    )
+                    children = semantic_splitter.split_text(parent_text)
+                except Exception as e:
+                    logger.warning("Semantic chunking failed for parent %d: %s, falling back to fixed", parent_idx, e)
+                    children = child_splitter.split_text(parent_text)
+            else:
+                children = child_splitter.split_text(parent_text)
             for child_text in children:
                 chunks.append({
                     "text": child_text,
@@ -886,19 +1045,27 @@ def run_index_pipeline(
                     },
                 })
 
-    # 3. Embed
+    # 3. Contextual Retrieval: add LLM-generated context prefix to each chunk
+    contextual_count = 0
+    if enable_contextual and llm_call_fn and chunks:
+        chunks = _add_contextual_prefixes(chunks, docs, llm_call_fn)
+        contextual_count = sum(1 for c in chunks if c.get("metadata", {}).get("contextual_prefix"))
+
+    # 4. Embed (text includes contextual prefix if enabled)
     texts_to_embed = [c["text"] for c in chunks]
     embeddings = embed_texts_llm(texts_to_embed)
 
-    # 4. Store
+    # 5. Store
     save_index(chunks, embeddings)
 
     elapsed = time.time() - start
-    print(f"[RAG] Index complete: {len(docs)} docs, {len(chunks)} chunks in {elapsed:.1f}s")
+    print(f"[RAG] Index complete: {len(docs)} docs, {len(chunks)} chunks "
+          f"({contextual_count} contextual) in {elapsed:.1f}s")
 
     return {
         "status": "ok",
         "documents_indexed": len(docs),
         "chunks_created": len(chunks),
+        "contextual_prefixes": contextual_count,
         "elapsed_seconds": round(elapsed, 1),
     }

@@ -1,1 +1,0 @@
-invalid type: string "fetchWeather({ lat: latitude, lon: longitude });\n    },\n    (error) => {\n      setError(\"无法获取位置，请手动搜索\");\n    }\n  );\n};\n```\n\n## 多城市对比\n\n用户可以将多个城市的天气信息放在一起对比，这个功能需要对每个城市分别请求，然后汇总展示。", expected i64�\n    try {", expected f64./chroma_db\")\n\n�����

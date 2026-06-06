@@ -270,8 +270,17 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
 @router.post("/api/rag/index", response_model=RAGIndexResponse)
 @limiter.limit("1/second")
 async def rag_index_endpoint(request: Request):
-    """Re-index all articles into Chroma + clear caches + rebuild BM25."""
-    result = run_index_pipeline(ARTICLES_DIR)
+    """Re-index all articles into Chroma + clear caches + rebuild BM25.
+
+    When Contextual Retrieval is enabled (default), each chunk gets an
+    LLM-generated context prefix before embedding.
+    """
+    from app.agent.llm import create_llm
+
+    llm = create_llm(temperature=0.0, streaming=False)
+    llm_call_fn = lambda msgs: llm.invoke(msgs).content
+
+    result = run_index_pipeline(ARTICLES_DIR, llm_call_fn=llm_call_fn, enable_contextual=True)
 
     # Clear all caches so fresh results are served
     from app.cache.redis_client import get_redis, _mem_cache

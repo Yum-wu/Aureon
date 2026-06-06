@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Aureon 项目开发指南。
+Aureon 全栈 AI 应用开发指南。
 
 ## 项目信息
 
@@ -14,14 +14,21 @@ Aureon 项目开发指南。
 | 数据库 | SQLite（记忆）+ Chroma（向量库）|
 | AI API | DeepSeek / 智谱 AI / DashScope (embedding) |
 
+## 核心概念
+
+- **RAG**：检索增强生成，基于文档的知识问答
+- **Agent**：LangChain Agent，具备 Tool Calling 能力的对话代理
+- **Memory**：三层记忆（L0 对话 / L1 原子记忆 / L3 人格）
+- **LangGraph**：状态图编排，支持流式输出的 Agent 工作流
+
 ## 构建命令
 
 ### 前端
 ```bash
-npm install && npm run dev
-npm run build
-npm test
-npm run lint
+npm install && npm run dev    # 开发
+npm run build                 # 构建
+npm test                      # 测试
+npm run lint                  # 检查
 ```
 
 ### 后端
@@ -29,8 +36,8 @@ npm run lint
 cd backend
 pip install -r requirements.txt
 cp .env.example .env
-uvicorn app.main:app --reload --port 8000
-pytest
+uvicorn app.main:app --reload --port 8000   # 开发
+pytest                                          # 测试
 ```
 
 ### Docker
@@ -40,6 +47,13 @@ docker-compose up -d
 docker-compose logs -f
 docker-compose down
 ```
+
+## 测试策略
+
+- 前端：`npm test`，关注组件渲染和 hooks 行为
+- 后端：`pytest`，390+ 测试覆盖各模块
+- **修改代码后必须跑对应测试**，推送前全量通过
+- CI 用 GitHub Actions，部署用 Railway
 
 ## API 端点
 
@@ -62,31 +76,21 @@ Aureon/
 └── docker-compose.yml
 ```
 
+## 代码探索规则
+
+- **优先用 code-review-graph 图谱工具**探索代码结构和依赖关系
+- query_graph_tool：查调用者、被调用者、测试覆盖
+- get_impact_radius_tool：评估改动影响范围
+- semantic_search_nodes_tool：按名称/语义搜索代码实体
+- get_architecture_overview_tool：架构概览
+- 仅在图谱未覆盖时 fallback 到 Grep/Glob/Read
+
 ## 代码规范
 
 - 前端 TypeScript + Tailwind CSS + React hooks
 - 后端 Python + FastAPI + async
 - 代码注释英文
-
-## 环境要求
-
-Node.js 18+ / npm 9+ / Python 3.10+ / pip 21+
-
-## 插件（16 个）
-
-自动：`security-essentials` `tailwind-expert` `testing-toolkit` `project-management` `shadcn-style-expert`
-
-手动：
-```
-前端     /frontend-expert /component-architecture /state-management /react-optimization /performance-audit
-Tailwind /tailwind-expert /setup-tailwind /validate-tailwind-config /fix-custom-utilities
-Python   /python-developer
-测试     /testing-best-practices
-质量     /code-quality /fix-issue /fix-zh /review-zh
-管理     /project-management /create-tasks /from-prd /generate-docs
-```
-
-Agent 自动识别：`Frontend Expert` `Tailwind CSS Expert` `Testing Toolkit` `Project Management`
+- 详见 `.claude/rules/code-quality.md`
 
 ## 部署
 

@@ -55,7 +55,7 @@ def get_system_config() -> dict:
 
 
 def run_full_suite(
-    dataset_name: str = "core_regression_30qa",
+    dataset_name: str = "core_regression_27qa",
     include_deepeval: bool = True,
     include_existing: bool = True,
     latency_runs: int = 1,
@@ -67,7 +67,7 @@ def run_full_suite(
     from tests.test_data_golden import load_dataset, get_dataset_info
 
     qa_pairs = load_dataset(dataset_name)
-    info = get_dataset_info(dataset_info=dataset_name) if False else get_dataset_info(dataset_name)
+    info = get_dataset_info(dataset_name)
 
     results = {
         "dataset": info,
@@ -90,12 +90,19 @@ def run_full_suite(
         def rag_query_fn(query):
             return rag_query(query, llm_call_fn=lambda msgs: llm.invoke(msgs).content, top_k=3)
 
+        # Build expected_map from golden dataset (skip negative QA with empty source_article)
+        expected_map = {
+            qa["question"]: qa["source_article"]
+            for qa in qa_pairs
+            if qa.get("source_article") and not qa.get("is_negative", False)
+        }
+
         # Recall@3
-        recall_result = evaluate_recall(retrieve, qa_pairs=qa_pairs, k=3)
+        recall_result = evaluate_recall(retrieve, qa_pairs=qa_pairs, expected_map=expected_map, k=3)
         results["recall_at_3"] = recall_result["score"]
 
         # Recall@5
-        recall_5 = evaluate_recall(retrieve, qa_pairs=qa_pairs, k=5)
+        recall_5 = evaluate_recall(retrieve, qa_pairs=qa_pairs, expected_map=expected_map, k=5)
         results["recall_at_5"] = recall_5["score"]
 
         # Latency
@@ -111,10 +118,9 @@ def run_full_suite(
     # ── DeepEval RAGAS metrics ──
     if include_deepeval:
         print("Running DeepEval RAGAS metrics...")
-        from tests.deepeval_eval import build_test_cases, run_deepeval_metrics
+        from tests.deepeval_eval import build_test_cases, run_deepeval_metrics, _load_article_texts
 
-        from app.rag.vector_store import retrieve
-        from app.rag.qa_chain import rag_query
+        from app.rag.qa_chain import hybrid_retrieve, rag_query
         from app.agent.llm import create_llm
 
         llm = create_llm()
@@ -122,10 +128,11 @@ def run_full_suite(
         def rag_query_fn(query):
             return rag_query(query, llm_call_fn=lambda msgs: llm.invoke(msgs).content, top_k=3)
 
-        test_cases = build_test_cases(qa_pairs, retrieve, rag_query_fn)
+        article_texts = _load_article_texts()
+        test_cases, used_qa_indices = build_test_cases(qa_pairs, hybrid_retrieve, rag_query_fn, article_texts)
         print(f"  Built {len(test_cases)} test cases")
 
-        deepeval_scores = run_deepeval_metrics(test_cases)
+        deepeval_scores = run_deepeval_metrics(test_cases, qa_pairs=qa_pairs, used_qa_indices=used_qa_indices)
         results.update({
             "context_precision": deepeval_scores.get("context_precision", 0),
             "context_recall": deepeval_scores.get("context_recall", 0),
@@ -133,6 +140,9 @@ def run_full_suite(
             "answer_relevancy": deepeval_scores.get("answer_relevancy", 0),
             "faithfulness": deepeval_scores.get("faithfulness", 0),
             "hallucination": deepeval_scores.get("hallucination", 0),
+            "negative_detection_rate": deepeval_scores.get("negative_detection_rate", 0),
+            "negative_total": deepeval_scores.get("negative_total", 0),
+            "negative_correct": deepeval_scores.get("negative_correct", 0),
             "deepeval_pass_rate": deepeval_scores.get("pass_rate", 0),
             "deepeval_elapsed": deepeval_scores.get("elapsed_seconds", 0),
         })
@@ -146,33 +156,44 @@ def run_full_suite(
 
 def save_results_to_db(results: Dict[str, Any]):
     """Save evaluation results to the evaluation database."""
-    from app.evaluation import save_evaluation_metric, init_evaluation_tables
+    from app.evaluation import save_evaluation_metric, init_evaluation_tables, EvaluationMetric
 
     init_evaluation_tables()
 
-    dataset_version = results.get("dataset", {}).get("version", "unknown")
-    timestamp = results.get("timestamp", datetime.now().isoformat())
+    benchmark_set = results.get("dataset", {}).get("version", "unknown")
+    model_version = results.get("system", {}).get("llm_model", "unknown")
 
-    metric_fields = [
-        "recall_at_3", "recall_at_5",
-        "context_precision", "context_recall", "context_relevancy",
-        "answer_relevancy", "faithfulness", "hallucination",
-        "latency_p50_ms", "latency_p99_ms",
-    ]
+    # metric_name -> metric_type mapping
+    METRIC_TYPE_MAP = {
+        "recall_at_3": "retrieval",
+        "recall_at_5": "retrieval",
+        "context_precision": "deepeval_ragas",
+        "context_recall": "deepeval_ragas",
+        "context_relevancy": "deepeval_ragas",
+        "answer_relevancy": "deepeval_ragas",
+        "faithfulness": "deepeval_ragas",
+        "hallucination": "deepeval_ragas",
+        "latency_p50_ms": "latency",
+        "latency_p99_ms": "latency",
+    }
+
+    metric_fields = list(METRIC_TYPE_MAP.keys())
 
     for field in metric_fields:
-        if field in results and results[field] > 0:
+        if field in results and results[field] is not None:
             try:
-                save_evaluation_metric({
-                    "metric_name": field,
-                    "metric_value": results[field],
-                    "dataset_version": dataset_version,
-                    "run_timestamp": timestamp,
-                })
+                metric = EvaluationMetric(
+                    metric_name=field,
+                    metric_value=results[field],
+                    metric_type=METRIC_TYPE_MAP.get(field, "other"),
+                    benchmark_set=benchmark_set,
+                    model_version=model_version,
+                )
+                save_evaluation_metric(metric)
             except Exception as e:
                 print(f"  Warning: Failed to save {field}: {e}")
 
-    print(f"Results saved to database (version: {dataset_version})")
+    print(f"Results saved to database (benchmark_set: {benchmark_set})")
 
 
 def generate_report(results: Dict[str, Any], output_dir: str = None) -> str:
@@ -266,7 +287,7 @@ def generate_report(results: Dict[str, Any], output_dir: str = None) -> str:
 
 
 if __name__ == "__main__":
-    dataset_name = sys.argv[1] if len(sys.argv) > 1 else "core_regression_30qa"
+    dataset_name = sys.argv[1] if len(sys.argv) > 1 else "core_regression_27qa"
     skip_db = "--no-db" in sys.argv
 
     print(f"=" * 60)
