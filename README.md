@@ -13,38 +13,44 @@
 
 | Metric | Value |
 |--------|-------|
-| Recall@3 (Hybrid) | **97.6%** |
+| Recall@3 (Hybrid) | **95.1%** |
+| Context Precision (DeepEval) | **0.791** |
+| Faithfulness (DeepEval) | **0.967** |
+| Negative Detection | **100%** |
 | TTFT (Streaming) | **~310ms** |
-| Full RAG Latency | **~400ms** |
-| Retrieval Latency | **~10ms** |
+| Retrieval Latency | **~5.8ms** |
 | Cost per Query | **$0.001** |
 
 ## Features
 
 - **Enterprise AI Search** — Streaming answers with progressive citations
-- **Hybrid Retrieval** — BM25 keyword + Dense semantic dual-channel fusion
+- **Hybrid Retrieval** — BM25 keyword + Dense semantic + Context Compression
+- **RAG Self-Correction** — CRAG fallback when retrieval quality is low
+- **Security** — API Key auth, Prompt Injection detection, Fernet encryption
 - **Document Management** — Upload, auto-index, preview, source management
 - **System Dashboard** — Real-time metrics, health monitoring, usage analytics
 - **Analytics** — Latency, token usage, cache performance, query distribution
-- **Architecture & Performance** — Interactive architecture diagram, optimization metrics
 - **Enterprise Admin** — Workspace management, RBAC, audit logs
 - **Feature Flags** — Gradual rollout, lifecycle management
-- **Observability** — Query tracing, performance monitoring
-- **Security** — PII detection, SSO, rate limiting
+- **Observability** — Query tracing, performance monitoring (structlog)
+- **Security** — PII detection, SSO (Fernet encryption), rate limiting
 - **Cost Governance** — Per-workspace cost tracking, budget management
 - **Reliability** — Backup, incident management, SLO, circuit breaker
 - **Knowledge Intelligence** — Document version control, export
 - **AI Platform** — Multi-LLM router, confidence scoring, session memory
 - **Integration** — Enterprise connectors (Google Drive/SharePoint), IM bots
+- **426 Backend Tests** — Comprehensive test coverage
 
 ## Architecture
 
 ```
 User → Web UI (React + Vite) → FastAPI → LangGraph Orchestrator
                                            ├── Intent Classifier
-                                           ├── Hybrid Search (BM25 + BGE/Chroma)
-                                           ├── LLM (GLM-4-Flash / GPT-4o-mini)
-                                           ├── Cache (Redis + In-Memory)
+                                           ├── Hybrid Search (BM25 + BGE/Chroma + Context Compression)
+                                           ├── RAG Self-Correction (CRAG)
+                                           ├── LLM (DeepSeek / GPT-4o / Claude)
+                                           ├── Cache (Redis + In-Memory + Semantic Dedup)
+                                           ├── Prompt Injection Guard
                                            └── SSE Streaming Response
 ```
 

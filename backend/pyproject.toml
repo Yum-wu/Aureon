@@ -1,0 +1,9 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-v --tb=short"
+# Parallel execution: use -n auto flag
+# Example: pytest -n auto tests/
+
+[tool.pytest-xdist]
+# Worker isolation settings

@@ -8,10 +8,10 @@
 | 运行时 | Python 3.14+ | 系统 Python |
 | 框架 | FastAPI + uvicorn | REST + SSE 流式端点 |
 | Agent 框架 | LangChain >=0.3 | Tool Calling Agent |
-| LLM 接口 | langchain-openai (ChatOpenAI) | OpenAI 兼容接口，适配智谱 |
-| 默认模型 | GLM-4-Flash-250414 | 智谱，改 .env 可切换 |
+| LLM 接口 | langchain-openai (ChatOpenAI) | OpenAI 兼容接口，适配智谱/DeepSeek |
+| 默认模型 | deepseek-v4-flash | DeepSeek，改 .env 可切换 |
 | 数据库 | SQLite | offloads/memory.db |
-| Web Search | Tavily API | 可选，无 Key 则跳过 |
+| 安全 | Auth Middleware + Fernet | X-API-Key 认证 + SSO 加密 |
 
 ### 前端（保留）
 | 组件 | 技术 | 说明 |
@@ -99,10 +99,14 @@ data: {"type": "error",     "content": {"message": "错误描述"}}
 
 ## 安全
 
-- API Key 仅存后端 `backend/.env`，前端不携带
+- API Key 仅存后端 `backend/.env`，生产环境通过 `API_AUTH_KEY` 启用认证
+- SSO client_secret 通过 Fernet 对称加密存储
 - Calculator 工具白名单安全沙箱，禁止 `__import__`/`eval` 原生
 - read_ref 路径校验防 path traversal
 - CORS 仅允许 `localhost:5173`
+- Docker 非 root 运行（gosu appuser）
+- Redis/ES/Qdrant 密码认证
+- Prompt Injection 检测（OWASP LLM Top 10 regex）
 
 ## 启动方式
 

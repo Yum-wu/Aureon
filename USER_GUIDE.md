@@ -66,10 +66,12 @@ Local:   http://localhost:5173/
 ### 后端配置（`backend/.env`）
 
 ```env
-LLM_API_KEY=your_zhipu_api_key_here
-LLM_MODEL=GLM-4-Flash-250414
-LLM_BASE_URL=https://open.bigmodel.cn/api/paas/v4/
+LLM_API_KEY=your_deepseek_api_key_here
+LLM_MODEL=deepseek-v4-flash
+LLM_BASE_URL=https://api.deepseek.com
 TAVILY_API_KEY=
+DASHSCOPE_API_KEY=your_dashscope_api_key_here
+# API_AUTH_KEY=your_secure_api_key_here  # 生产环境启用认证
 ```
 
 ### 切换模型
@@ -78,9 +80,10 @@ TAVILY_API_KEY=
 
 | 厂商 | LLM_MODEL | LLM_BASE_URL |
 |------|-----------|-------------|
-| 智谱 GLM-4-Flash | `GLM-4-Flash-250414` | `https://open.bigmodel.cn/api/paas/v4/` |
 | DeepSeek | `deepseek-chat` | `https://api.deepseek.com/v1` |
+| 智谱 GLM-4-Flash | `GLM-4-Flash-250414` | `https://open.bigmodel.cn/api/paas/v4/` |
 | 通义千问 | `qwen-plus` | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
+| Claude | `claude-sonnet-4-20250514` | `https://api.anthropic.com/v1` |
 
 ### 前端配置
 
@@ -239,6 +242,8 @@ ALL_TOOLS = [
 | 样式 | Tailwind CSS 4 |
 | 后端框架 | Python FastAPI |
 | Agent 框架 | LangChain 1.x |
-| 模型 | 智谱 GLM-4-Flash |
-| 数据库 | SQLite |
+| 模型 | DeepSeek / 智谱 / Claude |
+| 数据库 | SQLite + ChromaDB |
+| 缓存 | Redis + In-Memory |
+| 安全 | API Key Auth + Fernet Encryption |
 | 实时通信 | SSE |

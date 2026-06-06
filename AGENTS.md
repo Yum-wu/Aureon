@@ -14,14 +14,17 @@ Aureon/
 │   ├── agent/        # LLM 工厂、Agent 工厂、流式执行器
 │   ├── tools/        # @tool 装饰器，__init__.py 统一注册 ALL_TOOLS
 │   ├── memory/       # L0-L3 四层记忆 + 上下文卸载
-│   ├── rag/          # ChromaDB + Zhipu Embedding + MMR
+│   ├── rag/          # ChromaDB + Hybrid Search + Context Compression
 │   │   ├── vector_store.py  # 向量库 + BM25 检索
-│   │   ├── qa_chain.py      # RAG pipeline（检索→生成→来源）
+│   │   ├── qa_chain.py      # RAG pipeline（检索→CRAG→压缩→生成→来源）
+│   │   ├── guardrails.py    # Prompt Injection 检测
 │   │   ├── evaluator.py     # Recall + Faithfulness + 延迟
 │   │   └── models.py        # Pydantic 请求/响应
+│   ├── cache/        # Redis + 内存缓存、语义缓存去重
+│   ├── routers/      # API 路由（chat.py, rag.py, crew.py）
 │   ├── features/     # Feature Flag（灰度发布）
 │   ├── observability/ # Query Trace、统计
-│   ├── security/     # PII、SSO、Rate Limiting
+│   ├── security/     # PII、SSO（Fernet 加密）、Rate Limiting
 │   ├── evaluation/   # 评估指标、基准测试
 │   ├── cost/         # 成本追踪、Budget
 │   ├── reliability/  # 备份、事件、SLO、熔断器
@@ -30,17 +33,25 @@ Aureon/
 │   ├── integration/  # 企业连接器、IM Bot
 │   ├── langgraph/    # 工作流引擎 + MCP
 │   ├── api/          # 模型 + Analytics
+│   ├── common.py     # SSE_HEADERS, sse_event(), mask_secret
 │   ├── config.py     # pydantic_settings
-│   └── main.py       # FastAPI 入口
+│   └── main.py       # FastAPI 入口 + Auth Middleware
 ├── backend/tests/     # 426 tests
 ├── src/               # React 前端
 │   ├── components/ hooks/ pages/ services/ i18n/ types/
-│   └── (49 tests, 10 files)
+│   ├── hooks/AuthContext.ts    # Auth 状态定义
+│   └── hooks/AuthProvider.tsx  # Auth Provider
 ├── crew/              # CrewAI 文章生成
 └── docker-compose.yml
 ```
 
 ## 开发规范
+
+### 运行时环境
+- **Python**: 3.12（已固化，见 `.python-version`）
+- **Node.js**: 20 LTS
+- **Docker**: 所有 Dockerfile 统一 `python:3.12-slim`
+- **CI**: GitHub Actions 使用 `python-version: '3.12'`
 
 ### 后端
 - 工具：`@tool` + 类型注解 + docstring → `ALL_TOOLS` 注册
@@ -48,7 +59,13 @@ Aureon/
 - 输入：`{"messages": [HumanMessage(content=...)]}`
 - 流式：`graph.astream_events(..., version="v2")`
 - 测试：`tests/` + pytest + pytest-asyncio
-- API Key 仅存 `.env`
+- API Key 仅存 `.env`，生产环境通过 `API_AUTH_KEY` 启用认证
+- 敏感字段（SSO secret/LLM key）通过 `security/__init__.py` Fernet 加密存储
+- Docker 非 root 运行（gosu appuser）
+- **Rerank 优化参数**（qa_chain.py）：
+  - `RERANK_CANDIDATES`：rerank 候选数，默认 `12`
+  - `ADAPTIVE_RERANK_THRESHOLD`：自适应跳过阈值，默认 `0.5`（top1/top2 分差比例）
+  - `RETRIEVAL_MULTIPLIER`：检索乘数，默认 `7`
 
 ### 前端
 - TypeScript + Tailwind CSS 4 + tailwindcss-animate
@@ -66,8 +83,8 @@ Aureon/
 - 异步优先：`async def` + `asyncio`
 - 异常处理：禁裸 `except`，至少 `logger.exception()`
 - 路径安全：`.resolve()` + 前缀检查
-- 日志：`logging.getLogger(__name__)`，禁 `print`
-- SSE 输出：`json.dumps(..., ensure_ascii=False)`
+- 日志：`structlog.get_logger(__name__)`，禁 `print`，禁 `logging.getLogger`
+- SSE 输出：`json.dumps(..., ensure_ascii=False)`，使用 `sse_event()` + `SSE_HEADERS`
 
 ## 记忆系统
 
@@ -110,7 +127,10 @@ npx vite preview --port 5174 --host 127.0.0.1
 | GET | /api/rag/analytics/{usage,latency,tokens,cache} | 分析 |
 | POST | /api/langgraph/run | LangGraph |
 | POST | /api/crew/generate[/stream] | CrewAI |
+| GET | /api/crew/health | Crew 健康检查 |
 | GET | /api/health | 健康检查 |
+
+**认证**：配置 `API_AUTH_KEY` 后，所有 `/api/` 端点需 `X-API-Key` header（白名单：`/api/health`、`/api/crew/health`、`/metrics`）
 
 语言规则：所有回复必须使用中文
 

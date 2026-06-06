@@ -149,6 +149,7 @@ def _warmup_bm25():
     Runs in background thread at startup. Non-blocking.
     When index is empty (e.g. after Railway restart), automatically
     rebuilds using API embedding — no local BGE model, no OOM.
+    Also eagerly loads GPU models for faster first-request latency.
     """
     global _bm25_warmup_done, _index_ready
     try:
@@ -176,6 +177,14 @@ def _warmup_bm25():
                 logger.error("Auto-rebuild failed: %s", e)
         else:
             logger.info("Index OK: %d docs, %d chunks", doc_count, chunk_count)
+
+        # Eagerly load GPU models for faster first-request latency
+        try:
+            from app.rag.embed_gpu import eager_load_models
+            eager_load_models()
+        except Exception as e:
+            logger.warning("GPU model eager loading failed (non-fatal): %s", e)
+
     except Exception as e:
         logger.warning("BM25 warmup / index check failed (non-fatal): %s", e)
     finally:
