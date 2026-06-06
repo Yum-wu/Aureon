@@ -13,6 +13,7 @@ Aureon 全栈 AI 应用开发指南。
 | 端口 | 前端 5173 / 后端 8000 |
 | 数据库 | SQLite（记忆）+ Chroma（向量库）|
 | AI API | DeepSeek / 智谱 AI / DashScope (embedding) |
+| 安全 | API Key Auth, Prompt Injection Guard, Fernet Encryption |
 
 ## 核心概念
 
@@ -51,7 +52,7 @@ docker-compose down
 ## 测试策略
 
 - 前端：`npm test`，关注组件渲染和 hooks 行为
-- 后端：`pytest`，390+ 测试覆盖各模块
+- 后端：`pytest`，426 测试覆盖各模块
 - **修改代码后必须跑对应测试**，推送前全量通过
 - CI 用 GitHub Actions，部署用 Railway
 
@@ -69,7 +70,7 @@ docker-compose down
 Aureon/
 ├── src/components/  hooks/  services/  utils/
 ├── backend/app/{agent,tools,memory,rag,features,observability,security,evaluation,cost,reliability,knowledge,ai_platform,integration,langgraph,api}/
-├── backend/tests/   (390 tests)
+├── backend/tests/   (426 tests)
 ├── crew/            CrewAI 文章生成
 ├── dist/            构建输出
 ├── docs/            文档

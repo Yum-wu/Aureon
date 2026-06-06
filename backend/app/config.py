@@ -47,6 +47,12 @@ class Settings(BaseSettings):
     vector_backend: str = "chroma"
     qdrant_url: str = "http://localhost:6333"
     qdrant_api_key: str = ""
+    qdrant_collection: str = "aureon"
+
+    # GPU settings (auto-detect CUDA availability)
+    gpu_enabled: bool = False  # Set True only when GPU confirmed
+    embedding_batch_size: int = 64
+    reranker_device: str = "cpu"  # "cuda" or "cpu"
 
     offload_max_chars: int = 1000
     session_max_messages: int = 500

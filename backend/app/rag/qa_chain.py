@@ -20,7 +20,8 @@ logger = structlog.get_logger()
 
 _RRF_K = int(os.getenv("RRF_K", "200"))
 _RETRIEVAL_MULTIPLIER = int(os.getenv("RETRIEVAL_MULTIPLIER", "7"))
-_RERANK_CANDIDATES = int(os.getenv("RERANK_CANDIDATES", "20"))
+_RERANK_CANDIDATES = int(os.getenv("RERANK_CANDIDATES", "12"))
+_ADAPTIVE_RERANK_THRESHOLD = float(os.getenv("ADAPTIVE_RERANK_THRESHOLD", "0.5"))
 MULTI_QUERY_ENABLED = os.getenv("MULTI_QUERY_ENABLED", "true").lower() == "true"
 SEMANTIC_CHUNKING_ENABLED = os.getenv("SEMANTIC_CHUNKING_ENABLED", "true").lower() == "true"
 
@@ -70,8 +71,7 @@ def compress_context(query: str, chunks: List[Dict[str, Any]], threshold: float 
     Computes cosine similarity between query embedding and each chunk embedding.
     Removes chunks below threshold to reduce token waste in LLM context.
 
-    Based on LangChain's EmbeddingsFilter pattern but implemented directly with numpy
-    to avoid heavy langchain.retrievers dependency.
+    Uses GPU embedder when available for continuous GPU utilization.
 
     Args:
         query: User query text
@@ -90,7 +90,19 @@ def compress_context(query: str, chunks: List[Dict[str, Any]], threshold: float 
     try:
         # Embed query and chunks together for consistent embeddings
         texts = [query] + [c["text"] for c in chunks]
-        embeddings = embed_texts_llm(texts)
+
+        # Try GPU embedder first for continuous GPU utilization
+        embeddings = None
+        try:
+            from app.rag.vector_store import _get_gpu_embedder
+            gpu_embedder = _get_gpu_embedder()
+            if gpu_embedder is not None:
+                embeddings = gpu_embedder.encode(texts, batch_size=len(texts))
+        except Exception:
+            pass
+
+        if embeddings is None:
+            embeddings = embed_texts_llm(texts)
 
         query_emb = embeddings[0]
         chunk_embs = embeddings[1:]
@@ -328,11 +340,21 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
         doc["score"] = score
         candidates.append(doc)
 
-    # Rerank BEFORE diversity selection: cross-encoder re-scores candidates
-    # for precise relevance. Keep enough candidates for diversity selection.
+    # Adaptive Reranking: skip rerank when top-1 has high confidence
     if len(candidates) > top_k:
-        rerank_limit = max(top_k * 5, 15)  # keep more candidates for diversity
-        candidates = rerank(query, candidates, top_k=min(len(candidates), rerank_limit))
+        top1_score = candidates[0].get("score", 0)
+        top2_score = candidates[1].get("score", 0) if len(candidates) > 1 else 0
+        score_gap = top1_score - top2_score if top1_score > 0 else 0
+        gap_ratio = score_gap / top1_score if top1_score > 0 else 0
+
+        if gap_ratio >= _ADAPTIVE_RERANK_THRESHOLD:
+            logger.info(
+                "Adaptive rerank: skipping (top1=%.4f, gap_ratio=%.2f >= %.2f threshold)",
+                top1_score, gap_ratio, _ADAPTIVE_RERANK_THRESHOLD,
+            )
+        else:
+            rerank_limit = max(top_k * 3, 10)
+            candidates = rerank(query, candidates, top_k=min(len(candidates), rerank_limit))
 
     # Diversity selection: only for cross-article queries (comparisons, summaries).
     # For simple factual queries, return top-k by score — this maximizes precision
@@ -1059,3 +1081,272 @@ def run_index_pipeline(
         "contextual_prefixes": contextual_count,
         "elapsed_seconds": round(elapsed, 1),
     }
+
+
+# ── Async RAG Pipeline ──
+# Parallel BM25 + Vector retrieval via asyncio.gather
+
+
+async def generate_answer_async(
+    query: str,
+    context: str,
+    llm_call_fn,
+    system_prompt: str = None,
+    lang: str = "zh",
+) -> str:
+    """Async version of generate_answer. Call LLM with context and query."""
+    if system_prompt is None:
+        system_prompt = QA_SYSTEM_PROMPT_EN if lang == "en" else QA_SYSTEM_PROMPT
+    lang_instr = lang_instruction(lang).strip()
+    prompt = system_prompt.format(context=context, lang_instruction=lang_instr)
+    messages = [
+        {"role": "system", "content": prompt},
+        {"role": "user", "content": query},
+    ]
+    return await llm_call_fn(messages)
+
+
+async def hybrid_retrieve_async(
+    query: str,
+    top_k: int = 3,
+    lang_filter: str = None,
+) -> List[Dict[str, Any]]:
+    """Async hybrid retrieval: BM25 + Vector in parallel via asyncio.gather.
+
+    Runs BM25 keyword search and vector search concurrently,
+    then fuses results with RRF. Includes all quality filters from sync version.
+
+    Args:
+        query: Query text
+        top_k: Number of results to return
+        lang_filter: Optional language filter
+
+    Returns:
+        List of top_k document chunks
+    """
+    import asyncio
+
+    # Run both retrievers in parallel
+    bm25_task = asyncio.to_thread(retrieve_keyword, query, top_k=top_k * _RETRIEVAL_MULTIPLIER, lang_filter=lang_filter)
+
+    from app.config import settings
+    if settings.vector_backend == "qdrant":
+        vector_task = asyncio.to_thread(retrieve, query, top_k=top_k * _RETRIEVAL_MULTIPLIER, lang_filter=lang_filter)
+    else:
+        vector_task = asyncio.to_thread(retrieve, query, top_k=top_k * _RETRIEVAL_MULTIPLIER, use_mmr=False, lang_filter=lang_filter)
+
+    bm25_results, vector_results = await asyncio.gather(bm25_task, vector_task)
+
+    # ── Pre-RRF score filtering ──
+    if vector_results:
+        filtered_vector = [
+            r for r in vector_results
+            if r.get("metadata", {}).get("cosine_score", 1.0) >= _VECTOR_MIN_COSINE
+        ]
+        if not filtered_vector and vector_results:
+            logger.info(
+                "All %d vector results below cosine threshold %.2f, degrading to BM25-only",
+                len(vector_results), _VECTOR_MIN_COSINE,
+            )
+        vector_results = filtered_vector
+
+    # If only one retriever has results, use it directly
+    if not bm25_results and not vector_results:
+        return []
+    if not vector_results:
+        return bm25_results[:top_k]
+    if not bm25_results:
+        return vector_results[:top_k]
+
+    # RRF fusion with deduplication
+    rrf_scores: Dict[str, float] = {}
+    doc_map: Dict[str, Dict] = {}
+
+    def _doc_key(doc: Dict) -> str:
+        """Unique key for deduplication — uses slug (article ID)."""
+        return doc.get("metadata", {}).get("slug", "") or doc.get("text", "")[:50]
+
+    # Dedup by slug within each retriever: keep best rank per source
+    def _dedup_by_source(results: List[Dict]) -> List[Dict]:
+        seen: Dict[str, int] = {}
+        deduped = []
+        for rank, doc in enumerate(results, 1):
+            key = _doc_key(doc)
+            if key not in seen:
+                seen[key] = rank
+                deduped.append(doc)
+        return deduped
+
+    bm25_deduped = _dedup_by_source(bm25_results)
+    vector_deduped = _dedup_by_source(vector_results)
+
+    for rank, doc in enumerate(bm25_deduped, 1):
+        key = _doc_key(doc)
+        rrf_scores[key] = rrf_scores.get(key, 0) + 1.0 / (_RRF_K + rank)
+        doc_map[key] = doc
+
+    _vector_contrib_count = 0
+    for rank, doc in enumerate(vector_deduped, 1):
+        if _vector_contrib_count >= _VECTOR_MAX_CONTRIB:
+            break
+        cosine = doc.get("metadata", {}).get("cosine_score", 1.0)
+        if cosine < _VECTOR_CONFIDENCE_THRESHOLD:
+            continue
+        key = _doc_key(doc)
+        rrf_scores[key] = rrf_scores.get(key, 0) + 1.0 / (_RRF_K + rank)
+        if key not in doc_map:
+            doc_map[key] = doc
+        _vector_contrib_count += 1
+
+    # Title/slug boost
+    _title_boost_keywords = _extract_title_keywords(query)
+    if _title_boost_keywords:
+        for key, doc in doc_map.items():
+            title = (doc.get("metadata", {}).get("title", "") + " " +
+                     doc.get("metadata", {}).get("slug", "")).lower()
+            matches = sum(1 for kw in _title_boost_keywords if kw in title)
+            if matches > 0:
+                boost = 1.0 + 0.5 * matches
+                rrf_scores[key] *= boost
+
+    # Sort by RRF score descending
+    ranked = sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)
+
+    # Take candidates for diversity selection
+    candidate_limit = min(len(ranked), max(_RERANK_CANDIDATES, top_k * 3))
+    candidates = []
+    for key, score in ranked[:candidate_limit]:
+        doc = doc_map[key].copy()
+        doc["score"] = score
+        candidates.append(doc)
+
+    # Adaptive Reranking: skip rerank when top-1 has high confidence
+    # (large RRF score gap indicates clear winner already)
+    if len(candidates) > top_k:
+        top1_score = candidates[0].get("score", 0)
+        top2_score = candidates[1].get("score", 0) if len(candidates) > 1 else 0
+        score_gap = top1_score - top2_score if top1_score > 0 else 0
+        gap_ratio = score_gap / top1_score if top1_score > 0 else 0
+
+        if gap_ratio >= _ADAPTIVE_RERANK_THRESHOLD:
+            logger.info(
+                "Adaptive rerank: skipping (top1=%.4f, gap_ratio=%.2f >= %.2f threshold)",
+                top1_score, gap_ratio, _ADAPTIVE_RERANK_THRESHOLD,
+            )
+            # Already well-ordered by RRF, skip CrossEncoder
+        else:
+            rerank_limit = max(top_k * 3, 10)
+            candidates = rerank(query, candidates, top_k=min(len(candidates), rerank_limit))
+
+    # Diversity selection for cross-article queries
+    if is_cross_article_query(query):
+        selected = []
+        seen_slugs = set()
+        for doc in candidates:
+            slug = doc.get("metadata", {}).get("slug", "")
+            if slug not in seen_slugs:
+                seen_slugs.add(slug)
+                selected.append(doc)
+                if len(selected) >= top_k:
+                    break
+        if len(selected) < top_k:
+            for doc in candidates:
+                if doc not in selected:
+                    selected.append(doc)
+                    if len(selected) >= top_k:
+                        break
+    else:
+        selected = candidates[:top_k]
+
+    # Relevance gate
+    if selected and selected[0].get("score", 0) < _MIN_RELEVANCE_SCORE:
+        logger.info("All results below relevance threshold (max=%.4f < %.4f), returning empty",
+                     selected[0]["score"], _MIN_RELEVANCE_SCORE)
+        return []
+
+    return selected
+
+
+async def rag_query_async(
+    query: str,
+    llm_call_fn,
+    top_k: int = 3,
+    lang: str | None = None,
+    filter_lang: str | None = None,
+) -> RAGQueryResponse:
+    """Async RAG pipeline: retrieve (parallel) → compress → generate.
+
+    Uses asyncio.gather for parallel BM25 + vector retrieval.
+
+    Args:
+        query: Query text
+        llm_call_fn: LLM call function (can be sync or async)
+        top_k: Number of results
+        lang: Response language
+        filter_lang: Document language filter
+    """
+    import asyncio
+
+    if lang is None:
+        lang = detect_language(query)
+
+    # 1. Parallel retrieval
+    chunks = await hybrid_retrieve_async(query, top_k=top_k, lang_filter=filter_lang)
+
+    # 2. Negative detection: LLM classifier for queries the KB can't answer.
+    if _NEGATIVE_DETECTION_ENABLED and chunks:
+        top_score = max(c.get("score", 0) for c in chunks) if chunks else 0
+        if top_score < _HIGH_SCORE_SKIP_THRESHOLD:
+            if not classify_query_answerable_sync(query, llm_call_fn):
+                return RAGQueryResponse(
+                    answer=(
+                        "抱歉，该问题超出了知识库的覆盖范围。"
+                        if lang == "zh"
+                        else "Sorry, this question is outside the scope of the knowledge base."
+                    ),
+                    sources=[],
+                )
+        else:
+            logger.info("Skipping negative detection (top_score=%.4f >= %.4f)", top_score, _HIGH_SCORE_SKIP_THRESHOLD)
+
+    if not chunks:
+        no_result_msg = (
+            "No relevant content found in the knowledge base."
+            if lang == "en"
+            else "知识库中暂无相关内容，请尝试其他问题。"
+        )
+        return RAGQueryResponse(answer=no_result_msg, sources=[])
+
+    # 3. Context compression
+    if chunks:
+        chunks = compress_context(query, chunks)
+
+    if not chunks:
+        no_result_msg = (
+            "No relevant content found in the knowledge base."
+            if lang == "en"
+            else "知识库中暂无相关内容，请尝试其他问题。"
+        )
+        return RAGQueryResponse(answer=no_result_msg, sources=[])
+
+    # 3. Format context
+    context = format_context(chunks)
+
+    # 4. Generate (support both sync and async LLM)
+    if asyncio.iscoroutinefunction(llm_call_fn):
+        answer = await generate_answer_async(query, context, llm_call_fn, lang=lang)
+    else:
+        answer = generate_answer(query, context, llm_call_fn, lang=lang)
+
+    # 5. Build response
+    sources = [
+        SourceItem(
+            title=c["metadata"].get("title", c["metadata"].get("source", "Unknown")),
+            slug=c["metadata"].get("slug", ""),
+            chunk=c["text"][:200] + "..." if len(c["text"]) > 200 else c["text"],
+            score=c.get("score"),
+        )
+        for c in chunks
+    ]
+
+    return RAGQueryResponse(answer=answer, sources=sources)

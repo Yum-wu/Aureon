@@ -30,20 +30,40 @@ docker-compose up -d
 | Service | Port | Description |
 |---------|------|-------------|
 | frontend | 3000 | React app via Nginx |
-| backend | 8000 | FastAPI server |
-| redis | 6379 | Cache layer |
+| backend | 8000 | FastAPI server (non-root via gosu) |
+| redis | 6379 | Cache layer (password auth) |
+| elasticsearch | 9200 | BM25 search (password auth) |
 
 ## Environment Variables
 
 ```env
 # backend/.env
-OPENAI_API_KEY=sk-...
-CHROMA_HOST=chroma
-REDIS_HOST=redis
+LLM_API_KEY=your_deepseek_api_key
+LLM_MODEL=deepseek-v4-flash
+DASHSCOPE_API_KEY=your_dashscope_api_key  # Embedding
+
+# Authentication (production)
+API_AUTH_KEY=your_secure_api_key_here
+
+# Redis auth
+REDIS_PASSWORD=your_redis_password
+
+# Elasticsearch auth
+ES_PASSWORD=your_es_password
 ```
+
+## Security
+
+- Backend runs as non-root user (gosu appuser)
+- Redis/ES require password authentication
+- API Key auth available via API_AUTH_KEY
+- SSO secrets encrypted with Fernet
 
 ## Production Checklist
 
+- [ ] Set API_AUTH_KEY for endpoint protection
+- [ ] Set ENCRYPTION_KEY for SSO secret encryption
+- [ ] Configure Redis/ES passwords
 - [ ] Set strong SECRET_KEY
 - [ ] Configure CORS allowed origins
 - [ ] Enable HTTPS

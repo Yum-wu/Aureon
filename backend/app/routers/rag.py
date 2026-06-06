@@ -40,6 +40,7 @@ from app.rag.models import (
 from app.rag.qa_chain import (
     rag_query_with_cache,
     rag_query_astream,
+    rag_query_async,
     run_index_pipeline,
     run_incremental_index,
 )
@@ -128,6 +129,33 @@ async def rag_query_endpoint(req: RAGQueryRequest, request: Request):
         asyncio.create_task(record_query(req.query, len(result.sources), latency_ms))
     except Exception as e:
         logger.warning("Failed to record query stats: %s", e)
+    return result
+
+
+@router.post("/api/rag/query/async", response_model=RAGQueryResponse)
+@limiter.limit("2/second")
+async def rag_query_async_endpoint(req: RAGQueryRequest, request: Request):
+    """Async RAG query with parallel BM25 + vector retrieval."""
+    from app.agent.llm import create_llm
+
+    if not settings.llm_api_key and not settings.fallback_api_key:
+        raise HTTPException(
+            status_code=503,
+            detail="LLM API key not configured. Please set LLM_API_KEY or FALLBACK_API_KEY environment variable."
+        )
+
+    llm = create_llm(model=req.model, streaming=False)
+
+    async def llm_call(messages):
+        return (await llm.ainvoke(messages)).content
+
+    result = await rag_query_async(
+        query=req.query,
+        llm_call_fn=llm_call,
+        top_k=req.top_k or 3,
+        lang=None,  # 让 rag_query_async 自动检测语言
+        filter_lang=req.language,
+    )
     return result
 
 

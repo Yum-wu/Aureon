@@ -14,6 +14,37 @@ from typing import List, Dict, Any, Optional
 import structlog
 logger = structlog.get_logger()
 
+# GPU embedder integration
+_gpu_embedder = None
+_gpu_embedder_failed = False
+
+def _get_gpu_embedder():
+    """Get or create GPU embedder singleton with CUDA auto-detection."""
+    global _gpu_embedder, _gpu_embedder_failed
+    if _gpu_embedder_failed:
+        return None
+    if _gpu_embedder is None:
+        from app.rag.embed_gpu import GPUEmbedder
+        from app.config import settings
+        try:
+            # Auto-detect CUDA availability
+            device = "cpu"
+            if settings.gpu_enabled:
+                try:
+                    import torch
+                    if torch.cuda.is_available():
+                        device = "cuda"
+                except ImportError:
+                    pass
+            _gpu_embedder = GPUEmbedder(device=device)
+            # Verify it can actually load the model
+            _gpu_embedder.encode(["test"], batch_size=1)
+        except Exception as e:
+            logger.warning("GPU embedder unavailable: %s, using fallback", e)
+            _gpu_embedder_failed = True
+            return None
+    return _gpu_embedder
+
 import chromadb
 from chromadb.api.types import EmbeddingFunction
 
@@ -819,16 +850,28 @@ def rerank(query: str, chunks: List[Dict[str, Any]], top_k: int = 3) -> List[Dic
     Cross-encoder jointly encodes query + document for precise relevance scoring.
     More accurate than bi-encoder cosine similarity but slower (~300-600ms CPU).
 
+    Uses GPU reranker when available for continuous GPU utilization.
     Disabled when fewer than 4 candidates or when RERANK_ENABLED=false.
     """
     if not chunks or len(chunks) <= 1:
         return chunks
 
-    # Disabled explicitly or too few candidates to rerank
+    # Disabled explicitly
     import os
     if os.environ.get("RERANK_ENABLED", "true").lower() == "false":
         return chunks[:top_k]
 
+    # Try GPU reranker first for continuous GPU utilization
+    try:
+        from app.rag.embed_gpu import get_gpu_reranker
+        from app.config import settings
+        if settings.gpu_enabled:
+            gpu_reranker = get_gpu_reranker()
+            return gpu_reranker.rerank(query, chunks, top_k=top_k)
+    except Exception as e:
+        logger.debug("GPU reranker unavailable, falling back to CPU: %s", e)
+
+    # CPU fallback
     model = _get_reranker()
     if model is None:
         return chunks[:top_k]
@@ -998,7 +1041,11 @@ def _get_qdrant():
     if _qdrant_client is None:
         from qdrant_client import QdrantClient
         from app.config import settings
-        kwargs = {"url": settings.qdrant_url}
+        kwargs = {
+            "url": settings.qdrant_url,
+            "prefer_grpc": True,  # Use gRPC for lower latency (port 6334)
+            "grpc_port": 6334,
+        }
         if settings.qdrant_api_key:
             kwargs["api_key"] = settings.qdrant_api_key
         _qdrant_client = QdrantClient(**kwargs)
@@ -1022,11 +1069,17 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
         vectors_config=VectorParams(size=dim, distance=Distance.COSINE),
     )
 
-    # Embed all texts
+    # Embed all texts using GPU embedder
     texts = [c["text"] for c in chunks]
-    embeddings = _embed_local(texts)
-    if embeddings is None:
-        embeddings = embed_texts_llm(texts)
+    try:
+        from app.config import settings
+        embedder = _get_gpu_embedder()
+        embeddings = embedder.encode(texts, batch_size=settings.embedding_batch_size)
+    except Exception as e:
+        logger.warning("GPU embedding failed: %s, falling back to local/API", e)
+        embeddings = _embed_local(texts)
+        if embeddings is None:
+            embeddings = embed_texts_llm(texts)
 
     # Upsert in batches
     batch_size = 100
@@ -1049,11 +1102,16 @@ def retrieve_qdrant(query: str, top_k: int = 3, collection_name: str = "aureon")
     """Retrieve from Qdrant vector store."""
     client = _get_qdrant()
 
-    query_emb = embed_texts_llm([query])
+    try:
+        embedder = _get_gpu_embedder()
+        query_emb = embedder.encode([query])
+    except Exception as e:
+        logger.warning("GPU embedding failed: %s, falling back to API", e)
+        query_emb = embed_texts_llm([query])
 
-    results = client.query_points(
+    results = client.search(
         collection_name=collection_name,
-        query=query_emb[0].tolist(),
+        query_vector=query_emb[0].tolist(),
         limit=top_k,
     )
 
@@ -1063,7 +1121,7 @@ def retrieve_qdrant(query: str, top_k: int = 3, collection_name: str = "aureon")
             "metadata": {**r.payload.get("metadata", {}), "cosine_score": r.score},
             "score": r.score,
         }
-        for r in results.points
+        for r in results
     ]
 
 
