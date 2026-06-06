@@ -1,0 +1,10 @@
+schema_version: 1
+module_path: frontend
+title: Aureon 企业级 AI 知识库前端
+scope:
+    - src/
+    - tests/
+source_files: []
+depends_on: []
+related_to:
+    - path: backend

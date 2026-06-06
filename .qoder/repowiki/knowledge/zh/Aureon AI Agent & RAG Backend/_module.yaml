@@ -1,0 +1,10 @@
+schema_version: 1
+module_path: backend
+title: Aureon AI Agent & RAG Backend
+scope:
+    - backend/
+source_files: []
+depends_on: []
+related_to:
+    - path: crew_service
+    - path: frontend

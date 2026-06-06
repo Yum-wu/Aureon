@@ -1,0 +1,680 @@
+schema_version: 1
+module_path: ""
+title: Aureon 企业级 AI 知识库平台
+scope:
+    - .claude\rules\code-quality.md
+    - .claude\rules\plugins.md
+    - .claude\settings.local.json
+    - .code-review-graph\.gitignore
+    - .code-review-graph\graph.db
+    - .dockerignore
+    - .github\workflows\ci.yml
+    - .github\workflows\rag-quality.yml
+    - .gitignore
+    - .gstack\browse-audit.jsonl
+    - .gstack\browse-console.log
+    - .gstack\browse-network.log
+    - .qoder\repowiki\knowledge\zh\Aureon AI Agent & RAG Backend\_module.yaml
+    - .qoder\repowiki\knowledge\zh\Aureon AI Agent & RAG Backend\技术栈.md
+    - .qoder\repowiki\knowledge\zh\Aureon AI Agent & RAG Backend\架构设计.md
+    - .qoder\repowiki\knowledge\zh\Aureon AI Agent & RAG Backend\概述.md
+    - .qoder\repowiki\knowledge\zh\Aureon AI Agent & RAG Backend\特殊配置与命令.md
+    - .qoder\repowiki\knowledge\zh\Aureon AI Agent & RAG Backend\编码规范.md
+    - .qoder\repowiki\knowledge\zh\Aureon 企业级 AI 知识库前端\_module.yaml
+    - .qoder\repowiki\knowledge\zh\Aureon 企业级 AI 知识库前端\技术栈.md
+    - .qoder\repowiki\knowledge\zh\Aureon 企业级 AI 知识库前端\架构设计.md
+    - .qoder\repowiki\knowledge\zh\Aureon 企业级 AI 知识库前端\概述.md
+    - .qoder\repowiki\knowledge\zh\Aureon 企业级 AI 知识库前端\编码规范.md
+    - .qoder\repowiki\knowledge\zh\Aureon 企业级 AI 知识库平台\_module.yaml
+    - .qoder\repowiki\knowledge\zh\Aureon 企业级 AI 知识库平台\技术栈.md
+    - .qoder\repowiki\knowledge\zh\Aureon 企业级 AI 知识库平台\架构设计.md
+    - .qoder\repowiki\knowledge\zh\Aureon 企业级 AI 知识库平台\概述.md
+    - .qoder\repowiki\knowledge\zh\Aureon 企业级 AI 知识库平台\特殊配置与命令.md
+    - .qoder\repowiki\knowledge\zh\Aureon 系统架构与 RAG 知识库文档\_module.yaml
+    - .qoder\repowiki\knowledge\zh\Aureon 系统架构与 RAG 知识库文档\技术栈.md
+    - .qoder\repowiki\knowledge\zh\Aureon 系统架构与 RAG 知识库文档\架构设计.md
+    - .qoder\repowiki\knowledge\zh\Aureon 系统架构与 RAG 知识库文档\概述.md
+    - .qoder\repowiki\knowledge\zh\Aureon 系统架构与 RAG 知识库文档\特殊配置与命令.md
+    - .qoder\repowiki\knowledge\zh\Aureon 系统架构与 RAG 知识库文档\编码规范.md
+    - .qoder\repowiki\knowledge\zh\_index.yaml
+    - .qoder\repowiki\knowledge\zh\多智能体文章生成服务\_module.yaml
+    - .qoder\repowiki\knowledge\zh\多智能体文章生成服务\技术栈.md
+    - .qoder\repowiki\knowledge\zh\多智能体文章生成服务\架构设计.md
+    - .qoder\repowiki\knowledge\zh\多智能体文章生成服务\概述.md
+    - .qoder\repowiki\knowledge\zh\多智能体文章生成服务\特殊配置与命令.md
+    - .qoder\repowiki\knowledge\zh\多智能体文章生成服务\编码规范.md
+    - .qoder\repowiki\zh\content\AI Agent 系统\AI Agent 系统.md
+    - .qoder\repowiki\zh\content\AI Agent 系统\代理架构设计.md
+    - .qoder\repowiki\zh\content\AI Agent 系统\工具系统\工具系统.md
+    - .qoder\repowiki\zh\content\AI Agent 系统\工具系统\文件读取工具.md
+    - .qoder\repowiki\zh\content\AI Agent 系统\工具系统\知识查询工具.md
+    - .qoder\repowiki\zh\content\AI Agent 系统\工具系统\网络搜索工具.md
+    - .qoder\repowiki\zh\content\AI Agent 系统\工具系统\计算器工具.md
+    - .qoder\repowiki\zh\content\AI Agent 系统\执行器管理.md
+    - .qoder\repowiki\zh\content\AI Agent 系统\记忆集成.md
+    - .qoder\repowiki\zh\content\API 接口文档\API 接口文档.md
+    - .qoder\repowiki\zh\content\API 接口文档\API 数据模型.md
+    - .qoder\repowiki\zh\content\API 接口文档\RAG 接口.md
+    - .qoder\repowiki\zh\content\API 接口文档\分析统计接口.md
+    - .qoder\repowiki\zh\content\API 接口文档\聊天接口.md
+    - .qoder\repowiki\zh\content\LangGraph 工作流\LangGraph 工作流.md
+    - .qoder\repowiki\zh\content\LangGraph 工作流\MCP 集成.md
+    - .qoder\repowiki\zh\content\LangGraph 工作流\工作流图设计.md
+    - .qoder\repowiki\zh\content\LangGraph 工作流\工作流节点\RAG 节点.md
+    - .qoder\repowiki\zh\content\LangGraph 工作流\工作流节点\代理节点.md
+    - .qoder\repowiki\zh\content\LangGraph 工作流\工作流节点\工作流节点.md
+    - .qoder\repowiki\zh\content\LangGraph 工作流\工作流节点\意图分类节点.md
+    - .qoder\repowiki\zh\content\LangGraph 工作流\工作流节点\生成节点.md
+    - .qoder\repowiki\zh\content\LangGraph 工作流\流式处理.md
+    - .qoder\repowiki\zh\content\LangGraph 工作流\状态管理.md
+    - .qoder\repowiki\zh\content\RAG 检索引擎\RAG 检索引擎.md
+    - .qoder\repowiki\zh\content\RAG 检索引擎\向量存储管理.md
+    - .qoder\repowiki\zh\content\RAG 检索引擎\文档加载与预处理.md
+    - .qoder\repowiki\zh\content\RAG 检索引擎\混合检索算法.md
+    - .qoder\repowiki\zh\content\RAG 检索引擎\重排序与优化.md
+    - .qoder\repowiki\zh\content\RAG 检索引擎\问答链与生成.md
+    - .qoder\repowiki\zh\content\前端应用.md
+    - .qoder\repowiki\zh\content\后端服务\API 路由器\API 路由器.md
+    - .qoder\repowiki\zh\content\后端服务\API 路由器\RAG 路由.md
+    - .qoder\repowiki\zh\content\后端服务\API 路由器\分析路由.md
+    - .qoder\repowiki\zh\content\后端服务\API 路由器\功能路由.md
+    - .qoder\repowiki\zh\content\后端服务\API 路由器\安全路由.md
+    - .qoder\repowiki\zh\content\后端服务\API 路由器\聊天路由.md
+    - .qoder\repowiki\zh\content\后端服务\API 路由器\集成路由.md
+    - .qoder\repowiki\zh\content\后端服务\中间件配置.md
+    - .qoder\repowiki\zh\content\后端服务\后端服务.md
+    - .qoder\repowiki\zh\content\后端服务\异常处理机制.md
+    - .qoder\repowiki\zh\content\后端服务\服务生命周期管理.md
+    - .qoder\repowiki\zh\content\后端服务\核心应用架构.md
+    - .qoder\repowiki\zh\content\多层级记忆系统\L0 会话记忆.md
+    - .qoder\repowiki\zh\content\多层级记忆系统\L1 原子记忆.md
+    - .qoder\repowiki\zh\content\多层级记忆系统\L2 场景记忆.md
+    - .qoder\repowiki\zh\content\多层级记忆系统\L3 人物角色记忆.md
+    - .qoder\repowiki\zh\content\多层级记忆系统\多层级记忆系统.md
+    - .qoder\repowiki\zh\content\多层级记忆系统\记忆数据库层.md
+    - .qoder\repowiki\zh\content\多层级记忆系统\记忆离线存储系统.md
+    - .qoder\repowiki\zh\content\多层级记忆系统\记忆管理核心.md
+    - .qoder\repowiki\zh\content\安全与合规.md
+    - .qoder\repowiki\zh\content\开发指南.md
+    - .qoder\repowiki\zh\content\快速开始.md
+    - .qoder\repowiki\zh\content\性能优化\前端性能优化.md
+    - .qoder\repowiki\zh\content\性能优化\后端性能调优.md
+    - .qoder\repowiki\zh\content\性能优化\性能优化.md
+    - .qoder\repowiki\zh\content\性能优化\性能指标与监控.md
+    - .qoder\repowiki\zh\content\性能优化\数据库与向量存储优化.md
+    - .qoder\repowiki\zh\content\性能优化\缓存优化策略.md
+    - .qoder\repowiki\zh\content\故障排除与常见问题.md
+    - .qoder\repowiki\zh\content\架构设计\安全架构.md
+    - .qoder\repowiki\zh\content\架构设计\技术栈选择.md
+    - .qoder\repowiki\zh\content\架构设计\架构设计.md
+    - .qoder\repowiki\zh\content\架构设计\系统概览.md
+    - .qoder\repowiki\zh\content\架构设计\组件交互设计.md
+    - .qoder\repowiki\zh\content\架构设计\部署架构.md
+    - .qoder\repowiki\zh\content\核心功能模块\仪表板与分析.md
+    - .qoder\repowiki\zh\content\核心功能模块\实时聊天.md
+    - .qoder\repowiki\zh\content\核心功能模块\搜索功能.md
+    - .qoder\repowiki\zh\content\核心功能模块\文档管理.md
+    - .qoder\repowiki\zh\content\核心功能模块\核心功能模块.md
+    - .qoder\repowiki\zh\content\部署与运维\容器化部署.md
+    - .qoder\repowiki\zh\content\部署与运维\生产环境配置.md
+    - .qoder\repowiki\zh\content\部署与运维\监控告警.md
+    - .qoder\repowiki\zh\content\部署与运维\运维管理.md
+    - .qoder\repowiki\zh\content\部署与运维\部署与运维.md
+    - .qoder\repowiki\zh\content\项目概述\快速开始.md
+    - .qoder\repowiki\zh\content\项目概述\性能指标.md
+    - .qoder\repowiki\zh\content\项目概述\技术栈.md
+    - .qoder\repowiki\zh\content\项目概述\架构概览.md
+    - .qoder\repowiki\zh\content\项目概述\核心特性\RAG 检索增强生成系统\RAG 检索增强生成系统.md
+    - .qoder\repowiki\zh\content\项目概述\核心特性\RAG 检索增强生成系统\多查询扩展机制.md
+    - .qoder\repowiki\zh\content\项目概述\核心特性\RAG 检索增强生成系统\检索质量评估.md
+    - .qoder\repowiki\zh\content\项目概述\核心特性\RAG 检索增强生成系统\流式响应系统.md
+    - .qoder\repowiki\zh\content\项目概述\核心特性\RAG 检索增强生成系统\混合检索机制.md
+    - .qoder\repowiki\zh\content\项目概述\核心特性\仪表板与分析功能.md
+    - .qoder\repowiki\zh\content\项目概述\核心特性\多层级记忆管理系统\L0 会话记忆.md
+    - .qoder\repowiki\zh\content\项目概述\核心特性\多层级记忆管理系统\L1 原子记忆.md
+    - .qoder\repowiki\zh\content\项目概述\核心特性\多层级记忆管理系统\L2 场景记忆.md
+    - .qoder\repowiki\zh\content\项目概述\核心特性\多层级记忆管理系统\L3 人物角色记忆.md
+    - .qoder\repowiki\zh\content\项目概述\核心特性\多层级记忆管理系统\多层级记忆管理系统.md
+    - .qoder\repowiki\zh\content\项目概述\核心特性\多层级记忆管理系统\记忆卸载系统.md
+    - .qoder\repowiki\zh\content\项目概述\核心特性\多层级记忆管理系统\记忆管理器.md
+    - .qoder\repowiki\zh\content\项目概述\核心特性\实时流式响应系统.md
+    - .qoder\repowiki\zh\content\项目概述\核心特性\文档管理功能.md
+    - .qoder\repowiki\zh\content\项目概述\核心特性\核心特性.md
+    - .qoder\repowiki\zh\content\项目概述\项目概述.md
+    - .qoder\repowiki\zh\meta\repowiki-metadata.json
+    - AGENTS.md
+    - AGENTS.md.original.md
+    - CLAUDE.md
+    - CLAUDE.md.original.md
+    - Dockerfile
+    - Dockerfile.minimal
+    - Dockerfile.test
+    - PRD.md
+    - README.md
+    - README.zh-CN.md
+    - TECH_DESIGN.md
+    - USER_GUIDE.md
+    - backend\.deepeval\.deepeval-cache.json
+    - backend\.deepeval\.deepeval_telemetry.txt
+    - backend\.deepeval\.latest_run_full.json
+    - backend\.deepeval\.latest_test_run.json
+    - backend\.dockerignore
+    - backend\.env
+    - backend\.env.example
+    - backend\.gstack\browse-audit.jsonl
+    - backend\.gstack\browse-console.log
+    - backend\.gstack\browse-network.log
+    - backend\Dockerfile
+    - backend\app\__init__.py
+    - backend\app\agent\__init__.py
+    - backend\app\agent\agent.py
+    - backend\app\agent\executor.py
+    - backend\app\agent\llm.py
+    - backend\app\ai_platform\__init__.py
+    - backend\app\ai_platform\router.py
+    - backend\app\api\__init__.py
+    - backend\app\api\analytics.py
+    - backend\app\api\models.py
+    - backend\app\api\rag_stats.py
+    - backend\app\cache\__init__.py
+    - backend\app\cache\redis_client.py
+    - backend\app\common.py
+    - backend\app\config.py
+    - backend\app\cost\__init__.py
+    - backend\app\cost\router.py
+    - backend\app\crew\agents.py
+    - backend\app\crew\crew_setup.py
+    - backend\app\crew\main_events.py
+    - backend\app\crew\tasks.py
+    - backend\app\dependencies.py
+    - backend\app\evaluation\__init__.py
+    - backend\app\evaluation\router.py
+    - backend\app\exceptions.py
+    - backend\app\features\__init__.py
+    - backend\app\features\router.py
+    - backend\app\integration\__init__.py
+    - backend\app\integration\router.py
+    - backend\app\knowledge\__init__.py
+    - backend\app\knowledge\router.py
+    - backend\app\langgraph\__init__.py
+    - backend\app\langgraph\graph.py
+    - backend\app\langgraph\mcp\__init__.py
+    - backend\app\langgraph\mcp\client.py
+    - backend\app\langgraph\mcp\server.py
+    - backend\app\langgraph\nodes\__init__.py
+    - backend\app\langgraph\nodes\agent.py
+    - backend\app\langgraph\nodes\generate.py
+    - backend\app\langgraph\nodes\intent.py
+    - backend\app\langgraph\nodes\rag.py
+    - backend\app\langgraph\state.py
+    - backend\app\langgraph\streaming.py
+    - backend\app\main.py
+    - backend\app\memory\__init__.py
+    - backend\app\memory\db.py
+    - backend\app\memory\l0_conversation.py
+    - backend\app\memory\l1_atom.py
+    - backend\app\memory\l2_scenario.py
+    - backend\app\memory\l3_persona.py
+    - backend\app\memory\manager.py
+    - backend\app\memory\offload.py
+    - backend\app\observability\__init__.py
+    - backend\app\observability\router.py
+    - backend\app\rag\__init__.py
+    - backend\app\rag\evaluator.py
+    - backend\app\rag\guardrails.py
+    - backend\app\rag\loader.py
+    - backend\app\rag\models.py
+    - backend\app\rag\prompt_experiment.py
+    - backend\app\rag\qa_chain.py
+    - backend\app\rag\query_rewriter.py
+    - backend\app\rag\semantic_splitter.py
+    - backend\app\rag\test_data.py
+    - backend\app\rag\vector_store.py
+    - backend\app\reliability\__init__.py
+    - backend\app\reliability\router.py
+    - backend\app\routers\__init__.py
+    - backend\app\routers\chat.py
+    - backend\app\routers\rag.py
+    - backend\app\security\__init__.py
+    - backend\app\security\router.py
+    - backend\app\tools\__init__.py
+    - backend\app\tools\calculator.py
+    - backend\app\tools\knowledge.py
+    - backend\app\tools\read_ref.py
+    - backend\app\tools\web_search.py
+    - backend\app\utils\__init__.py
+    - backend\app\utils\lang_detect.py
+    - backend\crewai-0.11.2-py3-none-any.whl
+    - backend\data\articles\agent-memory-system.md
+    - backend\data\articles\ai-agent-architecture.md
+    - backend\data\articles\ai-writing-assistant.md
+    - backend\data\articles\blog-migration-troubleshooting.md
+    - backend\data\articles\chatbot-railway-deployment.md
+    - backend\data\articles\deepseek-cache-optimization.md
+    - backend\data\articles\eleven-projects-two-months.md
+    - backend\data\articles\embedding-models-guide.md
+    - backend\data\articles\en\ai-writing-assistant.md
+    - backend\data\articles\en\blog-migration-troubleshooting.md
+    - backend\data\articles\en\chatbot-railway-deployment.md
+    - backend\data\articles\en\deepseek-cache-optimization.md
+    - backend\data\articles\en\eleven-projects-two-months.md
+    - backend\data\articles\en\git-workflow.md
+    - backend\data\articles\en\hello-world.md
+    - backend\data\articles\en\hermes-agent-practical-guide.md
+    - backend\data\articles\en\markdown-notes-app.md
+    - backend\data\articles\en\react-performance-tips.md
+    - backend\data\articles\en\spa-github-pages.md
+    - backend\data\articles\en\weather-app-api.md
+    - backend\data\articles\en\wechat-miniprogram-ai-agent.md
+    - backend\data\articles\en\zustand-todo-app.md
+    - backend\data\articles\git-workflow.md
+    - backend\data\articles\hello-world.md
+    - backend\data\articles\hermes-agent-practical-guide.md
+    - backend\data\articles\langchain-agent-intro.md
+    - backend\data\articles\langchain-framework-guide.md
+    - backend\data\articles\langgraph-workflow.md
+    - backend\data\articles\llamaindex-rag-guide.md
+    - backend\data\articles\markdown-notes-app.md
+    - backend\data\articles\prompt-engineering-guide.md
+    - backend\data\articles\rag-concepts-deep-dive.md
+    - backend\data\articles\rag-system-guide.md
+    - backend\data\articles\react-performance-tips.md
+    - backend\data\articles\spa-github-pages.md
+    - backend\data\articles\uploads\test.md
+    - backend\data\articles\vector-database-guide.md
+    - backend\data\articles\weather-app-api.md
+    - backend\data\articles\wechat-miniprogram-ai-agent.md
+    - backend\data\articles\zustand-todo-app.md
+    - backend\data\benchmark_actual.json
+    - backend\data\benchmark_results.json
+    - backend\data\vectors\764a6c1e-2c21-452a-b47d-86587476f5a3\data_level0.bin
+    - backend\data\vectors\764a6c1e-2c21-452a-b47d-86587476f5a3\header.bin
+    - backend\data\vectors\764a6c1e-2c21-452a-b47d-86587476f5a3\length.bin
+    - backend\data\vectors\764a6c1e-2c21-452a-b47d-86587476f5a3\link_lists.bin
+    - backend\data\vectors\9354b92d-f07b-4987-ae72-ff02aa1525c8\data_level0.bin
+    - backend\data\vectors\9354b92d-f07b-4987-ae72-ff02aa1525c8\header.bin
+    - backend\data\vectors\9354b92d-f07b-4987-ae72-ff02aa1525c8\length.bin
+    - backend\data\vectors\9354b92d-f07b-4987-ae72-ff02aa1525c8\link_lists.bin
+    - backend\data\vectors\afdb341e-e964-49e3-ada8-c4423d754808\data_level0.bin
+    - backend\data\vectors\afdb341e-e964-49e3-ada8-c4423d754808\header.bin
+    - backend\data\vectors\afdb341e-e964-49e3-ada8-c4423d754808\length.bin
+    - backend\data\vectors\afdb341e-e964-49e3-ada8-c4423d754808\link_lists.bin
+    - backend\data\vectors\chroma.sqlite3
+    - backend\offloads\memory.db
+    - backend\offloads\persona.md
+    - backend\offloads\refs\sess_calculator_20260530T171338.md
+    - backend\offloads\refs\sess_calculator_20260530T174548.md
+    - backend\offloads\refs\sess_calculator_20260530T174653.md
+    - backend\offloads\refs\sess_calculator_20260530T175513.md
+    - backend\offloads\refs\sess_calculator_20260530T175853.md
+    - backend\offloads\refs\sess_calculator_20260530T180444.md
+    - backend\offloads\refs\sess_calculator_20260530T181529.md
+    - backend\offloads\refs\sess_calculator_20260530T181653.md
+    - backend\offloads\refs\sess_calculator_20260530T212056.md
+    - backend\offloads\refs\sess_calculator_20260530T212714.md
+    - backend\offloads\refs\sess_calculator_20260530T213650.md
+    - backend\offloads\refs\sess_calculator_20260530T213825.md
+    - backend\offloads\refs\sess_calculator_20260530T215857.md
+    - backend\offloads\refs\sess_calculator_20260530T221727.md
+    - backend\offloads\refs\sess_calculator_20260530T222607.md
+    - backend\offloads\refs\sess_calculator_20260531T071243.md
+    - backend\offloads\refs\sess_calculator_20260531T090712.md
+    - backend\offloads\refs\sess_calculator_20260531T115443.md
+    - backend\offloads\refs\sess_calculator_20260531T115508.md
+    - backend\offloads\refs\sess_calculator_20260531T115811.md
+    - backend\offloads\refs\sess_calculator_20260531T165226.md
+    - backend\offloads\refs\sess_calculator_20260531T165847.md
+    - backend\offloads\refs\sess_calculator_20260531T175014.md
+    - backend\offloads\refs\sess_calculator_20260601T184603.md
+    - backend\offloads\refs\sess_mgr_calc_20260530T174548.md
+    - backend\offloads\refs\sess_mgr_calc_20260530T174632.md
+    - backend\offloads\refs\sess_mgr_calc_20260530T174653.md
+    - backend\offloads\refs\sess_mgr_calc_20260530T174716.md
+    - backend\offloads\refs\sess_mgr_calc_20260530T174812.md
+    - backend\offloads\refs\sess_mgr_calc_20260530T175310.md
+    - backend\offloads\refs\sess_mgr_calc_20260530T175513.md
+    - backend\offloads\refs\sess_mgr_calc_20260530T175853.md
+    - backend\offloads\refs\sess_mgr_calc_20260530T175934.md
+    - backend\offloads\refs\sess_mgr_calc_20260530T180444.md
+    - backend\offloads\refs\sess_mgr_calc_20260530T181529.md
+    - backend\offloads\refs\sess_mgr_calc_20260530T181653.md
+    - backend\offloads\refs\sess_mgr_calc_20260530T212056.md
+    - backend\offloads\refs\sess_mgr_calc_20260530T212714.md
+    - backend\offloads\refs\sess_mgr_calc_20260530T213650.md
+    - backend\offloads\refs\sess_mgr_calc_20260530T213825.md
+    - backend\offloads\refs\sess_mgr_calc_20260530T215857.md
+    - backend\offloads\refs\sess_mgr_calc_20260530T221727.md
+    - backend\offloads\refs\sess_mgr_calc_20260530T222607.md
+    - backend\offloads\refs\sess_mgr_calc_20260531T071243.md
+    - backend\offloads\refs\sess_mgr_calc_20260531T090712.md
+    - backend\offloads\refs\sess_mgr_calc_20260531T115443.md
+    - backend\offloads\refs\sess_mgr_calc_20260531T165226.md
+    - backend\offloads\refs\sess_mgr_calc_20260531T165847.md
+    - backend\offloads\refs\sess_mgr_calc_20260531T175014.md
+    - backend\offloads\refs\sess_mgr_calc_20260601T184603.md
+    - backend\offloads\refs\sess_offload_calculator_20260530T174548.md
+    - backend\offloads\refs\sess_offload_calculator_20260530T174632.md
+    - backend\offloads\refs\sess_offload_calculator_20260530T174653.md
+    - backend\offloads\refs\sess_offload_calculator_20260530T174716.md
+    - backend\offloads\refs\sess_offload_calculator_20260530T174812.md
+    - backend\offloads\refs\sess_offload_calculator_20260530T175310.md
+    - backend\offloads\refs\sess_offload_calculator_20260530T175513.md
+    - backend\offloads\refs\sess_offload_calculator_20260530T175853.md
+    - backend\offloads\refs\sess_offload_calculator_20260530T175934.md
+    - backend\offloads\refs\sess_offload_calculator_20260530T180444.md
+    - backend\offloads\refs\sess_offload_calculator_20260530T181529.md
+    - backend\offloads\refs\sess_offload_calculator_20260530T181653.md
+    - backend\offloads\refs\sess_offload_calculator_20260530T212056.md
+    - backend\offloads\refs\sess_offload_calculator_20260530T212714.md
+    - backend\offloads\refs\sess_offload_calculator_20260530T213650.md
+    - backend\offloads\refs\sess_offload_calculator_20260530T213825.md
+    - backend\offloads\refs\sess_offload_calculator_20260530T215857.md
+    - backend\offloads\refs\sess_offload_calculator_20260530T221727.md
+    - backend\offloads\refs\sess_offload_calculator_20260530T222607.md
+    - backend\offloads\refs\sess_offload_calculator_20260531T071243.md
+    - backend\offloads\refs\sess_offload_calculator_20260531T090712.md
+    - backend\offloads\refs\sess_offload_calculator_20260531T115443.md
+    - backend\offloads\refs\sess_offload_calculator_20260531T165226.md
+    - backend\offloads\refs\sess_offload_calculator_20260531T165847.md
+    - backend\offloads\refs\sess_offload_calculator_20260531T175014.md
+    - backend\offloads\refs\sess_offload_calculator_20260601T184603.md
+    - backend\offloads\refs\sess_preview_big_tool_20260530T174548.md
+    - backend\offloads\refs\sess_preview_big_tool_20260530T174632.md
+    - backend\offloads\refs\sess_preview_big_tool_20260530T174653.md
+    - backend\offloads\refs\sess_preview_big_tool_20260530T174716.md
+    - backend\offloads\refs\sess_preview_big_tool_20260530T174812.md
+    - backend\offloads\refs\sess_preview_big_tool_20260530T175310.md
+    - backend\offloads\refs\sess_preview_big_tool_20260530T175513.md
+    - backend\offloads\refs\sess_preview_big_tool_20260530T175853.md
+    - backend\offloads\refs\sess_preview_big_tool_20260530T175934.md
+    - backend\offloads\refs\sess_preview_big_tool_20260530T180444.md
+    - backend\offloads\refs\sess_preview_big_tool_20260530T181529.md
+    - backend\offloads\refs\sess_preview_big_tool_20260530T181653.md
+    - backend\offloads\refs\sess_preview_big_tool_20260530T212056.md
+    - backend\offloads\refs\sess_preview_big_tool_20260530T212714.md
+    - backend\offloads\refs\sess_preview_big_tool_20260530T213650.md
+    - backend\offloads\refs\sess_preview_big_tool_20260530T213825.md
+    - backend\offloads\refs\sess_preview_big_tool_20260530T215857.md
+    - backend\offloads\refs\sess_preview_big_tool_20260530T221727.md
+    - backend\offloads\refs\sess_preview_big_tool_20260530T222607.md
+    - backend\offloads\refs\sess_preview_big_tool_20260531T071243.md
+    - backend\offloads\refs\sess_preview_big_tool_20260531T090712.md
+    - backend\offloads\refs\sess_preview_big_tool_20260531T115443.md
+    - backend\offloads\refs\sess_preview_big_tool_20260531T165226.md
+    - backend\offloads\refs\sess_preview_big_tool_20260531T165847.md
+    - backend\offloads\refs\sess_preview_big_tool_20260531T175014.md
+    - backend\offloads\refs\sess_preview_big_tool_20260601T184603.md
+    - backend\offloads\refs\sess_read_tool_20260530T174548.md
+    - backend\offloads\refs\sess_read_tool_20260530T174632.md
+    - backend\offloads\refs\sess_read_tool_20260530T174653.md
+    - backend\offloads\refs\sess_read_tool_20260530T174716.md
+    - backend\offloads\refs\sess_read_tool_20260530T174812.md
+    - backend\offloads\refs\sess_read_tool_20260530T175310.md
+    - backend\offloads\refs\sess_read_tool_20260530T175513.md
+    - backend\offloads\refs\sess_read_tool_20260530T175853.md
+    - backend\offloads\refs\sess_read_tool_20260530T175934.md
+    - backend\offloads\refs\sess_read_tool_20260530T180444.md
+    - backend\offloads\refs\sess_read_tool_20260530T181529.md
+    - backend\offloads\refs\sess_read_tool_20260530T181653.md
+    - backend\offloads\refs\sess_read_tool_20260530T212056.md
+    - backend\offloads\refs\sess_read_tool_20260530T212714.md
+    - backend\offloads\refs\sess_read_tool_20260530T213650.md
+    - backend\offloads\refs\sess_read_tool_20260530T213825.md
+    - backend\offloads\refs\sess_read_tool_20260530T215857.md
+    - backend\offloads\refs\sess_read_tool_20260530T221727.md
+    - backend\offloads\refs\sess_read_tool_20260530T222607.md
+    - backend\offloads\refs\sess_read_tool_20260531T071243.md
+    - backend\offloads\refs\sess_read_tool_20260531T090712.md
+    - backend\offloads\refs\sess_read_tool_20260531T115443.md
+    - backend\offloads\refs\sess_read_tool_20260531T165226.md
+    - backend\offloads\refs\sess_read_tool_20260531T165847.md
+    - backend\offloads\refs\sess_read_tool_20260531T175014.md
+    - backend\offloads\refs\sess_read_tool_20260601T184603.md
+    - backend\offloads\refs\sess_verify_search_20260530T174548.md
+    - backend\offloads\refs\sess_verify_search_20260530T174632.md
+    - backend\offloads\refs\sess_verify_search_20260530T174653.md
+    - backend\offloads\refs\sess_verify_search_20260530T174716.md
+    - backend\offloads\refs\sess_verify_search_20260530T174812.md
+    - backend\offloads\refs\sess_verify_search_20260530T175310.md
+    - backend\offloads\refs\sess_verify_search_20260530T175513.md
+    - backend\offloads\refs\sess_verify_search_20260530T175853.md
+    - backend\offloads\refs\sess_verify_search_20260530T175934.md
+    - backend\offloads\refs\sess_verify_search_20260530T180444.md
+    - backend\offloads\refs\sess_verify_search_20260530T181529.md
+    - backend\offloads\refs\sess_verify_search_20260530T181653.md
+    - backend\offloads\refs\sess_verify_search_20260530T212056.md
+    - backend\offloads\refs\sess_verify_search_20260530T212714.md
+    - backend\offloads\refs\sess_verify_search_20260530T213650.md
+    - backend\offloads\refs\sess_verify_search_20260530T213825.md
+    - backend\offloads\refs\sess_verify_search_20260530T215857.md
+    - backend\offloads\refs\sess_verify_search_20260530T221727.md
+    - backend\offloads\refs\sess_verify_search_20260530T222607.md
+    - backend\offloads\refs\sess_verify_search_20260531T071243.md
+    - backend\offloads\refs\sess_verify_search_20260531T090712.md
+    - backend\offloads\refs\sess_verify_search_20260531T115443.md
+    - backend\offloads\refs\sess_verify_search_20260531T165226.md
+    - backend\offloads\refs\sess_verify_search_20260531T165847.md
+    - backend\offloads\refs\sess_verify_search_20260531T175014.md
+    - backend\offloads\refs\sess_verify_search_20260601T184603.md
+    - backend\offloads\scenarios\flush_1_20260530.md
+    - backend\offloads\scenarios\l2_atoms_1780134348_20260530.md
+    - backend\offloads\scenarios\l2_atoms_1780134392_20260530.md
+    - backend\offloads\scenarios\l2_atoms_1780134413_20260530.md
+    - backend\offloads\scenarios\l2_empty_1780134348_20260530.md
+    - backend\offloads\scenarios\l2_empty_1780134392_20260530.md
+    - backend\offloads\scenarios\l2_empty_1780134413_20260530.md
+    - backend\offloads\scenarios\l2_ext_test_1780134348_20260530.md
+    - backend\offloads\scenarios\l2_ext_test_1780134392_20260530.md
+    - backend\offloads\scenarios\l2_ext_test_1780134413_20260530.md
+    - backend\offloads\scenarios\l2_recent_1780134348_20260530.md
+    - backend\offloads\scenarios\l2_recent_1780134392_20260530.md
+    - backend\offloads\scenarios\l2_recent_1780134413_20260530.md
+    - backend\offloads\scenarios\l3_size_1780134348_20260530.md
+    - backend\offloads\scenarios\l3_size_1780134392_20260530.md
+    - backend\offloads\scenarios\l3_test_1780134348_20260530.md
+    - backend\offloads\scenarios\l3_test_1780134392_20260530.md
+    - backend\offloads\scenarios\l3_test_1780134413_20260530.md
+    - backend\offloads\scenarios\mgr_ctx_1780134348_20260530.md
+    - backend\offloads\scenarios\mgr_ctx_1780134392_20260530.md
+    - backend\offloads\scenarios\mgr_fin_1780134348_20260530.md
+    - backend\offloads\scenarios\mgr_fin_1780134392_20260530.md
+    - backend\offloads\scenarios\mgr_fin_1780135133_20260530.md
+    - backend\requirements.txt
+    - backend\setup_venv.bat
+    - backend\setup_venv.sh
+    - backend\tests\benchmark_e2e.py
+    - backend\tests\benchmark_rag.py
+    - backend\tests\benchmark_rag_full.py
+    - backend\tests\deepeval_eval.py
+    - backend\tests\eval_agent.py
+    - backend\tests\eval_report.md
+    - backend\tests\eval_runner.py
+    - backend\tests\run_benchmark.py
+    - backend\tests\test_agent_flow.py
+    - backend\tests\test_ai_platform.py
+    - backend\tests\test_analytics.py
+    - backend\tests\test_api.py
+    - backend\tests\test_chat_router.py
+    - backend\tests\test_cost.py
+    - backend\tests\test_data_golden.py
+    - backend\tests\test_dependencies.py
+    - backend\tests\test_evaluation.py
+    - backend\tests\test_evaluator.py
+    - backend\tests\test_exceptions.py
+    - backend\tests\test_feature_flags.py
+    - backend\tests\test_guardrails.py
+    - backend\tests\test_input_validation.py
+    - backend\tests\test_integration.py
+    - backend\tests\test_knowledge.py
+    - backend\tests\test_lang_detect.py
+    - backend\tests\test_langgraph.py
+    - backend\tests\test_langgraph_graph.py
+    - backend\tests\test_loader.py
+    - backend\tests\test_loaders.py
+    - backend\tests\test_main.py
+    - backend\tests\test_manager.py
+    - backend\tests\test_memory.py
+    - backend\tests\test_memory_extended.py
+    - backend\tests\test_multi_query_retrieve.py
+    - backend\tests\test_observability.py
+    - backend\tests\test_prompt_experiment.py
+    - backend\tests\test_qa_chain.py
+    - backend\tests\test_query_rewriter.py
+    - backend\tests\test_rag_quality.py
+    - backend\tests\test_rag_router.py
+    - backend\tests\test_rag_router_extended.py
+    - backend\tests\test_rag_stats_extended.py
+    - backend\tests\test_rag_stats_router.py
+    - backend\tests\test_redis_cache.py
+    - backend\tests\test_reliability.py
+    - backend\tests\test_security.py
+    - backend\tests\test_streaming_workflow.py
+    - backend\tests\test_tools.py
+    - backend\tests\test_vector_store.py
+    - crew\.dockerignore
+    - crew\Dockerfile
+    - crew\README.md
+    - crew\app\__init__.py
+    - crew\app\agents.py
+    - crew\app\crew_setup.py
+    - crew\app\main.py
+    - crew\app\tasks.py
+    - crew\requirements.txt
+    - current-full.png
+    - current-viewport.png
+    - docker-compose.yml
+    - docker-entrypoint.sh
+    - docs\architecture\system-overview.md
+    - docs\benchmarks\recall-evaluation.md
+    - docs\deployment\docker-setup.md
+    - docs\product\features.md
+    - docs\rag-design.md
+    - docs\rag-enterprise-analysis.md
+    - docs\rag-evaluation\reports\rag-eval-report-2026-06-05-0857.md
+    - docs\rag-evaluation\reports\rag-eval-report-2026-06-05-1519.md
+    - docs\rag-evaluation\reports\rag-eval-report-2026-06-05-1536.md
+    - docs\rag-evaluation\reports\rag-eval-report-2026-06-05-1554.md
+    - docs\rag-evaluation\reports\rag-eval-report-2026-06-05-1603.md
+    - docs\rag-evaluation\reports\rag-eval-report-2026-06-05-1620.md
+    - docs\rag-evaluation\reports\rag-eval-report-2026-06-05-1714.md
+    - docs\rag-evaluation\reports\rag-eval-report-2026-06-05-1722.md
+    - docs\rag-evaluation\reports\rag-eval-report-2026-06-05-1738.md
+    - docs\rag-evaluation\reports\rag-eval-report-2026-06-05-1748.md
+    - docs\rag-evaluation\reports\rag-eval-report-2026-06-05-1759.md
+    - docs\superpowers\plans\2026-05-31-cross-article-query.md
+    - docs\superpowers\plans\2026-06-01-multi-format-docs.md
+    - docs\superpowers\plans\2026-06-01-rag-test-overhaul.md
+    - docs\superpowers\plans\2026-06-02-enterprise-rag-upgrade.md
+    - docs\superpowers\plans\2026-06-02-rag-quality-p1.md
+    - docs\superpowers\specs\2026-05-31-cross-article-query-design.md
+    - docs\superpowers\specs\2026-06-01-multi-format-docs-design.md
+    - docs\superpowers\specs\2026-06-02-enterprise-rag-upgrade-design.md
+    - docs\superpowers\specs\2026-06-02-rag-optimization-v22-design.md
+    - docs\superpowers\specs\2026-06-02-rag-quality-p1-design.md
+    - docs\superpowers\specs\2026-06-04-rag-eval-upgrade-design.md
+    - eslint.config.js
+    - frontend.Dockerfile
+    - index.html
+    - landing-preview.png
+    - nginx.conf
+    - offloads\memory.db
+    - offloads\memory.db-shm
+    - offloads\memory.db-wal
+    - offloads\persona.md
+    - offloads\scenarios\sess_l2_20260529.md
+    - package-lock.json
+    - package.json
+    - public\favicon.svg
+    - public\icons.svg
+    - railway.json
+    - search-page.png
+    - serve-static.js
+    - src\App.tsx
+    - src\assets\hero.png
+    - src\assets\react.svg
+    - src\assets\vite.svg
+    - src\components\ChatWindow.tsx
+    - src\components\CrewGenerator.tsx
+    - src\components\CrewGenerator.tsx.bak
+    - src\components\DemoIntro.tsx
+    - src\components\ErrorBoundary.tsx
+    - src\components\InputArea.tsx
+    - src\components\MessageItem.tsx
+    - src\components\MessageList.tsx
+    - src\components\RagQuery.tsx
+    - src\components\SyntaxHighlighterWrapper.tsx
+    - src\components\SystemStatus.tsx
+    - src\components\architecture\ArchitectureFlow.tsx
+    - src\components\architecture\OptimizationStory.tsx
+    - src\components\dashboard\MetricGrid.tsx
+    - src\components\dashboard\QueryVolumeChart.tsx
+    - src\components\dashboard\RecentQueries.tsx
+    - src\components\documents\DocumentUpload.tsx
+    - src\components\documents\__tests__\DocumentUpload.test.tsx
+    - src\components\landing\BenchmarkSection.tsx
+    - src\components\landing\FeatureGrid.tsx
+    - src\components\landing\HeroSection.tsx
+    - src\components\search\CitationList.tsx
+    - src\components\search\SearchBar.tsx
+    - src\components\search\StreamingAnswer.tsx
+    - src\components\ui\Badge.tsx
+    - src\components\ui\Button.tsx
+    - src\components\ui\Card.tsx
+    - src\components\ui\MetricCard.tsx
+    - src\hooks\__tests__\useAnalytics.test.ts
+    - src\hooks\__tests__\useDashboardStats.test.ts
+    - src\hooks\__tests__\useDocuments.test.ts
+    - src\hooks\useAnalytics.ts
+    - src\hooks\useBenchmark.ts
+    - src\hooks\useBlogConfig.ts
+    - src\hooks\useChat.ts
+    - src\hooks\useDashboardStats.ts
+    - src\hooks\useDocuments.ts
+    - src\hooks\useSystemHealth.ts
+    - src\i18n\LanguageSwitcher.tsx
+    - src\i18n\config.ts
+    - src\i18n\en.json
+    - src\i18n\zh.json
+    - src\index.css
+    - src\main.tsx
+    - src\pages\Admin.tsx
+    - src\pages\Admin\EvaluationDashboard.tsx
+    - src\pages\Admin\FeatureFlags.tsx
+    - src\pages\Analytics.tsx
+    - src\pages\Architecture.tsx
+    - src\pages\Benchmark.tsx
+    - src\pages\Dashboard.tsx
+    - src\pages\Documents.tsx
+    - src\pages\Landing.tsx
+    - src\pages\Login.tsx
+    - src\pages\Search.tsx
+    - src\pages\__tests__\Analytics.test.tsx
+    - src\pages\__tests__\Dashboard.test.tsx
+    - src\pages\__tests__\Documents.test.tsx
+    - src\pages\__tests__\ScrollBehavior.test.tsx
+    - src\pages\__tests__\Search.test.tsx
+    - src\services\__tests__\rag.test.ts
+    - src\services\api.ts
+    - src\services\evaluation.ts
+    - src\services\featureFlags.ts
+    - src\services\rag.ts
+    - src\services\storage.ts
+    - src\styles\design-tokens.css
+    - src\test-setup.ts
+    - src\test\setup.ts
+    - src\types\dashboard.ts
+    - src\types\message.ts
+    - src\types\syntax-highlighter.d.ts
+    - src\vite-env.d.ts
+    - tests\test_chatbot.py
+    - tsconfig.app.json
+    - tsconfig.json
+    - tsconfig.node.json
+    - updated-full.png
+    - updated-viewport.png
+    - vite.config.ts
+    - vitest.config.ts
+    - 目标.md
+source_files: []
+depends_on: []
+related_to: []

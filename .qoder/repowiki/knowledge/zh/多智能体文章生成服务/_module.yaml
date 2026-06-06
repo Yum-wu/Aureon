@@ -1,0 +1,9 @@
+schema_version: 1
+module_path: crew_service
+title: 多智能体文章生成服务
+scope:
+    - crew/
+source_files: []
+depends_on: []
+related_to:
+    - path: backend

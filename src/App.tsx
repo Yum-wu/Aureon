@@ -5,7 +5,8 @@ import { useTranslation } from "react-i18next";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Toaster } from "sonner";
 import { LanguageSwitcher } from "./i18n/LanguageSwitcher";
-import { AuthProvider, useAuth } from "./hooks/useAuth";
+import { AuthProvider } from "./hooks/AuthProvider";
+import { useAuth } from "./hooks/AuthContext";
 
 // Route-level code splitting — each page is a separate chunk
 const Landing = lazy(() => import("./pages/Landing").then(m => ({ default: m.Landing })));
