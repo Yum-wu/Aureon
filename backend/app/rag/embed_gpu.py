@@ -220,11 +220,18 @@ class GPUReranker:
             if attn_impl and self.device == "cuda":
                 model_kwargs["attn_implementation"] = attn_impl
 
-            self._model = CrossEncoder(
-                self.model_name,
-                device=self.device,
-                model_kwargs=model_kwargs,
-            )
+            try:
+                self._model = CrossEncoder(
+                    self.model_name,
+                    device=self.device,
+                    model_kwargs=model_kwargs,
+                )
+            except TypeError:
+                # Fallback: older sentence-transformers without model_kwargs
+                self._model = CrossEncoder(
+                    self.model_name,
+                    device=self.device,
+                )
 
             elapsed = time.time() - start
             logger.info(
