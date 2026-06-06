@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Tests for GPU-accelerated embedding.
 
 Uses mocks to avoid model downloads on CI. Real model tests are in
@@ -9,7 +10,7 @@ from unittest.mock import patch, MagicMock
 
 
 class TestGPUEmbeddingUnit:
-    """Unit tests for GPUEmbedder ¡ª no model loading."""
+    """Unit tests for GPUEmbedder (no model loading)."""
 
     def test_fp16_disabled_on_cpu(self):
         """GPUEmbedder with device='cpu' should disable fp16."""
@@ -51,7 +52,7 @@ class TestGPUEmbeddingUnit:
 
 
 class TestGPURerankerUnit:
-    """Unit tests for GPUReranker ¡ª no model loading."""
+    """Unit tests for GPUReranker (no model loading)."""
 
     def test_fp16_disabled_on_cpu(self):
         """GPUReranker with device='cpu' should disable fp16."""
