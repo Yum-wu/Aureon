@@ -1,8 +1,8 @@
-import logging
+import structlog
 from pathlib import Path
 from app.memory import l2_scenario
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger()
 
 PERSONA_PATH = Path("offloads/persona.md").resolve()
 PERSONA_MAX_SIZE = 2048  # 2KB

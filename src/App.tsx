@@ -1,10 +1,11 @@
 // Aureon — Enterprise AI Knowledge Base Platform
-import { lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { lazy, Suspense, type ReactNode } from "react";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Toaster } from "sonner";
 import { LanguageSwitcher } from "./i18n/LanguageSwitcher";
+import { AuthProvider, useAuth } from "./hooks/useAuth";
 
 // Route-level code splitting — each page is a separate chunk
 const Landing = lazy(() => import("./pages/Landing").then(m => ({ default: m.Landing })));
@@ -23,6 +24,15 @@ function PageFallback() {
       <div className="animate-spin rounded-full h-8 w-8" style={{borderColor:'var(--bg-tertiary)',borderTopColor:'var(--accent)'}} />
     </div>
   );
+}
+
+/* -- Route Guard -- */
+function ProtectedRoute({ children }: { children: ReactNode }) {
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  return <>{children}</>;
 }
 
 /* ── App Layout ── */
@@ -96,10 +106,11 @@ function AppLayout() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/search" element={<Search />} />
             <Route path="/documents" element={<Documents />} />
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="/admin" element={<Admin />} />
             <Route path="/architecture" element={<Architecture />} />
             <Route path="/crew" element={<CrewGenerator />} />
+            {/* Protected routes — require auth */}
+            <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
           </Routes>
         </Suspense>
       </div>
@@ -112,7 +123,9 @@ function App() {
     <ErrorBoundary>
       <Toaster theme="dark" position="top-center" richColors closeButton />
       <BrowserRouter>
-        <AppLayout />
+        <AuthProvider>
+          <AppLayout />
+        </AuthProvider>
       </BrowserRouter>
     </ErrorBoundary>
   );

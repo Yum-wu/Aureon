@@ -13,12 +13,12 @@ Reference: https://www.anthropic.com/news/contextual-retrieval
 """
 
 import re
-import logging
+import structlog
 from typing import List, Callable, Optional
 
 import numpy as np
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger()
 
 
 def _chinese_sentence_split(text: str) -> List[str]:

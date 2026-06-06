@@ -2,11 +2,11 @@
 Production guardrails: hallucination detection, citation verification.
 """
 import json
-import logging
+import structlog
 import re
 from typing import Dict, List, Optional, Tuple
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger()
 
 
 HALLUCINATION_CHECK_PROMPT = """你是一个事实核查助手。判断以下 AI 回答是否基于提供的参考文档。
@@ -67,3 +67,74 @@ def verify_citations(citations: List[str], sources: List[Dict]) -> Dict:
         else:
             missing.append(cite)
     return {"valid": valid, "missing": missing, "all_verified": len(missing) == 0}
+
+
+# -- Prompt Injection Detection --
+# OWASP LLM Top 10 #1 risk. Regex-based first line of defense (<1ms).
+
+_INJECTION_PATTERNS = [
+    # English patterns
+    r"(?i)ignore\s+(all\s+)?previous\s+instructions",
+    r"(?i)forget\s+(everything|all)\s+(above|before)",
+    r"(?i)you\s+are\s+now\s+(a|an|DAN)",
+    r"(?i)new\s+instructions?\s*:",
+    r"(?i)system\s*prompt\s*:",
+    r"(?i)disregard\s+(all\s+)?(previous|prior)",
+    r"(?i)override\s+(your|the)\s+(rules|instructions|system)",
+    r"(?i)act\s+as\s+(if\s+)?(you\s+are|a)",
+    r"(?i)pretend\s+(to\s+be|you\s+are)",
+    r"(?i)roleplay\s+as",
+    # Model-specific injection tokens
+    r"(?i)\[INST\]|\[/INST\]|<<SYS>>|<</SYS>>",
+    r"(?i)<\|im_start\|>|<\|im_end\|>",
+    r"(?i)###\s*(System|Instruction)",
+    # Chinese patterns
+    r"(?i)忽略.*(之前|以上|所有).*(指令|规则|设定)",
+    r"(?i)忘记.*(之前|以上).*(一切|内容)",
+    r"(?i)你现在是(一个)?",
+    r"(?i)扮演(一个)?",
+    r"(?i)新(的)?(指令|规则)\s*[:：]",
+    r"(?i)系统(提示|指令)\s*[:：]",
+]
+
+# Pre-compile for performance
+_INJECTION_RE = [re.compile(p) for p in _INJECTION_PATTERNS]
+
+
+def detect_prompt_injection(text: str) -> Dict:
+    """Detect potential prompt injection attempts using regex patterns.
+
+    Fast (<1ms) first-line defense. Returns dict with:
+    - detected (bool): whether injection was detected
+    - pattern (str): the matched pattern (for logging)
+    - risk_level (str): 'high', 'medium', or 'none'
+
+    Based on OWASP LLM Top 10 Prompt Injection Prevention Cheat Sheet.
+    """
+    if not text or len(text) < 3:
+        return {"detected": False, "pattern": "", "risk_level": "none"}
+
+    for pattern in _INJECTION_RE:
+        match = pattern.search(text)
+        if match:
+            return {
+                "detected": True,
+                "pattern": match.group(),
+                "risk_level": "high" if "system" in match.group().lower() or "INST" in match.group() else "medium",
+            }
+
+    return {"detected": False, "pattern": "", "risk_level": "none"}
+
+
+def sanitize_input(text: str, max_length: int = 4000) -> str:
+    """Sanitize user input to reduce injection risk.
+
+    - Truncate to max_length
+    - Remove angle brackets (prevent XML/HTML injection)
+    - Strip leading/trailing whitespace
+    """
+    if not text:
+        return ""
+    text = text[:max_length]
+    text = re.sub(r'[<>]', '', text)
+    return text.strip()

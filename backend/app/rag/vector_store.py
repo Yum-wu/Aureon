@@ -11,7 +11,8 @@ import time
 import numpy as np
 from typing import List, Dict, Any, Optional
 
-logger = logging.getLogger(__name__)
+import structlog
+logger = structlog.get_logger()
 
 import chromadb
 from chromadb.api.types import EmbeddingFunction
@@ -541,6 +542,11 @@ class ZhipuEmbeddingFn(EmbeddingFunction):
 
 # ── Public API ──
 
+def _invalidate_stats_cache():
+    """Invalidate stats cache after index changes."""
+    _stats_cache["updated_at"] = 0.0
+
+
 def add_to_index(chunks: List[Dict[str, Any]], path: str = None):
     """Add chunks to an EXISTING Chroma collection (incremental)."""
     save_path = path or VECTOR_DIR
@@ -575,6 +581,7 @@ def add_to_index(chunks: List[Dict[str, Any]], path: str = None):
 
     logger.info("Added %d chunks to existing Chroma (%s)", len(chunks), save_path)
     _build_kw_index(force=True)
+    _invalidate_stats_cache()
 
 
 def delete_from_index(source_filename: str, path: str = None):
@@ -594,6 +601,7 @@ def delete_from_index(source_filename: str, path: str = None):
     safe_name = source_filename.encode("ascii", errors="replace").decode("ascii")
     logger.info("Deleted %d chunks for '%s' from Chroma (%s)", deleted, safe_name, save_path)
     _build_kw_index(force=True)
+    _invalidate_stats_cache()
 
 
 def save_index(chunks: List[Dict[str, Any]], embeddings: np.ndarray = None, path: str = None):
@@ -645,6 +653,7 @@ def save_index(chunks: List[Dict[str, Any]], embeddings: np.ndarray = None, path
 
     logger.info("Saved %d chunks to Chroma (%s)", len(chunks), save_path)
     _build_kw_index(force=True)
+    _invalidate_stats_cache()
 
 
 def load_index(path: str = None):
@@ -853,28 +862,44 @@ def get_bm25_stats() -> dict:
     }
 
 
+# ── Stats cache (avoid full-scan on every health check) ──
+_stats_cache: dict = {"doc_count": 0, "chunk_count": 0, "updated_at": 0.0}
+_STATS_CACHE_TTL = float(os.getenv("STATS_CACHE_TTL", "60"))  # seconds
+
+
 def get_collection_stats() -> tuple[int, int]:
     """Return (total_docs, total_chunks) from Chroma collection.
 
     Counts unique source documents and total chunks.
     Returns (0, 0) if collection is empty or unavailable.
+    Results are cached for STATS_CACHE_TTL seconds (default 60s).
     """
+    import time as _time
+    now = _time.time()
+    if (now - _stats_cache["updated_at"]) < _STATS_CACHE_TTL:
+        return _stats_cache["doc_count"], _stats_cache["chunk_count"]
+
     try:
         client = _get_chroma()
         collection = _get_collection(client)
         total_chunks = collection.count()
         if total_chunks > 0:
-            # TODO: Optimize for large collections - consider maintaining counters
             all_meta = collection.get(include=["metadatas"])
             unique_docs = set()
             for meta in all_meta.get("metadatas", []):
                 if meta and isinstance(meta, dict):
                     src = meta.get("source") or meta.get("title", "unknown")
                     unique_docs.add(src)
+            _stats_cache["doc_count"] = len(unique_docs)
+            _stats_cache["chunk_count"] = total_chunks
+            _stats_cache["updated_at"] = now
             return len(unique_docs), total_chunks
+        _stats_cache["doc_count"] = 0
+        _stats_cache["chunk_count"] = 0
+        _stats_cache["updated_at"] = now
         return 0, 0
     except Exception:
-        return 0, 0
+        return _stats_cache["doc_count"], _stats_cache["chunk_count"]
 
 
 def get_indexed_sources() -> set:
@@ -1053,7 +1078,10 @@ def _get_es():
     if _es_client is None:
         from elasticsearch import Elasticsearch
         from app.config import settings
-        _es_client = Elasticsearch(settings.es_url)
+        kwargs = {}
+        if settings.es_password:
+            kwargs["basic_auth"] = ("elastic", settings.es_password)
+        _es_client = Elasticsearch(settings.es_url, **kwargs)
     return _es_client
 
 

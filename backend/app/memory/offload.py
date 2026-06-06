@@ -1,9 +1,9 @@
-import logging
+import structlog
 from pathlib import Path
 from datetime import datetime
 from app.config import settings
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger()
 
 REFS_DIR = Path(__file__).resolve().parent.parent.parent / "offloads" / "refs"
 

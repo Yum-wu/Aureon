@@ -7,11 +7,12 @@ Falls back to in-memory dict cache when Redis is down.
 """
 
 import hashlib
-import logging
+import re
 import time
 from typing import Optional
+import structlog
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger()
 
 # Sentinel: None = uninitialized, False = unavailable, valid client = ready
 _redis = None
@@ -22,11 +23,13 @@ _MEM_TTL = 3600  # 1 hour, same as Redis TTL
 
 
 # Bump to invalidate all cached RAG responses (e.g. after retrieval logic changes)
-_CACHE_VERSION = "v15"  # v15: index endpoint now clears all caches + rebuilds BM25
+_CACHE_VERSION = "v16"  # v16: semantic dedup via token bag
 
 
 def _mem_cache_key(key: str) -> str:
-    return f"llm_cache:{_CACHE_VERSION}:{hashlib.md5(key.strip().lower().encode()).hexdigest()}"
+    raw = key.strip().lower()
+    tokens = sorted(set(re.findall(r'[\w\u4e00-\u9fff]+', raw)))
+    return f"llm_cache:{_CACHE_VERSION}:{hashlib.md5(' '.join(tokens).encode()).hexdigest()}"
 
 
 def _mem_get(query: str) -> Optional[str]:
@@ -98,9 +101,17 @@ def _get_redis():
 
 
 async def semantic_cache_key(query: str) -> str:
-    """Return a deterministic cache key for a query."""
+    """Return a deterministic cache key for a query.
+
+    Uses normalized token bag (sorted unique tokens) for semantic dedup.
+    Queries with same tokens (regardless of order/punctuation) share a key.
+    Example: 'What is RAG?' and 'RAG is what' produce the same key.
+    """
     raw = query.strip().lower()
-    return f"llm_cache:{_CACHE_VERSION}:{hashlib.md5(raw.encode()).hexdigest()}"
+    # Normalize: remove punctuation, collapse whitespace, sort tokens
+    tokens = sorted(set(re.findall(r'[\w\u4e00-\u9fff]+', raw)))
+    token_hash = hashlib.md5(" ".join(tokens).encode()).hexdigest()
+    return f"llm_cache:{_CACHE_VERSION}:{token_hash}"
 
 
 async def get_cached(query: str, threshold: float = 0.92) -> Optional[str]:
@@ -147,6 +158,36 @@ async def set_cached(query: str, response: str, ttl: int = 3600):
 def get_redis():
     """Public interface for getting Redis client."""
     return _get_redis()
+
+
+async def clear_cache_by_prefix(prefix: str) -> int:
+    """Delete all keys matching prefix using SCAN (non-blocking).
+
+    Replaces dangerous KEYS command which blocks Redis on large keyspaces.
+    SCAN iterates in batches of 100, safe for production use.
+
+    Args:
+        prefix: Key prefix pattern (e.g. 'llm_cache:')
+
+    Returns:
+        Number of keys deleted.
+    """
+    r = _get_redis()
+    if not r:
+        return 0
+    cleared = 0
+    try:
+        cursor = 0
+        pattern = f"{prefix}*"
+        while True:
+            cursor, keys = await r.scan(cursor=cursor, match=pattern, count=100)
+            if keys:
+                cleared += await r.delete(*keys)
+            if cursor == 0:
+                break
+    except Exception as e:
+        logger.warning("clear_cache_by_prefix failed: %s", e)
+    return cleared
 
 
 async def close_redis():

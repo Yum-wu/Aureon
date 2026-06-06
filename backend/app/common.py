@@ -4,6 +4,7 @@ Extracts repeated patterns across features/observability/security/evaluation/
 cost/reliability/knowledge/ai_platform/integration modules.
 """
 import hashlib
+import json
 from datetime import datetime, timezone
 from typing import TypeVar, Type, Sequence
 
@@ -64,3 +65,18 @@ def require_llm_key():
             status_code=503,
             detail="LLM API key not configured. Set LLM_API_KEY or FALLBACK_API_KEY.",
         )
+
+
+def sse_event(data: dict) -> str:
+    """Format a dict as an SSE data event string.
+
+    Replaces repeated `f'data: {json.dumps(data, ensure_ascii=False)}\\n\\n'`
+    patterns across Chat, Crew, and RAG streaming endpoints.
+
+    Args:
+        data: Event payload dict (must be JSON-serializable).
+
+    Returns:
+        SSE-formatted string: `data: {...}\n\n`
+    """
+    return f"data: {json.dumps(data, ensure_ascii=False)}\n\n"

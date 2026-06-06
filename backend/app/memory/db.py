@@ -32,10 +32,49 @@ def get_db() -> sqlite3.Connection:
         return conn
 
 
+# -- Schema Versioning --
+# Lightweight migration mechanism for raw SQLite (no Alembic/SQLAlchemy needed).
+# Each migration is a function that receives a connection and bumps the version.
+_SCHEMA_VERSION = 1  # Current target version
+
+_SCHEMA_MIGRATIONS = {
+    # version: migration_function
+    # Example:
+    # 2: lambda conn: conn.execute("ALTER TABLE conversations ADD COLUMN user_id TEXT"),
+}
+
+
+def _get_current_version(conn) -> int:
+    """Get current schema version from DB."""
+    try:
+        row = conn.execute("SELECT version FROM schema_version ORDER BY version DESC LIMIT 1").fetchone()
+        return row["version"] if row else 0
+    except sqlite3.OperationalError:
+        return 0  # Table doesn't exist yet
+
+
+def _run_migrations(conn):
+    """Apply pending schema migrations."""
+    current = _get_current_version(conn)
+    if current >= _SCHEMA_VERSION:
+        return
+
+    for version in range(current + 1, _SCHEMA_VERSION + 1):
+        migration_fn = _SCHEMA_MIGRATIONS.get(version)
+        if migration_fn:
+            migration_fn(conn)
+        conn.execute("INSERT OR IGNORE INTO schema_version (version) VALUES (?)", (version,))
+    conn.commit()
+
+
 def init_db():
-    """Create tables if they don't exist."""
+    """Create tables if they don't exist and run migrations."""
     conn = get_db()
     conn.executescript("""
+        CREATE TABLE IF NOT EXISTS schema_version (
+            version INTEGER PRIMARY KEY,
+            applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
         CREATE TABLE IF NOT EXISTS conversations (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             session_id TEXT NOT NULL,
@@ -59,4 +98,5 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_conv_session ON conversations(session_id);
         CREATE INDEX IF NOT EXISTS idx_atom_session ON atoms(session_id);
     """)
+    _run_migrations(conn)
     conn.commit()

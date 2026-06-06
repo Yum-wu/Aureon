@@ -1,10 +1,10 @@
-import logging
+import structlog
 import time
 from pathlib import Path
 from datetime import datetime
 from app.memory import l1_atom
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger()
 
 SCENARIOS_DIR = Path("offloads/scenarios").resolve()
 MAX_SCENARIOS = 50

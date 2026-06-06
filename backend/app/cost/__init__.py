@@ -1,4 +1,7 @@
-"""Cost Governance - 成本追踪和 Budget 管理"""
+"""Cost Governance - 成本追踪和 Budget 管理
+
+EXPERIMENTAL: Not connected to core paths. Models/Routes exist but unused by production flow.
+"""
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 from pydantic import BaseModel, Field

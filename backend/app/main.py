@@ -34,12 +34,14 @@ from app.integration.router import router as integration_router
 from app.exceptions import AureonException
 from app.routers import chat as chat_router
 from app.routers import rag as rag_router
+from app.routers import crew as crew_router
 from app.agent.llm import create_llm
 from app.tools import ALL_TOOLS
 from app.memory.db import init_db
 from app.memory.manager import manager as memory_manager
 from app.config import settings
 from app.cache.redis_client import close_redis
+from app.common import SSE_HEADERS
 
 # ── CrewAI (merged, lazy-imported in route handlers) ──
 from pydantic import BaseModel, Field
@@ -99,10 +101,27 @@ async def aureon_exception_handler(request: Request, exc: AureonException):
 
 @app.middleware("http")
 async def logging_middleware(request: Request, call_next):
-    """Inject request_id + security headers, log request completion."""
+    """Inject request_id + security headers + optional auth, log request completion."""
     request_id = str(uuid.uuid4())[:8]
     structlog.contextvars.clear_contextvars()
     structlog.contextvars.bind_contextvars(request_id=request_id)
+
+    # API Key authentication (skip when API_AUTH_KEY is not configured)
+    if settings.api_auth_key and request.url.path.startswith("/api/"):
+        # Public endpoints that don't require auth
+        public_paths = {"/api/health", "/api/crew/health", "/metrics"}
+        if request.url.path not in public_paths:
+            api_key = request.headers.get("X-API-Key") or request.query_params.get("api_key", "")
+            if not api_key:
+                return JSONResponse(
+                    status_code=401,
+                    content={"error": "unauthorized", "detail": "Missing API key. Provide X-API-Key header or api_key query parameter."},
+                )
+            if api_key != settings.api_auth_key:
+                return JSONResponse(
+                    status_code=403,
+                    content={"error": "forbidden", "detail": "Invalid API key."},
+                )
 
     start = time.time()
     response = await call_next(request)
@@ -225,118 +244,6 @@ async def langgraph_run(req: LangGraphRunRequest, request: Request):
     return result
 
 
-# ── CrewAI Routes ──
-
-
-class CrewGenerateRequest(BaseModel):
-    topic: str = Field(..., min_length=2, max_length=500)
-
-
-@app.post("/api/crew/generate")
-@limiter.limit("3/minute")
-async def crew_generate(req: CrewGenerateRequest, request: Request):
-    """Generate article via 3-agent crew (synchronous)."""
-    import time
-    try:
-        from app.crew.crew_setup import generate_article
-    except ImportError:
-        raise HTTPException(status_code=503, detail="CrewAI module not available")
-
-    try:
-        # litellm (used by crewai 0.80+) needs standard OpenAI env vars
-        os.environ.setdefault("OPENAI_API_KEY", settings.llm_api_key)
-        os.environ.setdefault("OPENAI_BASE_URL", settings.llm_base_url)
-        os.environ.setdefault("OPENAI_MODEL_NAME", f"openai/{settings.llm_model}")
-
-        from app.utils.lang_detect import detect_language
-
-        lang = detect_language(req.topic)
-
-        start = time.time()
-        result = generate_article(topic=req.topic, lang=lang)
-        duration_ms = int((time.time() - start) * 1000)
-        return {
-            "topic": result["topic"],
-            "final_output": result["final_output"],
-            "duration_ms": duration_ms,
-            "agents": result["agents"],
-        }
-    except Exception as e:
-        logger.error("crew_generate_failed", error=str(e)[:200])
-        raise HTTPException(status_code=500, detail="Article generation failed")
-
-
-@app.post("/api/crew/generate/stream")
-@limiter.limit("3/minute")
-async def crew_generate_stream(req: CrewGenerateRequest, request: Request):
-    """Generate article with real-time agent progress via SSE."""
-    try:
-        from app.crew.crew_setup import generate_article
-        from app.crew.main_events import EventCollector
-    except ImportError as e:
-        return StreamingResponse(
-            iter([f'data: {{"type": "error", "message": "CrewAI not installed: {str(e)}"}}\n\n']),
-            media_type="text/event-stream",
-            status_code=503,
-        )
-
-    # litellm (used by crewai 0.80+) needs standard OpenAI env vars
-    os.environ.setdefault("OPENAI_API_KEY", settings.llm_api_key)
-    os.environ.setdefault("OPENAI_BASE_URL", settings.llm_base_url)
-    os.environ.setdefault("OPENAI_MODEL_NAME", f"openai/{settings.llm_model}")
-
-    from app.utils.lang_detect import detect_language
-
-    lang = detect_language(req.topic)
-
-    collector = EventCollector()
-
-    async def run_crew():
-        try:
-            result = await asyncio.to_thread(
-                generate_article, req.topic, collector.emit, lang
-            )
-            collector.emit("result", {
-                "final_output": result["final_output"],
-                "duration_ms": result["duration_ms"],
-            })
-        except Exception as e:
-            collector.emit("error", {"message": str(e)})
-        finally:
-            collector.close()
-
-    task = asyncio.create_task(run_crew())
-
-    async def event_stream():
-        try:
-            async for chunk in collector.stream():
-                if await request.is_disconnected():
-                    break
-                yield chunk
-        finally:
-            if not task.done():
-                task.cancel()
-
-    return StreamingResponse(
-        event_stream(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
-    )
-
-
-@app.get("/api/crew/health")
-async def crew_health():
-    return {
-        "status": "ok",
-        "service": "crew-generator",
-        "llm_configured": bool(settings.llm_api_key),
-    }
-
-
 @app.get("/api/health")
 async def health():
     return {
@@ -349,6 +256,7 @@ async def health():
 
 app.include_router(chat_router.router)
 app.include_router(rag_router.router)
+app.include_router(crew_router.router)
 app.include_router(stats_router)
 app.include_router(analytics_router)
 app.include_router(feature_flags_router)

@@ -1,7 +1,7 @@
-import logging
+import structlog
 from app.memory.db import get_db
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger()
 
 _fts_initialized = False
 

@@ -40,6 +40,9 @@ class Settings(BaseSettings):
 
     redis_url: str = ""
 
+    # API Authentication
+    api_auth_key: str = ""  # Shared API key for authentication (empty = disabled)
+
     # Vector store backend ("chroma" or "qdrant")
     vector_backend: str = "chroma"
     qdrant_url: str = "http://localhost:6333"
@@ -54,6 +57,7 @@ class Settings(BaseSettings):
     # Elasticsearch BM25 backend
     es_url: str = "http://localhost:9200"
     es_index: str = "aureon"
+    es_password: str = ""  # ES authentication password (empty = no auth)
     bm25_backend: str = "memory"
 
     # Auto index rebuild on startup when articles change

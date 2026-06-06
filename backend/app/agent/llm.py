@@ -5,16 +5,16 @@ Primary LLM uses `settings.llm_*` (DeepSeek).
 Fallback LLM uses `settings.fallback_*` (Zhipu AI).
 """
 
-import logging
 import os
 
 from langchain_openai import ChatOpenAI
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from openai import APIError, APITimeoutError, RateLimitError
+import structlog
 
 from app.config import settings
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger()
 
 
 def create_llm(model: str = None, **kwargs):

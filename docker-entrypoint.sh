@@ -10,5 +10,5 @@ sed -i "s/listen 80;/listen ${NGINX_PORT};/" /etc/nginx/conf.d/default.conf
 # 启动 nginx（守护进程模式）
 nginx
 
-# 等待 uvicorn 就绪后 exec（信号正确传递到 uvicorn）
-exec uvicorn app.main:app --host 127.0.0.1 --port 8000
+# 以非 root 用户运行 uvicorn（安全最佳实践）
+exec gosu appuser uvicorn app.main:app --host 127.0.0.1 --port 8000

@@ -1,4 +1,7 @@
-"""Knowledge Intelligence - Document Version Control & Export"""
+"""Knowledge Intelligence - Document Version Control & Export
+
+EXPERIMENTAL: Not connected to core paths. Models/Routes exist but unused by production flow.
+"""
 from datetime import datetime, timezone
 from typing import Optional
 from pydantic import BaseModel, Field

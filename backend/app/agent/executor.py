@@ -1,11 +1,13 @@
 import json
-import logging
 import uuid
 from typing import AsyncGenerator
 
 from langchain_core.messages import HumanMessage, SystemMessage
+import structlog
 
-logger = logging.getLogger(__name__)
+from app.common import sse_event
+
+logger = structlog.get_logger()
 
 
 async def stream_agent(
@@ -21,9 +23,9 @@ async def stream_agent(
     """
     if session_id is None:
         session_id = str(uuid.uuid4())
-        yield _sse({"type": "session", "content": {"session_id": session_id}})
+        yield sse_event({"type": "session", "content": {"session_id": session_id}})
     else:
-        yield _sse({"type": "session", "content": {"session_id": session_id}})
+        yield sse_event({"type": "session", "content": {"session_id": session_id}})
 
     chat_history = chat_history or []
     messages = list(chat_history)
@@ -43,22 +45,22 @@ async def stream_agent(
             if kind == "on_chat_model_stream":
                 chunk = event["data"]["chunk"]
                 if chunk.content:
-                    yield _sse({"type": "text", "content": chunk.content})
+                    yield sse_event({"type": "text", "content": chunk.content})
 
             elif kind == "on_tool_start":
                 name = event.get("name", "")
                 tool_input = event["data"].get("input", {})
-                yield _sse({"type": "tool_start", "content": {"tool": name, "args": tool_input}})
+                yield sse_event({"type": "tool_start", "content": {"tool": name, "args": tool_input}})
 
             elif kind == "on_tool_end":
                 name = event.get("name", "")
                 output = event["data"].get("output", "")
-                yield _sse({"type": "tool_end", "content": {"tool": name, "result": str(output)}})
+                yield sse_event({"type": "tool_end", "content": {"tool": name, "result": str(output)}})
 
     except Exception as e:
-        yield _sse({"type": "error", "content": {"message": str(e)}})
+        yield sse_event({"type": "error", "content": {"message": str(e)}})
 
-    yield _sse({"type": "done", "content": None})
+    yield sse_event({"type": "done", "content": None})
 
 
 async def stream_agent_with_memory(
@@ -118,5 +120,3 @@ async def stream_agent_with_memory(
             logger.warning(f"Memory: unexpected error during recording: {e}")
 
 
-def _sse(data: dict) -> str:
-    return f"data: {json.dumps(data, ensure_ascii=False)}\n\n"

@@ -159,6 +159,12 @@ def init_query_traces_table():
     conn.execute("""
         CREATE INDEX IF NOT EXISTS idx_query_traces_created_at ON query_traces(created_at)
     """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_query_traces_status ON query_traces(status)
+    """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_query_traces_status_created_at ON query_traces(status, created_at)
+    """)
     conn.commit()
 
 
