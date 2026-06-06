@@ -2,8 +2,8 @@
 // Checks if API_AUTH_KEY is configured on backend.
 // When API_AUTH_KEY is empty (dev mode), all routes are accessible.
 
-import { createContext, useState, useCallback, type ReactNode } from "react";
-import { AuthContext, type AuthState } from "./AuthContext";
+import { useState, useCallback, type ReactNode } from "react";
+import { AuthContext } from "./AuthContext";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [apiKey, setApiKey] = useState(() => sessionStorage.getItem("aureon_api_key") || "");
