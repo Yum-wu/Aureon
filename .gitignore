@@ -67,3 +67,7 @@ docker-compose.override.yml
 
 # 本地目标文档（不提交）
 目标.md
+
+# Vector index (rebuilt on startup via DashScope API)
+backend/data/vectors/
+backend/data/chroma.sqlite3

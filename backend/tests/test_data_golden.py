@@ -447,10 +447,10 @@ DATASETS = {
         "description": "Full 97 QA pairs from RAG test suite",
         "total": len(GOLDEN_97QA),
     },
-    "core_regression_30qa": {
+    "core_regression_27qa": {
         "data": CORE_REGRESSION_30QA,
         "version": "2026-06-04",
-        "description": "Core 30 QA pairs for CI quality gate",
+        "description": "Core 27 QA pairs for CI quality gate",
         "total": len(CORE_REGRESSION_30QA),
     },
     "difficult_cases_15qa": {
