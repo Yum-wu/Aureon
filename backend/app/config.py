@@ -108,6 +108,21 @@ class Settings(BaseSettings):
     # Tool Calling Configuration
     tool_calling_enabled: bool = True
 
+    # Concurrency limits
+    queue_timeout_seconds: float = 30.0
+    llm_semaphore_deepseek: int = 30
+    llm_semaphore_embedding: int = 50
+    rag_semaphore: int = 40
+
+    # CRAG confidence thresholds
+    crag_enabled: bool = False
+    crag_high_confidence: float = 0.05
+    crag_low_confidence: float = 0.01
+    crag_ambiguous_threshold: float = 0.03
+
+    # Post-generation reflection
+    reflection_enabled: bool = False
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
     def model_post_init(self, __context):
