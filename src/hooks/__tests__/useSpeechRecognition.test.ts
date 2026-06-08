@@ -13,18 +13,23 @@ class MockSpeechRecognition {
   start = mockStart;
   stop = mockStop;
   abort = mockAbort;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onresult: any = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onerror: any = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onend: any = null;
 }
 
 describe('useSpeechRecognition', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).SpeechRecognition = MockSpeechRecognition;
   });
 
   afterEach(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (window as any).SpeechRecognition;
   });
 
@@ -34,6 +39,7 @@ describe('useSpeechRecognition', () => {
   });
 
   it('should report isSupported as false when SpeechRecognition is missing', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (window as any).SpeechRecognition;
     const { result } = renderHook(() => useSpeechRecognition());
     expect(result.current.isSupported).toBe(false);
@@ -69,6 +75,7 @@ describe('useSpeechRecognition', () => {
   });
 
   it('should set error when starting without support', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (window as any).SpeechRecognition;
     const { result } = renderHook(() => useSpeechRecognition());
     act(() => {

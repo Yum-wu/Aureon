@@ -2,6 +2,7 @@
 
 export interface WebSocketMessage {
   type: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
 }
 
@@ -21,12 +22,14 @@ export interface SourceItem {
 
 export interface ToolCall {
   tool_name: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   tool_args: Record<string, any>;
   call_id: string;
 }
 
 export interface ToolResult {
   call_id: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   result: any;
   success: boolean;
   error?: string;
@@ -120,6 +123,7 @@ export class AureonWebSocket {
   /**
    * Send user message.
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   sendUserMessage(query: string, metadata?: Record<string, any>): void {
     this.send({
       type: 'user_message',

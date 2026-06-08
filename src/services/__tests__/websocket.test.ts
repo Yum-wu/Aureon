@@ -45,6 +45,7 @@ describe('AureonWebSocket', () => {
   });
 
   test('getWebSocket returns singleton instance', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { getWebSocket } = require('../websocket');
     const ws1 = getWebSocket('client-1');
     const ws2 = getWebSocket('client-2');
@@ -52,6 +53,7 @@ describe('AureonWebSocket', () => {
   });
 
   test('disconnectWebSocket clears instance', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { getWebSocket, disconnectWebSocket } = require('../websocket');
     const ws1 = getWebSocket('client-1');
     disconnectWebSocket();

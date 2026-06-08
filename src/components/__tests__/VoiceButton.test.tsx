@@ -7,6 +7,7 @@ vi.mock('../../hooks/useSpeechRecognition', () => ({
 }));
 
 import { useSpeechRecognition } from '../../hooks/useSpeechRecognition';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mockUseSpeechRecognition = useSpeechRecognition as unknown as ReturnType<typeof vi.fn> & { mockReturnValue: (v: any) => void };
 
 describe('VoiceButton', () => {
