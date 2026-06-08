@@ -8,7 +8,6 @@ import {
 import type {
   ChatMessage,
   SourceItem,
-  WebSocketMessage,
 } from '../services/websocket';
 
 interface UseWebSocketOptions {
@@ -23,6 +22,7 @@ interface UseWebSocketReturn {
   streamingText: string;
   sources: SourceItem[];
   error: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   sendMessage: (query: string, metadata?: Record<string, any>) => void;
   disconnect: () => void;
 }
@@ -124,6 +124,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
 
   // Send user message
   const sendMessage = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (query: string, metadata?: Record<string, any>) => {
       if (!wsRef.current || !isConnected) {
         setError('Not connected');

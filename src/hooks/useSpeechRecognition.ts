@@ -49,6 +49,7 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
 
   const getSpeechRecognition = useCallback(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition || null;
   }, []);
 
