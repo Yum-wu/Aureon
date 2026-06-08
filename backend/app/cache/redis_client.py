@@ -9,8 +9,10 @@ Falls back to in-memory dict cache when Redis is down.
 import hashlib
 import re
 import time
-from typing import Optional
+from collections import deque
+from typing import Optional, Dict, Any
 import structlog
+from app.multi_tenant.middleware import get_current_tenant_id
 
 logger = structlog.get_logger()
 
@@ -24,6 +26,43 @@ _MEM_TTL = 3600  # 1 hour, same as Redis TTL
 
 # Bump to invalidate all cached RAG responses (e.g. after retrieval logic changes)
 _CACHE_VERSION = "v16"  # v16: semantic dedup via token bag
+
+
+# ── Semantic cache metrics ──
+_cache_metrics = {
+    "exact_hits": 0,
+    "semantic_hits": 0,
+    "misses": 0,
+    "sets": 0,
+    "errors": 0,
+    "latencies": deque(maxlen=1000),  # Last 1000 operations
+    "total_lookups": 0,
+}
+
+
+def _record_cache_hit(hit_type: str, latency_ms: float):
+    """Record cache hit metric.
+
+    Args:
+        hit_type: Type of hit ('exact' or 'semantic')
+        latency_ms: Latency in milliseconds for this lookup
+    """
+    global _cache_metrics
+    _cache_metrics[f"{hit_type}_hits"] += 1
+    _cache_metrics["total_lookups"] += 1
+    _cache_metrics["latencies"].append(latency_ms)
+
+
+def _record_cache_miss(latency_ms: float):
+    """Record cache miss metric.
+
+    Args:
+        latency_ms: Latency in milliseconds for this lookup
+    """
+    global _cache_metrics
+    _cache_metrics["misses"] += 1
+    _cache_metrics["total_lookups"] += 1
+    _cache_metrics["latencies"].append(latency_ms)
 
 
 def _mem_cache_key(key: str) -> str:
@@ -62,26 +101,27 @@ def _mem_set(query: str, response: str, ttl: int = _MEM_TTL):
                 del _mem_cache[k]
 
 
-_redis = None
 _redis_fail_count = 0
-_RECONNECT_AFTER = 5  # Retry after N failures
+_RECONNECT_AFTER = 5  # Retry reconnect after N consecutive failures
 
 
 def _get_redis():
     """Return Redis client singleton, or False if unavailable.
 
-    Retries connection after _RECONNECT_AFTER failures to handle
+    Retries connection after _RECONNECT_AFTER consecutive failures to handle
     cases where Redis becomes available after app startup.
+
+    Sentinel values: None = uninitialized, False = unavailable, client = ready.
     """
     global _redis, _redis_fail_count
     if _redis is not None:
         return _redis
-    # Retry after enough failures (handles REDIS_URL added post-deploy)
+    # Only retry after enough consecutive failures have accumulated
     if _redis is False and _redis_fail_count < _RECONNECT_AFTER:
         return False
+    # Reset sentinel to retry (fail_count preserved — only reset on success)
     if _redis is False:
-        _redis = None  # Reset to retry
-        _redis_fail_count = 0
+        _redis = None
     try:
         import redis.asyncio as aioredis
         from app.config import settings
@@ -91,7 +131,7 @@ def _get_redis():
             socket_connect_timeout=2,
             socket_timeout=2,
         )
-        _redis_fail_count = 0
+        _redis_fail_count = 0  # Reset only on successful connection
         logger.info("Redis connected")
     except Exception as e:
         logger.warning("Redis unavailable (non-fatal): %s", e)
@@ -116,6 +156,7 @@ async def semantic_cache_key(query: str) -> str:
 
 async def get_cached(query: str, threshold: float = 0.92) -> Optional[str]:
     """Exact-match cache lookup. Falls back to in-memory if Redis down."""
+    tenant_id = get_current_tenant_id()
     # 1. Try in-memory first (fastest)
     mem_result = _mem_get(query)
     if mem_result is not None:
@@ -127,7 +168,9 @@ async def get_cached(query: str, threshold: float = 0.92) -> Optional[str]:
     if r:
         try:
             key = await semantic_cache_key(query)
-            cached = await r.get(key)
+            # Add tenant prefix to key
+            tenant_key = f"{tenant_id}:{key}"
+            cached = await r.get(tenant_key)
             if cached is not None:
                 # Also populate in-memory for faster next access
                 _mem_set(query, cached)
@@ -141,6 +184,7 @@ async def get_cached(query: str, threshold: float = 0.92) -> Optional[str]:
 
 async def set_cached(query: str, response: str, ttl: int = 3600):
     """Store a response in both in-memory and Redis."""
+    tenant_id = get_current_tenant_id()
     # Always store in-memory
     _mem_set(query, response, ttl)
 
@@ -150,7 +194,9 @@ async def set_cached(query: str, response: str, ttl: int = 3600):
         return
     try:
         key = await semantic_cache_key(query)
-        await r.setex(key, ttl, response)
+        # Add tenant prefix to key
+        tenant_key = f"{tenant_id}:{key}"
+        await r.setex(tenant_key, ttl, response)
     except Exception as e:
         logger.debug("Cache write error: %s", e)
 
@@ -199,3 +245,231 @@ async def close_redis():
         except Exception:
             pass
         _redis = None
+
+
+# ── Semantic Cache Integration ──
+# Two-layer cache: exact (hash) + semantic (vector similarity)
+# Gracefully degrades when SemanticLLMCache is unavailable
+
+_semantic_cache_instance = None
+
+
+def get_semantic_cache_instance():
+    """Get or create SemanticLLMCache singleton.
+
+    Lazy-loads the SemanticLLMCache module and creates a singleton instance.
+    Returns None if the module is unavailable (graceful degradation).
+    """
+    global _semantic_cache_instance
+
+    if _semantic_cache_instance is not None:
+        return _semantic_cache_instance
+
+    try:
+        from app.cache.semantic_cache import SemanticLLMCache
+        _semantic_cache_instance = SemanticLLMCache(
+            similarity_threshold=0.92,
+            default_ttl=3600,  # Match Redis TTL
+            max_cache_size=10000,
+        )
+        logger.info("Semantic cache singleton created")
+        return _semantic_cache_instance
+    except ImportError:
+        logger.debug("semantic_cache module not available, using exact-match only")
+        return None
+    except Exception as e:
+        logger.warning("Failed to create semantic cache: %s (non-fatal)", e)
+        return None
+
+
+def increment_cache_miss():
+    """Increment miss counter when LLM is actually called."""
+    global _cache_metrics
+    _cache_metrics["misses"] += 1
+
+
+def get_cache_metrics() -> Dict[str, Any]:
+    """Return cache performance metrics.
+
+    Returns:
+        Dictionary with hit/miss counts, rates, and latency percentiles
+    """
+    global _cache_metrics
+
+    total_lookups = _cache_metrics["total_lookups"]
+
+    # Calculate latency percentiles from deque
+    latencies = list(_cache_metrics["latencies"])
+    avg_latency = sum(latencies) / len(latencies) if latencies else 0.0
+
+    # Calculate percentiles efficiently
+    if latencies:
+        latencies_sorted = sorted(latencies)
+        p50_idx = int(len(latencies_sorted) * 0.5)
+        p90_idx = int(len(latencies_sorted) * 0.9)
+        p99_idx = int(len(latencies_sorted) * 0.99)
+        p50 = latencies_sorted[min(p50_idx, len(latencies_sorted) - 1)]
+        p90 = latencies_sorted[min(p90_idx, len(latencies_sorted) - 1)]
+        p99 = latencies_sorted[min(p99_idx, len(latencies_sorted) - 1)]
+    else:
+        p50 = p90 = p99 = 0.0
+
+    metrics = {
+        "exact_hits": _cache_metrics["exact_hits"],
+        "semantic_hits": _cache_metrics["semantic_hits"],
+        "misses": _cache_metrics["misses"],
+        "sets": _cache_metrics["sets"],
+        "errors": _cache_metrics["errors"],
+        "total_lookups": total_lookups,
+        "hit_rate": (
+            (_cache_metrics["exact_hits"] + _cache_metrics["semantic_hits"])
+            / total_lookups
+            if total_lookups > 0
+            else 0.0
+        ),
+        "exact_hit_rate": (
+            _cache_metrics["exact_hits"] / total_lookups
+            if total_lookups > 0
+            else 0.0
+        ),
+        "semantic_hit_rate": (
+            _cache_metrics["semantic_hits"] / total_lookups
+            if total_lookups > 0
+            else 0.0
+        ),
+        "error_rate": (
+            _cache_metrics["errors"] / total_lookups
+            if total_lookups > 0
+            else 0.0
+        ),
+        "avg_latency_ms": avg_latency,
+        "p50_latency_ms": p50,
+        "p90_latency_ms": p90,
+        "p99_latency_ms": p99,
+        "latency_sample_size": len(latencies),
+    }
+
+    return metrics
+
+
+async def get_cached_with_semantic(
+    query: str,
+    model: str = "deepseek",
+    temperature: float = 0.0,
+    max_tokens: int = 500,
+) -> Optional[str]:
+    """Two-layer cache lookup: exact → semantic.
+
+    Layer 1: Exact match via token-bag hash (fastest, <1ms)
+    Layer 2: Semantic similarity search via embedding (medium, ~10ms)
+    Returns None on miss.
+
+    Args:
+        query: User query text
+        model: LLM model name
+        temperature: Sampling temperature
+        max_tokens: Maximum tokens to generate
+
+    Returns:
+        Cached response or None if miss
+    """
+    global _cache_metrics
+
+    start_time = time.monotonic()
+
+    # Layer 1: Exact cache (fastest)
+    exact_result = await get_cached(query)
+    if exact_result is not None:
+        latency_ms = (time.monotonic() - start_time) * 1000
+        _record_cache_hit("exact", latency_ms)
+        logger.debug("Two-layer cache: exact HIT for query")
+        return exact_result
+
+    # Layer 2: Semantic cache (medium)
+    sem_cache = get_semantic_cache_instance()
+    if sem_cache:
+        try:
+            result = await sem_cache.get_exact(
+                query=query,
+                model=model,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+            if result is not None:
+                latency_ms = (time.monotonic() - start_time) * 1000
+                _record_cache_hit("semantic", latency_ms)
+                logger.debug("Two-layer cache: semantic EXACT HIT")
+                return result
+
+            # Try semantic similarity search
+            sem_result = await sem_cache.get_semantic(
+                query=query,
+                model=model,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+            if sem_result is not None:
+                response, score = sem_result
+                latency_ms = (time.monotonic() - start_time) * 1000
+                _record_cache_hit("semantic", latency_ms)
+                logger.debug(
+                    "Two-layer cache: semantic SIMILAR HIT (score=%.3f)", score
+                )
+                # Populate exact cache for future lookups
+                await set_cached(query, response)
+                return response
+        except Exception as e:
+            latency_ms = (time.monotonic() - start_time) * 1000
+            _record_cache_miss(latency_ms)
+            _cache_metrics["errors"] += 1
+            logger.debug("Semantic cache lookup error: %s (falling back to miss)", e)
+
+    # Cache miss
+    latency_ms = (time.monotonic() - start_time) * 1000
+    _record_cache_miss(latency_ms)
+    return None
+
+
+async def set_cached_with_semantic(
+    query: str,
+    response: str,
+    model: str = "deepseek",
+    temperature: float = 0.0,
+    max_tokens: int = 500,
+    ttl: int = 3600,
+):
+    """Store response in both exact and semantic caches.
+
+    Layer 1: Store in exact cache (hash-based, for instant lookup)
+    Layer 2: Store in semantic cache (embedding-based, for similar queries)
+
+    Args:
+        query: User query text
+        response: LLM response to cache
+        model: LLM model name
+        temperature: Sampling temperature
+        max_tokens: Maximum tokens to generate
+        ttl: Time-to-live in seconds (default: 3600 = 1 hour)
+    """
+    global _cache_metrics
+
+    # Store in exact cache (always works, even without semantic module)
+    await set_cached(query, response, ttl)
+    _cache_metrics["sets"] += 1
+
+    # Store in semantic cache (may be unavailable)
+    sem_cache = get_semantic_cache_instance()
+    if sem_cache:
+        try:
+            await sem_cache.set(
+                query=query,
+                response=response,
+                model=model,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                ttl=ttl,
+            )
+            logger.debug("Stored response in semantic cache")
+        except Exception as e:
+            logger.debug("Semantic cache store error: %s (non-fatal)", e)
+            _cache_metrics["errors"] += 1

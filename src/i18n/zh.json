@@ -8,7 +8,8 @@
       "benchmark": "架构与性能",
       "admin": "管理",
       "architecture": "架构",
-      "crew": "内容工作室"
+      "crew": "内容工作室",
+      "portfolio": "作品集"
     },
     "badges": {
       "recall": "召回率",
@@ -349,6 +350,20 @@
       "cost_per_query": "每次查询成本",
       "retrieval_latency": "检索延迟"
     }
+  },
+  "portfolio": {
+    "hero": {
+      "title": "企业 AI 知识库平台",
+      "subtitle": "Production 级 RAG 系统，可验证的 Benchmark 数据。96.5% 召回率，实时流式，企业就绪。"
+    },
+    "metrics": {
+      "recall": "召回率@3",
+      "mrr": "MRR",
+      "ndcg": "nDCG@10",
+      "ws": "WebSocket"
+    },
+    "techStack": "技术栈",
+    "viewBenchmark": "查看完整 Benchmark 结果"
   },
   "login": {
     "email": "邮箱",

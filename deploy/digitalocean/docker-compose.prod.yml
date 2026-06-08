@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ../..
+      dockerfile: deploy/digitalocean/Dockerfile.gunicorn
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - WEBSOCKET_MAX_CONNECTIONS=300
+      - RAG_SEMAPHORE=40
+      - LLM_SEMAPHORE_DEEPSEEK=30
+    depends_on:
+      - redis
+    volumes:
+      - aureon-data:/app/data
+    restart: unless-stopped
+
+  redis:
+    image: redis/redis-stack-server:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+volumes:
+  aureon-data:
+  redis-data:

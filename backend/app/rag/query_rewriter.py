@@ -1,8 +1,13 @@
 """
 Query rewriting for RAG: expand queries, generate variants.
+
+Includes HyDE (Hypothetical Document Embedding) implementation:
+1. User query → LLM generates hypothetical answer
+2. Hypothetical answer embedding → vector retrieval
+3. Return retrieval results
 """
 import structlog
-from typing import List
+from typing import List, Dict, Any, Optional
 
 logger = structlog.get_logger()
 
@@ -101,3 +106,169 @@ def expand_queries_rules(query: str) -> List[str]:
 
     seen = dict.fromkeys(queries)
     return [q for q in seen if q][:3]
+
+
+# ── HyDE (Hypothetical Document Embedding) ──
+# Gao et al., 2022: "Precise Zero-Shot Dense Retrieval without Relevance Labels"
+# Generates a hypothetical answer to improve retrieval accuracy.
+
+_HYDE_PROMPT_ZH = """你是一个知识库助手。请根据以下问题，生成一个详细、准确的回答。
+
+要求：
+1. 回答应该像一篇真实文档中的内容
+2. 包含具体的技术细节和解释
+3. 使用专业但易懂的语言
+4. 长度约100-200字
+
+问题：{query}
+
+回答："""
+
+_HYDE_PROMPT_EN = """You are a knowledge base assistant. Generate a detailed and accurate answer for the following question.
+
+Requirements:
+1. The answer should read like content from a real document
+2. Include specific technical details and explanations
+3. Use professional but accessible language
+4. Length: approximately 100-200 words
+
+Question: {query}
+
+Answer:"""
+
+
+def generate_hypothetical_answer(
+    query: str,
+    llm_call_fn,
+    lang: str = "zh",
+) -> str:
+    """Generate a hypothetical answer using LLM for HyDE retrieval.
+
+    Args:
+        query: User query text
+        llm_call_fn: LLM invocation function (messages -> response)
+        lang: Language ("zh" or "en")
+
+    Returns:
+        Hypothetical answer text
+    """
+    prompt = _HYDE_PROMPT_EN if lang == "en" else _HYDE_PROMPT_ZH
+    messages = [{"role": "user", "content": prompt.format(query=query)}]
+
+    try:
+        response = llm_call_fn(messages)
+        # Handle both string and object responses
+        if hasattr(response, "content"):
+            return response.content.strip()
+        return str(response).strip()
+    except Exception as e:
+        logger.warning("HyDE: failed to generate hypothetical answer: %s", e)
+        return ""
+
+
+def hyde_retrieve(
+    query: str,
+    llm_call_fn,
+    top_k: int = 3,
+    lang: str = "zh",
+    lang_filter: str = None,
+) -> List[Dict[str, Any]]:
+    """HyDE retrieval: generate hypothetical answer and use it for vector search.
+
+    Implements the HyDE technique:
+    1. Generate a hypothetical answer to the query using LLM
+    2. Use the hypothetical answer (not the query) for vector similarity search
+    3. Return the retrieved chunks
+
+    This often retrieves more relevant documents because the hypothetical answer
+    is semantically closer to actual documents than the original query.
+
+    Args:
+        query: User query text
+        llm_call_fn: LLM invocation function
+        top_k: Number of results to return
+        lang: Language for hypothetical answer generation
+        lang_filter: Document language filter ("zh" or "en")
+
+    Returns:
+        List of retrieved document chunks
+    """
+    from app.rag.vector_store import retrieve
+
+    # 1. Generate hypothetical answer
+    hypothetical = generate_hypothetical_answer(query, llm_call_fn, lang=lang)
+    if not hypothetical:
+        logger.info("HyDE: empty hypothetical answer, falling back to direct retrieval")
+        return retrieve(query, top_k=top_k, lang_filter=lang_filter)
+
+    logger.info(
+        "HyDE: generated hypothetical answer (%d chars), retrieving with it",
+        len(hypothetical),
+    )
+
+    # 2. Retrieve using hypothetical answer instead of original query
+    #    The hypothetical answer is semantically closer to actual documents
+    results = retrieve(hypothetical, top_k=top_k, lang_filter=lang_filter)
+
+    # 3. If HyDE returns no results, fallback to direct query retrieval
+    if not results:
+        logger.info("HyDE: no results with hypothetical answer, falling back to direct retrieval")
+        results = retrieve(query, top_k=top_k, lang_filter=lang_filter)
+
+    return results
+
+
+async def hyde_retrieve_async(
+    query: str,
+    llm_call_fn,
+    top_k: int = 3,
+    lang: str = "zh",
+    lang_filter: str = None,
+) -> List[Dict[str, Any]]:
+    """Async version of HyDE retrieval.
+
+    Args:
+        query: User query text
+        llm_call_fn: Async LLM invocation function
+        top_k: Number of results to return
+        lang: Language for hypothetical answer generation
+        lang_filter: Document language filter
+
+    Returns:
+        List of retrieved document chunks
+    """
+    import asyncio
+    from app.rag.vector_store import retrieve
+
+    # 1. Generate hypothetical answer (async)
+    prompt = _HYDE_PROMPT_EN if lang == "en" else _HYDE_PROMPT_ZH
+    messages = [{"role": "user", "content": prompt.format(query=query)}]
+
+    try:
+        response = await llm_call_fn(messages)
+        if hasattr(response, "content"):
+            hypothetical = response.content.strip()
+        else:
+            hypothetical = str(response).strip()
+    except Exception as e:
+        logger.warning("HyDE async: failed to generate hypothetical answer: %s", e)
+        hypothetical = ""
+
+    if not hypothetical:
+        logger.info("HyDE async: empty hypothetical answer, falling back to direct retrieval")
+        return await asyncio.to_thread(retrieve, query, top_k, False, lang_filter)
+
+    logger.info(
+        "HyDE async: generated hypothetical answer (%d chars), retrieving with it",
+        len(hypothetical),
+    )
+
+    # 2. Retrieve using hypothetical answer (run in thread to avoid blocking)
+    results = await asyncio.to_thread(retrieve, hypothetical, top_k, False, lang_filter)
+
+    # 3. Fallback to direct query if no results
+    if not results:
+        logger.info("HyDE async: no results with hypothetical answer, falling back to direct retrieval")
+        results = await asyncio.to_thread(retrieve, query, top_k, False, lang_filter)
+
+    return results

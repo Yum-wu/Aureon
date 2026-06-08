@@ -1,17 +1,196 @@
-"""Security Hardening - SSO, PII Detection, Rate Limiting
+"""Security Hardening - SSO, PII Detection, Rate Limiting, RBAC
 
 EXPERIMENTAL: PII detection and SSO not connected to core paths.
 Encryption utilities (encrypt_secret/decrypt_secret) ARE used by SSO.
 """
+import enum
+import functools
+import hashlib
+import hmac
+import json
 import os
 import re
+import time
+from datetime import datetime, timezone
 from typing import Optional
-from pydantic import BaseModel, Field
+
 import structlog
+from pydantic import BaseModel, Field
 
 from app.common import mask_secret
 
 logger = structlog.get_logger()
+
+
+# ── RBAC: Roles, Permissions & Role-Permission Matrix ──
+
+
+class UserRole(enum.IntEnum):
+    """Roles with ascending privilege level (used for comparison)."""
+    VIEWER = 0
+    EDITOR = 1
+    ADMIN = 2
+
+
+class Permission(enum.Enum):
+    """Fine-grained permissions that map to roles."""
+    READ = "read"
+    WRITE = "write"
+    UPLOAD = "upload"
+    INDEX = "index"
+    ADMIN = "admin"
+
+
+# Role → set of Permissions
+ROLE_PERMISSIONS: dict[UserRole, set[Permission]] = {
+    UserRole.VIEWER: {Permission.READ},
+    UserRole.EDITOR: {Permission.READ, Permission.WRITE, Permission.UPLOAD},
+    UserRole.ADMIN: {
+        Permission.READ,
+        Permission.WRITE,
+        Permission.UPLOAD,
+        Permission.INDEX,
+        Permission.ADMIN,
+    },
+}
+
+# ── JWT token utilities ──
+
+_JWT_SECRET: str | None = None
+_JWT_ALGORITHM = "HS256"
+_JWT_EXPIRY_HOURS = 24
+
+
+def _get_jwt_secret() -> str:
+    """Lazily resolve the JWT signing secret from environment."""
+    global _JWT_SECRET
+    if _JWT_SECRET is None:
+        import os
+        _JWT_SECRET = os.environ.get("JWT_SECRET", "aureon-dev-secret-change-in-production")
+        if _JWT_SECRET == "aureon-dev-secret-change-in-production":
+            logger.warning("Using default JWT_SECRET — set JWT_SECRET env var for production")
+    return _JWT_SECRET
+
+
+def create_access_token(data: dict) -> str:
+    """Create a signed JWT access token.
+
+    Args:
+        data: Payload dict. Must contain ``sub`` (subject / user id) and
+              ``role`` (a :class:`UserRole` value or string).
+
+    Returns:
+        Encoded JWT string.
+    """
+    try:
+        import jwt
+    except ImportError:
+        raise RuntimeError("PyJWT is required: pip install PyJWT>=2.8")
+
+    secret = _get_jwt_secret()
+    to_encode = data.copy()
+    now = datetime.now(timezone.utc)
+    to_encode.setdefault("iat", int(now.timestamp()))
+    to_encode.setdefault(
+        "exp", int((now.timestamp()) + _JWT_EXPIRY_HOURS * 3600)
+    )
+    return jwt.encode(to_encode, secret, algorithm=_JWT_ALGORITHM)
+
+
+def verify_token(token: str) -> dict:
+    """Decode and verify a JWT token.
+
+    Returns:
+        Decoded payload dict.
+
+    Raises:
+        AuthenticationError: If the token is invalid or expired.
+    """
+    try:
+        import jwt
+    except ImportError:
+        raise RuntimeError("PyJWT is required: pip install PyJWT>=2.8")
+
+    from app.exceptions import AuthenticationError
+
+    secret = _get_jwt_secret()
+    try:
+        payload = jwt.decode(token, secret, algorithms=[_JWT_ALGORITHM])
+    except jwt.ExpiredSignatureError:
+        raise AuthenticationError("Token has expired")
+    except jwt.InvalidTokenError as exc:
+        raise AuthenticationError(f"Invalid token: {exc}")
+    return payload
+
+
+def get_user_role(token_payload: dict) -> UserRole:
+    """Extract :class:`UserRole` from a decoded token payload."""
+    role_str = token_payload.get("role", "VIEWER")
+    if isinstance(role_str, UserRole):
+        return role_str
+    try:
+        return UserRole[role_str.upper()]
+    except KeyError:
+        return UserRole.VIEWER
+
+
+def has_permission(role: UserRole, perm: Permission) -> bool:
+    """Check whether *role* grants *perm*."""
+    return perm in ROLE_PERMISSIONS.get(role, set())
+
+
+def require_role(min_role: UserRole):
+    """FastAPI dependency that enforces a minimum :class:`UserRole`.
+
+    Usage in a route::
+
+        @router.post("/admin/action")
+        async def admin_action(user=Depends(require_role(UserRole.ADMIN))):
+            ...
+
+    The dependency reads ``Authorization: Bearer <jwt>`` from the request
+    header, decodes the token, and compares the role.
+    """
+    from fastapi import Request
+    from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+    from app.exceptions import AuthenticationError, AuthorizationError
+
+    bearer_scheme = HTTPBearer(auto_error=False)
+
+    async def _role_checker(
+        request: Request,
+        credentials: Optional[HTTPAuthorizationCredentials] = None,
+    ) -> dict:
+        # Skip RBAC when API_AUTH_KEY is not configured (dev mode)
+        from app.config import settings
+        if not settings.api_auth_key:
+            return {"sub": "dev-user", "role": "ADMIN", "_role": UserRole.ADMIN}
+
+        # Allow credentials from Depends or direct extraction
+        if credentials is None:
+            auth_header = request.headers.get("Authorization", "")
+            if auth_header.startswith("Bearer "):
+                token = auth_header[7:]
+            else:
+                raise AuthenticationError("Missing or invalid Authorization header")
+        else:
+            token = credentials.credentials
+
+        if not token:
+            raise AuthenticationError("Token is required")
+
+        payload = verify_token(token)
+        user_role = get_user_role(payload)
+
+        if user_role < min_role:
+            raise AuthorizationError(
+                f"Insufficient permissions: requires {min_role.name}, got {user_role.name}"
+            )
+
+        payload["_role"] = user_role
+        return payload
+
+    return _role_checker
 
 
 # -- Secret Encryption (Fernet symmetric encryption) --

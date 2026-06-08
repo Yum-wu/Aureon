@@ -30,13 +30,24 @@ def evaluate_thresholds(
     Returns:
         Dict with precision, recall, f1 keys
     """
-    tp = sum(1 for s in positive_scores if s >= config.low)
+    # Three-way CRAG gating using both thresholds:
+    # - positive_scores >= config.high  -> true positive (correctly classified as "correct")
+    # - config.low <= positive_scores < config.high -> ambiguous (correctly classified, kept in pipeline)
+    # - positive_scores < config.low    -> false negative (missed by retrieval)
+    # - negative_scores < config.low    -> true negative (correctly rejected)
+    # - negative_scores >= config.low   -> false positive (incorrectly passed threshold)
+    tp = sum(1 for s in positive_scores if s >= config.high)
+    ambiguous = sum(1 for s in positive_scores if config.low <= s < config.high)
     fn = sum(1 for s in positive_scores if s < config.low)
     tn = sum(1 for s in negative_scores if s < config.low)
     fp = sum(1 for s in negative_scores if s >= config.low)
 
-    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
-    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    # Ambiguous scores are "at least ambiguous" — not false negatives.
+    # For precision/recall we treat them as correctly retrieved (not missed).
+    effective_tp = tp + ambiguous
+
+    precision = effective_tp / (effective_tp + fp) if (effective_tp + fp) > 0 else 0.0
+    recall = effective_tp / (effective_tp + fn) if (effective_tp + fn) > 0 else 0.0
     f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
 
     return {"precision": precision, "recall": recall, "f1": f1}

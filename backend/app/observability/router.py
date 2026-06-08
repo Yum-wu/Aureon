@@ -6,7 +6,7 @@ from app.observability import (
     get_trace_stats,
 )
 
-router = APIRouter(prefix="/api/observability", tags=["Observability"])
+router = APIRouter(tags=["Observability"])
 
 
 @router.get("/traces")

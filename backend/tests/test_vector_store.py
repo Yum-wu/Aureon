@@ -64,21 +64,21 @@ class TestBM25Score:
         import app.rag.vector_store as vs
         vs._kw_idf = {"hello": 2.0, "world": 1.5}
         vs._kw_avgdl = 10.0
-        score = _bm25_score(["hello", "world"], ["hello", "world", "foo"])
+        score = _bm25_score(["hello", "world"], ["hello", "world", "foo"], vs._kw_avgdl)
         assert score > 0
 
     def test_no_matching_terms(self):
         import app.rag.vector_store as vs
         vs._kw_idf = {"foo": 1.0}
         vs._kw_avgdl = 10.0
-        score = _bm25_score(["hello"], ["world"])
+        score = _bm25_score(["hello"], ["world"], vs._kw_avgdl)
         assert score == 0.0
 
     def test_empty_query(self):
         import app.rag.vector_store as vs
         vs._kw_idf = {"hello": 1.0}
         vs._kw_avgdl = 5.0
-        score = _bm25_score([], ["hello"])
+        score = _bm25_score([], ["hello"], vs._kw_avgdl)
         assert score == 0.0
 
 

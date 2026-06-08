@@ -292,16 +292,6 @@ def main():
             print(f"    [{m['id']}] {m['question']}")
             print(f"      returned {m['retrieved_count']} results from: {m['retrieved_sources'][:3]}")
 
-    # Pipeline CRAG test: full pipeline with LLM-based retrieval assessment
-    print("\n  Pipeline CRAG Test (full pipeline with retrieval assessment)...")
-    crag_results = test_pipeline_negative_detection(qa_pairs)
-    print(f"    Pipeline Negative Detection: {crag_results['negative_detection_rate']*100:.1f}% ({crag_results['negative_correct']}/{crag_results['negative_total']})")
-    if crag_results["negative_wrong"]:
-        print(f"\n  CRAG failures (still returning results for unanswerable queries):")
-        for m in crag_results["negative_wrong"][:5]:
-            print(f"    [{m['id']}] {m['question']}")
-            print(f"      returned {m['sources_count']} sources: {m['sources'][:3]}")
-
     # BM25-only
     bm25_results = test_recall(retrieve_keyword, qa_pairs, k=3)
     print(f"\n  BM25 Retrieval:")
@@ -333,7 +323,7 @@ def main():
             print(f"    {typ:>14}: Recall={r['recall']*100:.1f}% P@3={r['precision']*100:.1f}% MRR={r['mrr']:.3f} (n={r['count']})")
 
     # ── Step 4: Latency ──
-    print("\n[4/5] Latency measurement...")
+    print("\n[4/6] Latency measurement...")
     lat_bm25 = measure_latency(retrieve_keyword, positive_pairs, num_runs=3)
     lat_vector = measure_latency(retrieve, positive_pairs, num_runs=3)
     lat_hybrid = measure_latency(hybrid_retrieve, positive_pairs, num_runs=3)
@@ -342,8 +332,79 @@ def main():
     print(f"  Vector: mean={lat_vector['mean_ms']}ms  p50={lat_vector['p50_ms']}ms  p99={lat_vector['p99_ms']}ms")
     print(f"  Hybrid: mean={lat_hybrid['mean_ms']}ms  p50={lat_hybrid['p50_ms']}ms  p99={lat_hybrid['p99_ms']}ms")
 
+    # ── Step 4b: Adaptive Embedding Latency ──
+    print("\n[4b/6] Adaptive embedding latency (CPU vs GPU by batch size)...")
+    adaptive_latencies = {}
+    dispatch_stats = {}
+    try:
+        from app.rag.embed_gpu import get_adaptive_embedder, GPUEmbedder
+        import torch
+
+        adaptive_embedder = get_adaptive_embedder()
+        batch_sizes = [1, 2, 4, 8, 16, 32, 64]
+        adaptive_latencies = {}
+
+        # Test adaptive embedder
+        for bs in batch_sizes:
+            texts = ["测试文本用于延迟测量"] * bs
+            latencies = []
+            for _ in range(3):
+                start = time.perf_counter()
+                adaptive_embedder.encode(texts, batch_size=bs)
+                latencies.append((time.perf_counter() - start) * 1000)
+            adaptive_latencies[f"batch_{bs}"] = round(statistics.mean(latencies), 1)
+
+        # Get dispatch stats
+        dispatch_stats = adaptive_embedder.get_stats()
+
+        print(f"  Adaptive Embedder (threshold={dispatch_stats['threshold']}):")
+        for bs_key, lat in sorted(adaptive_latencies.items()):
+            print(f"    {bs_key}: {lat}ms")
+
+        print(f"\n  Dispatch Stats:")
+        print(f"    GPU calls: {dispatch_stats['gpu_calls']}")
+        print(f"    CPU calls: {dispatch_stats['cpu_calls']}")
+        print(f"    GPU ratio: {dispatch_stats['gpu_ratio']:.1%}")
+
+        # Compare with pure GPU (if available)
+        if torch.cuda.is_available():
+            print(f"\n  Comparison (batch=1):")
+            cpu_embedder = GPUEmbedder(device="cpu", use_fp16=False)
+            gpu_embedder = GPUEmbedder(device="cuda")
+
+            single_text = ["单条查询测试"]
+
+            # CPU single
+            start = time.perf_counter()
+            cpu_embedder.encode(single_text, batch_size=1)
+            cpu_single = (time.perf_counter() - start) * 1000
+
+            # GPU single
+            start = time.perf_counter()
+            gpu_embedder.encode(single_text, batch_size=1)
+            gpu_single = (time.perf_counter() - start) * 1000
+
+            print(f"      CPU: {cpu_single:.1f}ms")
+            print(f"      GPU: {gpu_single:.1f}ms")
+            print(f"      Ratio: {gpu_single/cpu_single:.1f}x {'slower' if gpu_single > cpu_single else 'faster'}")
+
+    except Exception as e:
+        print(f"  Adaptive embedding test skipped: {e}")
+
+    # ── Step 4c: CRAG Pipeline Negative Detection ──
+    # Tests full rag_query pipeline with LLM classifier for negative queries.
+    # First run: ~10 min (20 pairs × ~30s LLM). Subsequent runs use classifier cache.
+    print("\n[4c/6] CRAG Pipeline negative detection (with LLM classifier)...")
+    crag_results = test_pipeline_negative_detection(qa_pairs)
+    print(f"  Negative Detection (Pipeline): {crag_results['negative_detection_rate']*100:.1f}% "
+          f"({crag_results['negative_correct']}/{crag_results['negative_total']})")
+    if crag_results["negative_wrong"]:
+        print(f"  Pipeline negative detection failures:")
+        for m in crag_results["negative_wrong"][:5]:
+            print(f"    [{m['id']}] {m['question'][:50]}... (sources: {m['sources']})")
+
     # ── Step 5: Summary ──
-    print("\n[5/5] Summary")
+    print("\n[5/6] Summary")
     print("=" * 70)
     print(f"{'Metric':<35} {'Value':>12} {'Target':>12} {'Status':>8}")
     print("-" * 70)
@@ -386,6 +447,23 @@ def main():
     print("-" * 70)
     print(f"  Total: {passed}/{total} passed")
 
+    # ── Step 6: Adaptive Dispatch Summary ──
+    if dispatch_stats:
+        print(f"\n[6/6] Adaptive Device Dispatch Summary")
+        print("-" * 70)
+        print(f"  Threshold:      {dispatch_stats.get('threshold', 'N/A')} texts")
+        print(f"  GPU available:  {dispatch_stats.get('gpu_available', 'N/A')}")
+        print(f"  GPU calls:      {dispatch_stats.get('gpu_calls', 0)}")
+        print(f"  CPU calls:      {dispatch_stats.get('cpu_calls', 0)}")
+        print(f"  Total texts:    {dispatch_stats.get('total_texts', 0)}")
+        print(f"  GPU ratio:      {dispatch_stats.get('gpu_ratio', 0):.1%}")
+        print()
+        print(f"  Batch Latency Breakdown:")
+        for bs_key, lat in sorted(adaptive_latencies.items()):
+            bs_num = int(bs_key.split('_')[1])
+            device = "GPU" if bs_num >= dispatch_stats.get('threshold', 4) else "CPU"
+            print(f"    {bs_key:>8}: {lat:>8.1f}ms  ({device})")
+
     # Save results
     output = {
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
@@ -411,15 +489,13 @@ def main():
         },
         "by_category": cat_results,
         "latency": {"bm25": lat_bm25, "vector": lat_vector, "hybrid": lat_hybrid},
-        "crag_pipeline": {
-            "negative_detection_rate": crag_results["negative_detection_rate"],
-            "negative_correct": crag_results["negative_correct"],
-            "negative_total": crag_results["negative_total"],
+        "adaptive_embedding": {
+            "latencies": adaptive_latencies,
+            "dispatch_stats": dispatch_stats,
         },
         "failures": {
             "retrieval_misses": hybrid_results["misses"][:20],
             "negative_wrong": hybrid_results["negative_wrong"][:10],
-            "crag_failures": crag_results["negative_wrong"][:10],
         },
         "pass_rate": f"{passed}/{total}",
     }

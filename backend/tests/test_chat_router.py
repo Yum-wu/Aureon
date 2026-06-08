@@ -65,7 +65,7 @@ async def test_list_sessions():
         mock_mm.get_active_sessions.return_value = mock_sessions
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
-            resp = await ac.get("/api/sessions")
+            resp = await ac.get("/api/chat/sessions")
 
     assert resp.status_code == 200
     data = resp.json()
@@ -79,7 +79,7 @@ async def test_delete_session():
     with patch("app.routers.chat.memory_manager") as mock_mm:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
-            resp = await ac.delete("/api/sessions/sess-to-delete")
+            resp = await ac.delete("/api/chat/sessions/sess-to-delete")
 
     assert resp.status_code == 200
     data = resp.json()

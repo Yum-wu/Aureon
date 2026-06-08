@@ -2,7 +2,7 @@
 import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, Dict, Any
 import structlog
 
 from fastapi import APIRouter, Depends, Query
@@ -383,6 +383,81 @@ async def get_query_volume(days: int = 7):
     except Exception as e:
         logger.error("Error fetching query volume: %s", e)
         return {"data": [], "total": 0}
+
+
+# ── Cache Analytics API ──
+
+
+class CacheAnalyticsResponse(BaseModel):
+    """Cache performance analytics response."""
+    exact_hits: int
+    semantic_hits: int
+    misses: int
+    total_lookups: int
+    hit_rate: float
+    exact_hit_rate: float
+    semantic_hit_rate: float
+    sets: int
+    errors: int
+    avg_latency_ms: float
+    p50_latency_ms: float
+    p90_latency_ms: float
+    p99_latency_ms: float
+    error_rate: float
+    latency_sample_size: int
+    semantic_cache_available: bool
+    semantic_cache_stats: Optional[Dict[str, Any]] = None
+
+
+@router.get("/api/rag/analytics/cache", response_model=CacheAnalyticsResponse)
+async def cache_analytics():
+    """Cache performance analytics endpoint.
+
+    Returns detailed metrics on the two-layer cache system:
+    - Exact cache (hash-based) hit rates
+    - Semantic cache (vector-based) hit rates
+    - Overall cache performance
+    - Latency percentiles (p50, p90, p99)
+    - Error rates
+    - Semantic cache availability and configuration
+    """
+    from app.cache.redis_client import get_cache_metrics, get_semantic_cache_instance
+
+    # Get basic cache metrics with latency data
+    metrics = get_cache_metrics()
+
+    # Check semantic cache availability
+    sem_cache = get_semantic_cache_instance()
+    sem_cache_available = sem_cache is not None
+    sem_cache_stats = None
+
+    # Get semantic cache stats if available
+    if sem_cache:
+        try:
+            sem_cache_stats = await sem_cache.get_stats()
+        except Exception as e:
+            logger.debug("Failed to fetch semantic cache stats: %s", e)
+            sem_cache_stats = {"error": str(e)}
+
+    return CacheAnalyticsResponse(
+        exact_hits=metrics.get("exact_hits", 0),
+        semantic_hits=metrics.get("semantic_hits", 0),
+        misses=metrics.get("misses", 0),
+        total_lookups=metrics.get("total_lookups", 0),
+        hit_rate=metrics.get("hit_rate", 0.0),
+        exact_hit_rate=metrics.get("exact_hit_rate", 0.0),
+        semantic_hit_rate=metrics.get("semantic_hit_rate", 0.0),
+        sets=metrics.get("sets", 0),
+        errors=metrics.get("errors", 0),
+        avg_latency_ms=metrics.get("avg_latency_ms", 0.0),
+        p50_latency_ms=metrics.get("p50_latency_ms", 0.0),
+        p90_latency_ms=metrics.get("p90_latency_ms", 0.0),
+        p99_latency_ms=metrics.get("p99_latency_ms", 0.0),
+        error_rate=metrics.get("error_rate", 0.0),
+        latency_sample_size=metrics.get("latency_sample_size", 0),
+        semantic_cache_available=sem_cache_available,
+        semantic_cache_stats=sem_cache_stats,
+    )
 
 
 # ── Blog Sync API ──

@@ -18,6 +18,8 @@ const Login = lazy(() => import("./pages/Login"));
 const Analytics = lazy(() => import("./pages/Analytics"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Architecture = lazy(() => import("./pages/Architecture").then(m => ({ default: m.Architecture })));
+const Portfolio = lazy(() => import("./pages/Portfolio").then(m => ({ default: m.Portfolio })));
+const SupportWidget = lazy(() => import("./components/SupportWidget").then(m => ({ default: m.SupportWidget })));
 
 function PageFallback() {
   return (
@@ -48,6 +50,7 @@ function AppLayout() {
     { path: "/documents", key: "app.nav.documents" },
     { path: "/analytics", key: "app.nav.analytics" },
     { path: "/architecture", key: "app.nav.architecture" },
+    { path: "/portfolio", key: "app.nav.portfolio" },
     { path: "/admin", key: "app.nav.admin" },
   ];
 
@@ -108,6 +111,7 @@ function AppLayout() {
             <Route path="/search" element={<Search />} />
             <Route path="/documents" element={<Documents />} />
             <Route path="/architecture" element={<Architecture />} />
+            <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/crew" element={<CrewGenerator />} />
             {/* Protected routes — require auth */}
             <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
@@ -115,6 +119,13 @@ function AppLayout() {
           </Routes>
         </Suspense>
       </div>
+
+      {/* Global Support Widget — hidden on login page */}
+      {!isLogin && (
+        <Suspense fallback={null}>
+          <SupportWidget />
+        </Suspense>
+      )}
     </div>
   );
 }

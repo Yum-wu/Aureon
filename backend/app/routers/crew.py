@@ -2,9 +2,9 @@
 """Crew router - article generation via 3-agent crew.
 
 Routes:
-  POST /api/crew/generate        - synchronous article generation
-  POST /api/crew/generate/stream - streaming article generation (SSE)
-  GET   /api/crew/health         - health check
+  POST /generate        - synchronous article generation
+  POST /generate/stream - streaming article generation (SSE)
+  GET   /health         - health check
 """
 
 import asyncio
@@ -31,7 +31,7 @@ class CrewGenerateRequest(BaseModel):
     topic: str = Field(..., min_length=2, max_length=500)
 
 
-@router.post("/api/crew/generate")
+@router.post("/generate")
 @limiter.limit("3/minute")
 async def crew_generate(req: CrewGenerateRequest, request: Request):
     """Generate article via 3-agent crew (synchronous)."""
@@ -64,7 +64,7 @@ async def crew_generate(req: CrewGenerateRequest, request: Request):
         raise HTTPException(status_code=500, detail="Article generation failed")
 
 
-@router.post("/api/crew/generate/stream")
+@router.post("/generate/stream")
 @limiter.limit("3/minute")
 async def crew_generate_stream(req: CrewGenerateRequest, request: Request):
     """Generate article with real-time agent progress via SSE."""
@@ -122,7 +122,7 @@ async def crew_generate_stream(req: CrewGenerateRequest, request: Request):
     )
 
 
-@router.get("/api/crew/health")
+@router.get("/health")
 async def crew_health():
     return {
         "status": "ok",

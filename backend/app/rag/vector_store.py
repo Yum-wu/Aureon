@@ -7,11 +7,13 @@ Falls back to Zhipu AI embedding API if local model unavailable.
 import logging
 import os
 import hashlib
+import threading
 import time
 import numpy as np
 from typing import List, Dict, Any, Optional
 
 import structlog
+from app.multi_tenant.middleware import get_current_tenant_id
 logger = structlog.get_logger()
 
 # GPU embedder integration
@@ -53,6 +55,7 @@ VECTOR_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file
 # ── Embedding cache (FIFO eviction, keyed by text hash) ──
 _embed_cache: Dict[str, np.ndarray] = {}
 _EMBED_CACHE_MAX = 500
+_embed_cache_lock = threading.Lock()  # Thread-safe access to _embed_cache
 
 # ── Local embedding model (lazy-loaded singleton) ──
 _local_embed_model = None
@@ -98,11 +101,13 @@ def _embed_local(texts: List[str]) -> Optional[np.ndarray]:
 # ── ChromaDB singleton ──
 _chroma_client: Optional[chromadb.PersistentClient] = None
 _chroma_collection = None
+_chroma_lock = threading.Lock()  # Thread-safe singleton init
 
 # ── Keyword search index (no embeddings, <10ms queries) ──
 _kw_docs: List[Dict] = []
 _kw_idf: Dict[str, float] = {}
 _kw_avgdl: float = 0.0
+_kw_lock = threading.Lock()  # Thread-safe access to keyword index
 _KW_MIN_RAW_SCORE = float(os.getenv("KW_MIN_RAW_SCORE", "0.15"))
 _KW_MIN_IDF = 0.3  # skip only very high-frequency terms (appear in >85% docs)
 
@@ -139,24 +144,27 @@ def _get_jieba():
 
 
 def _get_chroma(path: str = None) -> chromadb.PersistentClient:
-    """Get or create ChromaDB client (singleton per path)."""
+    """Get or create ChromaDB client (singleton per path, thread-safe)."""
     global _chroma_client
     save_path = path or VECTOR_DIR
     if _chroma_client is None:
-        os.makedirs(save_path, exist_ok=True)
-        _chroma_client = chromadb.PersistentClient(path=save_path)
+        with _chroma_lock:
+            if _chroma_client is None:
+                os.makedirs(save_path, exist_ok=True)
+                _chroma_client = chromadb.PersistentClient(path=save_path)
     return _chroma_client
 
 
 def _get_collection(client=None, name: str = "articles"):
-    """Get or create Chroma collection with embedding function."""
+    """Get or create Chroma collection with embedding function (thread-safe)."""
     global _chroma_collection
     if _chroma_collection is None or client is not None:
-        c = client or _get_chroma()
-        _chroma_collection = c.get_or_create_collection(
-            name=name,
-            embedding_function=ZhipuEmbeddingFn(),
-        )
+        with _chroma_lock:
+            c = client or _get_chroma()
+            _chroma_collection = c.get_or_create_collection(
+                name=name,
+                embedding_function=ZhipuEmbeddingFn(),
+            )
     return _chroma_collection
 
 
@@ -206,34 +214,36 @@ def _tokenize(text: str, is_query: bool = False) -> List[str]:
 
 
 def _build_kw_index(force: bool = False):
-    """Build in-memory BM25 index from Chroma documents.
+    """Build in-memory BM25 index from vector store documents.
 
     Pre-tokenizes all documents so retrieve_keyword() avoids re-tokenizing
     476+ docs on every query (saves ~150ms per query).
+    Supports both ChromaDB and Qdrant backends.
     """
     global _kw_docs, _kw_idf, _kw_avgdl
     import math
     from collections import Counter
+    from app.config import settings
 
-    if _kw_docs and not force:
-        return
-
-    try:
-        client = _get_chroma()
-        collection = _get_collection(client)
-        if collection.count() == 0:
+    with _kw_lock:
+        if _kw_docs and not force:
             return
 
-        results = collection.get(include=["documents", "metadatas"])
-        ids_list = results["ids"]
-        n = len(ids_list)
+    try:
+        if settings.vector_backend == "qdrant":
+            docs_data = _load_docs_from_qdrant()
+        else:
+            docs_data = _load_docs_from_chroma()
+
+        if not docs_data:
+            return
+
+        n = len(docs_data)
         df: Counter = Counter()
         docs: List[Dict] = []
         total_len = 0
 
-        for i in range(n):
-            text = results["documents"][i] or ""
-            meta = results["metadatas"][i] or {}
+        for text, meta in docs_data:
             tokens = _tokenize(text)
             docs.append({"text": text, "metadata": meta, "tokens": tokens})
             total_len += len(tokens)
@@ -249,15 +259,61 @@ def _build_kw_index(force: bool = False):
 
         avgdl = total_len / max(n, 1)
 
-        _kw_docs = docs
-        _kw_idf = idf
-        _kw_avgdl = avgdl
+        # Atomic swap of globals under lock
+        with _kw_lock:
+            _kw_docs = docs
+            _kw_idf = idf
+            _kw_avgdl = avgdl
         logger.info("BM25 index ready: %d docs, %d terms, avgdl=%.0f", n, len(idf), avgdl)
     except Exception as e:
         logger.warning("BM25 index build failed: %s", e)
 
 
-def _bm25_score(query_terms: List[str], doc_terms: List[str]) -> float:
+def _load_docs_from_chroma() -> List[tuple]:
+    """Load (text, metadata) pairs from ChromaDB."""
+    client = _get_chroma()
+    collection = _get_collection(client)
+    if collection.count() == 0:
+        return []
+    results = collection.get(include=["documents", "metadatas"])
+    return [
+        (results["documents"][i] or "", results["metadatas"][i] or {})
+        for i in range(len(results["ids"]))
+    ]
+
+
+def _load_docs_from_qdrant() -> List[tuple]:
+    """Load (text, metadata) pairs from Qdrant."""
+    client = _get_qdrant()
+    collection_name = _get_qdrant_collection_name()
+    try:
+        info = client.get_collection(collection_name)
+        if (info.points_count or 0) == 0:
+            return []
+    except Exception:
+        return []
+
+    docs_data = []
+    offset = None
+    while True:
+        points, offset = client.scroll(
+            collection_name=collection_name,
+            limit=100,
+            offset=offset,
+            with_payload=True,
+            with_vectors=False,
+        )
+        for pt in points:
+            payload = pt.payload or {}
+            text = payload.get("text", "")
+            meta = payload.get("metadata", {})
+            docs_data.append((text, meta))
+        if offset is None:
+            break
+    return docs_data
+
+
+def _bm25_score(query_terms: List[str], doc_terms: List[str], avgdl: float) -> float:
     """BM25+ scoring (Lv & Zhai 2011) with k1=1.2, b=0.75, δ=0.05.
 
     BM25+ adds a lower bound δ to TF normalization, preventing long documents
@@ -285,7 +341,7 @@ def _bm25_score(query_terms: List[str], doc_terms: List[str]) -> float:
             continue
         # BM25+: add δ to numerator so long docs don't get zero TF contribution
         num = delta + tf * (k1 + 1.0)
-        denom = tf + k1 * (1.0 - b + b * doc_len / max(_kw_avgdl, 1.0))
+        denom = tf + k1 * (1.0 - b + b * doc_len / max(avgdl, 1.0))
         qf = query_terms.count(term)
         boost = 2.0 if term.isascii() and len(term) >= 3 and term.isalpha() else 1.0
         score += idf * (num / denom) * qf * boost
@@ -305,7 +361,14 @@ def retrieve_keyword(query: str, top_k: int = 3, lang_filter: str = None) -> Lis
         return retrieve_keyword_es(query, top_k=top_k)
 
     _build_kw_index()
-    if not _kw_docs:
+
+    # Snapshot globals under lock for thread-safe access
+    with _kw_lock:
+        kw_docs = _kw_docs
+        kw_idf = dict(_kw_idf)
+        kw_avgdl = _kw_avgdl
+
+    if not kw_docs:
         return []
 
     q_terms = _tokenize(query, is_query=True)
@@ -313,22 +376,19 @@ def retrieve_keyword(query: str, top_k: int = 3, lang_filter: str = None) -> Lis
         return []
 
     # Filter: require at least one query term with meaningful IDF
-    # _tokenize already filters stopwords and single chars
     has_meaningful_term = any(
-        _kw_idf.get(t, 0) >= _KW_MIN_IDF for t in set(q_terms)
+        kw_idf.get(t, 0) >= _KW_MIN_IDF for t in set(q_terms)
     )
-    # Don't early-return — let BM25 scoring handle low-IDF terms naturally
-    # Documents with more query term matches still score higher
 
     # 语言过滤
-    filtered_docs = _kw_docs
+    filtered_docs = kw_docs
     if lang_filter:
-        filtered_docs = [doc for doc in _kw_docs if doc.get("metadata", {}).get("language") == lang_filter]
+        filtered_docs = [doc for doc in kw_docs if doc.get("metadata", {}).get("language") == lang_filter]
 
     scored = []
     for doc in filtered_docs:
         doc_terms = doc.get("tokens") or _tokenize(doc["text"])
-        s = _bm25_score(q_terms, doc_terms)
+        s = _bm25_score(q_terms, doc_terms, kw_avgdl)
         if s > 0:
             scored.append((s, doc))
 
@@ -456,12 +516,13 @@ def embed_texts_llm(texts: List[str], batch_size: int = 10) -> np.ndarray:
     # 1. Check in-memory cache first (fastest)
     uncached: List[tuple[int, str]] = []
     result = [None] * len(texts)
-    for i, t in enumerate(texts):
-        key = _cache_key(t)
-        if key in _embed_cache:
-            result[i] = _embed_cache[key]
-        else:
-            uncached.append((i, t))
+    with _embed_cache_lock:
+        for i, t in enumerate(texts):
+            key = _cache_key(t)
+            if key in _embed_cache:
+                result[i] = _embed_cache[key]
+            else:
+                uncached.append((i, t))
     if not uncached:
         return np.array(result, dtype=np.float32)
 
@@ -471,15 +532,26 @@ def embed_texts_llm(texts: List[str], batch_size: int = 10) -> np.ndarray:
         redis = get_redis()
         if redis:
             still_uncached = []
-            for idx, t in uncached:
-                key = _cache_key(t)
-                cached = redis.get(f"embed:{key}")
-                if cached:
-                    result[idx] = np.frombuffer(cached, dtype=np.float32)
-                    _embed_cache[key] = result[idx]
-                else:
-                    still_uncached.append((idx, t))
+            with _embed_cache_lock:
+                for idx, t in uncached:
+                    key = _cache_key(t)
+                    if key in _embed_cache:
+                        result[idx] = _embed_cache[key]
+                    else:
+                        still_uncached.append((idx, t))
             uncached = still_uncached
+            if uncached:
+                for idx, t in uncached:
+                    key = _cache_key(t)
+                    cached = redis.get(f"embed:{key}")
+                    if cached:
+                        emb = np.frombuffer(cached, dtype=np.float32)
+                        result[idx] = emb
+                        with _embed_cache_lock:
+                            _embed_cache[key] = emb
+                    else:
+                        still_uncached.append((idx, t))
+                uncached = still_uncached
             if not uncached:
                 return np.array(result, dtype=np.float32)
     except Exception:
@@ -523,11 +595,15 @@ def embed_texts_llm(texts: List[str], batch_size: int = 10) -> np.ndarray:
             raise RuntimeError(f"All embedding providers failed. Last error: {last_error}")
 
     # 4. Fill results + update cache
+    with _embed_cache_lock:
+        for (idx, text), emb in zip(uncached, embeddings):
+            result[idx] = emb
+            key = _cache_key(text)
+            _embed_cache[key] = emb
+
+    # Persist to Redis outside lock (I/O operation)
     for (idx, text), emb in zip(uncached, embeddings):
-        result[idx] = emb
         key = _cache_key(text)
-        _embed_cache[key] = emb
-        # Store in Redis for persistence across restarts
         try:
             from app.cache.redis_client import get_redis
             redis = get_redis()
@@ -537,9 +613,10 @@ def embed_texts_llm(texts: List[str], batch_size: int = 10) -> np.ndarray:
             pass
 
     # Evict if over limit
-    if len(_embed_cache) > _EMBED_CACHE_MAX:
-        for k in list(_embed_cache.keys())[:len(_embed_cache) - _EMBED_CACHE_MAX]:
-            del _embed_cache[k]
+    with _embed_cache_lock:
+        if len(_embed_cache) > _EMBED_CACHE_MAX:
+            for k in list(_embed_cache.keys())[:len(_embed_cache) - _EMBED_CACHE_MAX]:
+                del _embed_cache[k]
 
     return np.array(result, dtype=np.float32)
 
@@ -579,15 +656,26 @@ def _invalidate_stats_cache():
 
 
 def add_to_index(chunks: List[Dict[str, Any]], path: str = None):
-    """Add chunks to an EXISTING Chroma collection (incremental)."""
+    """Add chunks to an EXISTING vector collection (incremental).
+
+    Supports both ChromaDB and Qdrant backends.
+    """
+    from app.config import settings
+    if settings.vector_backend == "qdrant":
+        return _add_to_index_qdrant(chunks)
+    return _add_to_index_chroma(chunks, path)
+
+
+def _add_to_index_chroma(chunks: List[Dict[str, Any]], path: str = None):
+    """ChromaDB: add chunks incrementally."""
     save_path = path or VECTOR_DIR
     os.makedirs(save_path, exist_ok=True)
 
     client = _get_chroma(save_path)
     collection = _get_collection(client)
 
-    existing_count = collection.count()
-    ids = [f"chunk_{existing_count + i}" for i in range(len(chunks))]
+    # Use content-hash IDs for collision resistance (deletions don't affect new IDs)
+    ids = [f"chunk_{hashlib.md5(c['text'].encode()).hexdigest()}" for c in chunks]
     documents = [c["text"] for c in chunks]
     metadatas = [
         {
@@ -615,8 +703,60 @@ def add_to_index(chunks: List[Dict[str, Any]], path: str = None):
     _invalidate_stats_cache()
 
 
+def _add_to_index_qdrant(chunks: List[Dict[str, Any]]):
+    """Qdrant: add chunks incrementally."""
+    from qdrant_client.models import PointStruct
+    client = _get_qdrant()
+    collection_name = _get_qdrant_collection_name()
+
+    # Get current max ID to avoid collisions
+    try:
+        info = client.get_collection(collection_name)
+        existing_count = info.points_count or 0
+    except Exception:
+        existing_count = 0
+
+    # Embed texts using adaptive dispatch (CPU for small batches, GPU for large)
+    texts = [c["text"] for c in chunks]
+    try:
+        from app.rag.embed_gpu import get_adaptive_embedder
+        embedder = get_adaptive_embedder()
+        embeddings = embedder.encode(texts, batch_size=64)
+    except Exception:
+        embeddings = embed_texts_llm(texts)
+
+    # Upsert in batches
+    batch_size = 100
+    for start in range(0, len(chunks), batch_size):
+        end = min(start + batch_size, len(chunks))
+        points = [
+            PointStruct(
+                id=existing_count + start + i,
+                vector=embeddings[start + i].tolist(),
+                payload={"metadata": chunks[start + i].get("metadata", {}), "text": chunks[start + i]["text"]},
+            )
+            for i in range(end - start)
+        ]
+        client.upsert(collection_name=collection_name, points=points)
+
+    logger.info("Added %d chunks to Qdrant ('%s')", len(chunks), collection_name)
+    _build_kw_index(force=True)
+    _invalidate_stats_cache()
+
+
 def delete_from_index(source_filename: str, path: str = None):
-    """Delete all chunks whose metadata.source == source_filename from Chroma."""
+    """Delete all chunks whose metadata.source == source_filename.
+
+    Supports both ChromaDB and Qdrant backends.
+    """
+    from app.config import settings
+    if settings.vector_backend == "qdrant":
+        return _delete_from_index_qdrant(source_filename)
+    return _delete_from_index_chroma(source_filename, path)
+
+
+def _delete_from_index_chroma(source_filename: str, path: str = None):
+    """ChromaDB: delete chunks by source filename."""
     save_path = path or VECTOR_DIR
     try:
         client = _get_chroma(save_path)
@@ -635,8 +775,61 @@ def delete_from_index(source_filename: str, path: str = None):
     _invalidate_stats_cache()
 
 
+def _delete_from_index_qdrant(source_filename: str):
+    """Qdrant: delete chunks by source filename.
+
+    Qdrant doesn't support conditional delete by payload field directly,
+    so we scroll to find matching point IDs, then delete them.
+    """
+    client = _get_qdrant()
+    collection_name = _get_qdrant_collection_name()
+
+    try:
+        info = client.get_collection(collection_name)
+        if (info.points_count or 0) == 0:
+            return
+    except Exception as e:
+        logger.warning("Cannot open Qdrant for delete: %s", e)
+        return
+
+    # Scroll to find points with matching source
+    ids_to_delete = []
+    offset = None
+    while True:
+        points, offset = client.scroll(
+            collection_name=collection_name,
+            limit=100,
+            offset=offset,
+            with_payload=True,
+            with_vectors=False,
+        )
+        for pt in points:
+            meta = pt.payload.get("metadata", {}) if pt.payload else {}
+            if meta.get("source") == source_filename:
+                ids_to_delete.append(pt.id)
+        if offset is None:
+            break
+
+    if ids_to_delete:
+        client.delete(
+            collection_name=collection_name,
+            points_selector=ids_to_delete,
+        )
+
+    safe_name = source_filename.encode("ascii", errors="replace").decode("ascii")
+    logger.info("Deleted %d chunks for '%s' from Qdrant ('%s')", len(ids_to_delete), safe_name, collection_name)
+    _build_kw_index(force=True)
+    _invalidate_stats_cache()
+
+
 def save_index(chunks: List[Dict[str, Any]], embeddings: np.ndarray = None, path: str = None):
-    """Save chunks to vector storage (embeddings computed automatically)."""
+    """Save chunks to vector storage (embeddings computed automatically).
+
+    When vector_backend == "qdrant": writes to Qdrant only.
+    When vector_backend == "chroma": writes to ChromaDB.
+    Additionally, if Qdrant server is reachable (_qdrant_available),
+    also writes to Qdrant (dual-write) for gradual migration.
+    """
     from app.config import settings
     if settings.vector_backend == "qdrant":
         return save_index_qdrant(chunks)
@@ -659,7 +852,7 @@ def save_index(chunks: List[Dict[str, Any]], embeddings: np.ndarray = None, path
 
     collection = _get_collection(client)
 
-    ids = [f"chunk_{i}" for i in range(len(chunks))]
+    ids = [f"chunk_{hashlib.md5(c['text'].encode()).hexdigest()}" for c in chunks]
     documents = [c["text"] for c in chunks]
     metadatas = [
         {
@@ -676,23 +869,46 @@ def save_index(chunks: List[Dict[str, Any]], embeddings: np.ndarray = None, path
     batch_size = 20
     for start in range(0, len(chunks), batch_size):
         end = min(start + batch_size, len(chunks))
-        collection.add(
-            ids=ids[start:end],
-            documents=documents[start:end],
-            metadatas=metadatas[start:end],
-        )
+        add_kwargs = {
+            "ids": ids[start:end],
+            "documents": documents[start:end],
+            "metadatas": metadatas[start:end],
+        }
+        # Use pre-computed embeddings if provided to avoid redundant embedding computation
+        if embeddings is not None:
+            add_kwargs["embeddings"] = embeddings[start:end].tolist()
+        collection.add(**add_kwargs)
 
     logger.info("Saved %d chunks to Chroma (%s)", len(chunks), save_path)
     _build_kw_index(force=True)
     _invalidate_stats_cache()
 
+    # ── Dual-write: if Qdrant is reachable, also write there ──
+    global _qdrant_available
+    if _qdrant_available or _check_qdrant_available():
+        try:
+            save_index_qdrant(chunks)
+            logger.info("Dual-write: also saved %d chunks to Qdrant", len(chunks))
+        except Exception as e:
+            logger.warning("Dual-write to Qdrant failed (non-critical): %s", e)
+
 
 def load_index(path: str = None):
-    """Check if Chroma collection exists and has data."""
+    """Check if vector collection exists and has data.
+
+    Supports both ChromaDB and Qdrant backends.
+    """
+    from app.config import settings
     try:
-        client = _get_chroma(path)
-        collection = _get_collection(client)
-        count = collection.count()
+        if settings.vector_backend == "qdrant":
+            client = _get_qdrant()
+            collection_name = _get_qdrant_collection_name()
+            info = client.get_collection(collection_name)
+            count = info.points_count or 0
+        else:
+            client = _get_chroma(path)
+            collection = _get_collection(client)
+            count = collection.count()
         if count > 0:
             return [], np.array([])
         return None, None
@@ -700,7 +916,7 @@ def load_index(path: str = None):
         return None, None
 
 
-def retrieve(query: str, top_k: int = 3, use_mmr: bool = True, lang_filter: str = None) -> List[Dict[str, Any]]:
+def retrieve(query: str, top_k: int = 3, use_mmr: bool = True, lang_filter: str = None, tenant_id: str = None) -> List[Dict[str, Any]]:
     """Retrieve top_k chunks using vector similarity search.
 
     Args:
@@ -708,10 +924,15 @@ def retrieve(query: str, top_k: int = 3, use_mmr: bool = True, lang_filter: str 
         top_k: 返回结果数量
         use_mmr: 是否使用 MMR 多样性优化
         lang_filter: 语言过滤（"zh" 或 "en"），None 表示不过滤
+        tenant_id: 租户 ID（默认从上下文获取）
     """
     from app.config import settings
     if settings.vector_backend == "qdrant":
-        return retrieve_qdrant(query, top_k=top_k)
+        return retrieve_qdrant(query, top_k=top_k, tenant_id=tenant_id, lang_filter=lang_filter)
+
+    # Get tenant_id from context if not provided
+    if tenant_id is None:
+        tenant_id = get_current_tenant_id()
 
     try:
         client = _get_chroma()
@@ -727,13 +948,25 @@ def retrieve(query: str, top_k: int = 3, use_mmr: bool = True, lang_filter: str 
     fetch_k = max(top_k * 2, 10) if use_mmr else top_k
 
     try:
-        # 构建语言过滤条件
-        where_filter = {"language": lang_filter} if lang_filter else None
+        # 构建过滤条件（租户 + 语言）
+        where_conditions = []
+        if tenant_id:
+            where_conditions.append({"tenant_id": {"$eq": tenant_id}})
+        if lang_filter:
+            where_conditions.append({"language": {"$eq": lang_filter}})
+
+        # 组合过滤条件
+        if len(where_conditions) == 0:
+            where_filter = None
+        elif len(where_conditions) == 1:
+            where_filter = where_conditions[0]
+        else:
+            where_filter = {"$and": where_conditions}
 
         results = collection.query(
             query_texts=[query],
             n_results=fetch_k,
-            include=["documents", "metadatas", "distances"],
+            include=["documents", "metadatas", "distances", "embeddings"],
             where=where_filter,
         )
     except Exception as e:
@@ -760,6 +993,9 @@ def retrieve(query: str, top_k: int = 3, use_mmr: bool = True, lang_filter: str 
     if not results["ids"] or not results["ids"][0]:
         return []
 
+    # Extract embeddings if available (for downstream reuse in compress_context)
+    stored_embeddings = results.get("embeddings")
+
     items = []
     for i in range(len(results["ids"][0])):
         distance = results["distances"][0][i]
@@ -767,12 +1003,29 @@ def retrieve(query: str, top_k: int = 3, use_mmr: bool = True, lang_filter: str 
         cosine_score = 1.0 - distance
         item_meta = dict(results["metadatas"][0][i] or {})
         item_meta["cosine_score"] = cosine_score
-        items.append({
+
+        # Parent-Child chunking: use parent_text for richer context if available
+        parent_text = item_meta.get("parent_text", "")
+        if parent_text:
+            display_text = parent_text
+        else:
+            display_text = results["documents"][0][i]
+
+        item = {
             "id": results["ids"][0][i],
-            "text": results["documents"][0][i],
+            "text": display_text,
             "metadata": item_meta,
             "score": score,
-        })
+        }
+        # Attach stored embedding for reuse (avoids recomputation in compress_context)
+        if stored_embeddings is not None:
+            try:
+                emb = np.array(stored_embeddings[0][i], dtype=np.float32)
+                if np.linalg.norm(emb) > 1e-6:  # skip zero vectors
+                    item["_embedding"] = emb
+            except Exception:
+                pass
+        items.append(item)
 
     if use_mmr and len(items) > top_k:
         return _simple_diversity(items, top_k)
@@ -911,57 +1164,153 @@ _STATS_CACHE_TTL = float(os.getenv("STATS_CACHE_TTL", "60"))  # seconds
 
 
 def get_collection_stats() -> tuple[int, int]:
-    """Return (total_docs, total_chunks) from Chroma collection.
+    """Return (total_docs, total_chunks) from the active vector store.
 
     Counts unique source documents and total chunks.
     Returns (0, 0) if collection is empty or unavailable.
     Results are cached for STATS_CACHE_TTL seconds (default 60s).
+    Supports both ChromaDB and Qdrant backends.
     """
     import time as _time
+    from app.config import settings
     now = _time.time()
     if (now - _stats_cache["updated_at"]) < _STATS_CACHE_TTL:
         return _stats_cache["doc_count"], _stats_cache["chunk_count"]
 
     try:
-        client = _get_chroma()
-        collection = _get_collection(client)
-        total_chunks = collection.count()
-        if total_chunks > 0:
-            all_meta = collection.get(include=["metadatas"])
-            unique_docs = set()
-            for meta in all_meta.get("metadatas", []):
-                if meta and isinstance(meta, dict):
-                    src = meta.get("source") or meta.get("title", "unknown")
-                    unique_docs.add(src)
-            _stats_cache["doc_count"] = len(unique_docs)
-            _stats_cache["chunk_count"] = total_chunks
-            _stats_cache["updated_at"] = now
-            return len(unique_docs), total_chunks
-        _stats_cache["doc_count"] = 0
-        _stats_cache["chunk_count"] = 0
-        _stats_cache["updated_at"] = now
-        return 0, 0
+        if settings.vector_backend == "qdrant":
+            return _get_collection_stats_qdrant(now)
+        return _get_collection_stats_chroma(now)
     except Exception:
         return _stats_cache["doc_count"], _stats_cache["chunk_count"]
 
 
-def get_indexed_sources() -> set:
-    """Return set of source filenames currently in the Chroma articles collection."""
-    try:
-        client = _get_chroma()
-        collection = _get_collection(client)
-        if collection.count() == 0:
-            return set()
+def _get_collection_stats_chroma(now: float) -> tuple[int, int]:
+    """ChromaDB stats implementation."""
+    client = _get_chroma()
+    collection = _get_collection(client)
+    total_chunks = collection.count()
+    if total_chunks > 0:
         all_meta = collection.get(include=["metadatas"])
-        sources = set()
+        unique_docs = set()
         for meta in all_meta.get("metadatas", []):
             if meta and isinstance(meta, dict):
-                src = meta.get("source")
-                if src:
-                    sources.add(src)
-        return sources
+                src = meta.get("source") or meta.get("title", "unknown")
+                unique_docs.add(src)
+        _stats_cache["doc_count"] = len(unique_docs)
+        _stats_cache["chunk_count"] = total_chunks
+        _stats_cache["updated_at"] = now
+        return len(unique_docs), total_chunks
+    _stats_cache["doc_count"] = 0
+    _stats_cache["chunk_count"] = 0
+    _stats_cache["updated_at"] = now
+    return 0, 0
+
+
+def _get_collection_stats_qdrant(now: float) -> tuple[int, int]:
+    """Qdrant stats implementation."""
+    client = _get_qdrant()
+    collection_name = _get_qdrant_collection_name()
+    try:
+        info = client.get_collection(collection_name)
+        total_chunks = info.points_count or 0
+    except Exception:
+        return _stats_cache["doc_count"], _stats_cache["chunk_count"]
+
+    if total_chunks > 0:
+        # Scroll through points to count unique sources
+        unique_docs = set()
+        offset = None
+        while True:
+            points, offset = client.scroll(
+                collection_name=collection_name,
+                limit=100,
+                offset=offset,
+                with_payload=True,
+                with_vectors=False,
+            )
+            for pt in points:
+                meta = pt.payload.get("metadata", {}) if pt.payload else {}
+                src = meta.get("source") or meta.get("title", "unknown")
+                unique_docs.add(src)
+            if offset is None:
+                break
+        _stats_cache["doc_count"] = len(unique_docs)
+        _stats_cache["chunk_count"] = total_chunks
+        _stats_cache["updated_at"] = now
+        return len(unique_docs), total_chunks
+
+    _stats_cache["doc_count"] = 0
+    _stats_cache["chunk_count"] = 0
+    _stats_cache["updated_at"] = now
+    return 0, 0
+
+
+def _get_qdrant_collection_name() -> str:
+    """Get Qdrant collection name from settings."""
+    from app.config import settings
+    return settings.qdrant_collection or "aureon"
+
+
+def get_indexed_sources() -> set:
+    """Return set of source filenames currently in the vector store.
+
+    Supports both ChromaDB and Qdrant backends.
+    """
+    from app.config import settings
+    try:
+        if settings.vector_backend == "qdrant":
+            return _get_indexed_sources_qdrant()
+        return _get_indexed_sources_chroma()
     except Exception:
         return set()
+
+
+def _get_indexed_sources_chroma() -> set:
+    """ChromaDB: get indexed source filenames."""
+    client = _get_chroma()
+    collection = _get_collection(client)
+    if collection.count() == 0:
+        return set()
+    all_meta = collection.get(include=["metadatas"])
+    sources = set()
+    for meta in all_meta.get("metadatas", []):
+        if meta and isinstance(meta, dict):
+            src = meta.get("source")
+            if src:
+                sources.add(src)
+    return sources
+
+
+def _get_indexed_sources_qdrant() -> set:
+    """Qdrant: get indexed source filenames."""
+    client = _get_qdrant()
+    collection_name = _get_qdrant_collection_name()
+    try:
+        info = client.get_collection(collection_name)
+        if (info.points_count or 0) == 0:
+            return set()
+    except Exception:
+        return set()
+
+    sources = set()
+    offset = None
+    while True:
+        points, offset = client.scroll(
+            collection_name=collection_name,
+            limit=100,
+            offset=offset,
+            with_payload=True,
+            with_vectors=False,
+        )
+        for pt in points:
+            meta = pt.payload.get("metadata", {}) if pt.payload else {}
+            src = meta.get("source")
+            if src:
+                sources.add(src)
+        if offset is None:
+            break
+    return sources
 
 
 def check_index_stale(articles_dir: str) -> dict:
@@ -1033,6 +1382,20 @@ def check_index_stale(articles_dir: str) -> dict:
 
 # ── Qdrant Backend ──
 _qdrant_client = None
+_qdrant_available = False  # Global flag: True if Qdrant is reachable
+
+
+def _check_qdrant_available() -> bool:
+    """Check if Qdrant server is reachable. Caches result in _qdrant_available."""
+    global _qdrant_available
+    try:
+        client = _get_qdrant()
+        client.get_collections()  # lightweight health check
+        _qdrant_available = True
+        return True
+    except Exception:
+        _qdrant_available = False
+        return False
 
 
 def _get_qdrant():
@@ -1069,14 +1432,15 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
         vectors_config=VectorParams(size=dim, distance=Distance.COSINE),
     )
 
-    # Embed all texts using GPU embedder
+    # Embed all texts using adaptive dispatch (CPU for small batches, GPU for large)
     texts = [c["text"] for c in chunks]
     try:
         from app.config import settings
-        embedder = _get_gpu_embedder()
+        from app.rag.embed_gpu import get_adaptive_embedder
+        embedder = get_adaptive_embedder()
         embeddings = embedder.encode(texts, batch_size=settings.embedding_batch_size)
     except Exception as e:
-        logger.warning("GPU embedding failed: %s, falling back to local/API", e)
+        logger.warning("Adaptive embedding failed: %s, falling back to local/API", e)
         embeddings = _embed_local(texts)
         if embeddings is None:
             embeddings = embed_texts_llm(texts)
@@ -1098,32 +1462,252 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
     logger.info("Qdrant: indexed %d chunks into '%s'", len(chunks), collection_name)
 
 
-def retrieve_qdrant(query: str, top_k: int = 3, collection_name: str = "aureon") -> List[Dict]:
-    """Retrieve from Qdrant vector store."""
+def retrieve_qdrant(query: str, top_k: int = 3, collection_name: str = "aureon", tenant_id: str = None, lang_filter: str = None) -> List[Dict]:
+    """Retrieve from Qdrant vector store.
+
+    Uses adaptive dispatch: CPU for single queries (lower latency),
+    GPU for batch queries (higher throughput).
+
+    Supports both old (search) and new (query_points) qdrant_client APIs.
+    Supports payload filtering via Qdrant Filter (e.g. lang_filter, tenant_id).
+    Supports parent_text: if parent_text exists in metadata, use it as display text.
+
+    Args:
+        query: 查询文本
+        top_k: 返回结果数量
+        collection_name: Qdrant collection 名称
+        tenant_id: 租户 ID（默认从上下文获取）
+        lang_filter: 语言过滤（"zh" 或 "en"），None 表示不过滤
+    """
     client = _get_qdrant()
 
+    # Get tenant_id from context if not provided
+    if tenant_id is None:
+        tenant_id = get_current_tenant_id()
+
     try:
-        embedder = _get_gpu_embedder()
+        from app.rag.embed_gpu import get_adaptive_embedder
+        embedder = get_adaptive_embedder()
         query_emb = embedder.encode([query])
     except Exception as e:
-        logger.warning("GPU embedding failed: %s, falling back to API", e)
+        logger.warning("Adaptive embedding failed: %s, falling back to API", e)
         query_emb = embed_texts_llm([query])
 
-    results = client.search(
-        collection_name=collection_name,
-        query_vector=query_emb[0].tolist(),
-        limit=top_k,
-    )
+    query_vector = query_emb[0].tolist()
 
-    return [
-        {
-            "text": r.payload.get("text", ""),
-            "metadata": {**r.payload.get("metadata", {}), "cosine_score": r.score},
+    # Check if stored data actually has tenant_id — skip filter if not
+    _has_tenant_id = False
+    try:
+        _sample, _ = client.scroll(
+            collection_name=collection_name, limit=1,
+            with_payload=True, with_vectors=False,
+        )
+        if _sample:
+            _sample_meta = _sample[0].payload.get("metadata", {}) if _sample[0].payload else {}
+            _has_tenant_id = "tenant_id" in _sample_meta
+    except Exception:
+        pass
+
+    # Build Qdrant filter conditions (tenant + lang_filter)
+    from qdrant_client.models import Filter, FieldCondition, MatchValue
+    must_conditions = []
+    if tenant_id and _has_tenant_id:
+        must_conditions.append(
+            FieldCondition(
+                key="metadata.tenant_id",
+                match=MatchValue(value=tenant_id),
+            )
+        )
+    if lang_filter:
+        must_conditions.append(
+            FieldCondition(
+                key="metadata.language",
+                match=MatchValue(value=lang_filter),
+            )
+        )
+    query_filter = Filter(must=must_conditions) if must_conditions else None
+
+    # Try new API first (qdrant_client >= 1.12), fall back to old
+    try:
+        search_kwargs = dict(
+            collection_name=collection_name,
+            query=query_vector,
+            limit=top_k,
+            with_payload=True,
+            with_vectors=True,
+        )
+        if query_filter is not None:
+            search_kwargs["query_filter"] = query_filter
+        response = client.query_points(**search_kwargs)
+        results = response.points
+    except (AttributeError, TypeError):
+        # Old API fallback
+        search_kwargs = dict(
+            collection_name=collection_name,
+            query_vector=query_vector,
+            limit=top_k,
+            with_vectors=True,
+        )
+        if query_filter is not None:
+            search_kwargs["filter"] = query_filter
+        results = client.search(**search_kwargs)
+
+    items = []
+    for r in results:
+        payload_meta = r.payload.get("metadata", {})
+
+        # Parent-Child chunking: use parent_text for richer context if available
+        parent_text = payload_meta.get("parent_text", "")
+        if parent_text:
+            display_text = parent_text
+        else:
+            display_text = r.payload.get("text", "")
+
+        item = {
+            "text": display_text,
+            "metadata": {**payload_meta, "cosine_score": r.score},
             "score": r.score,
         }
-        for r in results
-    ]
+        # Attach stored embedding for reuse (avoids recomputation in compress_context)
+        try:
+            if hasattr(r, 'vector') and r.vector is not None:
+                emb = np.array(r.vector, dtype=np.float32)
+                if np.linalg.norm(emb) > 1e-6:
+                    item["_embedding"] = emb
+        except Exception:
+            pass
+        items.append(item)
+    return items
 
+
+
+def switch_to_qdrant(batch_size: int = 100) -> dict:
+    """Migrate all data from ChromaDB to Qdrant.
+
+    Reads all documents, embeddings, and metadatas from the ChromaDB collection,
+    then batch-writes them into the Qdrant collection. Returns migration statistics.
+
+    Args:
+        batch_size: Number of points to write per Qdrant upsert batch.
+
+    Returns:
+        dict with migration stats: {"status", "migrated_chunks", "source_backend", "target_backend", "elapsed_seconds"}
+    """
+    from qdrant_client.models import VectorParams, Distance, PointStruct
+    import numpy as _np
+    start_time = time.time()
+
+    # 1. Read all data from ChromaDB
+    try:
+        chroma_client = _get_chroma()
+        chroma_collection = _get_collection(chroma_client)
+    except Exception as e:
+        logger.error("Cannot connect to ChromaDB for migration: %s", e)
+        return {"status": "error", "message": f"ChromaDB connection failed: {e}"}
+
+    total = chroma_collection.count()
+    if total == 0:
+        logger.info("ChromaDB collection is empty, nothing to migrate")
+        return {
+            "status": "ok",
+            "migrated_chunks": 0,
+            "source_backend": "chroma",
+            "target_backend": "qdrant",
+            "elapsed_seconds": 0,
+            "message": "ChromaDB collection is empty",
+        }
+
+    logger.info("Starting ChromaDB -> Qdrant migration: %d chunks", total)
+
+    # 2. Read all documents, embeddings, metadatas from ChromaDB
+    all_ids = []
+    all_documents = []
+    all_metadatas = []
+    all_embeddings = []
+
+    offset = 0
+    batch_read = 500
+    while offset < total:
+        results = chroma_collection.get(
+            include=["documents", "metadatas", "embeddings"],
+            limit=batch_read,
+            offset=offset,
+        )
+        if not results["ids"]:
+            break
+        all_ids.extend(results["ids"])
+        all_documents.extend(results["documents"])
+        all_metadatas.extend(results["metadatas"])
+        if results.get("embeddings"):
+            all_embeddings.extend(results["embeddings"])
+        offset += len(results["ids"])
+
+    logger.info("Read %d chunks from ChromaDB", len(all_ids))
+
+    # 3. Prepare embeddings — if ChromaDB doesn't have them, recompute
+    if len(all_embeddings) != len(all_ids):
+        logger.info("Recomputing embeddings for %d chunks (ChromaDB did not store them)", len(all_ids))
+        try:
+            from app.rag.embed_gpu import get_adaptive_embedder
+            embedder = get_adaptive_embedder()
+            embeddings_np = embedder.encode(all_documents, batch_size=64)
+        except Exception:
+            embeddings_np = embed_texts_llm(all_documents)
+    else:
+        embeddings_np = _np.array(all_embeddings, dtype=_np.float32)
+
+    # 4. Ensure Qdrant collection exists with correct dimensions
+    qdrant_client = _get_qdrant()
+    collection_name = _get_qdrant_collection_name()
+    dim = embeddings_np.shape[1] if len(embeddings_np) > 0 else _LOCAL_MODEL_DIM
+
+    try:
+        qdrant_client.delete_collection(collection_name)
+    except Exception:
+        pass
+
+    qdrant_client.create_collection(
+        collection_name=collection_name,
+        vectors_config=VectorParams(size=dim, distance=Distance.COSINE),
+    )
+
+    # 5. Batch write to Qdrant
+    migrated = 0
+    for start in range(0, len(all_ids), batch_size):
+        end = min(start + batch_size, len(all_ids))
+        points = []
+        for i in range(start, end):
+            points.append(
+                PointStruct(
+                    id=i,
+                    vector=embeddings_np[i].tolist(),
+                    payload={
+                        "metadata": all_metadatas[i] if all_metadatas[i] else {},
+                        "text": all_documents[i] or "",
+                    },
+                )
+            )
+        qdrant_client.upsert(collection_name=collection_name, points=points)
+        migrated += len(points)
+        logger.info("Migration progress: %d / %d chunks", migrated, len(all_ids))
+
+    elapsed = time.time() - start_time
+    stats = {
+        "status": "ok",
+        "migrated_chunks": migrated,
+        "source_backend": "chroma",
+        "target_backend": "qdrant",
+        "elapsed_seconds": round(elapsed, 2),
+        "qdrant_collection": collection_name,
+        "vector_dimension": dim,
+    }
+    logger.info("Migration complete: %d chunks in %.2fs", migrated, elapsed)
+
+    # Rebuild BM25 index from Qdrant
+    _build_kw_index(force=True)
+    _invalidate_stats_cache()
+
+    return stats
 
 
 # ── Elasticsearch BM25 Backend ──

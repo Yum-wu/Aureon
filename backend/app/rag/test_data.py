@@ -900,6 +900,907 @@ TEST_QA_PAIRS = [
         "difficulty": "medium",
         "type": "negative",
     },
+
+    # ===================================================================
+    # EXPANDED QA PAIRS (Phase A: Enterprise Benchmark Expansion)
+    # All grounded in actual article content - no simulated data
+    # ===================================================================
+
+    # ── AI Agent Architecture (deep coverage, article has 270 lines) ──
+
+    {
+        "id": "agenta-004",
+        "question": "ReAct 模式中的 Thought-Action-Observation 循环，每个阶段分别由什么驱动？",
+        "answer": "Thought 由 LLM 推理驱动，决定下一步行动；Action 调用具体工具执行操作；Observation 获取工具返回的执行结果",
+        "source_article": "ai-agent-architecture",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+    {
+        "id": "agenta-005",
+        "question": "AI Agent 的四个核心组件是什么？各自承担什么职责？",
+        "answer": "LLM 作为大脑进行推理决策，Tools 提供与外部世界交互的能力，Memory 管理对话历史和知识，Planning 负责任务分解和执行策略",
+        "source_article": "ai-agent-architecture",
+        "difficulty": "easy",
+        "type": "factual",
+    },
+    {
+        "id": "agenta-006",
+        "question": "Tool Calling 中的工具安全原则包括哪些？为什么数据库工具要默认只读？",
+        "answer": "五项安全原则：最小权限、输入校验（Pydantic）、沙箱执行、速率限制、只读优先。数据库工具默认只读是为了防止 Agent 执行误操作或危险写入",
+        "source_article": "ai-agent-architecture",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+    {
+        "id": "agenta-007",
+        "question": "Agent 记忆系统中，BufferMemory、SummaryMemory 和 SQLite Checkpointer 各自适合什么场景？",
+        "answer": "BufferMemory 适合简单对话，保留所有历史但容量有限；SummaryMemory 适合长对话，压缩历史为摘要；SQLite Checkpointer 适合单用户应用，支持跨会话持久化",
+        "source_article": "ai-agent-architecture",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+    {
+        "id": "agenta-008",
+        "question": "多 Agent 系统的三种架构模式是什么？生产环境最推荐哪种？",
+        "answer": "主从模式（Orchestrator-Worker）由编排者分配任务给专家 Worker；对话模式（Debate/Consensus）多个 Agent 讨论达成共识；流水线模式（Pipeline）每个 Agent 处理特定环节。生产环境推荐主从模式，因为可控性和可预测性最好",
+        "source_article": "ai-agent-architecture",
+        "difficulty": "hard",
+        "type": "synthesis",
+    },
+    {
+        "id": "agenta-009",
+        "question": "Agent 在生产环境中需要考虑哪些工程问题？",
+        "answer": "可观测性（记录每个 Thought/Action/Observation 便于调试）、超时控制（避免无限循环）、错误恢复（Tool 调用失败时降级策略）、成本控制（监控 token 消耗）、并行执行（无依赖的 Tool 可并行调用）、人机协作（关键决策点加入 Human-in-the-loop 确认）",
+        "source_article": "ai-agent-architecture",
+        "difficulty": "hard",
+        "type": "synthesis",
+    },
+
+    # ── Prompt Engineering Guide (deep coverage, 319 lines) ──
+
+    {
+        "id": "pe-004",
+        "question": "Few-shot Learning 的最佳实践包括哪些？示例数量和多样性方面有什么建议？",
+        "answer": "示例数量 3-5 个即可，过多浪费 token；示例需要多样性，覆盖正面、负面、中性、边界情况；示例要保持输入输出格式一致",
+        "source_article": "prompt-engineering-guide",
+        "difficulty": "easy",
+        "type": "factual",
+    },
+    {
+        "id": "pe-005",
+        "question": "Chain-of-Thought 的三种变体 Zero-shot CoT、Few-shot CoT 和 Tree-of-Thought 各自的核心机制是什么？",
+        "answer": "Zero-shot CoT 加一句 Let's think step by step 触发推理；Few-shot CoT 提供带推理过程的示例引导；Tree-of-Thought 探索多条推理路径选择最优方案",
+        "source_article": "prompt-engineering-guide",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+    {
+        "id": "pe-006",
+        "question": "Self-Consistency 技术为什么要设置 temperature > 0？投票机制是如何工作的？",
+        "answer": "需要一定随机性来生成多条不同推理路径；temperature=0 会导致每次输出相同结果无法采样多样性。通过 Counter 统计所有答案出现频率，选择出现最多的答案作为最终输出",
+        "source_article": "prompt-engineering-guide",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+    {
+        "id": "pe-007",
+        "question": "System Prompt 设计的四个核心原则是什么？优先级排列为什么重要？",
+        "answer": "角色定义清晰（让 LLM 知道自己是谁）、边界明确（说明能做什么不能做什么）、格式规范（定义输出格式便于后处理）、优先级排列（重要规则放在前面，因为 LLM 对前面的指令权重更高）",
+        "source_article": "prompt-engineering-guide",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+    {
+        "id": "pe-008",
+        "question": "在 Prompt Engineering 最佳实践中，渐进式优化流程的六个步骤是什么？",
+        "answer": "1. 基线（写最简 Prompt 测试基本效果）2. 增强（添加 Few-shot 或 CoT）3. 约束（添加格式要求和边界规则）4. 评估（用评估数据集量化效果）5. 迭代（根据评估结果调整）6. 部署（A/B 测试验证线上效果）",
+        "source_article": "prompt-engineering-guide",
+        "difficulty": "medium",
+        "type": "factual",
+    },
+    {
+        "id": "pe-009",
+        "question": "RAG 场景的 Prompt 设计有哪些专用规则来避免幻觉？",
+        "answer": "只基于检索到的参考资料回答；无相关信息时明确回答根据已有资料无法回答；引用信息时标注来源；不编造资料中没有的信息；回答要简洁准确",
+        "source_article": "prompt-engineering-guide",
+        "difficulty": "easy",
+        "type": "factual",
+    },
+    {
+        "id": "pe-010",
+        "question": "Prompt Engineering 中应避免的五个常见陷阱是什么？",
+        "answer": "过度约束（规则太多让 LLM 困惑）、模糊指令（写得好一点不如说用专业但友好的语气）、过长 Prompt（超过 4000 token 效果可能下降）、注入攻击（用户输入可能包含恶意 Prompt）、未测试边界情况（空输入、超长输入、多语言混合）",
+        "source_article": "prompt-engineering-guide",
+        "difficulty": "medium",
+        "type": "synthesis",
+    },
+    {
+        "id": "pe-011",
+        "question": "使用 with_structured_output 强制 LLM 输出结构化数据的优势是什么？",
+        "answer": "确保 LLM 输出可解析的结构化数据（如 Pydantic 模型），避免自由文本解析的不确定性，方便下游系统直接使用输出结果，同时可以利用 Pydantic 做字段级别的验证",
+        "source_article": "prompt-engineering-guide",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+
+    # ── RAG Concepts Deep Dive (239 lines) ──
+
+    {
+        "id": "ragc-004",
+        "question": "RAG 和 Fine-tuning 在知识更新、成本和可解释性三个维度上各有什么特点？",
+        "answer": "知识更新：RAG 实时更新改文档即可，Fine-tuning 需要重新训练。成本：RAG 低无需训练，Fine-tuning 高需要 GPU 和数据标注。可解释性：RAG 高可追溯来源，Fine-tuning 低知识被内化到模型权重中",
+        "source_article": "rag-concepts-deep-dive",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+    {
+        "id": "ragc-005",
+        "question": "语义切分（Semantic Chunking）的原理是什么？它基于什么指标来判断语义边界？",
+        "answer": "基于 embedding 相似度判断语义边界。将文本转换为向量后计算相邻句子的余弦相似度，当相似度低于设定阈值（如 85 分位数）时进行切分，保持语义完整性",
+        "source_article": "rag-concepts-deep-dive",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+    {
+        "id": "ragc-006",
+        "question": "Parent-Child 切分策略中，大块和小块分别用于什么环节？为什么这样设计？",
+        "answer": "小块（如 500 字）用于检索匹配，精确度高；大块（如 2000 字）作为上下文返回给 LLM，提供更完整的语义。检索时匹配小块，返回对应大块作为上下文，兼顾检索精度和上下文完整性",
+        "source_article": "rag-concepts-deep-dive",
+        "difficulty": "hard",
+        "type": "reasoning",
+    },
+    {
+        "id": "ragc-007",
+        "question": "RRF 融合公式 score(d) = 1/(k + rank_i(d)) 中，k 值为什么通常取 60？如果 k 太小或太大会怎样？",
+        "answer": "k=60 是经验值，使排名差异在合理范围内平滑。k 太小会导致排名差异被过度放大（第 1 名和第 2 名差距过大）；k 太大会使排名差异被过度压缩（不同排名的分数过于接近），失去区分度",
+        "source_article": "rag-concepts-deep-dive",
+        "difficulty": "hard",
+        "type": "synthesis",
+    },
+    {
+        "id": "ragc-008",
+        "question": "RAG 的评估指标体系中，Recall@K、MRR 和 NDCG 分别衡量什么？",
+        "answer": "Recall@K 衡量前 K 个结果中包含多少相关文档（覆盖率）；MRR 衡量第一个相关结果的排名位置（排序质量）；NDCG 考虑所有相关文档的位置权重，排名越靠前得分越高（综合排序质量）",
+        "source_article": "rag-concepts-deep-dive",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+    {
+        "id": "ragc-009",
+        "question": "RAG 的五种常见优化策略是什么？HyDE 的工作原理是什么？",
+        "answer": "Query Rewriting（改写用户问题）、HyDE（让 LLM 先生成假设性回答，用该回答做检索）、多级检索（粗筛到精排）、元数据过滤（利用文档元数据预过滤）、自适应检索（根据问题复杂度动态决定）。HyDE 原理是通过生成假设回答来丰富查询的语义信息",
+        "source_article": "rag-concepts-deep-dive",
+        "difficulty": "hard",
+        "type": "synthesis",
+    },
+
+    # ── Vector Database Guide (253 lines) ──
+
+    {
+        "id": "vdb-004",
+        "question": "Flat、IVF 和 HNSW 三种索引算法的时间复杂度和适用规模分别是什么？",
+        "answer": "Flat 暴力搜索 O(n*d)，适用 <10 万向量；IVF 倒排文件索引 O(n/k*d)，适用 10 万到 1000 万；HNSW 分层图结构查询速度快内存占用高，适用 10 万到 1 亿向量",
+        "source_article": "vector-database-guide",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+    {
+        "id": "vdb-005",
+        "question": "ChromaDB 作为嵌入式向量数据库的特点是什么？它默认使用什么索引？",
+        "answer": "轻量级、嵌入式、开发者友好，适合原型和中小项目。支持内存模式和持久化存储。默认使用 HNSW 索引，适合 100 万以下向量场景",
+        "source_article": "vector-database-guide",
+        "difficulty": "easy",
+        "type": "factual",
+    },
+    {
+        "id": "vdb-006",
+        "question": "在生产环境中选择向量数据库时，已有 PostgreSQL 基础设施应该选什么方案？为什么？",
+        "answer": "选择 pgvector 扩展，无需额外引入新的基础设施。直接在现有 PostgreSQL 数据库上启用向量扩展，支持 HNSW 索引和余弦相似度查询，适合团队已有 PG 运维经验的场景",
+        "source_article": "vector-database-guide",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+    {
+        "id": "vdb-007",
+        "question": "Weaviate 向量数据库的独特优势是什么？和 ChromaDB 的主要区别在哪里？",
+        "answer": "Weaviate 支持内置混合搜索（向量 + BM25）、GraphQL API、内置向量化模块。和 ChromaDB 的主要区别是 Weaviate 支持混合搜索和更丰富的查询语言，适合需要关键词+语义混合检索的场景",
+        "source_article": "vector-database-guide",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+    {
+        "id": "vdb-008",
+        "question": "向量数据库性能优化的五个要点是什么？",
+        "answer": "1. 维度选择（768 比 1536 快一倍）2. 索引参数调优（HNSW 的 M 和 ef_construction）3. 批量操作减少网络往返 4. 元数据过滤先缩小范围再做向量检索 5. 内存管理注意容量规划",
+        "source_article": "vector-database-guide",
+        "difficulty": "medium",
+        "type": "factual",
+    },
+
+    # ── Embedding Models Guide (206 lines) ──
+
+    {
+        "id": "emb-004",
+        "question": "MTEB 排行榜评估 Embedding 模型的七个维度是什么？对于 RAG 场景最相关的是哪个？",
+        "answer": "Classification、Clustering、PairClassification、Retrieval、STS、Summarization、BitextMining。对于 RAG 场景最相关的是 Retrieval 维度，因为它直接衡量检索能力",
+        "source_article": "embedding-models-guide",
+        "difficulty": "easy",
+        "type": "factual",
+    },
+    {
+        "id": "emb-005",
+        "question": "Embedding 维度从 384 到 3072，每百万向量的存储空间变化如何？实践中推荐什么范围？",
+        "answer": "384 维约 1.5GB，512 维约 2GB，768 维约 3GB，1024 维约 4GB，1536 维约 6GB，3072 维约 12GB。实践中 512-1024 维是较好的平衡点",
+        "source_article": "embedding-models-guide",
+        "difficulty": "easy",
+        "type": "factual",
+    },
+    {
+        "id": "emb-006",
+        "question": "BGE 模型在查询编码时加 instruction 前缀的原理是什么？这个前缀的作用是什么？",
+        "answer": "加类似用于检索相关文章的提示前缀，使查询向量更偏向匹配（retrieval-oriented）而非纯语义相似度。这样检索时查询向量会更关注内容相关性，提升检索召回率",
+        "source_article": "embedding-models-guide",
+        "difficulty": "hard",
+        "type": "synthesis",
+    },
+    {
+        "id": "emb-007",
+        "question": "什么场景下应该选择本地 Embedding 模型而不是 API 服务？",
+        "answer": "数据量大（百万级文档）、需要控制成本（本地免费）、对延迟敏感（离线场景）、数据隐私要求高（不能外传数据到云端）、国内网络环境不稳定",
+        "source_article": "embedding-models-guide",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+    {
+        "id": "emb-008",
+        "question": "Embedding 模型选型决策流程中，数据量从 1 万以下到 100 万以上，推荐方案如何变化？",
+        "answer": "<1万用 OpenAI text-embedding-3-small；1万-100万中文为主用 bge-small-zh；100万+需要 GPU 用 bge-large-zh 或 bge-m3；多语言混合用 bge-m3 或 Jina v3；国内生产不想管 GPU 用 DashScope",
+        "source_article": "embedding-models-guide",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+
+    # ── LangChain Framework Guide (265 lines) ──
+
+    {
+        "id": "lcf-004",
+        "question": "LCEL 的管道操作符 | 在链式编排中解决了什么问题？它有什么原生优势？",
+        "answer": "解决了链式调用的语法冗余问题，使用 | 操作符连接各组件使代码更简洁。原生支持 streaming（流式输出）、async（异步执行）和并行执行",
+        "source_article": "langchain-framework-guide",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+    {
+        "id": "lcf-005",
+        "question": "LangChain 的 RAG 链是如何用 LCEL 构建的？每一步的作用是什么？",
+        "answer": "先用文本分割器切分文档，创建向量存储。RAG 链用管道连接：retriever 检索相关文档，ChatPromptTemplate 组装上下文和问题，LLM 生成回答，StrOutputParser 解析输出",
+        "source_article": "langchain-framework-guide",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+    {
+        "id": "lcf-006",
+        "question": "LangChain 的三种记忆类型 BufferMemory、WindowMemory、SummaryMemory 分别适合什么场景？",
+        "answer": "BufferMemory 保留所有对话历史，适合短对话；WindowMemory 只保留最近 N 轮，适合中等长度对话；SummaryMemory 压缩历史为摘要，适合长对话且 token 受限的场景",
+        "source_article": "langchain-framework-guide",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+    {
+        "id": "lcf-007",
+        "question": "LangChain 最佳实践中的五个关键建议是什么？",
+        "answer": "1. 优先使用 LCEL 用管道语法而非旧版 Chain 类 2. 生产环境始终开启 streaming 3. 为每个 Tool 添加异常处理避免链路中断 4. 使用 LangChain v0.3+ 旧版 API 已废弃 5. 涉及状态管理优先选 LangGraph",
+        "source_article": "langchain-framework-guide",
+        "difficulty": "easy",
+        "type": "factual",
+    },
+
+    # ── LlamaIndex RAG Guide (262 lines) ──
+
+    {
+        "id": "li-004",
+        "question": "LlamaIndex 的五种索引类型分别是什么？各自适合什么场景？",
+        "answer": "VectorStoreIndex 适合通用语义搜索；SummaryIndex 适合全文摘要；TreeIndex 适合层级问答；KeywordTableIndex 适合关键词搜索；KnowledgeGraphIndex 适合构建实体关系图的知识图谱场景",
+        "source_article": "llamaindex-rag-guide",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+    {
+        "id": "li-005",
+        "question": "LlamaIndex 的 QueryFusionRetriever 是如何实现混合检索的？权重设置的依据是什么？",
+        "answer": "同时使用 BM25 和向量检索，通过 RRF 融合结果。默认权重 BM25 0.4 + 向量 0.6，反映了语义理解在大多数场景下更重要，但关键词匹配不可替代",
+        "source_article": "llamaindex-rag-guide",
+        "difficulty": "hard",
+        "type": "synthesis",
+    },
+    {
+        "id": "li-006",
+        "question": "Response Synthesizer 的 compact 模式为什么性价比最高？它和 refine 模式有什么区别？",
+        "answer": "compact 模式将多个文档压缩后一次性送 LLM，减少调用次数同时保持足够上下文，token 消耗最少。refine 模式逐个文档迭代优化回答质量最好但 token 消耗大、速度慢",
+        "source_article": "llamaindex-rag-guide",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+    {
+        "id": "li-007",
+        "question": "LlamaIndex 相比 LangChain 在 RAG 场景下有什么优势？",
+        "answer": "LlamaIndex 核心定位是数据索引与 RAG，提供丰富的索引类型（向量/树/图/关键词）和精细的 Retriever + Synthesizer 分离控制。LangChain 定位是通用 LLM 应用编排，RAG 控制粒度较粗但生态更广泛",
+        "source_article": "llamaindex-rag-guide",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+    {
+        "id": "li-008",
+        "question": "LlamaIndex 的最佳实践中，chunk_size 调优建议是什么范围？为什么混合检索在多数场景优于单一检索？",
+        "answer": "chunk_size 一般 256-1024 tokens，根据文档类型和查询粒度调整。混合检索优于单一检索是因为 BM25 擅长精确关键词匹配，向量擅长语义理解，两者互补能覆盖更多场景",
+        "source_article": "llamaindex-rag-guide",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+
+    # ── Hermes Agent Guide (48 lines) ──
+
+    {
+        "id": "hermes-008",
+        "question": "Hermes Agent 集成四层记忆后，三个量化效果指标分别是什么？",
+        "answer": "Token 消耗降低 61%，任务成功率提升 51%，上下文完整性提升 89%",
+        "source_article": "hermes-agent-practical-guide",
+        "difficulty": "easy",
+        "type": "factual",
+    },
+    {
+        "id": "hermes-009",
+        "question": "Hermes Agent 遇到的三个主要挑战和对应的解决方案是什么？",
+        "answer": "多层记忆数据同步冲突用版本控制+乐观锁解决；技能之间工具函数冲突用统一命名空间+自动冲突检测解决；长上下文性能下降用分层压缩策略+动态上下文窗口解决",
+        "source_article": "hermes-agent-practical-guide",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+
+    # ── DeepSeek Cache Optimization ──
+
+    {
+        "id": "ds-004",
+        "question": "DeepSeek KV 缓存按什么匹配？前缀变化会导致什么后果？",
+        "answer": "KV 缓存按 token 位置匹配。前缀变化会导致缓存失效，因为位置对不上，后续 token 的 KV 值无法复用已缓存的计算结果",
+        "source_article": "deepseek-cache-optimization",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+
+    # ── React Performance Tips ──
+
+    {
+        "id": "react-004",
+        "question": "useMemo 在什么场景下使用有意义？什么场景是过度优化？",
+        "answer": "有意义：复杂计算如排序过滤大列表、创建大对象。过度优化：简单计算如加减乘除、小数据集。判断标准是优化成本大于重算成本时就是过度优化",
+        "source_article": "react-performance-tips",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+
+    # ── SPA GitHub Pages ──
+
+    {
+        "id": "spa-006",
+        "question": "Vite 的 base 配置和 React Router 的 basename 都需要设置的原因是什么？",
+        "answer": "base 控制静态资源（JS/CSS）的路径前缀，basename 控制前端路由的路径前缀。两者是独立的系统，资源加载和路由匹配各自独立工作，所以两者都要设置",
+        "source_article": "spa-github-pages",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+
+    # ── Chatbot Railway Deployment ──
+
+    {
+        "id": "rail-004",
+        "question": "BGE 模型加载对 Railway 部署的启动时间有什么影响？有哪些优化方案？",
+        "answer": "BGE 模型加载需要 60-90 秒，会导致健康检查超时。优化方案：模型预下载到 Docker 镜像、增加健康检查超时时间、将模型加载移到后台线程异步执行",
+        "source_article": "chatbot-railway-deployment",
+        "difficulty": "hard",
+        "type": "synthesis",
+    },
+
+    # ── Git Workflow ──
+
+    {
+        "id": "git-004",
+        "question": "Trunk-Based Development 为什么在持续部署场景下迭代速度最快？",
+        "answer": "所有开发者在主干上工作避免分支合并开销，通过 Feature Flag 控制功能发布而非分支隔离，配合强大的 CI/CD 保证每次提交质量，实现快速迭代和频繁部署",
+        "source_article": "git-workflow-best-practices",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+
+    # ── Weather App API ──
+
+    {
+        "id": "weather-003",
+        "question": "天气应用的三层串行调用设计中，为什么要用城市编码作为中间参数？",
+        "answer": "天气 API 和空气质量 API 需要城市编码作为输入参数，但定位 API 返回的是 GPS 坐标。必须先通过定位 API 将坐标转为城市编码，再依次调用天气和空气质量 API，形成串行依赖链",
+        "source_article": "weather-app-api-integration",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+
+    # ── WeChat Mini Program ──
+
+    {
+        "id": "wx-003",
+        "question": "WXML 中使用 *this 作为 wx:key 会有什么问题？正确做法是什么？",
+        "answer": "*this 会导致列表渲染时无法正确识别元素，引起不必要的重渲染和状态丢失。正确做法是使用字符串指定唯一标识字段名作为 key",
+        "source_article": "wechat-miniprogram-ai-agent",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+
+    # ── Markdown Notes App ──
+
+    {
+        "id": "md-003",
+        "question": "Markdown 笔记应用中防抖保存机制解决了什么问题？为什么不能每次按键都触发保存？",
+        "answer": "防抖保存避免每次按键都触发 API 调用，减少服务器压力和网络延迟。如果每次按键都保存会导致频繁的网络请求、高服务器负载和用户体验卡顿",
+        "source_article": "markdown-notes-app",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+
+    # ── AI Writing Assistant ──
+
+    {
+        "id": "aw-003",
+        "question": "AI 写作助手的流式输出（SSE）相比普通 HTTP 请求在用户体验上有什么优势？",
+        "answer": "使用 Server-Sent Events 逐 token 推送生成内容。优势是用户无需等待完整响应就能看到内容逐渐出现，首字延迟低，写作体验更流畅自然",
+        "source_article": "ai-writing-assistant",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+
+    # ── Agent Memory System ──
+
+    {
+        "id": "mem-004",
+        "question": "从原始对话到用户画像，L1 原子事实层和 L2 场景聚合层分别存储什么粒度的信息？",
+        "answer": "L1 存储细粒度的单条事实（如用户喜欢 Python），L2 存储粗粒度的场景聚合（如用户在做一个 RAG 项目使用 Python + LangChain）。L2 是对多个 L1 事实的高阶抽象",
+        "source_article": "agent-memory-system",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+
+    # ── RAG System Guide ──
+
+    {
+        "id": "rag-004",
+        "question": "文档分块时 chunk 大小如何影响检索效果？太大或太小分别有什么问题？",
+        "answer": "太大丢失检索精度，一段长文本中可能包含多个主题，难以精确定位；太小丢失上下文完整性，单个 chunk 可能缺乏足够语义信息。推荐 500 字 + 50 字 overlap 作为平衡点",
+        "source_article": "rag-system-guide",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+
+    # ── Eleven Projects Two Months ──
+
+    {
+        "id": "11p-004",
+        "question": "作者在快速迭代中对做减法有什么反思？",
+        "answer": "做减法比做加法更需要判断力和取舍能力，砍掉已实现的功能比添加新功能更痛苦，但精简后的产品体验更好，技术债务更少",
+        "source_article": "eleven-projects-two-months",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+
+    # ── Blog Migration ──
+
+    {
+        "id": "blog-004",
+        "question": "Vercel 部署失败时排查的三个关键步骤是什么？",
+        "answer": "检查构建日志中的错误信息、确认环境变量是否正确配置、验证输出目录路径是否与 Vercel 设置匹配",
+        "source_article": "blog-migration-troubleshooting",
+        "difficulty": "easy",
+        "type": "factual",
+    },
+
+    # ── Hello World ──
+
+    {
+        "id": "hw-003",
+        "question": "博客从零搭建到上线的关键技术决策有哪些？",
+        "answer": "选择 React+Vite 的现代前端技术栈（开发体验好构建速度快）、设计 Markdown 驱动的博客结构、配置 GitHub Pages 部署流程、添加搜索和分析功能",
+        "source_article": "hello-world",
+        "difficulty": "medium",
+        "type": "synthesis",
+    },
+
+    # ── Zustand ──
+
+    {
+        "id": "zust-004",
+        "question": "Zustand 的状态更新机制是如何实现自动重渲染的？",
+        "answer": "直接调用 setter 修改状态，Zustand 内部通过 Proxy 或 subscribe 机制检测变化，自动触发订阅了该状态的组件重渲染",
+        "source_article": "zustand-todo-app",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+
+    # ── LangGraph Workflow ──
+
+    {
+        "id": "lg-004",
+        "question": "LangGraph 的条件边在什么场景下必须使用？和普通边的核心区别是什么？",
+        "answer": "普通边是固定路由 A->B，条件边根据状态值动态选择下一个节点。需要根据不同输入走不同路径时必须使用条件边，例如分类结果决定走哪个处理分支",
+        "source_article": "langgraph-workflow",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+
+    # ── LangChain Agent Intro ──
+
+    {
+        "id": "lc-004",
+        "question": "不注册工具的话 Agent 会怎样？为什么工具注册是 Agent 系统的基础？",
+        "answer": "不注册工具 Agent 不知道可以调用什么，会试图直接回答所有问题导致幻觉或无法完成需要外部数据的任务。工具注册告诉 Agent 有哪些工具可用及其参数格式",
+        "source_article": "langchain-agent-intro",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+
+    # ===================================================================
+    # CROSS-ARTICLE DEEP QUERIES (require multi-document reasoning)
+    # ===================================================================
+
+    {
+        "id": "cross-zh-004",
+        "question": "对比 LangChain、LlamaIndex 和 LangGraph 在 RAG 场景中的定位差异，各自最适合什么阶段的 RAG 系统？",
+        "answer": "LangChain 适合简单 RAG 查询和单轮工具调用（基础构建）；LlamaIndex 适合需要精细控制索引和检索的场景（数据索引专精）；LangGraph 适合需要复杂工作流、条件分支和状态持久化的生产级 RAG（高级编排）",
+        "source_article": "langchain-framework-guide",
+        "difficulty": "hard",
+        "type": "cross_article",
+    },
+    {
+        "id": "cross-zh-005",
+        "question": "RAG 系统中 Chunking 策略、Embedding 模型选择和向量数据库选型之间如何相互影响？",
+        "answer": "Chunking 策略决定向量粒度（小块检索精度高大块上下文完整）；Embedding 维度决定向量大小影响数据库存储和查询性能；向量数据库的索引算法影响不同规模下的检索速度。三者需要协调：如 768 维 Embedding + ChromaDB 适合小规模，1536 维 + Qdrant 适合中规模",
+        "source_article": "embedding-models-guide",
+        "difficulty": "hard",
+        "type": "cross_article",
+    },
+    {
+        "id": "cross-zh-006",
+        "question": "Agent 的记忆系统设计（Hermes 四层 vs LangChain Memory）和 RAG 的检索系统有什么设计理念上的共通点？",
+        "answer": "都遵循分层处理理念：Hermes 将记忆分为对话-原子-场景-画像逐层抽象；RAG 将文档分为 chunks 逐层检索。两者都通过索引/检索机制在海量数据中快速定位相关信息，区别在于记忆系统偏向用户个性化，RAG 偏向知识检索",
+        "source_article": "hermes-agent-practical-guide",
+        "difficulty": "hard",
+        "type": "cross_article",
+    },
+    {
+        "id": "cross-zh-007",
+        "question": "Prompt Engineering 中 System Prompt 的设计原则和 RAG 系统的 Prompt 设计有什么区别？各自关注什么？",
+        "answer": "System Prompt 关注角色定义、能力边界、输出格式等全局行为约束。RAG Prompt 关注如何将检索到的上下文和问题组装好传给 LLM，强调只基于参考回答、标注来源、不编造信息。RAG Prompt 是 System Prompt 在特定场景下的应用",
+        "source_article": "prompt-engineering-guide",
+        "difficulty": "hard",
+        "type": "cross_article",
+    },
+    {
+        "id": "cross-zh-008",
+        "question": "部署 AI 应用到 Railway 时，Docker 多阶段构建、健康检查和 BGE 模型加载三个环节如何互相影响？",
+        "answer": "Docker 多阶段构建将 Node.js 前端构建和 Python 后端运行分离减小镜像；BGE 模型预下载到镜像可减少启动时间；但如果模型太大镜像构建变慢。健康检查需要在模型加载完成后才能通过，所以需要配置足够超时时间",
+        "source_article": "chatbot-railway-deployment",
+        "difficulty": "hard",
+        "type": "cross_article",
+    },
+
+    # ===================================================================
+    # ADDITIONAL NEGATIVE / EDGE CASE QUERIES
+    # ===================================================================
+
+    {
+        "id": "neg-016",
+        "question": "Aureon 平台的月活跃用户数量是多少？",
+        "answer": "知识库中没有关于 Aureon 月活跃用户的数据",
+        "source_article": "none",
+        "difficulty": "easy",
+        "type": "negative",
+    },
+    {
+        "id": "neg-017",
+        "question": "LangChain v0.4 的发布时间是什么？",
+        "answer": "知识库中没有关于 LangChain v0.4 发布时间的信息",
+        "source_article": "none",
+        "difficulty": "easy",
+        "type": "negative",
+    },
+    {
+        "id": "neg-018",
+        "question": "作者使用什么键盘和鼠标？",
+        "answer": "知识库中没有关于作者外设配置的信息",
+        "source_article": "none",
+        "difficulty": "easy",
+        "type": "negative",
+    },
+    {
+        "id": "neg-019",
+        "question": "Hermes Agent 的 GitHub Star 数量增长趋势如何？",
+        "answer": "知识库中没有关于 Hermes Agent Star 增长趋势的信息",
+        "source_article": "none",
+        "difficulty": "medium",
+        "type": "negative",
+    },
+    {
+        "id": "neg-020",
+        "question": "DeepSeek API 的具体计费单价是多少？",
+        "answer": "知识库中没有关于 DeepSeek API 具体定价的信息",
+        "source_article": "none",
+        "difficulty": "medium",
+        "type": "negative",
+    },
+
+    # ===================================================================
+    # ADDITIONAL EDGE CASE QUERIES
+    # ===================================================================
+
+    {
+        "id": "edge-004",
+        "question": "请用一句话总结 RAG 系统的核心原理",
+        "answer": "先检索相关文档再让 LLM 基于检索结果生成回答的技术架构",
+        "source_article": "rag-concepts-deep-dive",
+        "difficulty": "easy",
+        "type": "factual",
+    },
+    {
+        "id": "edge-005",
+        "question": "React 和 Vue 在 AI 应用前端开发中各有什么优势？",
+        "answer": "React 生态更成熟，AI 相关组件库更多如 Vercel AI SDK；Vue 上手更快适合小团队。关键不在框架选择而在状态管理和 API 集成方案",
+        "source_article": "react-performance-tips",
+        "difficulty": "medium",
+        "type": "synthesis",
+    },
+
+    # ===================================================================
+    # PHASE A EXPANSION: Additional Coverage to 200+ QA
+    # ===================================================================
+
+    # ── AI Agent Architecture (additional deep questions) ──
+
+    {
+        "id": "agenta-010",
+        "question": "Agent 和 Chain、Function Calling 在执行流程、自主性和 token 消耗上有什么区别？",
+        "answer": "Chain 执行固定线性流程、无自主性、token 消耗低；Function Calling 由 LLM 决定调用哪个函数、有限自主性单轮、token 消耗中等；Agent 动态多步、高自主性多轮循环、token 消耗高",
+        "source_article": "ai-agent-architecture",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+    {
+        "id": "agenta-011",
+        "question": "Agent 记忆系统中对话缓冲、滑动窗口和摘要压缩三种方式各自的核心机制是什么？",
+        "answer": "对话缓冲保留所有历史记录在内存中；滑动窗口只保留最近 N 轮对话丢弃更早的；摘要压缩用 LLM 将长对话历史压缩为摘要文本，超过 token 限制时自动触发",
+        "source_article": "ai-agent-architecture",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+    {
+        "id": "agenta-012",
+        "question": "工具注册中 Pydantic BaseModel 结构化输入校验的优势是什么？",
+        "answer": "Pydantic 提供类型验证、默认值、字段描述等能力，确保工具输入符合预期格式。相比裸参数更安全可靠，且字段描述可以被 LLM 读取理解工具用法",
+        "source_article": "ai-agent-architecture",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+
+    # ── Prompt Engineering (additional) ──
+
+    {
+        "id": "pe-012",
+        "question": "为什么 Prompt Engineering 是一个持续迭代的过程？模型升级后需要做什么？",
+        "answer": "因为不同模型对同一 Prompt 的响应可能差异很大，需要根据新模型的特点重新评估和优化现有 Prompt。而且评估数据集也需要随业务变化更新",
+        "source_article": "prompt-engineering-guide",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+    {
+        "id": "pe-013",
+        "question": "Prompt 版本管理为什么重要？应该记录什么信息？",
+        "answer": "Prompt 是实验驱动的，需要不断测试调整，版本管理帮助追踪每次修改的效果变化。应该记录每个 Prompt 的版本号、修改内容、对应的评估指标和测试结果",
+        "source_article": "prompt-engineering-guide",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+
+    # ── RAG Concepts (additional deep) ──
+
+    {
+        "id": "ragc-010",
+        "question": "RAG 的完整 Pipeline 中，数据处理阶段和查询阶段分别包含哪些步骤？",
+        "answer": "数据处理阶段：文档收集-文档清洗-文档切分-向量化-存入向量数据库。查询阶段：用户问题-问题向量化-检索-重排序-Prompt组装-LLM生成-返回回答",
+        "source_article": "rag-concepts-deep-dive",
+        "difficulty": "medium",
+        "type": "factual",
+    },
+    {
+        "id": "ragc-011",
+        "question": "RAG vs Fine-tuning 的核心判断标准是什么？什么时候应该结合使用？",
+        "answer": "需要最新知识或可溯源回答选 RAG；需要调整模型输出风格或专业格式选 Fine-tuning。两者可以结合：用 Fine-tuning 提升模型对专业领域的理解能力，用 RAG 注入最新知识",
+        "source_article": "rag-concepts-deep-dive",
+        "difficulty": "hard",
+        "type": "synthesis",
+    },
+
+    # ── Vector Database (additional) ──
+
+    {
+        "id": "vdb-009",
+        "question": "IVF 索引的 K-Means 聚类机制是如何加速查询的？nprobe 参数控制什么？",
+        "answer": "IVF 将向量空间用 K-Means 聚类划分为多个区域（Voronoi cells），查询时只在最近的几个区域搜索而非全量扫描。nprobe 参数控制搜索的聚类数量，越大精度越高但速度越慢",
+        "source_article": "vector-database-guide",
+        "difficulty": "hard",
+        "type": "synthesis",
+    },
+    {
+        "id": "vdb-010",
+        "question": "HNSW 索引的 ef_construction 和 M 参数如何影响索引质量和查询速度？",
+        "answer": "ef_construction 控制构建索引时的搜索范围，越大索引质量越好但构建越慢。M 控制每个节点的连接数，越大图越密集精度越高但内存占用越大。生产环境需要根据精度和性能需求权衡",
+        "source_article": "vector-database-guide",
+        "difficulty": "hard",
+        "type": "synthesis",
+    },
+
+    # ── Embedding Models (additional) ──
+
+    {
+        "id": "emb-009",
+        "question": "为什么文档编码和查询编码必须使用同一个 Embedding 模型？混用会导致什么问题？",
+        "answer": "不同模型生成的向量在不同的向量空间中，维度和语义映射都不同，无法直接计算相似度。混用会导致检索结果完全不准确，因为向量之间的距离失去了语义意义",
+        "source_article": "embedding-models-guide",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+    {
+        "id": "emb-010",
+        "question": "Embedding 模型更新后为什么要重新编码所有文档？监控漂移的意义是什么？",
+        "answer": "新版本模型生成的向量与旧版本不在同一向量空间，新旧向量混在一起会导致检索质量下降。监控漂移是在模型更新前评估新模型对现有索引的影响，决定是否需要全量重编码",
+        "source_article": "embedding-models-guide",
+        "difficulty": "hard",
+        "type": "synthesis",
+    },
+
+    # ── LangChain Framework (additional) ──
+
+    {
+        "id": "lcf-008",
+        "question": "LangChain vs LangGraph vs Deep Agents 的定位差异是什么？",
+        "answer": "LangChain 是基础构建框架适合简单 RAG 和单轮工具调用；LangGraph 是有状态 Agent 编排框架适合复杂工作流和状态持久化；Deep Agents 是自主决策框架适合开放式任务和自我反思",
+        "source_article": "langchain-framework-guide",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+    {
+        "id": "lcf-009",
+        "question": "create_tool_calling_agent 和 create_react_agent 在底层机制上有什么区别？",
+        "answer": "create_tool_calling_agent 依赖模型原生的 function calling 能力，性能更好但需要模型支持；create_react_agent 使用 ReAct prompt 模式，所有模型兼容但 token 消耗更高因为需要更多 prompt 文本",
+        "source_article": "langchain-framework-guide",
+        "difficulty": "hard",
+        "type": "synthesis",
+    },
+
+    # ── LlamaIndex (additional) ──
+
+    {
+        "id": "li-009",
+        "question": "LlamaIndex 的 Retriever 后处理中 SimilarityPostprocessor 的作用是什么？",
+        "answer": "在检索结果返回前根据相似度分数过滤低质量结果，设置 cutoff 阈值（如 0.7），低于阈值的结果被丢弃，确保返回的都是高相关性文档",
+        "source_article": "llamaindex-rag-guide",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+
+    # ── Hermes Agent (additional) ──
+
+    {
+        "id": "hermes-010",
+        "question": "Hermes Agent 为什么选择模块化设计？这对技能整合有什么好处？",
+        "answer": "模块化设计解决了技能间工具函数冲突、长上下文性能下降等问题。通过统一命名空间和自动冲突检测，不同技能可以在同一 Agent 中安全共存，每个技能独立管理自己的工具和逻辑",
+        "source_article": "hermes-agent-practical-guide",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+
+    # ── DeepSeek Cache (additional) ──
+
+    {
+        "id": "ds-005",
+        "question": "DeepSeek 缓存命中率从 56% 提升到 76% 的过程中，关键策略的作用原理是什么？",
+        "answer": "保持 system prompt 前缀一致是关键策略。原理是 KV 缓存按 token 位置匹配，前缀变化导致整个缓存失效。固定 system prompt 后，后续对话的前缀部分可以直接复用缓存的 KV 值",
+        "source_article": "deepseek-cache-optimization",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+
+    # ── React Performance (additional) ──
+
+    {
+        "id": "react-005",
+        "question": "React.memo 和 useCallback 配合使用时，子组件没有 React.memo 会怎样？",
+        "answer": "useCallback 缓存了函数引用避免重建，但子组件没有 React.memo 时仍会在父组件重渲染时重渲染，useCallback 的优化完全无效。只有子组件被 React.memo 包裹时 useCallback 才有实际效果",
+        "source_article": "react-performance-tips",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+
+    # ── SPA GitHub Pages (additional) ──
+
+    {
+        "id": "spa-007",
+        "question": "React SPA 部署到 GitHub Pages 时 404 问题的根本原因是什么？",
+        "answer": "GitHub Pages 是静态文件托管，直接请求 /search/path 时服务器找不到对应的 HTML 文件。SPA 路由完全由前端 JavaScript 控制，需要所有路径都返回 index.html 才能正确加载",
+        "source_article": "spa-github-pages",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+
+    # ── Chatbot Railway Deployment (additional) ──
+
+    {
+        "id": "rail-005",
+        "question": "Docker 多阶段构建中前端构建产物如何被复制到后端运行镜像中？",
+        "answer": "第一阶段用 Node.js 镜像构建前端生成 dist 目录；第二阶段用 Python 镜像时通过 COPY --from=build /app/dist /app/dist 将构建产物跨阶段复制到最终镜像",
+        "source_article": "chatbot-railway-deployment",
+        "difficulty": "medium",
+        "type": "reasoning",
+    },
+
+    # ── Cross-article deep (additional) ──
+
+    {
+        "id": "cross-zh-009",
+        "question": "向量数据库的 HNSW 索引和 Embedding 模型的维度选择如何共同影响 RAG 系统的检索性能？",
+        "answer": "高维 Embedding（如 1536d）使 HNSW 图中每个节点的向量更大占用更多内存，查询时距离计算也更慢。低维（如 512d）降低内存和计算成本但可能损失精度。最优配置需要根据文档规模和延迟要求在维度和索引参数之间权衡",
+        "source_article": "vector-database-guide",
+        "difficulty": "hard",
+        "type": "cross_article",
+    },
+    {
+        "id": "cross-zh-010",
+        "question": "对比 Agent 的 ReAct 模式和 Prompt Engineering 的 Chain-of-Thought，两者在推理机制上有什么异同？",
+        "answer": "相同点：都涉及逐步推理过程。不同点：CoT 是纯推理不涉及外部工具调用，而 ReAct 交替进行推理和行动（Tool Calling），能根据工具返回的 Observation 动态调整策略。CoT 适合纯文本推理任务，ReAct 适合需要外部数据的任务",
+        "source_article": "prompt-engineering-guide",
+        "difficulty": "hard",
+        "type": "cross_article",
+    },
+    {
+        "id": "cross-zh-011",
+        "question": "Memory 系统（对话历史管理）和 RAG 系统（知识检索）在架构设计上有什么共同的优化思路？",
+        "answer": "两者都使用分层策略：Memory 用 L0-L3 分层抽象，RAG 用分块+索引分层检索。两者都用缓存（Memory 缓存最近对话，RAG 缓存嵌入结果）。两者都面临容量和性能的权衡（Memory 需要压缩策略，RAG 需要 chunk 大小调优）",
+        "source_article": "agent-memory-system",
+        "difficulty": "hard",
+        "type": "cross_article",
+    },
+
+    # ── Additional difficult/hard cases ──
+
+    {
+        "id": "difficult-004",
+        "question": "如果要为一个 1000+ 文档的企业知识库选择完整的 RAG 技术栈，你会推荐什么组合？为什么？",
+        "answer": "推荐 bge-large-zh 或 bge-m3 Embedding（多语言高精度）+ ChromaDB 或 Qdrant（取决于是否需要分布式）+ Parent-Child 分块（1500字父+500字子）+ Hybrid 检索（BM25+向量+RRF）+ CrossEncoder Reranker（fp16 加速）+ DeepSeek 生成",
+        "source_article": "rag-concepts-deep-dive",
+        "difficulty": "hard",
+        "type": "synthesis",
+    },
+    {
+        "id": "difficult-005",
+        "question": "分析 RAG 系统中幻觉产生的三个主要原因以及对应的缓解策略。",
+        "answer": "1. 检索不到相关文档导致 LLM 编造（缓解：Negative Detection + 降低 temperature）2. 检索到相关文档但 LLM 忽略上下文自行发挥（缓解：Faithfulness 约束 Prompt + 引用标注）3. 检索到不相关文档干扰生成（缓解：Context Precision 优化 + 相似度过滤）",
+        "source_article": "rag-concepts-deep-dive",
+        "difficulty": "hard",
+        "type": "synthesis",
+    },
+    {
+        "id": "difficult-006",
+        "question": "从生产环境角度，Agent 系统需要哪些可观测性和安全保障？请结合具体技术方案说明。",
+        "answer": "可观测性：记录 Thought/Action/Observation 日志（structlog）、Prometheus 指标、LangSmith 追踪。安全保障：工具沙箱执行（避免 eval/exec）、输入验证（Pydantic）、速率限制、权限控制（数据库只读）、Prompt Injection 检测（OWASP regex 模式）",
+        "source_article": "ai-agent-architecture",
+        "difficulty": "hard",
+        "type": "synthesis",
+    },
 ]
 
 # For recall evaluation: expected source articles per query

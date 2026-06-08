@@ -1,11 +1,27 @@
-"""Reliability & Resilience - Backup, Failover, SLO
+"""Reliability & Resilience - Backup, Failover, SLO, Circuit Breaker
 
-EXPERIMENTAL: Not connected to core paths. CircuitBreaker exists but unused.
+Provides backup management, incident tracking, SLO monitoring, and circuit breaker pattern.
 """
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 from pydantic import BaseModel, Field
 import structlog
+
+# Import circuit breaker from dedicated module
+from .circuit_breaker import (
+    CircuitState,
+    CircuitBreaker,
+    CircuitBreakerError,
+    circuit_breaker,
+    get_circuit_breaker,
+    get_all_circuit_breakers,
+    reset_all_circuit_breakers,
+    create_llm_circuit_breaker,
+    llm_circuit_breaker,
+    embedding_circuit_breaker,
+    reranker_circuit_breaker,
+    wrap_llm_call,
+)
 
 logger = structlog.get_logger()
 
@@ -58,13 +74,23 @@ class SLOStatus(BaseModel):
 
 
 # ── Circuit Breaker ──
-# EXPERIMENTAL: Not connected to any core path (LLM/Embedding calls).
-# To enable: wrap external calls with circuit_breaker.can_execute() check.
+# 使用 circuit_breaker 模块中的实现
+# 保留旧的 CircuitBreaker 类用于向后兼容
 
-class CircuitBreaker:
-    """熔断器"""
+import warnings
+
+class LegacyCircuitBreaker:
+    """旧版熔断器（已弃用）
+    
+    请使用 circuit_breaker 模块中的新实现。
+    """
 
     def __init__(self, failure_threshold: int = 5, recovery_timeout: int = 30):
+        warnings.warn(
+            "LegacyCircuitBreaker 已弃用，请使用 circuit_breaker.CircuitBreaker",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.failure_threshold = failure_threshold
         self.recovery_timeout = recovery_timeout
         self.failure_count = 0
@@ -401,3 +427,40 @@ def get_slo_status() -> list[SLOStatus]:
         ))
 
     return statuses
+
+
+# ── 导出 ──
+__all__ = [
+    # 数据模型
+    "BackupRecord",
+    "IncidentRecord",
+    "SLOConfig",
+    "SLOStatus",
+    
+    # 断路器
+    "CircuitState",
+    "CircuitBreaker",
+    "CircuitBreakerError",
+    "LegacyCircuitBreaker",
+    "circuit_breaker",
+    "get_circuit_breaker",
+    "get_all_circuit_breakers",
+    "reset_all_circuit_breakers",
+    "create_llm_circuit_breaker",
+    "llm_circuit_breaker",
+    "embedding_circuit_breaker",
+    "reranker_circuit_breaker",
+    "wrap_llm_call",
+    
+    # 数据库操作
+    "init_reliability_tables",
+    "create_backup_record",
+    "complete_backup",
+    "get_recent_backups",
+    "create_incident",
+    "resolve_incident",
+    "get_open_incidents",
+    "create_slo_config",
+    "get_slo_configs",
+    "get_slo_status",
+]

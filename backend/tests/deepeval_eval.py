@@ -393,7 +393,7 @@ def format_results(scores: Dict[str, Any], dataset_info: Dict = None) -> str:
 if __name__ == "__main__":
     from tests.test_data_golden import load_dataset, get_dataset_info
 
-    dataset_name = sys.argv[1] if len(sys.argv) > 1 else "core_regression_27qa"
+    dataset_name = sys.argv[1] if len(sys.argv) > 1 else "core_regression_40qa"
     qa_pairs = load_dataset(dataset_name)
     info = get_dataset_info(dataset_name)
 

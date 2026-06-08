@@ -1,0 +1,59 @@
+# Commit Message: feat: Add WebSocket chat endpoint for real-time streaming responses
+
+## Summary
+Implemented WebSocket endpoint at `/ws/chat/{client_id}` for real-time streaming chat with RAG responses.
+
+## Changes
+
+### New Files Created
+1. **backend/app/api/websocket_chat.py** - WebSocket endpoint implementation
+   - WebSocket endpoint with connection lifecycle management
+   - Multi-turn conversation support
+   - Streaming RAG responses via token-by-token events
+   - Tool calling orchestration
+   - Message type handling: user_message, heartbeat, tool_result
+   - Error handling and graceful disconnection
+
+2. **backend/tests/test_websocket_chat.py** - Comprehensive test suite
+   - Connection establishment tests
+   - Heartbeat handling tests
+   - User message validation tests
+   - Unknown message type handling
+   - Error propagation tests
+   - Tool result acknowledgment tests
+   - RAG streaming integration tests (with mocking)
+
+### Modified Files
+3. **backend/app/main.py** - Router registration
+   - Added import for websocket_chat_router
+   - Registered WebSocket chat router with tags=["websocket"]
+
+## Features
+- **Real-time streaming**: Token-by-token response streaming
+- **Multi-turn conversations**: Maintains conversation context across messages
+- **Heartbeat monitoring**: Connection keepalive mechanism
+- **Tool calling**: Orchestration for tool invocations and results
+- **Error handling**: Graceful error propagation and client notification
+- **RAG integration**: Streaming RAG responses with source citations
+
+## Architecture
+- Uses WebSocketManager for connection management
+- Uses ConversationManager for multi-turn state tracking
+- Integrates with rag_query_astream() for streaming responses
+- Per-connection manager instances for isolation
+
+## Testing
+- 12 unit tests covering all message types and error scenarios
+- Integration tests with mocked RAG streaming
+- WebSocket disconnect handling validation
+
+## Deployment Notes
+- WebSocket endpoint available at: ws://localhost:8000/ws/chat/{client_id}
+- Tags: ["websocket"] in API documentation
+- No additional configuration required
+
+## Related Tasks
+- Task 3.1: WebSocket Manager (completed)
+- Task 3.2: Conversation Manager (completed)
+- Task 3.3: WebSocket Chat Endpoint (completed)
+- Task 3.4: Frontend WebSocket Client (pending)

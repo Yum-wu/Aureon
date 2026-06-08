@@ -1,0 +1,136 @@
+======================================================================
+  AUREON RAG - Concurrent Benchmark
+======================================================================
+
+  QA pairs: 97
+
+  Warming up index...
+2026-06-07 00:12:14 [info     ] BM25 index ready: 293 docs, 11354 terms, avgdl=123
+
+> Concurrency: 1
+2026-06-07 00:12:14 [info     ] BM25 query='Hermes Agent 的分层记忆系统有几层？每层叫什么？' terms=['hermes', 'agent', '的分', '分层', '层记', '记忆', '忆系', '系统', '统有', '有几', '几层', '层每', '每层', '层叫', '叫什', '什么'] top3=[(34.29, 'hermes-agent-practical-guide'), (33.35, 'hermes-agent-practical-guide'), (32.79, 'hermes-agent-practical-guide')]
+Loading weights:   0%|          | 0/391 [00:00<?, ?it/s]Loading weights:  13%|█▎        | 49/391 [00:00<00:00, 449.23it/s]Loading weights:  26%|██▌       | 102/391 [00:00<00:00, 493.43it/s]Loading weights:  41%|████      | 161/391 [00:00<00:00, 516.32it/s]Loading weights:  57%|█████▋    | 223/391 [00:00<00:00, 555.61it/s]Loading weights:  71%|███████▏  | 279/391 [00:00<00:00, 512.96it/s]Loading weights:  86%|████████▌ | 337/391 [00:00<00:00, 513.36it/s]Loading weights: 100%|██████████| 391/391 [00:00<00:00, 524.45it/s]
+2026-06-07 00:12:36 [info     ] GPU Embedder loaded: BAAI/bge-large-zh-v1.5 on cuda (fp16=True)
+Loading weights:   0%|          | 0/393 [00:00<?, ?it/s]Loading weights: 100%|██████████| 393/393 [00:00<00:00, 4432.38it/s]
+2026-06-07 00:12:59 [info     ] Cross-encoder reranker loaded: BAAI/bge-reranker-v2-m3
+2026-06-07 00:13:03 [info     ] BM25 query='集成四层记忆后，Token 消耗和任务成功率变化如何？' terms=['token', '集成', '成四', '四层', '层记', '记忆', '忆后', '后消', '消耗', '耗和', '和任', '任务', '务成', '成功', '功率', '率变', '变化', '化如', '如何'] top3=[(33.34, 'hermes-agent-practical-guide'), (28.55, 'hermes-agent-practical-guide'), (15.42, 'hermes-agent-practical-guide')]
+2026-06-07 00:13:10 [info     ] BM25 query='Hermes Agent 的模块化设计解决了哪些实际工程问题？' terms=['hermes', 'agent', '的模', '模块', '块化', '化设', '设计', '计解', '解决', '决了', '了哪', '哪些', '些实', '实际', '际工', '工程', '程问', '问题'] top3=[(30.46, 'hermes-agent-practical-guide'), (19.15, 'hermes-agent-practical-guide'), (16.84, 'hermes-agent-practical-guide')]
+2026-06-07 00:13:16 [info     ] BM25 query='文中提到的三个核心技能分别面向什么使用场景？' terms=['文中', '中提', '提到', '到的', '的三', '三个', '个核', '核心', '心技', '技能', '能分', '分别', '别面', '面向', '向什', '什么', '么使', '使用', '用场', '场景'] top3=[(20.52, 'hermes-agent-practical-guide'), (11.41, 'prompt-engineering-guide'), (11.31, 'llamaindex-rag-guide')]
+2026-06-07 00:13:23 [info     ] BM25 query='Hermes Agent 集成记忆系统时，如何解决短期记忆和长期持久化之间的数据一致性问题？' terms=['hermes', 'agent', '集成', '成记', '记忆', '忆系', '系统', '统时', '时如', '如何', '何解', '解决', '决短', '短期', '期记', '记忆', '忆和', '和长', '长期', '期持', '持久', '久化', '化之', '之间', '间的', '的数', '数据', '据一', '一致', '致性', '性问', '问题'] top3=[(52.56, 'hermes-agent-practical-guide'), (33.29, 'ai-agent-architecture'), (32.77, 'ai-agent-architecture')]
+Traceback (most recent call last):
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\.venv-gpu\Lib\site-packages\httpx\_transports\default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\.venv-gpu\Lib\site-packages\httpx\_transports\default.py", line 250, in handle_request
+    resp = self._pool.handle_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\.venv-gpu\Lib\site-packages\httpcore\_sync\connection_pool.py", line 256, in handle_request
+    raise exc from None
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\.venv-gpu\Lib\site-packages\httpcore\_sync\connection_pool.py", line 236, in handle_request
+    response = connection.handle_request(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\.venv-gpu\Lib\site-packages\httpcore\_sync\connection.py", line 101, in handle_request
+    raise exc
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\.venv-gpu\Lib\site-packages\httpcore\_sync\connection.py", line 78, in handle_request
+    stream = self._connect(request)
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\.venv-gpu\Lib\site-packages\httpcore\_sync\connection.py", line 124, in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\.venv-gpu\Lib\site-packages\httpcore\_backends\sync.py", line 207, in connect_tcp
+    with map_exceptions(exc_map):
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Yum\AppData\Local\Programs\Python\Python312\Lib\contextlib.py", line 158, in __exit__
+    self.gen.throw(value)
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\.venv-gpu\Lib\site-packages\httpcore\_exceptions.py", line 14, in map_exceptions
+    raise to_exc(exc) from exc
+httpcore.ConnectError: [WinError 10061] 由于目标计算机积极拒绝，无法连接。
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\.venv-gpu\Lib\site-packages\qdrant_client\http\api_client.py", line 106, in send_inner
+    response = self._client.send(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\.venv-gpu\Lib\site-packages\httpx\_client.py", line 914, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\.venv-gpu\Lib\site-packages\httpx\_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\.venv-gpu\Lib\site-packages\httpx\_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\.venv-gpu\Lib\site-packages\httpx\_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\.venv-gpu\Lib\site-packages\httpx\_transports\default.py", line 249, in handle_request
+    with map_httpcore_exceptions():
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Yum\AppData\Local\Programs\Python\Python312\Lib\contextlib.py", line 158, in __exit__
+    self.gen.throw(value)
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\.venv-gpu\Lib\site-packages\httpx\_transports\default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.ConnectError: [WinError 10061] 由于目标计算机积极拒绝，无法连接。
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\tests\benchmark_concurrent.py", line 186, in <module>
+    asyncio.run(run_full_concurrent_benchmark())
+  File "C:\Users\Yum\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py", line 194, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "C:\Users\Yum\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Yum\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py", line 687, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\tests\benchmark_concurrent.py", line 156, in run_full_concurrent_benchmark
+    result = await run_concurrent_evaluation(qa_pairs, concurrency=conc)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\tests\benchmark_concurrent.py", line 60, in run_concurrent_evaluation
+    results = await asyncio.gather(*tasks)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\tests\benchmark_concurrent.py", line 31, in evaluate_qa_async
+    chunks = await hybrid_retrieve_async(query, top_k=3)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\app\rag\qa_chain.py", line 1116, in hybrid_retrieve_async
+    bm25_results, vector_results = await asyncio.gather(bm25_task, vector_task)
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Yum\AppData\Local\Programs\Python\Python312\Lib\asyncio\threads.py", line 25, in to_thread
+    return await loop.run_in_executor(None, func_call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Yum\AppData\Local\Programs\Python\Python312\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\app\rag\vector_store.py", line 714, in retrieve
+    return retrieve_qdrant(query, top_k=top_k)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\app\rag\vector_store.py", line 1099, in retrieve_qdrant
+    results = client.search(
+              ^^^^^^^^^^^^^^
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\.venv-gpu\Lib\site-packages\qdrant_client\qdrant_client.py", line 387, in search
+    return self._client.search(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\.venv-gpu\Lib\site-packages\qdrant_client\qdrant_remote.py", line 563, in search
+    search_result = self.http.points_api.search_points(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\.venv-gpu\Lib\site-packages\qdrant_client\http\api\points_api.py", line 1820, in search_points
+    return self._build_for_search_points(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\.venv-gpu\Lib\site-packages\qdrant_client\http\api\points_api.py", line 852, in _build_for_search_points
+    return self.api_client.request(
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\.venv-gpu\Lib\site-packages\qdrant_client\http\api_client.py", line 79, in request
+    return self.send(request, type_)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\.venv-gpu\Lib\site-packages\qdrant_client\http\api_client.py", line 96, in send
+    response = self.middleware(request, self.send_inner)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\.venv-gpu\Lib\site-packages\qdrant_client\http\api_client.py", line 205, in __call__
+    return call_next(request)
+           ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\.venv-gpu\Lib\site-packages\qdrant_client\http\api_client.py", line 108, in send_inner
+    raise ResponseHandlingException(e)
+qdrant_client.http.exceptions.ResponseHandlingException: [WinError 10061] 由于目标计算机积极拒绝，无法连接。

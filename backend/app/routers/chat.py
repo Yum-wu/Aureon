@@ -1,10 +1,10 @@
 """Chat router — extracted from main.py.
 
 Routes:
-  POST /api/chat/stream           — basic chat streaming (SSE)
-  POST /api/chat/enhanced/stream  — enhanced chat with RAG integration (SSE)
-  GET  /api/sessions              — list active sessions
-  DELETE /api/sessions/{session_id} — delete a session
+  POST /stream           — basic chat streaming (SSE)
+  POST /enhanced/stream  — enhanced chat with RAG integration (SSE)
+  GET  /sessions              — list active sessions
+  DELETE /sessions/{session_id} — delete a session
 """
 
 import asyncio
@@ -23,6 +23,8 @@ from app.memory.manager import manager as memory_manager
 from app.utils.lang_detect import detect_language
 from app.common import SSE_HEADERS, sse_event
 from app.rag.guardrails import detect_prompt_injection, sanitize_input
+from app.audit.decorator import audit_action
+from app.exceptions import AureonException
 
 logger = structlog.get_logger()
 
@@ -45,15 +47,15 @@ async def _get_agent(lang: str = "zh", model: str = None):
     return _agents[cache_key]
 
 
-@router.post("/api/chat/stream")
+@router.post("/stream")
+@audit_action("query", "session")
 async def chat_stream(req: ChatRequest, request: Request):
     # Prompt injection check (< 1ms, regex-based)
     injection = detect_prompt_injection(req.message)
     if injection["detected"]:
         logger.warning("Prompt injection detected", pattern=injection["pattern"], risk=injection["risk_level"])
         if injection["risk_level"] == "high":
-            from fastapi import HTTPException
-            raise HTTPException(status_code=400, detail="Potentially harmful input detected.")
+            raise AureonException(status_code=400, detail="Potentially harmful input detected.")
 
     # Sanitize input
     sanitized_message = sanitize_input(req.message)
@@ -72,7 +74,8 @@ async def chat_stream(req: ChatRequest, request: Request):
     )
 
 
-@router.post("/api/chat/enhanced/stream")
+@router.post("/enhanced/stream")
+@audit_action("query", "session")
 async def chat_enhanced_stream(req: ChatRequest, request: Request):
     """Enhanced chat with automatic RAG integration via LangGraph intent routing."""
     from app.langgraph.streaming import stream_workflow
@@ -82,8 +85,7 @@ async def chat_enhanced_stream(req: ChatRequest, request: Request):
     if injection["detected"]:
         logger.warning("Prompt injection detected", pattern=injection["pattern"], risk=injection["risk_level"])
         if injection["risk_level"] == "high":
-            from fastapi import HTTPException
-            raise HTTPException(status_code=400, detail="Potentially harmful input detected.")
+            raise AureonException(status_code=400, detail="Potentially harmful input detected.")
 
     sanitized_message = sanitize_input(req.message)
 
@@ -108,13 +110,13 @@ async def chat_enhanced_stream(req: ChatRequest, request: Request):
     )
 
 
-@router.get("/api/sessions", response_model=SessionListResponse)
+@router.get("/sessions", response_model=SessionListResponse)
 async def list_sessions():
     sessions = memory_manager.get_active_sessions()
     return SessionListResponse(sessions=sessions, count=len(sessions))
 
 
-@router.delete("/api/sessions/{session_id}", response_model=StatusResponse)
+@router.delete("/sessions/{session_id}", response_model=StatusResponse)
 async def delete_session(session_id: str):
     memory_manager.finalize_scenario(session_id, summary="用户手动清除会话")
     memory_manager.clear_session(session_id)

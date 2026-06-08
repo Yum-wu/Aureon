@@ -31,12 +31,16 @@ WARNING_THRESHOLDS = {
 @pytest.fixture(scope="module")
 def evaluation_results():
     """Run full evaluation once per test module."""
+    from app.config import settings
+    _placeholder = {"", "your_deepseek_api_key_here", "sk-placeholder", "YOUR_API_KEY"}
+    if not settings.llm_api_key or settings.llm_api_key in _placeholder:
+        pytest.skip("No valid LLM API key configured — skipping DeepEval quality gate")
     from tests.test_data_golden import load_dataset, get_dataset_info
     from tests.deepeval_eval import build_test_cases, run_deepeval_metrics, _load_article_texts
     from app.rag.qa_chain import hybrid_retrieve, rag_query
     from app.agent.llm import create_llm
 
-    dataset_name = "core_regression_27qa"
+    dataset_name = "core_regression_40qa"
     qa_pairs = load_dataset(dataset_name)
     info = get_dataset_info(dataset_name)
 
@@ -94,6 +98,69 @@ class TestRAGQualityGate:
         pass_rate = evaluation_results.get("pass_rate", 0)
         assert pass_rate >= 0.8, \
             f"Pass rate {pass_rate:.0%} < 80%"
+
+
+
+
+@pytest.fixture(scope="module")
+def ragas_evaluation_results():
+    """Run RAGAS evaluation once per test module."""
+    from tests.test_data_golden import load_dataset, get_dataset_info
+    from app.rag.qa_chain import hybrid_retrieve, rag_query
+    from app.agent.llm import create_llm
+    from app.rag.evaluator import run_ragas_evaluation, RAGAS_AVAILABLE
+    
+    if not RAGAS_AVAILABLE:
+        pytest.skip("ragas not installed")
+    
+    dataset_name = "core_regression_40qa"
+    qa_pairs = load_dataset(dataset_name)
+    info = get_dataset_info(dataset_name)
+    
+    llm = create_llm()
+    
+    def rag_query_fn(query):
+        return rag_query(query, llm_call_fn=lambda msgs: llm.invoke(msgs).content, top_k=3)
+    
+    scores = run_ragas_evaluation(rag_query_fn, qa_pairs=qa_pairs)
+    scores["dataset_info"] = info
+    
+    return scores
+
+
+class TestRAGASQualityGate:
+    """RAGAS quality gate tests."""
+    
+    def test_ragas_faithfulness(self, ragas_evaluation_results):
+        """RAGAS Faithfulness >= 0.70"""
+        metrics = ragas_evaluation_results.get("metrics", {})
+        faith = metrics.get("faithfulness", {})
+        score = faith.get("average_score", 0)
+        assert score >= 0.70, \
+            f"RAGAS Faithfulness {score:.3f} < 0.70"
+    
+    def test_ragas_answer_relevancy(self, ragas_evaluation_results):
+        """RAGAS Answer Relevancy >= 0.60"""
+        metrics = ragas_evaluation_results.get("metrics", {})
+        relevancy = metrics.get("answer_relevancy", {})
+        score = relevancy.get("average_score", 0)
+        assert score >= 0.60, \
+            f"RAGAS Answer Relevancy {score:.3f} < 0.60"
+    
+    def test_ragas_context_precision(self, ragas_evaluation_results):
+        """RAGAS Context Precision >= 0.70"""
+        metrics = ragas_evaluation_results.get("metrics", {})
+        precision = metrics.get("context_precision", {})
+        score = precision.get("average_score", 0)
+        assert score >= 0.70, \
+            f"RAGAS Context Precision {score:.3f} < 0.70"
+    
+    def test_ragas_overall(self, ragas_evaluation_results):
+        """All RAGAS metrics should be present"""
+        metrics = ragas_evaluation_results.get("metrics", {})
+        required = ["faithfulness", "answer_relevancy", "context_precision"]
+        for metric in required:
+            assert metric in metrics, f"Missing RAGAS metric: {metric}"
 
 
 if __name__ == "__main__":

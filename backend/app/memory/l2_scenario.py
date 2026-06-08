@@ -81,7 +81,10 @@ def _cleanup_old_scenarios():
     """Keep only the most recent MAX_SCENARIOS files."""
     files = _list_scenarios()
     excess = len(files) - MAX_SCENARIOS
-    for fp, _ in files[:excess]:
+    if excess <= 0:
+        return
+    # files sorted newest-first; delete the oldest (tail)
+    for fp, _ in files[-excess:]:
         try:
             fp.unlink()
             logger.debug(f"Removed old scenario: {fp.name}")
