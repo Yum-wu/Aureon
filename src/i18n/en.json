@@ -70,7 +70,7 @@
     ],
     "benchmark": {
       "title": "Performance Benchmark",
-      "subtitle": "Evaluated on 192 QA pairs with hybrid retrieval pipeline (13/14 pass, 92.9%)"
+      "subtitle": "Evaluated on 192 QA pairs with hybrid retrieval pipeline (13/14 pass, 92.9%)",
       "vs_baseline": "vs baseline",
       "optimized": "optimized",
       "reduced": "reduced",
