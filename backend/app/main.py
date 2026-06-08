@@ -5,11 +5,12 @@ import sys
 import threading
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 
 # Suppress noisy ChromaDB telemetry errors
 logging.getLogger("chromadb.telemetry").setLevel(logging.CRITICAL)
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -31,7 +32,16 @@ from app.reliability.router import router as reliability_router
 from app.knowledge.router import router as knowledge_router
 from app.ai_platform.router import router as ai_platform_router
 from app.integration.router import router as integration_router
-from app.exceptions import AureonException
+from app.audit.router import router as audit_router
+from app.api.websocket_chat import router as websocket_chat_router
+from app.exceptions import (
+    AureonException,
+    AuthenticationError,
+    AuthorizationError,
+    NotFoundError,
+    RateLimitError,
+    LLMServiceError,
+)
 from app.routers import chat as chat_router
 from app.routers import rag as rag_router
 from app.routers import crew as crew_router
@@ -42,6 +52,7 @@ from app.memory.manager import manager as memory_manager
 from app.config import settings
 from app.cache.redis_client import close_redis
 from app.common import SSE_HEADERS
+from app.multi_tenant.middleware import TenantMiddleware
 
 # ── CrewAI (merged, lazy-imported in route handlers) ──
 from pydantic import BaseModel, Field
@@ -69,6 +80,11 @@ limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(title="Aureon API", version="0.1.0")
 
+# ── Custom ThreadPoolExecutor for async routes ──
+# Configure max_workers to handle concurrent requests across multiple Uvicorn workers
+executor = ThreadPoolExecutor(max_workers=64)
+app.state.executor = executor
+
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -78,6 +94,9 @@ app.add_middleware(
     allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["*"],
 )
+
+# ── Tenant Middleware (multi-tenant isolation) ──
+app.add_middleware(TenantMiddleware)
 
 # ── Prometheus metrics ──
 Instrumentator().instrument(app).expose(app, endpoint="/metrics")
@@ -89,12 +108,20 @@ from fastapi.responses import JSONResponse
 
 @app.exception_handler(AureonException)
 async def aureon_exception_handler(request: Request, exc: AureonException):
-    """Return structured JSON for all Aureon-specific exceptions."""
+    """Return structured JSON for all Aureon-specific exceptions.
+
+    Includes ``request_id`` from the structlog contextvars so that
+    frontend logs can be correlated with backend traces.
+    """
+    # Retrieve request_id from structlog context (set by logging_middleware)
+    request_id = structlog.contextvars.get_contextvars().get("request_id", str(uuid.uuid4())[:8])
     return JSONResponse(
         status_code=exc.status_code,
         content={
             "error": exc.error_type,
             "detail": str(exc.detail),
+            "request_id": request_id,
+            "error_type": exc.error_type,
         },
     )
 
@@ -111,11 +138,11 @@ async def logging_middleware(request: Request, call_next):
         # Public endpoints that don't require auth
         public_paths = {"/api/health", "/api/crew/health", "/metrics"}
         if request.url.path not in public_paths:
-            api_key = request.headers.get("X-API-Key") or request.query_params.get("api_key", "")
+            api_key = request.headers.get("X-API-Key")
             if not api_key:
                 return JSONResponse(
                     status_code=401,
-                    content={"error": "unauthorized", "detail": "Missing API key. Provide X-API-Key header or api_key query parameter."},
+                    content={"error": "unauthorized", "detail": "Missing API key. Provide X-API-Key header."},
                 )
             if api_key != settings.api_auth_key:
                 return JSONResponse(
@@ -132,6 +159,7 @@ async def logging_middleware(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
 
     logger.info(
         "request_completed",
@@ -214,6 +242,8 @@ async def startup():
     from app.knowledge import init_knowledge_tables
     from app.ai_platform import init_ai_platform_tables
     from app.integration import init_integration_tables
+    from app.audit import init_audit_tables
+    from app.memory.pg import init_pg_tables
     init_feature_flags_table()
     init_query_traces_table()
     init_pii_detection_table()
@@ -224,10 +254,19 @@ async def startup():
     init_knowledge_tables()
     init_ai_platform_tables()
     init_integration_tables()
+    init_audit_tables()
+    await init_pg_tables()
     memory_manager.init_background_tasks()
 
     # Background BM25 + ChromaDB warmup + auto-rebuild (non-blocking)
     threading.Thread(target=_warmup_bm25, daemon=True).start()
+
+    # OpenTelemetry distributed tracing (Task 5.1)
+    try:
+        from app.observability.tracing import init_tracing
+        init_tracing(app)
+    except Exception as e:
+        logger.warning("OpenTelemetry tracing init failed (non-fatal): %s", e)
 
     logger.info("Startup complete")
 
@@ -263,20 +302,34 @@ async def health():
     }
 
 
-app.include_router(chat_router.router)
-app.include_router(rag_router.router)
-app.include_router(crew_router.router)
-app.include_router(stats_router)
-app.include_router(analytics_router)
-app.include_router(feature_flags_router)
-app.include_router(observability_router)
-app.include_router(security_router)
-app.include_router(evaluation_router)
-app.include_router(cost_router)
-app.include_router(reliability_router)
-app.include_router(knowledge_router)
-app.include_router(ai_platform_router)
-app.include_router(integration_router)
+# ── Legacy /api/ routes (backward compatible, kept alongside /api/v1/) ──
+app.include_router(chat_router.router, prefix="/api/chat", tags=["chat"])
+app.include_router(rag_router.router, prefix="/api/rag", tags=["rag"])
+app.include_router(crew_router.router, prefix="/api/crew", tags=["crew"])
+app.include_router(stats_router)  # rag_stats.py has no prefix, routes handle /api/* internally
+app.include_router(analytics_router)  # already has prefix=/api/rag/analytics
+app.include_router(feature_flags_router)  # already has prefix=/api/feature-flags
+app.include_router(observability_router, prefix="/api/observability")  # routes use relative paths
+app.include_router(security_router, prefix="/api/security")  # routes use relative paths
+app.include_router(evaluation_router)  # already has prefix=/api/evaluation
+app.include_router(cost_router)  # already has prefix=/api/cost
+app.include_router(reliability_router)  # already has prefix=/api/reliability
+app.include_router(knowledge_router, prefix="/api/knowledge")  # routes use relative paths
+app.include_router(ai_platform_router)  # already has prefix=/api/ai-platform
+app.include_router(integration_router)  # already has prefix=/api/integration
+app.include_router(audit_router, prefix="/api/audit")  # routes use relative paths
+app.include_router(websocket_chat_router, tags=["websocket"])
+
+# ── API Versioning: v1_router with /api/v1 prefix ──
+v1_router = APIRouter(prefix="/api/v1")
+v1_router.include_router(chat_router.router, prefix="/chat", tags=["chat"])
+v1_router.include_router(rag_router.router, prefix="/rag", tags=["rag"])
+v1_router.include_router(crew_router.router, prefix="/crew", tags=["crew"])
+v1_router.include_router(security_router, prefix="/security", tags=["security"])
+v1_router.include_router(audit_router, prefix="/audit", tags=["audit"])
+v1_router.include_router(observability_router, prefix="/observability", tags=["observability"])
+v1_router.include_router(knowledge_router, prefix="/knowledge", tags=["knowledge"])
+app.include_router(v1_router)
 
 # ── SPA 静态文件（必须在 API 路由之后） ──
 static_dir = os.path.join(os.path.dirname(__file__), "..", "static")

@@ -14,7 +14,7 @@ Reference: https://www.anthropic.com/news/contextual-retrieval
 
 import re
 import structlog
-from typing import List, Callable, Optional
+from typing import List, Callable, Optional, Dict, Any
 
 import numpy as np
 
@@ -217,3 +217,230 @@ class SemanticTextSplitter:
         if current.strip():
             chunks.append(current.strip())
         return chunks if chunks else [text]
+
+class ParentChildSplitter:
+    """Parent-Child hierarchical chunking strategy.
+
+    Parent chunks: large context blocks (512-1024 tokens)
+    Child chunks: small searchable units (128-256 tokens)
+
+    During retrieval:
+    - Search uses child chunks for precise matching
+    - Return parent chunks for rich context
+
+    Args:
+        parent_size: Target size for parent chunks in characters (default 800)
+        child_size: Target size for child chunks in characters (default 200)
+        overlap: Overlap between adjacent child chunks in characters (default 50)
+    """
+
+    def __init__(
+        self,
+        parent_size: int = 800,
+        child_size: int = 200,
+        overlap: int = 50,
+    ):
+        self.parent_size = parent_size
+        self.child_size = child_size
+        self.overlap = overlap
+
+    def split_documents(
+        self,
+        documents: List[Dict[str, Any]],
+        parent_size: int = 800,
+        child_size: int = 200,
+        overlap: int = 50,
+    ) -> List[Dict[str, Any]]:
+        """Split documents into parent-child hierarchical chunks.
+
+        Args:
+            documents: List of document dicts with 'content' and 'metadata' fields.
+            parent_size: Target size for parent chunks in characters.
+            child_size: Target size for child chunks in characters.
+            overlap: Overlap between adjacent child chunks in characters.
+
+        Returns:
+            List of chunk dicts, each containing:
+            - text: The child chunk text
+            - metadata: Dict with parent_text, parent_idx, and original metadata
+        """
+        parent_size = parent_size or self.parent_size
+        child_size = child_size or self.child_size
+        overlap = overlap or self.overlap
+
+        all_chunks: List[Dict[str, Any]] = []
+
+        for doc in documents:
+            content = doc.get("content", "")
+            metadata = doc.get("metadata", {})
+
+            if not content or not content.strip():
+                continue
+
+            # Step 1: Split document into parent chunks
+            parent_chunks = self._split_parents(content, parent_size)
+
+            # Step 2: For each parent chunk, split into child chunks
+            for parent_idx, parent_text in enumerate(parent_chunks):
+                child_texts = self._split_children(parent_text, child_size, overlap)
+                for child_text in child_texts:
+                    all_chunks.append({
+                        "text": child_text,
+                        "metadata": {
+                            **metadata,
+                            "parent_text": parent_text,
+                            "parent_idx": parent_idx,
+                        },
+                    })
+
+        logger.info(
+            "ParentChildSplitter: %d docs -> %d parent-child chunks",
+            len(documents), len(all_chunks),
+        )
+        return all_chunks
+
+    def _split_parents(self, text: str, parent_size: int) -> List[str]:
+        """Split text into parent chunks at paragraph/heading boundaries.
+
+        Tries to respect document structure by splitting on:
+        1. Markdown headers (## )
+        2. Double newlines (paragraph breaks)
+        3. Single newlines (line breaks)
+        """
+        # First, split on markdown headers to preserve structure
+        sections = re.split(r'(?=\n## )', text)
+
+        parent_chunks: List[str] = []
+        current = ""
+
+        for section in sections:
+            section = section.strip()
+            if not section:
+                continue
+
+            if len(current) + len(section) + 2 <= parent_size:
+                current = current + "\n\n" + section if current else section
+            else:
+                if current:
+                    parent_chunks.append(current.strip())
+                # If single section exceeds parent_size, split by paragraphs
+                if len(section) > parent_size:
+                    sub_chunks = self._split_large_section(section, parent_size)
+                    parent_chunks.extend(sub_chunks)
+                else:
+                    current = section
+                    continue
+                current = ""
+
+        if current.strip():
+            parent_chunks.append(current.strip())
+
+        return parent_chunks if parent_chunks else [text]
+
+    def _split_large_section(self, section: str, parent_size: int) -> List[str]:
+        """Split a section that exceeds parent_size at paragraph boundaries."""
+        paragraphs = section.split("\n\n")
+        result: List[str] = []
+        current = ""
+
+        for para in paragraphs:
+            if len(current) + len(para) + 2 > parent_size and current:
+                result.append(current.strip())
+                current = para
+            else:
+                current = current + "\n\n" + para if current else para
+
+            # If single paragraph exceeds size, split by lines
+            if len(current) > parent_size:
+                lines = current.split("\n")
+                buffer = ""
+                for line in lines:
+                    if len(buffer) + len(line) + 1 > parent_size and buffer:
+                        result.append(buffer.strip())
+                        buffer = line
+                    else:
+                        buffer = buffer + "\n" + line if buffer else line
+                current = buffer
+
+        if current.strip():
+            result.append(current.strip())
+
+        return result if result else [section]
+
+    def _split_children(self, parent_text: str, child_size: int, overlap: int) -> List[str]:
+        """Split a parent chunk into child chunks with overlap.
+
+        Uses sentence boundaries where possible to keep semantic units intact.
+        Falls back to character-level splitting when sentences are too long.
+        """
+        if len(parent_text) <= child_size:
+            return [parent_text]
+
+        # Split on sentence boundaries first
+        sentences = _chinese_sentence_split(parent_text)
+        if len(sentences) <= 1:
+            # No sentence splits possible, use character-level
+            return self._split_by_chars(parent_text, child_size, overlap)
+
+        # Merge sentences into child-sized chunks
+        children: List[str] = []
+        current = ""
+
+        for sentence in sentences:
+            if len(current) + len(sentence) + 1 <= child_size:
+                current = current + "\n" + sentence if current else sentence
+            else:
+                if current:
+                    children.append(current.strip())
+                # If single sentence exceeds child_size, force split
+                if len(sentence) > child_size:
+                    sub_children = self._split_by_chars(sentence, child_size, overlap)
+                    children.extend(sub_children)
+                    current = ""
+                else:
+                    current = sentence
+
+        if current.strip():
+            children.append(current.strip())
+
+        # Apply overlap: prepend tail of previous child to current child
+        if overlap > 0 and len(children) > 1:
+            children = self._apply_overlap(children, overlap)
+
+        return children if children else [parent_text]
+
+    def _split_by_chars(self, text: str, chunk_size: int, overlap: int) -> List[str]:
+        """Character-level splitting with overlap."""
+        chunks: List[str] = []
+        start = 0
+        while start < len(text):
+            end = min(start + chunk_size, len(text))
+            chunks.append(text[start:end].strip())
+            if end >= len(text):
+                break
+            start = end - overlap
+            if start <= (len(chunks[-1]) if chunks else 0):
+                start = end  # prevent infinite loop
+        return chunks
+
+    def _apply_overlap(self, children: List[str], overlap: int) -> List[str]:
+        """Prepend tail of previous child to each child for context continuity."""
+        result: List[str] = [children[0]]
+        for i in range(1, len(children)):
+            prev = children[i - 1]
+            if len(prev) > overlap:
+                overlap_text = prev[-overlap:]
+                # Try to break at a sentence boundary
+                for sep in ["。", "！", "？", ".", "!", "?"]:
+                    idx = overlap_text.find(sep)
+                    if idx >= 0:
+                        overlap_text = overlap_text[idx + 1:]
+                        break
+                overlap_text = overlap_text.strip()
+                if overlap_text:
+                    result.append(overlap_text + "\n" + children[i])
+                else:
+                    result.append(children[i])
+            else:
+                result.append(children[i])
+        return result

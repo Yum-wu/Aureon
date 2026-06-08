@@ -1,16 +1,19 @@
 """Security API Router"""
 from typing import Optional
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from app.security import (
     PIIDetector,
     SSOProvider,
+    UserRole,
     create_sso_provider,
     list_sso_providers,
     delete_sso_provider,
     log_pii_detection,
+    require_role,
 )
+from app.exceptions import NotFoundError, AureonException
 
-router = APIRouter(prefix="/api/security", tags=["Security"])
+router = APIRouter(tags=["Security"])
 
 # PII 检测器实例
 pii_detector = PIIDetector()
@@ -63,22 +66,22 @@ async def scan_document(
 
 @router.post("/sso/providers", response_model=SSOProvider, status_code=201)
 async def create_sso_provider_endpoint(provider: SSOProvider):
-    """创建 SSO 提供商"""
+    """创建 SSO 提供商 (需要 ADMIN 角色)"""
     return create_sso_provider(provider)
 
 
 @router.get("/sso/providers", response_model=list[SSOProvider])
 async def list_sso_providers_endpoint():
-    """列出所有 SSO 提供商"""
+    """列出所有 SSO 提供商 (需要 ADMIN 角色)"""
     return list_sso_providers()
 
 
 @router.delete("/sso/providers/{name}", status_code=204)
 async def delete_sso_provider_endpoint(name: str):
-    """删除 SSO 提供商"""
+    """删除 SSO 提供商 (需要 ADMIN 角色)"""
     success = delete_sso_provider(name)
     if not success:
-        raise HTTPException(status_code=404, detail="SSO provider not found")
+        raise NotFoundError("SSO provider not found")
 
 
 # ── Rate Limiting Config ──

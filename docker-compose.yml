@@ -1,15 +1,22 @@
 services:
   redis:
-    image: redis:7-alpine
+    image: redis/redis-stack-server:latest
     ports:
       - "6379:6379"
-    command: redis-server --requirepass ${REDIS_PASSWORD:-aureon_redis_dev}
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 2gb --maxmemory-policy allkeys-lru
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-aureon_redis_dev}", "ping"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 5
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+          cpus: '1.0'
 
   app:
     build:
@@ -17,6 +24,7 @@ services:
       dockerfile: Dockerfile
     ports:
       - "80:80"
+      - "8000:8000"
     env_file:
       - backend/.env
     environment:
@@ -28,6 +36,10 @@ services:
       - ES_URL=http://elasticsearch:9200
       - ES_PASSWORD=${ES_PASSWORD:-aureon_es_dev}
       - API_AUTH_KEY=${API_AUTH_KEY:-}
+      - WEBSOCKET_ENABLED=true
+      - WEBSOCKET_MAX_CONNECTIONS=200
+    expose:
+      - "8000"
     depends_on:
       redis:
         condition: service_healthy
@@ -39,6 +51,11 @@ services:
       - ./offloads:/app/offloads
       - ./data:/app/data
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 4g
+          cpus: '2.0'
 
   qdrant:
     image: qdrant/qdrant:v1.12.1
@@ -63,7 +80,7 @@ services:
       - discovery.type=single-node
       - xpack.security.enabled=true
       - xpack.security.http.ssl.enabled=false
-      - ELASTIC_PASSWORD=${ES_PASSWORD:-aureon_es_dev}
+      - ELASTIC_PASSWORD=${ES_PASSWORD:?ES_PASSWORD must be set}
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
     ports:
       - "9200:9200"

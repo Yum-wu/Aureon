@@ -1,0 +1,510 @@
+{
+  "timestamp": "2026-06-08T19:43:11",
+  "version": "enterprise_v1",
+  "dataset": {
+    "total_qa": 192,
+    "by_type": {
+      "factual": 24,
+      "reasoning": 92,
+      "synthesis": 42,
+      "cross_article": 14,
+      "negative": 20
+    },
+    "by_difficulty": {
+      "easy": 34,
+      "medium": 105,
+      "hard": 53
+    }
+  },
+  "collection": {
+    "docs": 26,
+    "chunks": 191
+  },
+  "retrieval": {
+    "hybrid": {
+      "recall@3": 0.9651,
+      "recall@5": 1.0,
+      "recall@10": 1.0,
+      "precision@3": 0.9651,
+      "mrr": 0.8844,
+      "ndcg@10": 0.9136,
+      "negative_detection": 0.0,
+      "positive_total": 172,
+      "negative_total": 20,
+      "misses": []
+    },
+    "dense": {
+      "recall@3": 0.936,
+      "recall@5": 0.9477,
+      "recall@10": 0.9767,
+      "precision@3": 0.936,
+      "mrr": 0.8735,
+      "ndcg@10": 2.2022,
+      "negative_detection": 0.0,
+      "positive_total": 172,
+      "negative_total": 20,
+      "misses": [
+        {
+          "id": "spa-003",
+          "question": "文章描述的部署自检流程中，Network 面板和 Console 面板分别能发现什么问题？",
+          "expected": "spa-github-pages",
+          "retrieved": [
+            "langchain-framework-guide",
+            "rag-concepts-deep-dive",
+            "blog-migration-troubleshooting",
+            "prompt-engineering-guide",
+            "deepseek-cache-optimization"
+          ]
+        },
+        {
+          "id": "lg-003",
+          "question": "LangGraph 相比普通的链式调用（LangChain LCEL），在什么场景下更有优势？",
+          "expected": "langgraph-workflow",
+          "retrieved": [
+            "langchain-framework-guide",
+            "langchain-framework-guide",
+            "langchain-framework-guide",
+            "langchain-framework-guide",
+            "rag-concepts-deep-dive"
+          ]
+        },
+        {
+          "id": "git-001",
+          "question": "文章对比了哪几种分支策略？各自的优缺点是什么？",
+          "expected": "git-workflow-best-practices",
+          "retrieved": [
+            "rag-concepts-deep-dive",
+            "embedding-models-guide",
+            "markdown-notes-app",
+            "prompt-engineering-guide",
+            "prompt-engineering-guide"
+          ]
+        },
+        {
+          "id": "git-004",
+          "question": "Trunk-Based Development 为什么在持续部署场景下迭代速度最快？",
+          "expected": "git-workflow-best-practices",
+          "retrieved": [
+            "eleven-projects-two-months",
+            "eleven-projects-two-months",
+            "markdown-notes-app",
+            "eleven-projects-two-months",
+            "deepseek-cache-optimization"
+          ]
+        }
+      ]
+    },
+    "bm25": {
+      "recall@3": 0.9593,
+      "recall@5": 0.9709,
+      "recall@10": 0.9884,
+      "precision@3": 0.9593,
+      "mrr": 0.9117,
+      "ndcg@10": 2.0777,
+      "negative_detection": 0.1,
+      "positive_total": 172,
+      "negative_total": 20,
+      "misses": [
+        {
+          "id": "lg-003",
+          "question": "LangGraph 相比普通的链式调用（LangChain LCEL），在什么场景下更有优势？",
+          "expected": "langgraph-workflow",
+          "retrieved": [
+            "langchain-framework-guide",
+            "langchain-framework-guide",
+            "langchain-framework-guide",
+            "langchain-framework-guide",
+            "ai-agent-architecture"
+          ]
+        },
+        {
+          "id": "edge-005",
+          "question": "React 和 Vue 在 AI 应用前端开发中各有什么优势？",
+          "expected": "react-performance-tips",
+          "retrieved": [
+            "ai-writing-assistant",
+            "hello-world",
+            "ai-agent-architecture",
+            "chatbot-railway-deployment",
+            "chatbot-railway-deployment"
+          ]
+        }
+      ]
+    }
+  },
+  "category": {
+    "by_difficulty": {
+      "easy": {
+        "recall@3": 0.9524,
+        "total": 21,
+        "hits": 20
+      },
+      "hard": {
+        "recall@3": 0.9434,
+        "total": 53,
+        "hits": 50
+      },
+      "medium": {
+        "recall@3": 0.9796,
+        "total": 98,
+        "hits": 96
+      }
+    },
+    "by_type": {
+      "cross_article": {
+        "recall@3": 0.8571,
+        "total": 14,
+        "hits": 12
+      },
+      "factual": {
+        "recall@3": 0.9583,
+        "total": 24,
+        "hits": 23
+      },
+      "negative": {
+        "recall@3": 0,
+        "total": 0,
+        "hits": 0
+      },
+      "reasoning": {
+        "recall@3": 0.9783,
+        "total": 92,
+        "hits": 90
+      },
+      "synthesis": {
+        "recall@3": 0.9762,
+        "total": 42,
+        "hits": 41
+      }
+    },
+    "by_source": {
+      "agent-memory-system": {
+        "recall@3": 0.8,
+        "total": 5,
+        "hits": 4
+      },
+      "ai-agent-architecture": {
+        "recall@3": 1.0,
+        "total": 13,
+        "hits": 13
+      },
+      "ai-writing-assistant": {
+        "recall@3": 1.0,
+        "total": 3,
+        "hits": 3
+      },
+      "blog-migration-troubleshooting": {
+        "recall@3": 1.0,
+        "total": 4,
+        "hits": 4
+      },
+      "chatbot-railway-deployment": {
+        "recall@3": 1.0,
+        "total": 6,
+        "hits": 6
+      },
+      "deepseek-cache-optimization": {
+        "recall@3": 1.0,
+        "total": 5,
+        "hits": 5
+      },
+      "eleven-projects-two-months": {
+        "recall@3": 1.0,
+        "total": 4,
+        "hits": 4
+      },
+      "embedding-models-guide": {
+        "recall@3": 0.9091,
+        "total": 11,
+        "hits": 10
+      },
+      "git-workflow-best-practices": {
+        "recall@3": 0.75,
+        "total": 4,
+        "hits": 3
+      },
+      "hello-world": {
+        "recall@3": 1.0,
+        "total": 3,
+        "hits": 3
+      },
+      "hermes-agent-practical-guide": {
+        "recall@3": 1.0,
+        "total": 12,
+        "hits": 12
+      },
+      "langchain-agent-intro": {
+        "recall@3": 1.0,
+        "total": 4,
+        "hits": 4
+      },
+      "langchain-framework-guide": {
+        "recall@3": 1.0,
+        "total": 11,
+        "hits": 11
+      },
+      "langgraph-workflow": {
+        "recall@3": 0.75,
+        "total": 4,
+        "hits": 3
+      },
+      "llamaindex-rag-guide": {
+        "recall@3": 1.0,
+        "total": 9,
+        "hits": 9
+      },
+      "markdown-notes-app": {
+        "recall@3": 1.0,
+        "total": 3,
+        "hits": 3
+      },
+      "prompt-engineering-guide": {
+        "recall@3": 1.0,
+        "total": 15,
+        "hits": 15
+      },
+      "rag-concepts-deep-dive": {
+        "recall@3": 1.0,
+        "total": 15,
+        "hits": 15
+      },
+      "rag-system-guide": {
+        "recall@3": 0.75,
+        "total": 4,
+        "hits": 3
+      },
+      "react-performance-tips": {
+        "recall@3": 1.0,
+        "total": 7,
+        "hits": 7
+      },
+      "spa-github-pages": {
+        "recall@3": 1.0,
+        "total": 8,
+        "hits": 8
+      },
+      "vector-database-guide": {
+        "recall@3": 0.9167,
+        "total": 12,
+        "hits": 11
+      },
+      "weather-app-api-integration": {
+        "recall@3": 1.0,
+        "total": 3,
+        "hits": 3
+      },
+      "wechat-miniprogram-ai-agent": {
+        "recall@3": 1.0,
+        "total": 3,
+        "hits": 3
+      },
+      "zustand-todo-app": {
+        "recall@3": 1.0,
+        "total": 4,
+        "hits": 4
+      }
+    }
+  },
+  "latency": {
+    "bm25": {
+      "p50": 1.9,
+      "p90": 2.3,
+      "p95": 2.6,
+      "p99": 2.9,
+      "mean": 1.9,
+      "min": 1.5,
+      "max": 3.3
+    },
+    "dense": {
+      "p50": 142.1,
+      "p90": 153.2,
+      "p95": 157.6,
+      "p99": 177.1,
+      "mean": 143.2,
+      "min": 123.8,
+      "max": 279.7
+    },
+    "hybrid": {
+      "p50": 157.9,
+      "p90": 224.7,
+      "p95": 232.5,
+      "p99": 252.4,
+      "mean": 174.3,
+      "min": 136.9,
+      "max": 508.9
+    },
+    "positive_queries": 172,
+    "runs_per_query": 3
+  },
+  "throughput": {},
+  "negative_detection": {
+    "keyword_detection_rate": 0.5,
+    "keyword_correct": 10,
+    "total": 20,
+    "keyword_failures": [
+      {
+        "id": "neg-003",
+        "question": "Aureon 在 AWS 上的部署成本是多少？"
+      },
+      {
+        "id": "neg-006",
+        "question": "这个项目的 GitHub Stars 数量是多少？"
+      },
+      {
+        "id": "neg-007",
+        "question": "Aureon 的 API 每分钟请求限制是多少？"
+      },
+      {
+        "id": "neg-010",
+        "question": "React 19 相比 React 18 有哪些新特性？"
+      },
+      {
+        "id": "neg-014",
+        "question": "作者的下一个项目计划做什么？"
+      },
+      {
+        "id": "neg-015",
+        "question": "PyTorch 和 TensorFlow 哪个更适合生产部署？"
+      },
+      {
+        "id": "neg-016",
+        "question": "Aureon 平台的月活跃用户数量是多少？"
+      },
+      {
+        "id": "neg-018",
+        "question": "作者使用什么键盘和鼠标？"
+      },
+      {
+        "id": "neg-019",
+        "question": "Hermes Agent 的 GitHub Star 数量增长趋势如何？"
+      },
+      {
+        "id": "neg-020",
+        "question": "DeepSeek API 的具体计费单价是多少？"
+      }
+    ]
+  },
+  "scale_simulation": {
+    "current": {
+      "docs": 26,
+      "chunks": 191
+    },
+    "projections": {
+      "100": {
+        "target_docs": 100,
+        "target_chunks_est": 734,
+        "scale_factor": 3.8,
+        "estimated": {
+          "latency_bm25_p50_ms": 8.2,
+          "latency_vector_p50_ms": 7.8,
+          "latency_hybrid_p50_ms": 8.2,
+          "latency_hybrid_p99_ms": 58.8,
+          "qps_concurrency_5": 5.3,
+          "recall_at_3": 0.886
+        },
+        "estimated_memory_mb": 0.0,
+        "notes": [
+          "Estimates based on log-scale index growth (HNSW/BM25 pre-tokenized)",
+          "Actual performance depends on hardware, index configuration, and query distribution",
+          "Recall degradation assumes same embedding model and retrieval parameters"
+        ]
+      },
+      "250": {
+        "target_docs": 250,
+        "target_chunks_est": 1836,
+        "scale_factor": 9.6,
+        "estimated": {
+          "latency_bm25_p50_ms": 9.1,
+          "latency_vector_p50_ms": 8.4,
+          "latency_hybrid_p50_ms": 9.1,
+          "latency_hybrid_p99_ms": 64.7,
+          "qps_concurrency_5": 4.9,
+          "recall_at_3": 0.8425
+        },
+        "estimated_memory_mb": 0.0,
+        "notes": [
+          "Estimates based on log-scale index growth (HNSW/BM25 pre-tokenized)",
+          "Actual performance depends on hardware, index configuration, and query distribution",
+          "Recall degradation assumes same embedding model and retrieval parameters"
+        ]
+      },
+      "500": {
+        "target_docs": 500,
+        "target_chunks_est": 3673,
+        "scale_factor": 19.2,
+        "estimated": {
+          "latency_bm25_p50_ms": 9.7,
+          "latency_vector_p50_ms": 8.8,
+          "latency_hybrid_p50_ms": 9.7,
+          "latency_hybrid_p99_ms": 69.3,
+          "qps_concurrency_5": 4.6,
+          "recall_at_3": 0.8096
+        },
+        "estimated_memory_mb": 0.0,
+        "notes": [
+          "Estimates based on log-scale index growth (HNSW/BM25 pre-tokenized)",
+          "Actual performance depends on hardware, index configuration, and query distribution",
+          "Recall degradation assumes same embedding model and retrieval parameters"
+        ]
+      },
+      "1000": {
+        "target_docs": 1000,
+        "target_chunks_est": 7346,
+        "scale_factor": 38.5,
+        "estimated": {
+          "latency_bm25_p50_ms": 10.3,
+          "latency_vector_p50_ms": 9.2,
+          "latency_hybrid_p50_ms": 10.3,
+          "latency_hybrid_p99_ms": 73.8,
+          "qps_concurrency_5": 4.4,
+          "recall_at_3": 0.7766
+        },
+        "estimated_memory_mb": 0.0,
+        "notes": [
+          "Estimates based on log-scale index growth (HNSW/BM25 pre-tokenized)",
+          "Actual performance depends on hardware, index configuration, and query distribution",
+          "Recall degradation assumes same embedding model and retrieval parameters"
+        ]
+      },
+      "2000": {
+        "target_docs": 2000,
+        "target_chunks_est": 14692,
+        "scale_factor": 76.9,
+        "estimated": {
+          "latency_bm25_p50_ms": 11.0,
+          "latency_vector_p50_ms": 9.6,
+          "latency_hybrid_p50_ms": 11.0,
+          "latency_hybrid_p99_ms": 78.3,
+          "qps_concurrency_5": 4.2,
+          "recall_at_3": 0.7437
+        },
+        "estimated_memory_mb": 0.1,
+        "notes": [
+          "Estimates based on log-scale index growth (HNSW/BM25 pre-tokenized)",
+          "Actual performance depends on hardware, index configuration, and query distribution",
+          "Recall degradation assumes same embedding model and retrieval parameters"
+        ]
+      },
+      "5000": {
+        "target_docs": 5000,
+        "target_chunks_est": 36730,
+        "scale_factor": 192.3,
+        "estimated": {
+          "latency_bm25_p50_ms": 11.8,
+          "latency_vector_p50_ms": 10.2,
+          "latency_hybrid_p50_ms": 11.8,
+          "latency_hybrid_p99_ms": 84.3,
+          "qps_concurrency_5": 3.9,
+          "recall_at_3": 0.7002
+        },
+        "estimated_memory_mb": 0.1,
+        "notes": [
+          "Estimates based on log-scale index growth (HNSW/BM25 pre-tokenized)",
+          "Actual performance depends on hardware, index configuration, and query distribution",
+          "Recall degradation assumes same embedding model and retrieval parameters"
+        ]
+      }
+    }
+  },
+  "elapsed_seconds": 317.2
+}

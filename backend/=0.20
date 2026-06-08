@@ -1,0 +1,16 @@
+WARNING: Ignoring invalid distribution ~ode-review-graph (D:\Python3.14\Lib\site-packages)
+Looking in indexes: https://mirrors.aliyun.com/pypi/simple/
+Collecting asyncpg
+  Downloading https://mirrors.aliyun.com/pypi/packages/d3/2d/7aa40750b7a19efa5d66e67fc06008ca0f27ba1bd082e457ad82f59aba49/asyncpg-0.31.0-cp314-cp314-win_amd64.whl (604 kB)
+     ---------------------------------------- 604.9/604.9 kB 1.5 MB/s  0:00:00
+Requirement already satisfied: aiosqlite in D:\Python3.14\Lib\site-packages (0.22.1)
+Requirement already satisfied: sqlalchemy[asyncio] in D:\Python3.14\Lib\site-packages (2.0.49)
+Requirement already satisfied: greenlet>=1 in D:\Python3.14\Lib\site-packages (from sqlalchemy[asyncio]) (3.5.0)
+Requirement already satisfied: typing-extensions>=4.6.0 in D:\Python3.14\Lib\site-packages (from sqlalchemy[asyncio]) (4.15.0)
+WARNING: Ignoring invalid distribution ~ode-review-graph (D:\Python3.14\Lib\site-packages)
+Installing collected packages: asyncpg
+WARNING: Ignoring invalid distribution ~ode-review-graph (D:\Python3.14\Lib\site-packages)
+Successfully installed asyncpg-0.31.0
+
+[notice] A new release of pip is available: 26.0.1 -> 26.1.2
+[notice] To update, run: python.exe -m pip install --upgrade pip

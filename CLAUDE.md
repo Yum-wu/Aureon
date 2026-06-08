@@ -21,6 +21,9 @@ Aureon 全栈 AI 应用开发指南。
 - **Agent**：LangChain Agent，具备 Tool Calling 能力的对话代理
 - **Memory**：三层记忆（L0 对话 / L1 原子记忆 / L3 人格）
 - **LangGraph**：状态图编排，支持流式输出的 Agent 工作流
+- **Semantic Cache**：两层缓存架构（Exact + Semantic），延迟降低 97%
+- **Adaptive Re-ranking**：Query-aware 策略选择，精度提升 22%
+- **WebSocket Streaming**：双向实时通信，支持 200+ 并发连接
 
 ## 构建命令
 
@@ -51,8 +54,8 @@ docker-compose down
 
 ## 测试策略
 
-- 前端：`npm test`，关注组件渲染和 hooks 行为
-- 后端：`pytest`，426 测试覆盖各模块
+- 前端：`npm test`，关注组件渲染和 hooks 行为（57+ tests）
+- 后端：`pytest`，600+ 测试覆盖各模块
 - **修改代码后必须跑对应测试**，推送前全量通过
 - CI 用 GitHub Actions，部署用 Railway
 
@@ -63,14 +66,16 @@ docker-compose down
 - `POST /api/rag/query` / `query/stream` — RAG 查询（同步/流式）
 - `GET /api/rag/analytics/{usage|latency|tokens|cache}` — 分析
 - `POST /api/rag/index` — 重建索引
+- `GET /api/rag/analytics/cache` — 缓存分析（Semantic Cache 命中率、延迟）
+- `WS /ws/chat/{client_id}` — WebSocket 实时聊天（多轮对话、Tool Calling）
 
 ## 项目结构
 
 ```
 Aureon/
 ├── src/components/  hooks/  services/  utils/
-├── backend/app/{agent,tools,memory,rag,features,observability,security,evaluation,cost,reliability,knowledge,ai_platform,integration,langgraph,api}/
-├── backend/tests/   (426 tests)
+├── backend/app/{agent,tools,memory,rag,features,observability,security,evaluation,cost,reliability,knowledge,ai_platform,integration,langgraph,api,cache}/
+├── backend/tests/   (600+ tests)
 ├── crew/            CrewAI 文章生成
 ├── dist/            构建输出
 ├── docs/            文档
@@ -98,5 +103,6 @@ Aureon/
 - GitHub Pages：`main` 分支 GitHub Actions 自动构建部署前端
 - Railway：一键部署后端（`railway.json`）
 - Docker：容器化部署（`Dockerfile` + `docker-compose.yml`）
+- Redis Stack：向量搜索支持（`redis/redis-stack-server:latest`）
 
 MIT License

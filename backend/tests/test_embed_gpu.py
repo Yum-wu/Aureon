@@ -4,6 +4,7 @@
 Uses mocks to avoid model downloads on CI. Real model tests are in
 test_embed_gpu_integration.py (run locally with GPU).
 """
+import sys
 import pytest
 import numpy as np
 from unittest.mock import patch, MagicMock
@@ -92,7 +93,12 @@ class TestGPUConfig:
         mock_model = MagicMock()
         mock_model.get_sentence_embedding_dimension.return_value = 1024
 
-        with patch("sentence_transformers.SentenceTransformer", return_value=mock_model):
+        # Inject a fake sentence_transformers module into sys.modules
+        # to avoid the real import chain (sentence_transformers -> torch.distributed)
+        mock_st = MagicMock()
+        mock_st.SentenceTransformer.return_value = mock_model
+        with patch.dict(sys.modules, {"sentence_transformers": mock_st}), \
+             patch("app.rag.embed_gpu._detect_best_attention", return_value=None):
             embedder._load_model()
             assert embedder._model is mock_model
 
@@ -102,7 +108,10 @@ class TestGPUConfig:
         reranker = GPUReranker(device="cpu")
         mock_model = MagicMock()
 
-        with patch("sentence_transformers.CrossEncoder", return_value=mock_model):
+        mock_st = MagicMock()
+        mock_st.CrossEncoder.return_value = mock_model
+        with patch.dict(sys.modules, {"sentence_transformers": mock_st}), \
+             patch("app.rag.embed_gpu._detect_best_attention", return_value=None):
             reranker._load_model()
             assert reranker._model is mock_model
 
@@ -120,7 +129,10 @@ class TestGPUConfig:
                 raise TypeError("unexpected keyword argument 'model_kwargs'")
             return mock_model
 
-        with patch("sentence_transformers.CrossEncoder", side_effect=fake_cross_encoder):
+        mock_st = MagicMock()
+        mock_st.CrossEncoder = MagicMock(side_effect=fake_cross_encoder)
+        with patch.dict(sys.modules, {"sentence_transformers": mock_st}), \
+             patch("app.rag.embed_gpu._detect_best_attention", return_value=None):
             reranker._load_model()
             assert reranker._model is mock_model
             assert call_count == 2

@@ -155,22 +155,39 @@ async def test_cache_no_redis():
         resp = await ac.get("/api/rag/analytics/cache")
     assert resp.status_code == 200
     data = resp.json()
-    assert data["hitRate"] == 0
-    assert data["saves"] == 0
+    # Support both old (hitRate) and new (hit_rate) formats
+    assert data.get("hitRate", data.get("hit_rate", 0)) == 0
+    assert data.get("saves", data.get("sets", 0)) == 0
 
 
 @pytest.mark.asyncio
-async def test_cache_with_hits(mock_redis):
-    mock_redis.get = AsyncMock(side_effect=lambda k: {
-        "aureon:stats:cache_hits": "80",
-        "aureon:stats:cache_misses": "20",
-    }.get(k))
-    app.dependency_overrides[get_redis_or_none] = lambda: mock_redis
-
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        resp = await ac.get("/api/rag/analytics/cache")
+async def test_cache_with_hits():
+    """Cache endpoint now reads from get_cache_metrics() (in-memory), not Redis."""
+    fake_metrics = {
+        "exact_hits": 60,
+        "semantic_hits": 20,
+        "misses": 20,
+        "total_lookups": 100,
+        "hit_rate": 0.8,
+        "exact_hit_rate": 0.6,
+        "semantic_hit_rate": 0.2,
+        "sets": 80,
+        "errors": 0,
+        "avg_latency_ms": 5.0,
+        "p50_latency_ms": 3.0,
+        "p90_latency_ms": 8.0,
+        "p99_latency_ms": 12.0,
+        "error_rate": 0.0,
+        "latency_sample_size": 100,
+    }
+    with patch("app.cache.redis_client.get_cache_metrics", return_value=fake_metrics):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.get("/api/rag/analytics/cache")
     assert resp.status_code == 200
     data = resp.json()
-    assert data["hitRate"] == 80.0
-    assert data["saves"] == 80
+    # New response format uses snake_case
+    assert data["hit_rate"] == 0.8
+    assert data["sets"] == 80
+    assert data["exact_hits"] == 60
+    assert data["semantic_hits"] == 20

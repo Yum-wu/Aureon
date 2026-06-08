@@ -13,7 +13,7 @@ from app.knowledge import (
     get_export_records,
 )
 
-router = APIRouter(prefix="/api/knowledge", tags=["Knowledge Intelligence"])
+router = APIRouter(tags=["Knowledge Intelligence"])
 
 
 # ── Document Version Control Endpoints ──

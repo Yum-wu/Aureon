@@ -8,7 +8,8 @@
       "benchmark": "Architecture",
       "admin": "Admin",
       "architecture": "Architecture",
-      "crew": "Content Studio"
+      "crew": "Content Studio",
+      "portfolio": "Portfolio"
     },
     "badges": {
       "recall": "Recall",
@@ -349,6 +350,20 @@
       "cost_per_query": "Cost/Query",
       "retrieval_latency": "Retrieval Latency"
     }
+  },
+  "portfolio": {
+    "hero": {
+      "title": "Enterprise AI Knowledge Base Platform",
+      "subtitle": "Production-grade RAG with verified benchmarks. 96.5% Recall, real-time streaming, enterprise-ready."
+    },
+    "metrics": {
+      "recall": "Recall@3",
+      "mrr": "MRR",
+      "ndcg": "nDCG@10",
+      "ws": "WebSocket"
+    },
+    "techStack": "Technology Stack",
+    "viewBenchmark": "View Full Benchmark Results"
   },
   "login": {
     "email": "Email",

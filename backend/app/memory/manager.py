@@ -118,10 +118,9 @@ class MemoryManager:
                             logger.error(f"Auto-finalize failed for {sid}: {e}")
                         self._sessions.pop(sid, None)
             except asyncio.CancelledError:
-                logger.info("Background cleanup task cancelled — restarting")
-                # Restart task instead of exiting
-                self._scenario_task = asyncio.create_task(self._periodic_cleanup())
-                return
+                logger.info("Background cleanup task cancelled — allowing graceful shutdown")
+                # Let CancelledError propagate for clean shutdown
+                raise
             except Exception as e:
                 logger.error(f"Periodic cleanup error: {e}")
 

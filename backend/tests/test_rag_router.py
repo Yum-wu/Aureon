@@ -126,6 +126,7 @@ async def test_upload_requires_api_key_when_configured():
          patch("app.routers.rag.os.path.join", return_value="/tmp/test.md"), \
          patch("builtins.open", MagicMock()):
         mock_settings.llm_api_key = "test-key"
+        mock_settings.api_auth_key = None  # Skip API key auth in test
         mock_index.return_value = {
             "status": "ok",
             "chunks_created": 1,

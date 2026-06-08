@@ -11,4 +11,4 @@ sed -i "s/listen 80;/listen ${NGINX_PORT};/" /etc/nginx/conf.d/default.conf
 nginx
 
 # 以非 root 用户运行 uvicorn（安全最佳实践）
-exec gosu appuser uvicorn app.main:app --host 127.0.0.1 --port 8000
+exec gosu appuser uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 4

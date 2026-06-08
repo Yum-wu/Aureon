@@ -1,4 +1,6 @@
 """Observability Layer - Query Trace 和 Distributed Tracing"""
+import asyncio
+import json
 import time
 import uuid
 from datetime import datetime, timezone
@@ -35,8 +37,9 @@ class QueryTrace(BaseModel):
 class QueryTracer:
     """查询追踪器"""
 
-    def __init__(self, request_id: str, session_id: Optional[str] = None):
+    def __init__(self, request_id: str, query: str = "", session_id: Optional[str] = None):
         self.request_id = request_id
+        self.query = query
         self.session_id = session_id
         self.start_time = time.time()
         self.retrieval_start = None
@@ -110,6 +113,7 @@ class QueryTracer:
         return QueryTrace(
             request_id=self.request_id,
             session_id=self.session_id,
+            query=self.query,
             retrieval_latency_ms=retrieval_latency,
             rerank_latency_ms=rerank_latency,
             llm_latency_ms=llm_latency,
@@ -123,6 +127,57 @@ class QueryTracer:
             status="completed",
             created_at=datetime.now(timezone.utc).isoformat(),
         )
+
+    def record(self) -> QueryTrace:
+        """Build the trace, persist to SQLite, and asynchronously
+        write to PostgreSQL when the PG adapter is available.
+
+        Returns the built :class:`QueryTrace`.
+        """
+        trace = self.build_trace()
+
+        # 1. Synchronous SQLite persist (always available)
+        try:
+            save_query_trace(trace)
+        except Exception as exc:
+            logger.warning("sqlite_trace_save_failed", error=str(exc))
+
+        # 2. Best-effort async PG write
+        try:
+            from app.memory.pg import insert_query_trace  # noqa: WPS433
+
+            pg_data: dict = {
+                "request_id": trace.request_id,
+                "session_id": trace.session_id,
+                "user_id": trace.user_id,
+                "workspace_id": trace.workspace_id,
+                "query": trace.query,
+                "latency_ms": trace.total_latency_ms,
+                "cache_hit": trace.cache_hit,
+                "retrieval_latency_ms": trace.retrieval_latency_ms,
+                "rerank_latency_ms": trace.rerank_latency_ms,
+                "llm_latency_ms": trace.llm_latency_ms,
+                "total_chunks": len(trace.retrieved_documents),
+                "reranked_chunks": len(trace.cited_documents),
+            }
+            loop = asyncio.get_running_loop()
+            loop.create_task(_safe_pg_insert(pg_data))
+        except RuntimeError:
+            # No running event-loop (e.g. called from a sync context)
+            logger.debug("pg_write_skipped_no_event_loop")
+        except Exception as exc:
+            logger.warning("pg_trace_write_failed", error=str(exc))
+
+        return trace
+
+
+async def _safe_pg_insert(trace_data: dict) -> None:
+    """Best-effort async insert into PostgreSQL query_traces table."""
+    try:
+        from app.memory.pg import insert_query_trace  # noqa: WPS433
+        await insert_query_trace(trace_data)
+    except Exception as exc:
+        logger.warning("pg_trace_insert_failed", error=str(exc))
 
 
 def init_query_traces_table():

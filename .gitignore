@@ -71,3 +71,4 @@ docker-compose.override.yml
 # Vector index (rebuilt on startup via DashScope API)
 backend/data/vectors/
 backend/data/chroma.sqlite3
+backend/nul

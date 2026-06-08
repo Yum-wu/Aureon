@@ -1,16 +1,16 @@
 """RAG router -- extracted from main.py.
 
 Routes:
-  POST /api/rag/query           -- RAG query with Redis cache
-  POST /api/rag/query/stream    -- Streaming RAG query (SSE)
-  POST /api/rag/index           -- Re-index all articles
-  POST /api/rag/upload          -- Upload document and index
-  GET  /api/rag/uploads         -- List uploaded files
-  DELETE /api/rag/upload/{fn}   -- Delete uploaded file
-  POST /api/rag/evaluate        -- Run RAG evaluation
-  POST /api/rag/experiment      -- Run prompt experiment
-  GET  /api/rag/health          -- RAG health check
-  GET  /api/rag/benchmark       -- Benchmark results
+  POST /query           -- RAG query with Redis cache
+  POST /query/stream    -- Streaming RAG query (SSE)
+  POST /index           -- Re-index all articles
+  POST /upload          -- Upload document and index
+  GET  /uploads         -- List uploaded files
+  DELETE /upload/{fn}   -- Delete uploaded file
+  POST /evaluate        -- Run RAG evaluation
+  POST /experiment      -- Run prompt experiment
+  GET  /health          -- RAG health check
+  GET  /benchmark       -- Benchmark results
 """
 
 import asyncio
@@ -20,7 +20,7 @@ import os
 import sys
 import time
 
-from fastapi import APIRouter, Request, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, Request, UploadFile, File, Form, Depends
 from fastapi.responses import StreamingResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -31,6 +31,14 @@ from app.api.rag_stats import record_query
 from app.config import settings
 from app.dependencies import get_redis_or_none
 from app.common import SSE_HEADERS, sse_event
+from app.exceptions import (
+    LLMServiceError,
+    AuthenticationError,
+    AuthorizationError,
+    NotFoundError,
+    AureonException,
+)
+from app.security import UserRole, require_role
 from app.rag.models import (
     RAGQueryRequest,
     RAGQueryResponse,
@@ -48,6 +56,8 @@ from app.rag.evaluator import run_full_evaluation
 from app.rag.prompt_experiment import run_experiment, STRATEGIES
 from app.rag.test_data import TEST_QA_PAIRS
 from app.rag.vector_store import retrieve
+from app.audit.decorator import audit_action
+from app.multi_tenant.middleware import get_current_tenant_id
 
 logger = structlog.get_logger()
 
@@ -58,7 +68,7 @@ limiter = Limiter(key_func=get_remote_address)
 def _validate_filename(filename: str) -> str:
     """Validate filename for path traversal attacks."""
     if ".." in filename or "/" in filename or "\\" in filename:
-        raise HTTPException(status_code=400, detail="Invalid filename")
+        raise AureonException(status_code=400, detail="Invalid filename")
     return filename
 
 # Module constants for data paths
@@ -85,7 +95,7 @@ async def _ensure_index_ready() -> bool:
     return False
 
 
-@router.post("/api/rag/query", response_model=RAGQueryResponse)
+@router.post("/query", response_model=RAGQueryResponse)
 @limiter.limit("2/second")
 async def rag_query_endpoint(req: RAGQueryRequest, request: Request):
     """RAG query: retrieve context + generate answer (with Redis cache)."""
@@ -94,8 +104,7 @@ async def rag_query_endpoint(req: RAGQueryRequest, request: Request):
 
     # Check if LLM API key is configured
     if not settings.llm_api_key and not settings.fallback_api_key:
-        raise HTTPException(
-            status_code=503,
+        raise LLMServiceError(
             detail="LLM API key not configured. Please set LLM_API_KEY or FALLBACK_API_KEY environment variable."
         )
 
@@ -110,7 +119,7 @@ async def rag_query_endpoint(req: RAGQueryRequest, request: Request):
             return response.content
         except Exception as e:
             logger.error("LLM invoke failed: %s", e)
-            raise HTTPException(status_code=502, detail=f"LLM service error: {str(e)[:100]}")
+            raise LLMServiceError(detail=f"LLM service error: {str(e)[:100]}")
 
     start_time = time.time()
     try:
@@ -118,11 +127,11 @@ async def rag_query_endpoint(req: RAGQueryRequest, request: Request):
             req.query, _llm_call, top_k=req.top_k, use_mmr=req.use_mmr,
             filter_lang=req.language,
         )
-    except HTTPException:
+    except AureonException:
         raise
     except Exception as e:
         logger.error("rag_query_with_cache failed: %s", e)
-        raise HTTPException(status_code=500, detail=f"Query processing error: {str(e)[:100]}")
+        raise AureonException(status_code=500, detail=f"Query processing error: {str(e)[:100]}")
     latency_ms = int((time.time() - start_time) * 1000)
     # Record query for Dashboard stats (fire-and-forget with error handling)
     try:
@@ -132,17 +141,20 @@ async def rag_query_endpoint(req: RAGQueryRequest, request: Request):
     return result
 
 
-@router.post("/api/rag/query/async", response_model=RAGQueryResponse)
+@router.post("/query/async", response_model=RAGQueryResponse)
 @limiter.limit("2/second")
 async def rag_query_async_endpoint(req: RAGQueryRequest, request: Request):
     """Async RAG query with parallel BM25 + vector retrieval."""
+    import uuid
     from app.agent.llm import create_llm
 
     if not settings.llm_api_key and not settings.fallback_api_key:
-        raise HTTPException(
-            status_code=503,
+        raise LLMServiceError(
             detail="LLM API key not configured. Please set LLM_API_KEY or FALLBACK_API_KEY environment variable."
         )
+
+    # Generate request_id for tracing
+    request_id = str(uuid.uuid4())[:8]
 
     llm = create_llm(model=req.model, streaming=False)
 
@@ -155,11 +167,12 @@ async def rag_query_async_endpoint(req: RAGQueryRequest, request: Request):
         top_k=req.top_k or 3,
         lang=None,  # 让 rag_query_async 自动检测语言
         filter_lang=req.language,
+        request_id=request_id,
     )
     return result
 
 
-@router.post("/api/rag/query/stream")
+@router.post("/query/stream")
 @limiter.limit("2/second")
 async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
     """Streaming RAG: buffered SSE + Redis cache layer."""
@@ -169,8 +182,7 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
 
     # Check if LLM API key is configured
     if not settings.llm_api_key and not settings.fallback_api_key:
-        raise HTTPException(
-            status_code=503,
+        raise LLMServiceError(
             detail="LLM API key not configured. Please set LLM_API_KEY or FALLBACK_API_KEY environment variable."
         )
 
@@ -215,10 +227,14 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
             yield {"type": "text", "content": buf}
 
     async def event_stream():
+        import uuid
         start_time = time.time()
         sources_count = 0
         input_tokens = 0
         output_tokens = 0
+        # Generate request_id for tracing
+        request_id = str(uuid.uuid4())[:8]
+        
         # 1. Try Redis cache hit (JSON format with sources)
         cached = await get_cached(req.query)
         if cached is not None:
@@ -237,6 +253,7 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
             except (json.JSONDecodeError, TypeError):
                 answer_text = cached
                 cached_sources = []
+            yield sse_event({'type': 'request_id', 'request_id': request_id})
             yield sse_event({'type': 'sources', 'sources': cached_sources})
             yield sse_event({'type': 'text', 'content': answer_text})
             yield sse_event({'type': 'cache_hit'})
@@ -255,6 +272,10 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
         # 2. Stream with buffering, auto-cache full answer on completion
         full_text = ""
         sources_data = []
+        
+        # Emit request_id event for tracing
+        yield sse_event({'type': 'request_id', 'request_id': request_id})
+        
         try:
             raw_gen = rag_query_astream(
                 req.query, llm, top_k=req.top_k, use_mmr=req.use_mmr,
@@ -270,6 +291,9 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
                 yield sse_event(event)
         except Exception as e:
             yield sse_event({'type': 'error', 'content': str(e)})
+        else:
+            # Send done event only if stream completed normally (not on disconnect)
+            yield sse_event({'type': 'done'})
         finally:
             # 3. Cache as JSON (answer + sources) for cross-endpoint compatibility
             from app.rag.vector_store import _kw_docs as _bm25_docs
@@ -283,7 +307,6 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
                 req.query, sources_count, latency_ms,
                 input_tokens=input_tokens, output_tokens=output_tokens
             ))
-            yield sse_event({'type': 'done'})
 
     return StreamingResponse(
         event_stream(),
@@ -292,20 +315,31 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
     )
 
 
-@router.post("/api/rag/index", response_model=RAGIndexResponse)
+@router.post("/index", response_model=RAGIndexResponse)
 @limiter.limit("1/second")
-async def rag_index_endpoint(request: Request):
+@audit_action("index", "index")
+async def rag_index_endpoint(request: Request, user=Depends(require_role(UserRole.EDITOR))):
     """Re-index all articles into Chroma + clear caches + rebuild BM25.
 
+    Requires EDITOR role or higher.
     When Contextual Retrieval is enabled (default), each chunk gets an
     LLM-generated context prefix before embedding.
     """
     from app.agent.llm import create_llm
 
+    # Get tenant_id from current context
+    tenant_id = get_current_tenant_id()
+
     llm = create_llm(temperature=0.0, streaming=False)
     llm_call_fn = lambda msgs: llm.invoke(msgs).content
 
     result = run_index_pipeline(ARTICLES_DIR, llm_call_fn=llm_call_fn, enable_contextual=True)
+
+    # Add tenant_id to result metadata if available
+    if result.get("metadata"):
+        result["metadata"]["tenant_id"] = tenant_id
+    elif result.get("status") == "success":
+        result["metadata"] = {"tenant_id": tenant_id}
 
     # Clear all caches so fresh results are served
     from app.cache.redis_client import clear_cache_by_prefix, _mem_cache
@@ -319,7 +353,7 @@ async def rag_index_endpoint(request: Request):
     return result
 
 
-@router.get("/api/rag/index/status")
+@router.get("/index/status")
 async def rag_index_status():
     """Check index health: file count vs indexed count, staleness."""
     from app.rag.vector_store import check_index_stale, get_collection_stats
@@ -340,12 +374,15 @@ async def rag_index_status():
     }
 
 
-@router.post("/api/rag/upload", response_model=RAGUploadResponse)
+@router.post("/upload", response_model=RAGUploadResponse)
+@audit_action("upload", "document")
 async def rag_upload_endpoint(
     file: UploadFile = File(...),
     language: str = Form(None),
     title: str = Form(None),
     api_key: str = Form(None),
+    request: Request = None,
+    user=Depends(require_role(UserRole.EDITOR)),
 ):
     """Upload a document (.md, .txt, .pdf, .docx, .xlsx) and incrementally index it.
 
@@ -355,19 +392,19 @@ async def rag_upload_endpoint(
         title: 文档标题，可选
         api_key: API Key（用于博客同步认证），可选
     """
+    # Get tenant_id from current context
+    tenant_id = get_current_tenant_id()
+
     # 验证 API Key（如果配置了）
     expected_key = os.getenv("BLOG_SYNC_API_KEY")
     if expected_key and api_key != expected_key:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid API key"
-        )
+        raise AuthenticationError("Invalid API key")
 
     import shutil
 
     # Validate filename
     if not file.filename:
-        raise HTTPException(status_code=400, detail="No filename")
+        raise AureonException(status_code=400, detail="No filename")
 
     # Security: prevent path traversal
     _validate_filename(file.filename)
@@ -379,7 +416,7 @@ async def rag_upload_endpoint(
     allowed = {".md", ".txt", ".pdf", ".docx", ".xlsx"}
     ext = os.path.splitext(safe_filename)[1].lower()
     if ext not in allowed:
-        raise HTTPException(
+        raise AureonException(
             status_code=400,
             detail=f"Unsupported format: {ext}, only {', '.join(allowed)}",
         )
@@ -392,11 +429,13 @@ async def rag_upload_endpoint(
     try:
         content = await file.read()
         if len(content) > MAX_UPLOAD_BYTES:
-            raise HTTPException(status_code=413, detail=f"File too large (max {MAX_UPLOAD_BYTES // 1024 // 1024}MB)")
+            raise AureonException(status_code=413, detail=f"File too large (max {MAX_UPLOAD_BYTES // 1024 // 1024}MB)")
         with open(dest, "wb") as f:
             f.write(content)
+    except AureonException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"File save failed: {str(e)}")
+        raise AureonException(status_code=500, detail=f"File save failed: {str(e)}")
 
     # Incremental index
     result = run_incremental_index(dest)
@@ -407,15 +446,22 @@ async def rag_upload_endpoint(
     if title and result.get("metadata"):
         result["metadata"]["title"] = title
 
+    # Add tenant_id to metadata
+    if result.get("metadata"):
+        result["metadata"]["tenant_id"] = tenant_id
+    elif result.get("status") == "success":
+        # If metadata doesn't exist but upload was successful, create it
+        result["metadata"] = {"tenant_id": tenant_id}
+
     if result["status"] == "error":
-        raise HTTPException(
+        raise AureonException(
             status_code=500, detail=result.get("message", "Index failed")
         )
 
     return result
 
 
-@router.get("/api/rag/uploads")
+@router.get("/uploads")
 async def rag_list_uploads():
     """List all uploaded files in the uploads directory."""
     if not os.path.isdir(UPLOADS_DIR):
@@ -434,7 +480,7 @@ async def rag_list_uploads():
     return {"files": files}
 
 
-@router.delete("/api/rag/upload/{filename}", response_model=StatusResponse)
+@router.delete("/upload/{filename}", response_model=StatusResponse)
 async def rag_delete_upload(filename: str):
     """Delete an uploaded file and its chunks from the index."""
     # Security: prevent path traversal
@@ -457,7 +503,7 @@ async def rag_delete_upload(filename: str):
     return StatusResponse(status="deleted", session_id=filename)
 
 
-@router.post("/api/rag/evaluate")
+@router.post("/evaluate")
 async def rag_evaluate_endpoint():
     """Run full RAG evaluation: Recall@k, Faithfulness, Latency."""
     from app.agent.llm import create_llm
@@ -479,7 +525,7 @@ async def rag_evaluate_endpoint():
     return result
 
 
-@router.post("/api/rag/experiment")
+@router.post("/experiment")
 async def rag_experiment_endpoint():
     """Run prompt strategy experiment on test dataset."""
     from app.agent.llm import create_llm
@@ -498,7 +544,7 @@ async def rag_experiment_endpoint():
     return result
 
 
-@router.get("/api/rag/health")
+@router.get("/health")
 async def rag_health():
     """RAG system health + live service status."""
     from app.rag.vector_store import get_bm25_stats, _skip_local_embed
@@ -540,7 +586,7 @@ async def rag_health():
     }
 
 
-@router.get("/api/rag/benchmark")
+@router.get("/benchmark")
 async def rag_benchmark():
     """Latest RAG evaluation benchmark results."""
     benchmark_path = os.path.join(
@@ -552,7 +598,7 @@ async def rag_benchmark():
         return json.load(f)
 
 
-@router.post("/api/rag/cache/clear")
+@router.post("/cache/clear")
 async def rag_cache_clear():
     """Clear all RAG query caches (Redis + in-memory)."""
     from app.cache.redis_client import clear_cache_by_prefix, _mem_cache
@@ -561,7 +607,7 @@ async def rag_cache_clear():
     return {"status": "ok", "cleared_keys": cleared}
 
 
-@router.get("/api/rag/suggestions")
+@router.get("/suggestions")
 async def get_suggestions():
     """Return suggested queries based on knowledge base topics."""
     suggestions = [

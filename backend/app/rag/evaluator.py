@@ -11,6 +11,24 @@ from typing import Callable, List, Dict, Any
 from app.rag.test_data import TEST_QA_PAIRS, RETRIEVAL_EXPECTED
 from app.rag.models import RAGQueryResponse
 
+try:
+    from ragas import evaluate as ragas_evaluate
+    from ragas.metrics import faithfulness, answer_relevancy, context_precision
+    RAGAS_AVAILABLE = True
+except ImportError:
+    RAGAS_AVAILABLE = False
+    # Provide fallback functions
+    def ragas_evaluate(*args, **kwargs):
+        raise ImportError("ragas is not installed. Install it with: pip install ragas")
+    class _FallbackMetric:
+        def __init__(self, name):
+            self.name = name
+        def __call__(self, *args, **kwargs):
+            raise ImportError(f"ragas is not installed. Cannot compute {self.name}")
+    faithfulness = _FallbackMetric("faithfulness")
+    answer_relevancy = _FallbackMetric("answer_relevancy")
+    context_precision = _FallbackMetric("context_precision")
+
 
 # ── Recall@k ──
 
@@ -174,6 +192,81 @@ def evaluate_latency(
     }
 
 
+# ── RAGAS Evaluation ──
+
+def evaluate_faithfulness_ragas(
+    query: str,
+    answer: str,
+    contexts: List[str],
+) -> Dict[str, Any]:
+    """Evaluate faithfulness using RAGAS metric."""
+    if not RAGAS_AVAILABLE:
+        return {"metric": "Faithfulness (RAGAS)", "error": "ragas not installed", "score": None}
+    # Build dataset for ragas
+    from datasets import Dataset
+    data = {
+        "question": [query],
+        "answer": [answer],
+        "contexts": [contexts],
+    }
+    dataset = Dataset.from_dict(data)
+    result = ragas_evaluate(dataset, metrics=[faithfulness])
+    score = result["faithfulness"][0]
+    return {
+        "metric": "Faithfulness (RAGAS)",
+        "score": score,
+        "query": query[:60],
+        "answer": answer[:200],
+    }
+
+def evaluate_answer_relevance_ragas(
+    query: str,
+    answer: str,
+    contexts: List[str],
+) -> Dict[str, Any]:
+    """Evaluate answer relevance using RAGAS metric."""
+    if not RAGAS_AVAILABLE:
+        return {"metric": "Answer Relevancy (RAGAS)", "error": "ragas not installed", "score": None}
+    from datasets import Dataset
+    data = {
+        "question": [query],
+        "answer": [answer],
+        "contexts": [contexts],
+    }
+    dataset = Dataset.from_dict(data)
+    result = ragas_evaluate(dataset, metrics=[answer_relevancy])
+    score = result["answer_relevancy"][0]
+    return {
+        "metric": "Answer Relevancy (RAGAS)",
+        "score": score,
+        "query": query[:60],
+        "answer": answer[:200],
+    }
+
+def evaluate_context_precision_ragas(
+    query: str,
+    contexts: List[str],
+    ground_truth: str,
+) -> Dict[str, Any]:
+    """Evaluate context precision using RAGAS metric."""
+    if not RAGAS_AVAILABLE:
+        return {"metric": "Context Precision (RAGAS)", "error": "ragas not installed", "score": None}
+    from datasets import Dataset
+    data = {
+        "question": [query],
+        "contexts": [contexts],
+        "ground_truth": [ground_truth],
+    }
+    dataset = Dataset.from_dict(data)
+    result = ragas_evaluate(dataset, metrics=[context_precision])
+    score = result["context_precision"][0]
+    return {
+        "metric": "Context Precision (RAGAS)",
+        "score": score,
+        "query": query[:60],
+        "ground_truth": ground_truth[:200],
+    }
+
 # ── Full suite ──
 
 def run_full_evaluation(
@@ -188,4 +281,66 @@ def run_full_evaluation(
         "recall": evaluate_recall(retrieve_fn, k=recall_k),
         "faithfulness": evaluate_faithfulness(rag_query_fn, llm),
         "latency": evaluate_latency(rag_query_fn, num_runs=latency_runs),
+    }
+
+
+def run_ragas_evaluation(
+    rag_query_fn: Callable,
+    qa_pairs: List[Dict] = None,
+    metrics: List[str] = None,
+) -> Dict[str, Any]:
+    """Run RAGAS evaluation on QA pairs."""
+    if not RAGAS_AVAILABLE:
+        return {"metric": "RAGAS", "error": "ragas not installed"}
+    
+    pairs = qa_pairs or TEST_QA_PAIRS
+    metrics = metrics or ["faithfulness", "answer_relevancy", "context_precision"]
+    
+    all_results = {metric: [] for metric in metrics}
+    details = []
+    
+    for qa in pairs:
+        q = qa["question"]
+        expected = qa["answer"]
+        
+        result: RAGQueryResponse = rag_query_fn(q)
+        if not result.sources:
+            continue
+        
+        contexts = [s.chunk for s in result.sources]
+        answer = result.answer
+        
+        # Evaluate each metric
+        for metric in metrics:
+            if metric == "faithfulness":
+                eval_result = evaluate_faithfulness_ragas(q, answer, contexts)
+            elif metric == "answer_relevancy":
+                eval_result = evaluate_answer_relevance_ragas(q, answer, contexts)
+            elif metric == "context_precision":
+                eval_result = evaluate_context_precision_ragas(q, contexts, expected)
+            else:
+                continue
+            
+            if eval_result.get("score") is not None:
+                all_results[metric].append(eval_result["score"])
+        
+        details.append({
+            "question": q[:60],
+            "answer": answer[:200],
+            "num_sources": len(contexts),
+        })
+    
+    # Calculate averages
+    avg_results = {}
+    for metric, scores in all_results.items():
+        avg = statistics.mean(scores) if scores else 0.0
+        avg_results[metric] = {
+            "average_score": round(avg, 4),
+            "num_samples": len(scores),
+        }
+    
+    return {
+        "metric": "RAGAS",
+        "metrics": avg_results,
+        "details": details[:5],  # Limit details for brevity
     }

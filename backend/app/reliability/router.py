@@ -5,6 +5,7 @@ from app.reliability import (
     BackupRecord,
     IncidentRecord,
     SLOConfig,
+    CircuitBreaker,
     create_backup_record,
     complete_backup,
     get_recent_backups,
@@ -14,6 +15,9 @@ from app.reliability import (
     create_slo_config,
     get_slo_configs,
     get_slo_status,
+    get_circuit_breaker,
+    get_all_circuit_breakers,
+    reset_all_circuit_breakers,
 )
 
 router = APIRouter(prefix="/api/reliability", tags=["Reliability"])
@@ -85,3 +89,38 @@ async def list_slo_configs():
 async def slo_status():
     """获取 SLO 状态"""
     return {"slos": get_slo_status()}
+
+
+# ── Circuit Breaker Endpoints ──
+
+@router.get("/circuit-breakers")
+async def list_circuit_breakers():
+    """获取所有断路器状态"""
+    breakers = get_all_circuit_breakers()
+    return {
+        "circuit_breakers": {
+            name: breaker.stats for name, breaker in breakers.items()
+        }
+    }
+
+
+@router.get("/circuit-breakers/{name}")
+async def get_circuit_breaker_status(name: str):
+    """获取指定断路器状态"""
+    breaker = get_circuit_breaker(name)
+    return breaker.stats
+
+
+@router.post("/circuit-breakers/{name}/reset")
+async def reset_circuit_breaker_endpoint(name: str):
+    """重置指定断路器"""
+    breaker = get_circuit_breaker(name)
+    await breaker.reset()
+    return {"status": "reset", "name": name}
+
+
+@router.post("/circuit-breakers/reset-all")
+async def reset_all_circuit_breakers_endpoint():
+    """重置所有断路器"""
+    reset_all_circuit_breakers()
+    return {"status": "all_reset"}
