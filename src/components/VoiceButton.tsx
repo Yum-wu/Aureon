@@ -3,7 +3,6 @@
  * Shows recording state with animated indicator.
  */
 
-import React from 'react';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 
 interface VoiceButtonProps {
