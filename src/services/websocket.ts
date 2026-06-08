@@ -59,7 +59,12 @@ export class AureonWebSocket {
    */
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
-      const wsUrl = `ws://localhost:8000/ws/chat/${this.clientId}`;
+      const isSecure = window.location.protocol === 'https:';
+      const wsProtocol = isSecure ? 'wss:' : 'ws:';
+      const wsHost = isSecure
+        ? window.location.host
+        : 'localhost:8000';
+      const wsUrl = `${wsProtocol}//${wsHost}/ws/chat/${this.clientId}`;
 
       this.ws = new WebSocket(wsUrl);
 
