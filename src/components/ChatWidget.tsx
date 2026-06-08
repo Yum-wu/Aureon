@@ -11,7 +11,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { VoiceButton } from './VoiceButton';
-import type { SourceItem } from '../services/websocket';
 
 interface ChatWidgetProps {
   clientId?: string;
