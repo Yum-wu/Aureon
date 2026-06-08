@@ -707,18 +707,46 @@ Reference documents:
 """
 
 
+# ── Query type adaptive instructions ──
+_QUERY_TYPE_INSTRUCTIONS = {
+    "factual": {
+        "zh": "给出明确的事实答案（时间、名称、数字）。一句话回答即可。",
+        "en": "Give a clear factual answer (dates, names, numbers). One sentence is sufficient.",
+    },
+    "comparison": {
+        "zh": "用表格或并列结构对比各项差异。每个维度直接回应用户关心的方面。",
+        "en": "Use a table or parallel structure to compare differences. Each dimension should directly address what the user cares about.",
+    },
+    "how_to": {
+        "zh": "给出清晰的步骤列表。每步操作直接可执行。",
+        "en": "Provide a clear step-by-step list. Each step should be directly actionable.",
+    },
+    "reasoning": {
+        "zh": "给出推理过程和结论。每个推理步骤都要有文档依据。",
+        "en": "Provide reasoning process and conclusion. Each reasoning step should have document evidence.",
+    },
+}
+
+
 def generate_answer(
     query: str,
     context: str,
     llm_call_fn,
     system_prompt: str = None,
     lang: str = "zh",
+    query_type: str = None,
 ) -> str:
     """Call LLM with context and query. Return generated answer."""
     if system_prompt is None:
         system_prompt = QA_SYSTEM_PROMPT_EN if lang == "en" else QA_SYSTEM_PROMPT
     lang_instr = lang_instruction(lang).strip()
-    prompt = system_prompt.format(context=context, lang_instruction=lang_instr)
+
+    # Inject query type instruction if available
+    type_instruction = ""
+    if query_type and query_type in _QUERY_TYPE_INSTRUCTIONS:
+        type_instruction = "\n" + _QUERY_TYPE_INSTRUCTIONS[query_type].get(lang, "")
+
+    prompt = system_prompt.format(context=context, lang_instruction=lang_instr + type_instruction)
     messages = [
         {"role": "system", "content": prompt},
         {"role": "user", "content": query},
