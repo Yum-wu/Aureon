@@ -23,7 +23,7 @@ export function FeatureGrid() {
       icon: '01',
       title: t('landing.features.0.title'),
       description: t('landing.features.0.desc'),
-      metric: `${fmtVal(recallVal, '95.1%')} recall`,
+      metric: `${fmtVal(recallVal, '96.5%')} recall`,
     },
     {
       icon: '02',
@@ -41,19 +41,19 @@ export function FeatureGrid() {
       icon: '04',
       title: t('landing.features.3.title'),
       description: t('landing.features.3.desc'),
-      metric: '97 QA pairs',
+      metric: '192 QA pairs',
     },
     {
       icon: '05',
       title: t('landing.features.4.title'),
       description: t('landing.features.5.desc'),
-      metric: '26 articles / 476 chunks',
+      metric: '26 articles / 191 chunks',
     },
     {
       icon: '06',
       title: t('landing.features.5.title'),
       description: t('landing.features.5.desc'),
-      metric: `${fmtVal(latencyVal, '5.8ms')} latency`,
+      metric: `${fmtVal(latencyVal, '156ms')} latency`,
     },
   ];
 

@@ -22,8 +22,8 @@ export function Architecture() {
   };
 
   const metrics = [
-    { label: 'Recall@3 (Hybrid)', value: fmtVal(recallVal, '95.1%') },
-    { label: 'Retrieval Latency', value: fmtVal(latencyVal, '5.8ms') },
+    { label: 'Recall@3 (Hybrid)', value: fmtVal(recallVal, '96.5%') },
+    { label: 'Retrieval Latency', value: fmtVal(latencyVal, '156ms') },
     { label: 'TTFT', value: fmtVal(ttftVal, '~310ms') },
   ];
 

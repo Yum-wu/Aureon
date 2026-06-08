@@ -1,69 +1,69 @@
 {
-  "timestamp": "2026-06-07T01:27:25",
-  "qa_pairs": 97,
+  "timestamp": "2026-06-08T19:05:58",
+  "qa_pairs": 192,
   "results": [
     {
       "concurrency": 1,
-      "total_queries": 97,
-      "total_time_ms": 47756.7,
-      "qps": 2.0,
-      "recall": 97.6,
-      "hit_rate": 82.5,
+      "total_queries": 192,
+      "total_time_ms": 41358.7,
+      "qps": 4.6,
+      "recall": 96.5,
+      "hit_rate": 86.5,
       "latency": {
-        "mean_ms": 491.8,
-        "p50_ms": 180.3,
-        "p90_ms": 213.5,
-        "p99_ms": 30680.7,
-        "min_ms": 33.2,
-        "max_ms": 30680.7
+        "mean_ms": 215.3,
+        "p50_ms": 150.8,
+        "p90_ms": 160.6,
+        "p99_ms": 177.6,
+        "min_ms": 124.8,
+        "max_ms": 12654.9
       }
     },
     {
       "concurrency": 5,
-      "total_queries": 97,
-      "total_time_ms": 15834.9,
-      "qps": 6.1,
-      "recall": 97.6,
-      "hit_rate": 82.5,
+      "total_queries": 192,
+      "total_time_ms": 20283.6,
+      "qps": 9.5,
+      "recall": 96.5,
+      "hit_rate": 86.5,
       "latency": {
-        "mean_ms": 692.3,
-        "p50_ms": 707.3,
-        "p90_ms": 855.0,
-        "p99_ms": 940.7,
-        "min_ms": 299.8,
-        "max_ms": 940.7
+        "mean_ms": 525.8,
+        "p50_ms": 512.6,
+        "p90_ms": 603.3,
+        "p99_ms": 775.3,
+        "min_ms": 351.0,
+        "max_ms": 830.8
       }
     },
     {
       "concurrency": 10,
-      "total_queries": 97,
-      "total_time_ms": 16353.3,
-      "qps": 5.9,
-      "recall": 97.6,
-      "hit_rate": 82.5,
+      "total_queries": 192,
+      "total_time_ms": 19962.5,
+      "qps": 9.6,
+      "recall": 96.5,
+      "hit_rate": 86.5,
       "latency": {
-        "mean_ms": 1302.7,
-        "p50_ms": 1338.7,
-        "p90_ms": 1663.6,
-        "p99_ms": 1822.0,
-        "min_ms": 456.8,
-        "max_ms": 1822.0
+        "mean_ms": 1028.5,
+        "p50_ms": 987.4,
+        "p90_ms": 1261.3,
+        "p99_ms": 1526.1,
+        "min_ms": 740.2,
+        "max_ms": 1593.3
       }
     },
     {
       "concurrency": 20,
-      "total_queries": 97,
-      "total_time_ms": 16376.2,
-      "qps": 5.9,
-      "recall": 97.6,
-      "hit_rate": 82.5,
+      "total_queries": 192,
+      "total_time_ms": 20224.1,
+      "qps": 9.5,
+      "recall": 96.5,
+      "hit_rate": 86.5,
       "latency": {
-        "mean_ms": 2176.3,
-        "p50_ms": 2173.9,
-        "p90_ms": 3286.2,
-        "p99_ms": 3830.7,
-        "min_ms": 699.0,
-        "max_ms": 3830.7
+        "mean_ms": 2066.4,
+        "p50_ms": 2005.6,
+        "p90_ms": 2555.7,
+        "p99_ms": 2793.9,
+        "min_ms": 1232.3,
+        "max_ms": 2853.2
       }
     }
   ]

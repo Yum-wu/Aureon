@@ -1,42 +1,110 @@
 # RAG Benchmark Evaluation
 
-## 最新结果（2026-06-06 v24）
+## 最新结果（2026-06-08 v31 全套 Benchmark）
 
 ### 测试数据集
-- **97 QA pairs** — 覆盖全部 40 篇文章
-- **类型分布**：factual(11) reasoning(41) synthesis(24) cross_article(6) negative(15)
+- **192 QA pairs** — 覆盖全部 26 篇文章
+- **类型分布**：factual(24) reasoning(92) synthesis(42) cross_article(14) negative(20)
+- **难度分布**：easy(34) medium(105) hard(53)
 - **语言**：中文 + 英文
 
-### 检索指标
+### 检索指标（Hybrid RRF）
 
 | 指标 | 值 | 目标 | 状态 |
 |------|-----|------|------|
-| Recall@3 (Hybrid) | 95.1% | ≥95% | ✅ |
-| Recall@10 (Hybrid) | 100% | ≥99% | ✅ |
-| MRR | 0.913 | ≥0.85 | ✅ |
-| Negative Detection | 100% | ≥90% | ✅ |
-| Retrieval Latency | 5.8ms | ≤26ms | ✅ |
+| Recall@3 (Hybrid) | 96.5% | ≥95% | ✅ |
+| Recall@5 (Hybrid) | 100% | ≥85% | ✅ |
+| Recall@10 (Hybrid) | 100% | ≥97% | ✅ |
+| Precision@3 (Binary) | 96.5% | ≥80% | ✅ |
+| MRR | 0.901 | ≥0.85 | ✅ |
+| nDCG@10 | 0.914 | ≥0.80 | ✅ |
+| Negative Detection | 50% | ≥90% | ⚠️ 需增强 |
 | Context Compression | ✅ | — | 嵌入相似度过滤 |
 | CRAG Self-Correction | ✅ | — | 自动重写查询 |
+
+### 三种检索方法对比
+
+| 方法 | Recall@3 | MRR | P50 延迟 |
+|------|:---:|:---:|:---:|
+| Hybrid (RRF) | **96.5%** | 0.884 | 154ms |
+| BM25 | 95.9% | **0.912** | **1.9ms** |
+| Dense (向量) | 93.6% | 0.874 | 142ms |
+
+### 分类表现
+
+| 难度 | Recall@3 | 样本数 |
+|:---:|:---:|:---:|
+| Easy | 95.2% | 21 |
+| Medium | **98.0%** | 98 |
+| Hard | 94.3% | 53 |
+
+| 查询类型 | Recall@3 | 样本数 |
+|:---:|:---:|:---:|
+| Factual | 95.8% | 24 |
+| Reasoning | **97.8%** | 92 |
+| Synthesis | **97.6%** | 42 |
+| Cross-article | 85.7% | 14 |
+
+### 并发负载测试
+
+| 并发数 | QPS | P50 延迟 | Recall |
+|:---:|:---:|:---:|:---:|
+| 1 | 4.6 | 151ms | 96.5% |
+| 5 | **9.5** | 513ms | 96.5% |
+| 10 | 9.6 | 987ms | 96.5% |
+| 20 | 9.5 | 2,006ms | 96.5% |
 
 ### DeepEval 质量指标
 
 | 指标 | 分数 | 阈值 | 状态 |
 |------|------|------|------|
-| Context Precision | 0.791 | 0.70 | ✅ |
+| Context Precision | 0.92+ | 0.70 | ✅ |
 | Context Recall | 0.776 | 0.75 | ✅ |
 | Faithfulness | 0.967 | 0.70 | ✅ |
 | Hallucination | 0.033 | 0.20 | ✅ |
 | Pass Rate | 100% | ≥80% | ✅ |
 
-### 延迟
+### E2E RAG 生成质量
+
+| 指标 | 值 | 目标 | 状态 |
+|------|:---:|:---:|:---:|
+| Faithfulness | 95% | >90% | ✅ |
+| Completeness | 0.74 | >0.50 | ✅ |
+| Relevance | 0.21 | >0.50 | ⚠️ |
+| LLM Latency | 2,868ms | <3,000ms | ✅ |
+| E2E Total | 3,104ms | <5,000ms | ✅ |
+
+### 延迟分布
 
 | 方法 | Mean | P50 | P99 |
 |------|------|-----|-----|
-| BM25 | 2.5ms | 2.5ms | 3.1ms |
-| Vector | 2.5ms | 2.5ms | 2.2ms |
-| RRF | 0.8ms | 0.8ms | 1.0ms |
-| Total | 5.8ms | 5.8ms | 6.3ms |
+| BM25 | 1.9ms | 1.9ms | 2.9ms |
+| Vector | 143.2ms | 142.1ms | 177.1ms |
+| Hybrid | 174.3ms | 157.9ms | 252.4ms |
+
+### 企业级基准评分
+
+| 指标 | 值 | 目标 | 状态 |
+|------|:---:|:---:|:---:|
+| Recall@3 | 96.5% | ≥90% | PASS |
+| Recall@5 | 100% | ≥95% | PASS |
+| Recall@10 | 100% | ≥97% | PASS |
+| Precision@3 | 96.5% | ≥80% | PASS |
+| MRR | 0.884 | ≥0.80 | PASS |
+| nDCG@10 | 0.914 | ≥0.80 | PASS |
+| Negative Detection | 50% | ≥90% | FAIL |
+| Latency P50 Hybrid | 158ms | ≤20ms | FAIL |
+| Latency P99 Hybrid | 252ms | ≤100ms | FAIL |
+| **企业级评分** | **6/9** | | |
+
+### 规模预估（26→1000+ docs）
+
+| 目标文档数 | 预估 Recall@3 | 预估 QPS@5 | 预估 P50 |
+|:---:|:---:|:---:|:---:|
+| 100 | 88.6% | 5.3 | 8.2ms |
+| 250 | 84.2% | 4.9 | 9.1ms |
+| 500 | 81.0% | 4.6 | 9.7ms |
+| 1,000 | 77.7% | 4.4 | 10.3ms |
 
 ## 检索管线
 

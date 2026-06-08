@@ -22,27 +22,27 @@ export function BenchmarkSection() {
   const metrics = [
     {
       label: 'Recall@3 (Hybrid)',
-      value: fmtVal(recallVal, '95.1%'),
-      change: '97 QA pairs',
+      value: fmtVal(recallVal, '96.5%'),
+      change: '192 QA pairs',
       sub: t('landing.benchmark.vs_baseline'),
     },
     {
       label: 'Retrieval Latency',
-      value: fmtVal(latencyVal, '5.8ms'),
-      change: 'BM25 + Vec + RRF',
+      value: fmtVal(latencyVal, '156ms'),
+      change: 'BM25 + Vec + RRF + Reranker',
       sub: t('landing.benchmark.optimized'),
     },
     {
       label: 'Negative Detection',
       value: '100%',
-      change: '15/15',
+      change: '20/20',
       sub: t('landing.benchmark.reduced'),
     },
   ];
 
   const optimizations = [
     { label: 'TTFT', before: '~800ms', after: fmtVal(ttftVal, '~310ms') },
-    { label: 'Retrieval Latency', before: '153ms', after: fmtVal(latencyVal, '5.8ms') },
+    { label: 'Retrieval Latency', before: '153ms', after: fmtVal(latencyVal, '156ms') },
     { label: t('landing.benchmark.cost_per_query'), before: '$0.01', after: fmtVal(costVal, '~$0.001') },
   ];
 

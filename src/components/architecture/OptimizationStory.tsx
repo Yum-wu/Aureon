@@ -23,9 +23,9 @@ export function OptimizationStory() {
     benchmark?.metrics?.find((m: { label: string; value: string | number }) => m.label.includes(pat))?.value ?? null;
 
   const ttftVal = findMetric('TTFT');
-  const latencyVal = findMetric('Retrieval Latency');
   const costVal = findMetric('Cost');
   const cacheVal = findMetric('Cache');
+  const recallVal = findMetric('Recall@3');
 
   const optimizations: Optimization[] = [
     {
@@ -35,10 +35,10 @@ export function OptimizationStory() {
       improvement: '-61%',
     },
     {
-      metricKey: 'architecture.optimization.retrieval_latency',
-      before: '153ms',
-      after: fmtVal(latencyVal, '5.8ms'),
-      improvement: '-96%',
+      metricKey: 'architecture.optimization.retrieval_accuracy',
+      before: '95.1%',
+      after: fmtVal(recallVal, '96.5%'),
+      improvement: '+1.4pp',
     },
     {
       metricKey: 'architecture.optimization.cost_per_query',

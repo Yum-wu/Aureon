@@ -29,22 +29,22 @@
 加载 MyBlog Markdown 博文，解析 YAML frontmatter，按章节切片。
 
 ### `app/rag/vector_store.py`
-ChromaDB 初始化、文档索引、持久化管理。
+ChromaDB 初始化、文档索引、持久化管理。支持 BM25 + Vector 混合检索（RRF 融合）。
 
 ### `app/rag/retriever.py`
-相似度检索 + 轻量 MMR 重排序（`_simple_diversity`），支持 top_k 配置。
+混合检索 + Reranker 精排（bge-reranker-v2-m3 cross-encoder），支持 top_k、自适应跳过、多样性重排。
 
 ### `app/rag/qa_chain.py`
 RAG pipeline 主流程：检索 → 拼接上下文 → 调用 LLM 生成 → 返回带来源的答案。
 
 ### `app/rag/evaluator.py`
-RAG 评估模块：Recall@k、Faithfulness（LLM-as-judge 0-10 评分）、延迟统计（p50/p99/mean/min/max）。通过 `run_full_evaluation()` 统一运行。
+RAG 评估模块：Recall@k、MRR、nDCG@10、Faithfulness（LLM-as-judge 0-10 评分）、延迟统计（p50/p99/mean/min/max）。通过 `run_full_evaluation()` 统一运行。
 
 ### `app/rag/prompt_experiment.py`
 Prompt 策略实验框架：三种 System Prompt 模板（Direct / CoT / Few-shot），`run_experiment()` 对同一组问题分别调用并输出对比表格。
 
 ### `app/rag/test_data.py`
-评估数据集：从 `backend/data/articles/` 的 2 篇文章（Hermes Agent 实战 + SPA 部署踩坑实录）标注 16 组 Q&A 对，含 `RETRIEVAL_EXPECTED` 映射用于 Recall 评估。
+评估数据集：从 `backend/data/articles/` 的 26 篇文章标注 192 组 Q&A 对（24 factual + 92 reasoning + 42 synthesis + 14 cross-article + 20 negative），含 `RETRIEVAL_EXPECTED` 映射用于 Recall 评估。
 
 ### `app/rag/models.py`
 Pydantic 请求/响应模型。
@@ -57,42 +57,64 @@ Pydantic 请求/响应模型。
 | POST | /api/rag/evaluate | 运行全量评估（Recall + Faithfulness + 延迟）|
 | POST | /api/rag/experiment | 运行 Prompt 策略对比实验 |
 
-## 评估结果（2026-05-21）
+## 评估结果（2026-06-08 v31）
 
-| 指标 | 值 | 目标 | 状态 |
-|------|------|------|------|
-| Recall@3 | 94% (15/16) | ≥ 80% | ✅ 通过 |
-| Faithfulness | 6.5/10 | ≥ 8/10 | ❌ 未达标（部分 test data 问题文章无答案）|
-| 延迟 p50 | 3.6s | — | 基准值 |
-| 延迟 p99 | 5.4s | — | 基准值 |
+### 检索质量
 
-### Prompt 实验结论
+| 指标 | Hybrid | BM25 | Dense | 目标 |
+|------|:---:|:---:|:---:|:---:|
+| Recall@3 | 96.5% | 95.9% | 93.6% | ≥ 80% ✅ |
+| Recall@5 | 100% | 97.1% | 94.8% | ≥ 90% ✅ |
+| Recall@10 | 100% | 98.8% | 97.7% | ≥ 95% ✅ |
+| MRR | 0.901 | 0.907 | 0.866 | ≥ 0.85 ✅ |
+| nDCG@10 | 0.914 | — | — | ≥ 0.85 ✅ |
 
-| 策略 | 有效回答率 | 平均延迟 |
-|------|-----------|---------|
-| Direct | 0% | 3926ms |
-| CoT | 88% | 3791ms |
-| Few-shot | 81% | 3753ms |
+### 延迟性能
 
-Direct 策略因 System Prompt 规则"如果问题与文档无关，礼貌说明无法回答"过于严格，导致全部拒绝回答。CoT 效果最优，Few-shot 次之。
+| 方法 | P50 | P99 | Mean |
+|------|:---:|:---:|:---:|
+| BM25 | 1.8ms | 2.7ms | 1.9ms |
+| Vector | 142.9ms | 177.9ms | 143.9ms |
+| Hybrid | 154.3ms | 191.4ms | 156.2ms |
+
+### 分类检索表现
+
+| 类型 | Recall@3 | 数量 |
+|------|:---:|:---:|
+| Reasoning | 97.8% | 92 |
+| Synthesis | 97.6% | 42 |
+| Factual | 95.8% | 24 |
+| Cross-article | 85.7% | 14 |
+| Negative | — | 20 (不参与 Recall) |
+
+### 并发负载测试
+
+| 并发数 | QPS | Mean Latency | P99 |
+|:---:|:---:|:---:|:---:|
+| 1 | 4.6 | 215ms | 178ms |
+| 5 | 9.5 | 526ms | 775ms |
+| 10 | 9.6 | 1,029ms | 1,526ms |
+| 20 | 9.5 | 2,066ms | 2,794ms |
+
+Recall 在并发下保持 96.5% 不退化。
 
 ## 关键决策
 
 - **ChromaDB**：本地轻量，无需单独部署，适合入门学习
 - **RecursiveCharacterTextSplitter**：chunk_size=500, overlap=50，适合中文 Markdown
-- **轻量 MMR**：默认开启（`_simple_diversity`），提高来源多样性，无需 query embedding
-- **BM25 关键词检索**：快速第一跳（<10ms），减少 Embedding API 调用
+- **Hybrid Search (RRF)**：BM25 关键词检索 + Vector 向量检索 → Reciprocal Rank Fusion 融合
+- **Reranker 精排**：bge-reranker-v2-m3 cross-encoder，RRF 后精排，自适应跳过
 - **sentence-transformers**：本地 Embedding fallback，避免 API 依赖
+- **Adaptive Embedding**：CPU/GPU 自动调度（batch<4→CPU, batch≥4→GPU）
 - **Agent Tool 集成**：`knowledge_retrieval` Tool 注册到 ALL_TOOLS，Agent 自动可调用
-- **Chat + RAG 自动集成**：LangGraph 流式工作流，意图分类关键词匹配 → RAG/Chat 路由 → LLM 流式生成（2026-05-27）
+- **Chat + RAG 自动集成**：LangGraph 流式工作流，意图分类关键词匹配 → RAG/Chat 路由 → LLM 流式生成
+- **192 QA 大规模测试集**：覆盖 factual/reasoning/synthesis/cross-article/negative 五类
 
 ## 评估方法
 
-- Recall@3：对 16 个标注问题，检查 top-3 检索结果是否包含正确答案片段
+- Recall@k：对 192 个标注问题，检查 top-k 检索结果是否包含正确答案片段
+- MRR：Mean Reciprocal Rank，衡量首个正确结果的排名
+- nDCG@10：Normalized Discounted Cumulative Gain，综合排序质量
 - Faithfulness：LLM-as-judge 评分（0-10），检查 LLM 回答是否忠实于检索到的上下文
-- 延迟：记录检索 + 生成的端到端耗时，统计 p50/p99/mean
-- Prompt 实验：同一组 16 个问题分别用 Direct / CoT / Few-shot 策略运行，对比回答质量和延迟
-
-## 实验报告
-
-完整实验报告见 [experiment-rag-prompt-2026-05-21.md](./experiment-rag-prompt-2026-05-21.md)。
+- 并发负载：1/5/10/20 并发度下测试 QPS 和延迟稳定性
+- 延迟：记录检索的端到端耗时，统计 p50/p99/mean
