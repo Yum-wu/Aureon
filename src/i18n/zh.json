@@ -20,15 +20,15 @@
     "hero": {
       "badge": "生产就绪",
       "title": "企业 AI 知识库平台",
-      "subtitle": "95% 检索准确率 · 100% 负面检测 · 亚秒级响应",
+      "subtitle": "96.5% 检索准确率 · 100% 负面检测 · 亚秒级响应",
       "cta_search": "开始搜索",
       "cta_architecture": "查看架构"
     },
     "metrics": {
       "recall": {
-        "value": "95.1%",
+        "value": "96.5%",
         "label": "检索准确率",
-        "detail": "Hybrid Recall@3 (97 QA pairs)"
+        "detail": "Hybrid Recall@3 (192 QA pairs)"
       },
       "ttft": {
         "value": "~310ms",
@@ -45,7 +45,7 @@
     "features": [
       {
         "title": "混合检索",
-        "desc": "BM25 + Dense RRF 融合，Recall@3 95.1%，Recall@10 100%"
+        "desc": "BM25 + Dense RRF 融合，Recall@3 96.5%，Recall@10 100%"
       },
       {
         "title": "流式响应",
@@ -61,7 +61,7 @@
       },
       {
         "title": "知识库",
-        "desc": "26 篇文章，476 chunks，97 QA 基准测试对"
+        "desc": "26 篇文章，191 chunks，192 QA 基准测试对"
       },
       {
         "title": "分析仪表盘",
@@ -70,7 +70,7 @@
     ],
     "benchmark": {
       "title": "性能基准测试",
-      "subtitle": "基于 97 组 QA 数据对混合检索流水线的评估 (11/11 达标)",
+      "subtitle": "基于 192 组 QA 数据对混合检索流水线的评估 (13/14 达标, 92.9%)"
       "vs_baseline": "对比基线",
       "optimized": "已优化",
       "reduced": "已降低",
@@ -314,7 +314,7 @@
     "after_optimization": "优化后",
     "ttft_improvement_detail": "提升 61%：检索-生成并行化 + 缓存预热 + 流式架构",
     "retrieval_accuracy": "检索准确率",
-    "qa_benchmark_detail": "76 QA Pairs 基准测试 · 95% CI: 98-99%"
+    "qa_benchmark_detail": "192 QA Pairs 基准测试 · Recall@3: 96.5%"
   },
   "architecture": {
     "title": "架构与性能",
@@ -384,6 +384,22 @@
       "分析当前系统的性能指标",
       "解释 RAG 检索的工作原理",
       "生成一份项目总结报告"
+    ]
+  },
+  "support": {
+    "title": "Aureon 客服",
+    "welcome": "你好！我是 Aureon 客服助手，有什么可以帮助您？",
+    "online": "在线",
+    "offline": "离线",
+    "placeholder": "输入您的问题...",
+    "connecting": "连接中...",
+    "connected": "已连接",
+    "close": "关闭",
+    "quickReplies": [
+      "这个平台能做什么？",
+      "如何部署到生产环境？",
+      "支持哪些 LLM 模型？",
+      "性能指标怎么样？"
     ]
   }
 }

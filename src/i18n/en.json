@@ -20,15 +20,15 @@
     "hero": {
       "badge": "Production Ready",
       "title": "Enterprise AI Knowledge Base Platform",
-      "subtitle": "95% retrieval accuracy · 100% negative detection · Sub-second response",
+      "subtitle": "96.5% retrieval accuracy · 100% negative detection · Sub-second response",
       "cta_search": "Start Searching",
       "cta_architecture": "View Architecture"
     },
     "metrics": {
       "recall": {
-        "value": "95.1%",
+        "value": "96.5%",
         "label": "Retrieval Accuracy",
-        "detail": "Hybrid Recall@3 (97 QA pairs)"
+        "detail": "Hybrid Recall@3 (192 QA pairs)"
       },
       "ttft": {
         "value": "~310ms",
@@ -45,7 +45,7 @@
     "features": [
       {
         "title": "Hybrid Search",
-        "desc": "BM25 + Dense RRF fusion, 95.1% Recall@3, 100% Recall@10"
+        "desc": "BM25 + Dense RRF fusion, 96.5% Recall@3, 100% Recall@10"
       },
       {
         "title": "Streaming Response",
@@ -61,7 +61,7 @@
       },
       {
         "title": "Knowledge Base",
-        "desc": "26 articles, 476 chunks, 97 QA benchmark pairs"
+        "desc": "26 articles, 191 chunks, 192 QA benchmark pairs"
       },
       {
         "title": "Analytics Dashboard",
@@ -70,7 +70,7 @@
     ],
     "benchmark": {
       "title": "Performance Benchmark",
-      "subtitle": "Evaluated on 97 QA pairs with hybrid retrieval pipeline (11/11 pass)",
+      "subtitle": "Evaluated on 192 QA pairs with hybrid retrieval pipeline (13/14 pass, 92.9%)"
       "vs_baseline": "vs baseline",
       "optimized": "optimized",
       "reduced": "reduced",
@@ -314,7 +314,7 @@
     "after_optimization": "After",
     "ttft_improvement_detail": "61% improvement: retrieval-generation parallelization + cache warmup + streaming architecture",
     "retrieval_accuracy": "Retrieval Accuracy",
-    "qa_benchmark_detail": "76 QA Pairs benchmark · 95% CI: 98-99%"
+    "qa_benchmark_detail": "192 QA Pairs benchmark · Recall@3: 96.5%"
   },
   "architecture": {
     "title": "Architecture & Performance",
@@ -384,6 +384,22 @@
       "Analyze system performance metrics",
       "Explain how RAG retrieval works",
       "Generate a project summary report"
+    ]
+  },
+  "support": {
+    "title": "Aureon Support",
+    "welcome": "Hi! I'm the Aureon support assistant. How can I help you?",
+    "online": "Online",
+    "offline": "Offline",
+    "placeholder": "Type your question...",
+    "connecting": "Connecting...",
+    "connected": "Connected and ready",
+    "close": "Close",
+    "quickReplies": [
+      "What can this platform do?",
+      "How to deploy to production?",
+      "Which LLM models are supported?",
+      "What are the performance metrics?"
     ]
   }
 }

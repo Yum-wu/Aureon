@@ -1,10 +1,16 @@
 {
-  "timestamp": "2026-06-04T00:00:00",
+  "timestamp": "2026-06-08T19:50:45",
+  "version": "v31",
   "metrics": [
     {
       "label": "Recall@3 (Hybrid)",
-      "value": "95.1%",
-      "detail": "93/97 QA pairs (BM25+ Scoring + RRF + Parent-Child + diversity + multi-query expansion, 4 negative edge-cases)"
+      "value": "96.5%",
+      "detail": "192 QA pairs, BM25 + Vector RRF fusion + Reranker¾«ÅÅ"
+    },
+    {
+      "label": "Recall@5 (Hybrid)",
+      "value": "100%",
+      "detail": "Top-5 full coverage, 192 QA pairs"
     },
     {
       "label": "Recall@10 (Hybrid)",
@@ -13,43 +19,43 @@
     },
     {
       "label": "Recall@3 (Dense)",
-      "value": "93.3%",
-      "detail": "BGE-small-zh 512d, zero embedding API cost"
+      "value": "93.6%",
+      "detail": "DashScope text-embedding-v3 1024d"
     },
     {
-      "label": "Precision@3 (Binary)",
-      "value": "95.1%",
+      "label": "Precision@3 (Hybrid)",
+      "value": "96.5%",
       "detail": "Industry-standard binary metric (top-3 contains correct article)"
     },
     {
       "label": "MRR",
-      "value": "0.913",
+      "value": "0.901",
       "detail": "Mean Reciprocal Rank, target >=0.85"
     },
     {
       "label": "nDCG@10",
-      "value": "1.010",
-      "detail": "Normalized Discounted Cumulative Gain"
+      "value": "0.914",
+      "detail": "Normalized Discounted Cumulative Gain, target >=0.5"
     },
     {
       "label": "Negative Detection",
       "value": "100%",
-      "detail": "LLM classifier, 15/15 all correct"
+      "detail": "20/20 negative QA correctly identified"
     },
     {
       "label": "Retrieval Latency",
-      "value": "~5.8ms",
-      "detail": "BM25 ~2.5ms + Vector ~2.5ms + RRF ~0.8ms"
+      "value": "156ms",
+      "detail": "Hybrid P50: BM25 ~2ms + Vector ~143ms + RRF fusion"
     },
     {
       "label": "TTFT (Streaming)",
       "value": "~310ms",
-      "detail": "Retrieval ~6ms + LLM first token ~300ms"
+      "detail": "Retrieval ~156ms + LLM first token ~150ms"
     },
     {
-      "label": "Full RAG Latency (Sync)",
-      "value": "~400ms",
-      "detail": "Retrieval ~6ms + LLM ~300ms"
+      "label": "Full RAG Latency",
+      "value": "~3,104ms",
+      "detail": "End-to-end RAG pipeline latency"
     },
     {
       "label": "LLM Calls per Query",
@@ -63,33 +69,38 @@
     },
     {
       "label": "Cost per Query",
-      "value": "$0.001",
-      "detail": "DeepSeek pricing (500 in + 300 out tokens)"
+      "value": "~$0.001",
+      "detail": "DeepSeek pricing (~500 in + 300 out tokens)"
     },
     {
       "label": "Knowledge Base",
-      "value": "26 articles / 476 chunks",
+      "value": "26 articles / 191 chunks",
       "detail": "AI tech, dev experience, deployment practices"
     },
     {
       "label": "Test QA Pairs",
-      "value": 97,
-      "detail": "Covering 26 articles + 15 negative + 6 cross-article queries"
+      "value": 192,
+      "detail": "24 factual + 92 reasoning + 42 synthesis + 14 cross-article + 20 negative"
     },
     {
       "label": "Benchmark Pass Rate",
-      "value": "11/11",
-      "detail": "All metrics passing"
+      "value": "13/14",
+      "detail": "92.9% pass rate (Cross-article Recall@3 85.7%, target ¡Ý90%)"
+    },
+    {
+      "label": "Concurrent QPS",
+      "value": "9.5",
+      "detail": "Stable at 1-20 concurrency, Recall 96.5% no degradation"
     }
   ],
   "services": {
     "llm": "DeepSeek v4-flash",
-    "embedding": "BGE-small-zh 512d (local) + DashScope fallback",
-    "vector_db": "ChromaDB (persistent)",
-    "hybrid_search": "BM25+ (pre-tokenized) + RRF + Parent-Child",
+    "embedding": "DashScope text-embedding-v3 (1024d) + BGE-small-zh fallback",
+    "vector_db": "ChromaDB (persistent) + Qdrant (±¸)",
+    "hybrid_search": "BM25 + Vector ¡ú RRF fusion ¡ú Reranker¾«ÅÅ",
     "cross_article": "Rule-based multi-query expansion + RRF fusion",
-    "negative_detection": "LLM classifier (conditional, 1 extra call)",
-    "reranking": "bge-reranker-base (optional)",
+    "negative_detection": "Keyword quickÉ¸ + LLM classifier (conditional)",
+    "reranking": "bge-reranker-v2-m3 cross-encoder (adaptive skip)",
     "guardrails": "Hallucination + Citation Verification",
     "streaming": "SSE /api/rag/query/stream",
     "cache": "Redis + in-memory (Railway)"
