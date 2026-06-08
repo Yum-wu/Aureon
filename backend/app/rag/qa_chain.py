@@ -10,8 +10,10 @@ import numpy as np
 from typing import List, Dict, Any, Optional
 
 from app.rag.vector_store import retrieve, retrieve_keyword, format_context, save_index, embed_texts_llm, load_index, rerank
-from app.rag.query_rewriter import is_cross_article_query, expand_queries_rules
+from app.rag.query_rewriter import is_cross_article_query, expand_queries_rules, hyde_retrieve, hyde_retrieve_async
 from app.rag.models import RAGQueryResponse, SourceItem
+from app.rag.query_classifier import classify_query_complexity, get_reranking_strategy
+from app.rag.ensemble_reranker import get_ensemble_reranker
 from app.utils.lang_detect import detect_language, lang_instruction
 
 import structlog
@@ -24,6 +26,10 @@ _RERANK_CANDIDATES = int(os.getenv("RERANK_CANDIDATES", "12"))
 _ADAPTIVE_RERANK_THRESHOLD = float(os.getenv("ADAPTIVE_RERANK_THRESHOLD", "0.5"))
 MULTI_QUERY_ENABLED = os.getenv("MULTI_QUERY_ENABLED", "true").lower() == "true"
 SEMANTIC_CHUNKING_ENABLED = os.getenv("SEMANTIC_CHUNKING_ENABLED", "true").lower() == "true"
+
+# Adaptive re-ranking based on query complexity
+_ADAPTIVE_RERANK_ENABLED = os.getenv("ADAPTIVE_RERANK_ENABLED", "true").lower() == "true"
+_ENSEMBLE_RERANK_ENABLED = os.getenv("ENSEMBLE_RERANK_ENABLED", "false").lower() == "true"
 
 # Keywords that uniquely identify specific articles — used for title/slug boost.
 # Only terms that are specific enough to disambiguate between articles.
@@ -64,6 +70,12 @@ _NEGATIVE_DETECTION_ENABLED = os.getenv("NEGATIVE_DETECTION_ENABLED", "true").lo
 _CONTEXT_COMPRESSION_ENABLED = os.getenv("CONTEXT_COMPRESSION_ENABLED", "true").lower() == "true"
 _CONTEXT_COMPRESSION_THRESHOLD = float(os.getenv("CONTEXT_COMPRESSION_THRESHOLD", "0.35"))
 
+# HyDE (Hypothetical Document Embedding): generate hypothetical answer for retrieval.
+# Improves retrieval accuracy by using LLM-generated answer instead of raw query.
+# Reference: Gao et al., 2022 "Precise Zero-Shot Dense Retrieval without Relevance Labels"
+_HYDE_ENABLED = os.getenv("HYDE_ENABLED", "false").lower() == "true"
+_HYDE_FALLBACK_THRESHOLD = float(os.getenv("HYDE_FALLBACK_THRESHOLD", "0.01"))
+
 
 def compress_context(query: str, chunks: List[Dict[str, Any]], threshold: float = None) -> List[Dict[str, Any]]:
     """Filter chunks by embedding similarity to query (lightweight context compression).
@@ -71,11 +83,12 @@ def compress_context(query: str, chunks: List[Dict[str, Any]], threshold: float 
     Computes cosine similarity between query embedding and each chunk embedding.
     Removes chunks below threshold to reduce token waste in LLM context.
 
-    Uses GPU embedder when available for continuous GPU utilization.
+    Reuses pre-computed chunk embeddings (_embedding field from retrieval phase)
+    when available, avoiding redundant embedding computation.
 
     Args:
         query: User query text
-        chunks: List of retrieved chunk dicts with 'text' field
+        chunks: List of retrieved chunk dicts with 'text' field and optional '_embedding'
         threshold: Minimum cosine similarity (default: _CONTEXT_COMPRESSION_THRESHOLD)
 
     Returns:
@@ -88,24 +101,50 @@ def compress_context(query: str, chunks: List[Dict[str, Any]], threshold: float 
         threshold = _CONTEXT_COMPRESSION_THRESHOLD
 
     try:
-        # Embed query and chunks together for consistent embeddings
-        texts = [query] + [c["text"] for c in chunks]
+        # Check which chunks have pre-computed embeddings from retrieval phase
+        cached_indices = {i for i, c in enumerate(chunks) if "_embedding" in c}
+        has_cached = len(cached_indices) > 0
 
-        # Try GPU embedder first for continuous GPU utilization
-        embeddings = None
-        try:
-            from app.rag.vector_store import _get_gpu_embedder
-            gpu_embedder = _get_gpu_embedder()
-            if gpu_embedder is not None:
-                embeddings = gpu_embedder.encode(texts, batch_size=len(texts))
-        except Exception:
-            pass
+        if has_cached:
+            # Reuse stored embeddings: embed only the query + any uncached chunks
+            # Use embed_texts_llm (not GPU) to match the embedding model used by
+            # ChromaDB/Qdrant during indexing — ensures consistent embedding space
+            uncached_texts = [chunks[i]["text"] for i in range(len(chunks)) if i not in cached_indices]
+            to_embed = [query] + uncached_texts
+            new_embeddings = embed_texts_llm(to_embed)
 
-        if embeddings is None:
-            embeddings = embed_texts_llm(texts)
+            query_emb = new_embeddings[0]
+            chunk_embs = []
+            uncached_iter = iter(new_embeddings[1:])
+            for i in range(len(chunks)):
+                if i in cached_indices:
+                    chunk_embs.append(chunks[i]["_embedding"])
+                else:
+                    chunk_embs.append(next(uncached_iter))
+            chunk_embs = np.array(chunk_embs, dtype=np.float32)
 
-        query_emb = embeddings[0]
-        chunk_embs = embeddings[1:]
+            logger.debug(
+                "Context compression: reused %d/%d cached embeddings",
+                len(cached_indices), len(chunks),
+            )
+        else:
+            # No cached embeddings: compute all (GPU-first, then API fallback)
+            texts = [query] + [c["text"] for c in chunks]
+
+            embeddings = None
+            try:
+                from app.rag.vector_store import _get_gpu_embedder
+                gpu_embedder = _get_gpu_embedder()
+                if gpu_embedder is not None:
+                    embeddings = gpu_embedder.encode(texts, batch_size=len(texts))
+            except Exception:
+                pass
+
+            if embeddings is None:
+                embeddings = embed_texts_llm(texts)
+
+            query_emb = embeddings[0]
+            chunk_embs = embeddings[1:]
 
         # Normalize embeddings before computing cosine similarity
         # API embeddings (DashScope/SiliconFlow/Zhipu) are NOT pre-normalized
@@ -119,6 +158,8 @@ def compress_context(query: str, chunks: List[Dict[str, Any]], threshold: float 
             if sim >= threshold:
                 chunk_copy = dict(chunk)
                 chunk_copy["compression_score"] = float(sim)
+                # Remove _embedding from output to save memory (no longer needed)
+                chunk_copy.pop("_embedding", None)
                 scored_chunks.append(chunk_copy)
 
         scored_chunks.sort(key=lambda c: c["compression_score"], reverse=True)
@@ -139,12 +180,51 @@ def compress_context(query: str, chunks: List[Dict[str, Any]], threshold: float 
 # High scores indicate confident retrieval — LLM classifier is wasteful.
 _HIGH_SCORE_SKIP_THRESHOLD = float(os.getenv("HIGH_SCORE_SKIP_THRESHOLD", "0.01"))
 
+# LLM Classifier cache: avoid redundant API calls for the same query.
+# Keyed by normalized query hash, TTL-based expiry.
+import hashlib as _hashlib
+
+_CLASSIFIER_CACHE: Dict[str, bool] = {}
+_CLASSIFIER_CACHE_TIMESTAMPS: Dict[str, float] = {}
+_CLASSIFIER_CACHE_TTL = float(os.getenv("CLASSIFIER_CACHE_TTL", "3600"))  # seconds
+
+
+def _classifier_cache_key(query: str) -> str:
+    """Deterministic cache key for classifier results."""
+    return _hashlib.md5(query.strip().lower().encode()).hexdigest()
+
+
+def _classifier_cache_get(query: str) -> bool | None:
+    """Return cached result or None if miss/expired."""
+    if _CLASSIFIER_CACHE_TTL <= 0:
+        return None
+    key = _classifier_cache_key(query)
+    ts = _CLASSIFIER_CACHE_TIMESTAMPS.get(key)
+    if ts is not None and (time.time() - ts) < _CLASSIFIER_CACHE_TTL:
+        return _CLASSIFIER_CACHE.get(key)
+    return None
+
+
+def _classifier_cache_set(query: str, answerable: bool) -> None:
+    """Store classifier result in memory cache."""
+    if _CLASSIFIER_CACHE_TTL <= 0:
+        return
+    key = _classifier_cache_key(query)
+    _CLASSIFIER_CACHE[key] = answerable
+    _CLASSIFIER_CACHE_TIMESTAMPS[key] = time.time()
+
 
 async def classify_query_answerable(query: str, model: str = None) -> bool:
     """Use LLM to determine if a query can be answered by the knowledge base."""
     # Fast-path: keyword heuristic before LLM call
     if _is_negative_by_keywords(query):
         return False
+
+    # Cache check: skip LLM call for repeated queries
+    cached = _classifier_cache_get(query)
+    if cached is not None:
+        logger.debug("Classifier cache hit: query=%s answerable=%s", query[:40], cached)
+        return cached
 
     from app.agent.llm import create_llm
 
@@ -165,7 +245,9 @@ async def classify_query_answerable(query: str, model: str = None) -> bool:
 
     try:
         response = await llm.ainvoke(prompt)
-        return "YES" in response.content.upper()
+        answerable = "YES" in response.content.upper()
+        _classifier_cache_set(query, answerable)
+        return answerable
     except Exception as e:
         logger.warning("LLM classifier failed: %s, defaulting to answerable", e)
         return True
@@ -212,6 +294,12 @@ def classify_query_answerable_sync(query: str, llm_call_fn) -> bool:
     if _is_negative_by_keywords(query):
         return False
 
+    # Cache check: skip LLM call for repeated queries
+    cached = _classifier_cache_get(query)
+    if cached is not None:
+        logger.debug("Classifier cache hit (sync): query=%s answerable=%s", query[:40], cached)
+        return cached
+
     prompt = (
         "你是一个企业知识库的查询分类器。判断以下查询是否能在"
         "\"AI技术、开发经验、部署实践\"相关的知识库中找到答案。\n\n"
@@ -227,7 +315,9 @@ def classify_query_answerable_sync(query: str, llm_call_fn) -> bool:
     )
     try:
         response = llm_call_fn([{"role": "user", "content": prompt}])
-        return "YES" in str(response).upper()
+        answerable = "YES" in str(response).upper()
+        _classifier_cache_set(query, answerable)
+        return answerable
     except Exception as e:
         logger.warning("Sync LLM classifier failed: %s, defaulting to answerable", e)
         return True
@@ -314,6 +404,9 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
         rrf_scores[key] = rrf_scores.get(key, 0) + 1.0 / (_RRF_K + rank)
         if key not in doc_map:
             doc_map[key] = doc
+        elif "_embedding" in doc:
+            # Preserve embedding from vector result for downstream reuse
+            doc_map[key]["_embedding"] = doc["_embedding"]
         _vector_contrib_count += 1
 
     # Title/slug boost: if query terms match a document's title or slug,
@@ -340,21 +433,42 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
         doc["score"] = score
         candidates.append(doc)
 
-    # Adaptive Reranking: skip rerank when top-1 has high confidence
-    if len(candidates) > top_k:
-        top1_score = candidates[0].get("score", 0)
-        top2_score = candidates[1].get("score", 0) if len(candidates) > 1 else 0
-        score_gap = top1_score - top2_score if top1_score > 0 else 0
-        gap_ratio = score_gap / top1_score if top1_score > 0 else 0
+    # ── NEW: Adaptive Re-ranking based on Query Complexity ──
+    if _ADAPTIVE_RERANK_ENABLED and len(candidates) > top_k:
+        try:
+            # Get query complexity and re-ranking strategy
+            strategy = get_re-ranking_strategy(query)
+            complexity = strategy["complexity"]
 
-        if gap_ratio >= _ADAPTIVE_RERANK_THRESHOLD:
-            logger.info(
-                "Adaptive rerank: skipping (top1=%.4f, gap_ratio=%.2f >= %.2f threshold)",
-                top1_score, gap_ratio, _ADAPTIVE_RERANK_THRESHOLD,
-            )
-        else:
-            rerank_limit = max(top_k * 3, 10)
-            candidates = rerank(query, candidates, top_k=min(len(candidates), rerank_limit))
+            if complexity == "simple":
+                # Skip re-ranking for simple queries (latency priority)
+                logger.info(
+                    "Adaptive rerank: SKIP (simple query, latency priority)"
+                )
+            elif complexity == "medium":
+                # Single BGE reranker (balance latency/quality)
+                logger.info(
+                    "Adaptive rerank: SINGLE_BGE (medium complexity)"
+                )
+                rerank_limit = max(top_k * 3, 10)
+                candidates = rerank(query, candidates, top_k=min(len(candidates), rerank_limit))
+            elif complexity == "complex" and _ENSEMBLE_RERANK_ENABLED:
+                # Ensemble reranking not available in sync path; fall back to single BGE
+                # Use hybrid_retrieve_async for ensemble reranking
+                logger.info(
+                    "Adaptive rerank: SINGLE_BGE (complex, ensemble unavailable in sync)"
+                )
+                rerank_limit = max(top_k * 3, 10)
+                candidates = rerank(query, candidates, top_k=min(len(candidates), rerank_limit))
+            else:
+                # Default: single BGE reranker
+                logger.info(
+                    "Adaptive rerank: SINGLE_BGE (default)"
+                )
+                rerank_limit = max(top_k * 3, 10)
+                candidates = rerank(query, candidates, top_k=min(len(candidates), rerank_limit))
+        except Exception as e:
+            logger.warning("Adaptive re-ranking failed, using RRF candidates as-is: %s", e)
 
     # Diversity selection: only for cross-article queries (comparisons, summaries).
     # For simple factual queries, return top-k by score — this maximizes precision
@@ -445,6 +559,9 @@ def multi_query_retrieve(query: str, top_k: int = 3, lang_filter: str = None) ->
             rrf_scores[key] = rrf_scores.get(key, 0) + 1.0 / (_RRF_K + rank)
             if key not in doc_map:
                 doc_map[key] = doc
+            elif "_embedding" in doc:
+                # Preserve embedding from vector result for downstream reuse
+                doc_map[key]["_embedding"] = doc["_embedding"]
 
     # Title/slug boost (same logic as hybrid_retrieve)
     _title_boost_keywords = _extract_title_keywords(query)
@@ -501,14 +618,42 @@ def multi_query_retrieve(query: str, top_k: int = 3, lang_filter: str = None) ->
     return selected
 
 
-QA_SYSTEM_PROMPT = """你是知识库问答助手。基于提供的参考文档回答用户问题。
+QA_SYSTEM_PROMPT = """你是精准的知识库问答助手。你的唯一任务是回答用户的问题。
 
-规则：
-1. 只基于参考文档内容回答。参考文档中没有的信息，说"文档中未提及"。
-2. 回答必须直接针对用户问题，不要添加与问题无关的额外信息。
-3. 如果问题与文档无关，礼貌说明无法回答。
-4. 回答简洁准确，每个句子都必须直接回答用户的问题。
-5. 在回答末尾标注引用来源，格式：[来源: 文章标题]。
+## 核心原则
+- 先理解用户的问题意图，再从参考文档中提取答案
+- 每个句子必须直接回应用户的问题
+- 如果文档中有答案，直接给出答案
+- 如果文档中没有答案，直接说"文档中未提及"
+
+## 回答结构（必须遵守）
+1. **直接回答**（1-2 句话，直接回答问题核心）
+2. **补充细节**（仅当用户问题需要更详细解释时）
+3. **引用来源**（格式：[来源: 文章标题]）
+
+## 禁止行为
+- ❌ 禁止以"根据文档"、"文档介绍了"、"参考文档提到"开头
+- ❌ 禁止复述文档内容而不回答问题
+- ❌ 禁止添加用户未要求的背景信息
+- ❌ 禁止使用"总的来说"、"综上所述"、"需要注意的是"等总结性语句
+- ❌ 禁止在回答开头加前言或铺垫
+
+## 正确示例
+
+用户问："BM25 的核心原理是什么？"
+✅ 正确："BM25 通过词频饱和度和文档长度归一化计算关键词匹配分数，核心公式包含 TF（词频）和 IDF（逆文档频率）两个组件。[来源: RAG 优化实战]"
+❌ 错误："文档介绍了 RAG 系统中使用的多种检索技术。BM25 是其中一种经典的排序算法，它的核心原理是..."
+
+用户问："如何配置 Redis 缓存？"
+✅ 正确："配置步骤：1) 安装 redis-py；2) 设置 REDIS_URL 环境变量；3) 在 config.py 中启用缓存层。[来源: Redis 集成指南]"
+❌ 错误："Redis 是一个高性能的内存数据库，在 RAG 系统中常用于缓存。下面文档介绍了如何配置..."
+
+## 负面回答模式
+如果参考文档中没有相关信息，直接回答：
+"文档中未提及该信息。"
+
+不要猜测、不要补充你认为可能正确的信息。
+
 {lang_instruction}
 
 参考文档中每段以 [Source N: 文章标题] 开头。引用时用自然方式标注来源，例如：[来源: Hermes Agent 实战]。
@@ -517,14 +662,42 @@ QA_SYSTEM_PROMPT = """你是知识库问答助手。基于提供的参考文档�
 {context}
 """
 
-QA_SYSTEM_PROMPT_EN = """You are a knowledge base QA assistant. Answer user questions based on the provided reference documents.
+QA_SYSTEM_PROMPT_EN = """You are a precise knowledge base QA assistant. Your only task is to answer the user's question.
 
-Rules:
-1. Only answer based on the reference documents. If information is not in the documents, say "not mentioned in the documents".
-2. Your answer must directly address the user's question. Do not include information unrelated to the question.
-3. If the question is unrelated to the documents, politely explain that you cannot answer.
-4. Keep answers concise and focused. Every sentence must directly answer the user's question.
-5. Cite sources at the end of your answer, format: [Source: Article Title].
+## Core Principles
+- Understand the user's question intent first, then extract the answer from reference documents
+- Every sentence must directly address the user's question
+- If the documents contain the answer, give it directly
+- If the documents don't contain the answer, say "Not mentioned in the documents"
+
+## Answer Structure (mandatory)
+1. **Direct answer** (1-2 sentences, addressing the core question)
+2. **Supporting details** (only when the user needs more explanation)
+3. **Source citation** (format: [Source: Article Title])
+
+## Prohibited Patterns
+- ❌ Do NOT start with "Based on the documents", "The documents mention", "According to the reference"
+- ❌ Do NOT summarize document content without answering the question
+- ❌ Do NOT add background information the user didn't ask for
+- ❌ Do NOT use "In summary", "To summarize", "It's worth noting" as transitions
+- ❌ Do NOT add preamble or setup before the actual answer
+
+## Correct Examples
+
+User: "What is the core principle of BM25?"
+✅ Correct: "BM25 calculates keyword matching scores through term frequency saturation and document length normalization, with TF and IDF as its two core components. [Source: RAG Optimization Guide]"
+❌ Wrong: "The documents describe various retrieval techniques used in RAG systems. BM25 is one of the classic ranking algorithms. Its core principle is..."
+
+User: "How to configure Redis caching?"
+✅ Correct: "Steps: 1) Install redis-py; 2) Set REDIS_URL environment variable; 3) Enable cache layer in config.py. [Source: Redis Integration Guide]"
+❌ Wrong: "Redis is a high-performance in-memory database commonly used for caching in RAG systems. The following documents describe how to configure..."
+
+## Negative Response
+If the reference documents don't contain the relevant information, answer directly:
+"The documents do not contain information about this topic."
+
+Do not guess or supplement information you think might be correct.
+
 {lang_instruction}
 
 Each paragraph in the reference documents starts with [Source N: Article Title]. When citing, naturally mention the source, e.g., [Source: Hermes Agent in Practice].
@@ -575,7 +748,30 @@ def rag_query(
         lang = detect_language(query)
 
     # 1. Hybrid retrieval: BM25 keyword + vector search, RRF fusion
-    chunks = multi_query_retrieve(query, top_k=top_k, lang_filter=filter_lang)
+    #    If HyDE is enabled, use hypothetical answer for retrieval
+    if _HYDE_ENABLED:
+        logger.info("HyDE enabled: using hypothetical answer for retrieval")
+        chunks = hyde_retrieve(
+            query,
+            llm_call_fn,
+            top_k=top_k,
+            lang=lang,
+            lang_filter=filter_lang,
+        )
+        # If HyDE returns poor results, fallback to multi_query_retrieve
+        if chunks:
+            top_score = max(c.get("score", 0) for c in chunks)
+            if top_score < _HYDE_FALLBACK_THRESHOLD:
+                logger.info(
+                    "HyDE: poor results (score=%.4f < %.4f), falling back to hybrid retrieval",
+                    top_score, _HYDE_FALLBACK_THRESHOLD,
+                )
+                chunks = multi_query_retrieve(query, top_k=top_k, lang_filter=filter_lang)
+        else:
+            logger.info("HyDE: no results, falling back to hybrid retrieval")
+            chunks = multi_query_retrieve(query, top_k=top_k, lang_filter=filter_lang)
+    else:
+        chunks = multi_query_retrieve(query, top_k=top_k, lang_filter=filter_lang)
 
     # 2. Negative detection: LLM classifier for queries the KB can't answer.
     #    Skip when top RRF score is high (confident retrieval) to save LLM calls.
@@ -648,6 +844,8 @@ def rag_query(
             slug=c["metadata"].get("slug", ""),
             chunk=c["text"][:200] + "..." if len(c["text"]) > 200 else c["text"],
             score=c.get("score"),
+            chunk_id=c.get("id", c["metadata"].get("chunk_id", "")),
+            chunk_text_snippet=c["text"][:200],
         )
         for c in chunks
     ]
@@ -684,7 +882,10 @@ async def rag_query_astream(
         lang = detect_language(query)
 
     # 1. Hybrid retrieval: BM25 keyword + vector search, RRF fusion
-    chunks = multi_query_retrieve(query, top_k=top_k, lang_filter=filter_lang)
+    #    Wrapped in asyncio.to_thread to avoid blocking the event loop
+    #    (multi_query_retrieve calls sync embedding APIs internally)
+    import asyncio
+    chunks = await asyncio.to_thread(multi_query_retrieve, query, top_k=top_k, lang_filter=filter_lang)
 
     # 2. CRAG assessment disabled — too many false positives on production.
     #    TODO: calibrate after collecting data.
@@ -718,8 +919,9 @@ async def rag_query_astream(
             logger.info("Skipping negative detection (top_score=%.4f >= %.4f)", top_score, _HIGH_SCORE_SKIP_THRESHOLD)
 
     # 1b. Context compression: filter chunks by embedding similarity to query
+    #     Wrapped in asyncio.to_thread to avoid blocking event loop with sync embedding API
     if chunks:
-        chunks = compress_context(query, chunks)
+        chunks = await asyncio.to_thread(compress_context, query, chunks)
 
     # 2. Format context
     context = format_context(chunks)
@@ -740,6 +942,8 @@ async def rag_query_astream(
             "title": c["metadata"].get("title", c["metadata"].get("source", "Unknown")),
             "slug": c["metadata"].get("slug", ""),
             "score": c.get("score"),
+            "chunk_id": c.get("id", c["metadata"].get("chunk_id", "")),
+            "chunk_text_snippet": c["text"][:200],
         }
         for c in chunks
     ]
@@ -772,16 +976,40 @@ async def rag_query_with_cache(
     use_mmr: bool = True,
     lang: str | None = None,
     filter_lang: str | None = None,
+    model: str = None,
 ) -> RAGQueryResponse:
-    """RAG query with Redis semantic cache.
+    """RAG query with two-layer Redis semantic cache.
+
+    Two-layer cache architecture:
+    - Layer 1: Exact match via token-bag hash (fastest, <1ms)
+    - Layer 2: Semantic similarity via embeddings (medium, ~10ms)
+    - LLM fallback: actual generation (slowest, ~2s)
 
     On a cache hit returns the cached answer with sources (stored as JSON).
     On a miss, delegates to :func:`rag_query` and caches the result.
-    Degrades gracefully when Redis is unavailable.
-    """
-    from app.cache.redis_client import get_cached, set_cached
+    Degrades gracefully when Redis or semantic cache is unavailable.
 
-    cached = await get_cached(query)
+    Args:
+        query: User query text
+        llm_call_fn: LLM invocation function
+        top_k: Number of retrieved chunks
+        use_mmr: Whether to use MMR diversity optimization
+        lang: Response language (None = auto-detect)
+        filter_lang: Document language filter
+        model: LLM model name (for semantic cache parameterization)
+
+    Returns:
+        RAGQueryResponse with answer and source citations
+    """
+    from app.cache.redis_client import get_cached_with_semantic, set_cached_with_semantic, increment_cache_miss
+
+    # Layer 1+2: Two-layer cache lookup (exact → semantic)
+    cached = await get_cached_with_semantic(
+        query=query,
+        model=model or "deepseek",
+        temperature=0.0,
+        max_tokens=500,
+    )
     if cached is not None:
         try:
             cached_data = json.loads(cached)
@@ -791,7 +1019,7 @@ async def rag_query_with_cache(
         except (json.JSONDecodeError, TypeError):
             answer = cached
             sources = []
-        # Record cache hit
+        # Record cache hit in stats
         try:
             from app.cache.redis_client import get_redis
             from app.api.rag_stats import STATS_PREFIX
@@ -802,11 +1030,22 @@ async def rag_query_with_cache(
             pass
         return RAGQueryResponse(answer=answer, sources=sources)
 
+    # Cache miss: run RAG pipeline
     result = rag_query(query, llm_call_fn, top_k, use_mmr, lang, filter_lang)
-    cache_data = json.dumps({"answer": result.answer, "sources": [s.model_dump() for s in result.sources]})
-    await set_cached(query, cache_data)
 
-    # Record cache miss
+    # Cache the result in both exact and semantic caches
+    cache_data = json.dumps({"answer": result.answer, "sources": [s.model_dump() for s in result.sources]})
+    await set_cached_with_semantic(
+        query=query,
+        response=cache_data,
+        model=model or "deepseek",
+        temperature=0.0,
+        max_tokens=500,
+        ttl=3600,
+    )
+
+    # Record cache miss in stats
+    increment_cache_miss()
     try:
         from app.cache.redis_client import get_redis
         from app.api.rag_stats import STATS_PREFIX
@@ -1196,6 +1435,9 @@ async def hybrid_retrieve_async(
         rrf_scores[key] = rrf_scores.get(key, 0) + 1.0 / (_RRF_K + rank)
         if key not in doc_map:
             doc_map[key] = doc
+        elif "_embedding" in doc:
+            # Preserve embedding from vector result for downstream reuse
+            doc_map[key]["_embedding"] = doc["_embedding"]
         _vector_contrib_count += 1
 
     # Title/slug boost
@@ -1220,23 +1462,28 @@ async def hybrid_retrieve_async(
         doc["score"] = score
         candidates.append(doc)
 
-    # Adaptive Reranking: skip rerank when top-1 has high confidence
-    # (large RRF score gap indicates clear winner already)
-    if len(candidates) > top_k:
-        top1_score = candidates[0].get("score", 0)
-        top2_score = candidates[1].get("score", 0) if len(candidates) > 1 else 0
-        score_gap = top1_score - top2_score if top1_score > 0 else 0
-        gap_ratio = score_gap / top1_score if top1_score > 0 else 0
+    # ── Adaptive Re-ranking based on Query Complexity ──
+    if _ADAPTIVE_RERANK_ENABLED and len(candidates) > top_k:
+        try:
+            strategy = get_re-ranking_strategy(query)
+            complexity = strategy["complexity"]
 
-        if gap_ratio >= _ADAPTIVE_RERANK_THRESHOLD:
-            logger.info(
-                "Adaptive rerank: skipping (top1=%.4f, gap_ratio=%.2f >= %.2f threshold)",
-                top1_score, gap_ratio, _ADAPTIVE_RERANK_THRESHOLD,
-            )
-            # Already well-ordered by RRF, skip CrossEncoder
-        else:
-            rerank_limit = max(top_k * 3, 10)
-            candidates = rerank(query, candidates, top_k=min(len(candidates), rerank_limit))
+            if complexity == "simple":
+                logger.info("Adaptive rerank: SKIP (simple query)")
+            elif complexity == "medium":
+                logger.info("Adaptive rerank: SINGLE_BGE (medium)")
+                rerank_limit = max(top_k * 3, 10)
+                candidates = rerank(query, candidates, top_k=min(len(candidates), rerank_limit))
+            elif complexity == "complex" and _ENSEMBLE_RERANK_ENABLED:
+                logger.info("Adaptive rerank: ENSEMBLE (complex)")
+                ensemble = get_ensemble_reranker()
+                candidates = await ensemble.rerank(query, candidates, top_k=min(len(candidates), top_k * 3))
+            else:
+                logger.info("Adaptive rerank: SINGLE_BGE (default)")
+                rerank_limit = max(top_k * 3, 10)
+                candidates = rerank(query, candidates, top_k=min(len(candidates), rerank_limit))
+        except Exception as e:
+            logger.warning("Adaptive re-ranking failed, using RRF candidates as-is: %s", e)
 
     # Diversity selection for cross-article queries
     if is_cross_article_query(query):
@@ -1273,8 +1520,10 @@ async def rag_query_async(
     top_k: int = 3,
     lang: str | None = None,
     filter_lang: str | None = None,
+    chunking_strategy: str = "default",
+    request_id: str = None,
 ) -> RAGQueryResponse:
-    """Async RAG pipeline: retrieve (parallel) → compress → generate.
+    """Async RAG pipeline: retrieve (parallel) -> compress -> generate.
 
     Uses asyncio.gather for parallel BM25 + vector retrieval.
 
@@ -1284,20 +1533,61 @@ async def rag_query_async(
         top_k: Number of results
         lang: Response language
         filter_lang: Document language filter
+        chunking_strategy: Chunking strategy to use:
+            - "default": Use existing chunking (parent-child from index pipeline)
+            - "parent_child": Explicitly use ParentChildSplitter for document splitting
+        request_id: Optional request ID for tracing
     """
     import asyncio
+    from app.observability import QueryTracer
+    from app.observability.tracing import create_span
+    
+    # Initialize tracer if request_id provided
+    tracer = QueryTracer(request_id=request_id or '', query=query) if request_id else None
 
     if lang is None:
         lang = detect_language(query)
 
-    # 1. Parallel retrieval
-    chunks = await hybrid_retrieve_async(query, top_k=top_k, lang_filter=filter_lang)
+    # If parent_child strategy requested, apply it at query time for
+    # ad-hoc documents. For pre-indexed data, the strategy was applied
+    # during indexing (run_index_pipeline already uses parent-child).
+    if chunking_strategy == "parent_child":
+        logger.info("Using parent_child chunking strategy for query: %s", query[:50])
+
+    # 1. Parallel retrieval (with tracing span)
+    with create_span("retrieval", {"query_length": len(query), "top_k": top_k}) as retrieval_span:
+        #    If HyDE is enabled, use hypothetical answer for retrieval
+        if _HYDE_ENABLED:
+            logger.info("HyDE enabled (async): using hypothetical answer for retrieval")
+            chunks = await hyde_retrieve_async(
+                query,
+                llm_call_fn,
+                top_k=top_k,
+                lang=lang,
+                lang_filter=filter_lang,
+            )
+            # If HyDE returns poor results, fallback to hybrid_retrieve_async
+            if chunks:
+                top_score = max(c.get("score", 0) for c in chunks)
+                if top_score < _HYDE_FALLBACK_THRESHOLD:
+                    logger.info(
+                        "HyDE async: poor results (score=%.4f < %.4f), falling back to hybrid retrieval",
+                        top_score, _HYDE_FALLBACK_THRESHOLD,
+                    )
+                    chunks = await hybrid_retrieve_async(query, top_k=top_k, lang_filter=filter_lang)
+            else:
+                logger.info("HyDE async: no results, falling back to hybrid retrieval")
+                chunks = await hybrid_retrieve_async(query, top_k=top_k, lang_filter=filter_lang)
+        else:
+            chunks = await hybrid_retrieve_async(query, top_k=top_k, lang_filter=filter_lang)
+        if retrieval_span is not None:
+            retrieval_span.set_attribute("chunk_count", len(chunks))
 
     # 2. Negative detection: LLM classifier for queries the KB can't answer.
     if _NEGATIVE_DETECTION_ENABLED and chunks:
         top_score = max(c.get("score", 0) for c in chunks) if chunks else 0
         if top_score < _HIGH_SCORE_SKIP_THRESHOLD:
-            if not classify_query_answerable_sync(query, llm_call_fn):
+            if not await asyncio.to_thread(classify_query_answerable_sync, query, llm_call_fn):
                 return RAGQueryResponse(
                     answer=(
                         "抱歉，该问题超出了知识库的覆盖范围。"
@@ -1317,9 +1607,12 @@ async def rag_query_async(
         )
         return RAGQueryResponse(answer=no_result_msg, sources=[])
 
-    # 3. Context compression
-    if chunks:
-        chunks = compress_context(query, chunks)
+    # 3. Context compression (with tracing span)
+    with create_span("compression", {"input_chunk_count": len(chunks)}) as compression_span:
+        if chunks:
+            chunks = await asyncio.to_thread(compress_context, query, chunks)
+        if compression_span is not None:
+            compression_span.set_attribute("output_chunk_count", len(chunks))
 
     if not chunks:
         no_result_msg = (
@@ -1332,11 +1625,14 @@ async def rag_query_async(
     # 3. Format context
     context = format_context(chunks)
 
-    # 4. Generate (support both sync and async LLM)
-    if asyncio.iscoroutinefunction(llm_call_fn):
-        answer = await generate_answer_async(query, context, llm_call_fn, lang=lang)
-    else:
-        answer = generate_answer(query, context, llm_call_fn, lang=lang)
+    # 4. Generate (with tracing span)
+    with create_span("llm_generation", {"context_length": len(context)}) as llm_span:
+        if asyncio.iscoroutinefunction(llm_call_fn):
+            answer = await generate_answer_async(query, context, llm_call_fn, lang=lang)
+        else:
+            answer = generate_answer(query, context, llm_call_fn, lang=lang)
+        if llm_span is not None:
+            llm_span.set_attribute("answer_length", len(answer))
 
     # 5. Build response
     sources = [
@@ -1345,8 +1641,16 @@ async def rag_query_async(
             slug=c["metadata"].get("slug", ""),
             chunk=c["text"][:200] + "..." if len(c["text"]) > 200 else c["text"],
             score=c.get("score"),
+            chunk_id=c.get("id", c["metadata"].get("chunk_id", "")),
+            chunk_text_snippet=c["text"][:200],
         )
         for c in chunks
     ]
+
+    # 6. Record trace if tracer is active
+    if tracer:
+        tracer.end_retrieval([{"chunk_id": s.chunk_id, "title": s.title, "slug": s.slug} for s in sources])
+        tracer.end_rerank([{"chunk_id": s.chunk_id, "title": s.title} for s in sources])
+        tracer.record()
 
     return RAGQueryResponse(answer=answer, sources=sources)
