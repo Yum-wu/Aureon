@@ -1,3 +1,6 @@
+import os
+from typing import Optional
+
 from pydantic_settings import BaseSettings
 
 
@@ -44,10 +47,10 @@ class Settings(BaseSettings):
     api_auth_key: str = ""  # Shared API key for authentication (empty = disabled)
 
     # Vector store backend ("chroma" or "qdrant")
-    vector_backend: str = "chroma"
-    qdrant_url: str = "http://localhost:6333"
-    qdrant_api_key: str = ""
-    qdrant_collection: str = "aureon"
+    vector_backend: str = "chroma"  # env: VECTOR_DB or VECTOR_BACKEND
+    qdrant_url: str = "http://localhost:6333"  # env: QDRANT_URL
+    qdrant_api_key: str = ""  # env: QDRANT_API_KEY
+    qdrant_collection: str = "aureon"  # env: QDRANT_COLLECTION
 
     # GPU settings (auto-detect CUDA availability)
     gpu_enabled: bool = False  # Set True only when GPU confirmed
@@ -66,10 +69,61 @@ class Settings(BaseSettings):
     es_password: str = ""  # ES authentication password (empty = no auth)
     bm25_backend: str = "memory"
 
+    # Semantic Cache
+    semantic_cache_enabled: bool = True
+    semantic_cache_threshold: float = 0.92
+    semantic_cache_ttl: int = 86400
+    semantic_cache_max_size: int = 10000
+    semantic_cache_embedding_model: str = "BAAI/bge-large-zh-v1.5"
+
     # Auto index rebuild on startup when articles change
     auto_index_enabled: bool = True
 
+    # Adaptive Re-ranking
+    adaptive_rerank_enabled: bool = True
+    ensemble_rerank_enabled: bool = False
+    rerank_candidates: int = 12
+    adaptive_rerank_threshold: float = 0.5
+
+    # Ensemble Reranker Weights
+    ensemble_bge_weight: float = 0.6
+    ensemble_cohere_weight: float = 0.3
+    ensemble_jina_weight: float = 0.1
+
+    # External Reranker APIs
+    cohere_api_key: Optional[str] = None
+    cohere_rerank_model: str = "rerank-multilingual-v3.0"
+    jina_api_key: Optional[str] = None
+
+    # WebSocket Configuration
+    websocket_enabled: bool = True
+    websocket_max_connections: int = 300
+    websocket_heartbeat_interval: int = 30
+    websocket_heartbeat_timeout: int = 300
+
+    # Conversation Configuration
+    conversation_max_turns: int = 20
+    conversation_max_context_tokens: int = 4000
+
+    # Tool Calling Configuration
+    tool_calling_enabled: bool = True
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
+
+    def model_post_init(self, __context):
+        """Support VECTOR_DB env var as alias for vector_backend."""
+        if not self.vector_backend or self.vector_backend == "chroma":
+            vdb = os.environ.get("VECTOR_DB", "")
+            if vdb:
+                object.__setattr__(self, "vector_backend", vdb)
+
+
+def _resolve_vector_backend() -> str:
+    """Resolve vector backend from settings or VECTOR_DB env var."""
+    vdb = os.environ.get("VECTOR_DB", "")
+    if vdb:
+        return vdb
+    return settings.vector_backend
 
 
 settings = Settings()
