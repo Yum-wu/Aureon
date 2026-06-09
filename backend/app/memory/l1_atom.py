@@ -77,12 +77,13 @@ def search_atoms(session_id: str, query: str, limit: int = 10):
         ).fetchall()
         return [dict(r) for r in rows]
     except Exception:
-        # Fallback to LIKE if FTS fails
+        # Fallback to LIKE if FTS fails — escape LIKE wildcards
+        safe_like = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         rows = conn.execute(
             "SELECT * FROM atoms WHERE session_id = ? "
-            "AND (subject LIKE ? OR predicate LIKE ? OR object LIKE ?) "
+            "AND (subject LIKE ? ESCAPE '\\' OR predicate LIKE ? ESCAPE '\\' OR object LIKE ? ESCAPE '\\') "
             "ORDER BY confidence DESC LIMIT ?",
-            (session_id, f"%{query}%", f"%{query}%", f"%{query}%", limit),
+            (session_id, f"%{safe_like}%", f"%{safe_like}%", f"%{safe_like}%", limit),
         ).fetchall()
         return [dict(r) for r in rows]
 

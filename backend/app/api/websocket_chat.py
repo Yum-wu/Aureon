@@ -1,6 +1,6 @@
 """WebSocket chat endpoint for real-time streaming responses."""
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from typing import Dict, Any, Optional
 import json
 import asyncio
@@ -27,7 +27,6 @@ def _get_ws_semaphore() -> asyncio.Semaphore:
 async def websocket_chat(
     websocket: WebSocket,
     client_id: str,
-    api_key: Optional[str] = Query(default=None),
 ):
     """WebSocket endpoint for real-time chat.
 
@@ -38,7 +37,7 @@ async def websocket_chat(
     - Tool calling
 
     Authentication:
-    - Query param ``api_key`` (preferred, deprecated — prefer header)
+    - Header ``X-API-Key`` (preferred, not logged in access logs)
     - First message ``type=auth`` with ``api_key`` field
     - Skipped when ``API_AUTH_KEY`` is not configured
 
@@ -68,21 +67,18 @@ async def websocket_chat(
         return
 
     async with semaphore:
-        # ── 2. API key authentication ──
+        # ── 2. API key authentication (before accepting connection) ──
         authenticated = False
         if settings.api_auth_key:
-            # Try query param first
-            if api_key:
-                if api_key == settings.api_auth_key:
+            # Try header first (preferred — not logged in access logs)
+            header_key = websocket.headers.get("x-api-key")
+            if header_key:
+                if header_key == settings.api_auth_key:
                     authenticated = True
                 else:
-                    await websocket.accept()
-                    await websocket.send_json({
-                        "type": "error",
-                        "message": "Invalid API key.",
-                    })
+                    # Reject before accept — no connection established
                     await websocket.close(code=4001, reason="Unauthorized")
-                    logger.warning("WS auth failed: bad api_key query param", client_id=client_id)
+                    logger.warning("WS auth failed: bad X-API-Key header", client_id=client_id)
                     return
         else:
             # No auth configured — skip
@@ -92,7 +88,7 @@ async def websocket_chat(
         manager = WebSocketManager()
         conv_manager = ConversationManager()
 
-        # Connect
+        # Connect (only after auth check passed)
         await manager.connect(websocket, client_id)
 
         # Create conversation
@@ -164,10 +160,10 @@ async def websocket_chat(
             try:
                 await manager.send_json(client_id, {
                     "type": "error",
-                    "message": str(e),
+                    "message": "An internal error occurred.",
                 })
             except Exception:
-                pass
+                logger.warning("Failed to send error message to client %s", client_id)
         finally:
             await manager.disconnect(client_id)
 
@@ -276,7 +272,7 @@ async def _stream_rag_response(
         logger.error("Error streaming response: %s", e, exc_info=True)
         await manager.send_json(client_id, {
             "type": "error",
-            "message": f"Error generating response: {str(e)}",
+            "message": "An error occurred while generating the response.",
         })
 
 

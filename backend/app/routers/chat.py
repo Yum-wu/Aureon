@@ -28,22 +28,32 @@ from app.exceptions import AureonException
 
 logger = structlog.get_logger()
 
-# ── Agent cache ──
-_agents: dict[str, Any] = {}
+# ── Agent cache (LRU-bounded) ──
+import collections
+
+_MAX_AGENTS = 32
+_agents: collections.OrderedDict[str, Any] = collections.OrderedDict()
 _agent_lock = asyncio.Lock()
 
 router = APIRouter()
 
 
 async def _get_agent(lang: str = "zh", model: str = None):
-    """Get or create a chat agent for the given language and model."""
+    """Get or create a chat agent for the given language and model (LRU-bounded)."""
     global _agents
     cache_key = f"{lang}:{model or 'default'}"
-    if cache_key not in _agents:
-        async with _agent_lock:
-            if cache_key not in _agents:
-                llm = create_llm(model=model)
-                _agents[cache_key] = create_chat_agent(llm, lang=lang)
+    if cache_key in _agents:
+        _agents.move_to_end(cache_key)
+        return _agents[cache_key]
+    async with _agent_lock:
+        if cache_key in _agents:
+            _agents.move_to_end(cache_key)
+            return _agents[cache_key]
+        llm = create_llm(model=model)
+        _agents[cache_key] = create_chat_agent(llm, lang=lang)
+        # Evict oldest if over limit
+        while len(_agents) > _MAX_AGENTS:
+            _agents.popitem(last=False)
     return _agents[cache_key]
 
 

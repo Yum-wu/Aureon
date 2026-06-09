@@ -62,13 +62,19 @@ _JWT_EXPIRY_HOURS = 24
 
 
 def _get_jwt_secret() -> str:
-    """Lazily resolve the JWT signing secret from environment."""
+    """Lazily resolve the JWT signing secret from environment.
+
+    Raises RuntimeError if JWT_SECRET is not set (no insecure default).
+    """
     global _JWT_SECRET
     if _JWT_SECRET is None:
         import os
-        _JWT_SECRET = os.environ.get("JWT_SECRET", "aureon-dev-secret-change-in-production")
-        if _JWT_SECRET == "aureon-dev-secret-change-in-production":
-            logger.warning("Using default JWT_SECRET — set JWT_SECRET env var for production")
+        _JWT_SECRET = os.environ.get("JWT_SECRET")
+        if not _JWT_SECRET:
+            raise RuntimeError(
+                "JWT_SECRET environment variable is required. "
+                "Set it before starting the application."
+            )
     return _JWT_SECRET
 
 
@@ -217,26 +223,41 @@ def _get_fernet():
 
 
 def encrypt_secret(value: str | None) -> str | None:
-    """Encrypt a secret value with Fernet. Returns base64 ciphertext."""
+    """Encrypt a secret value with Fernet. Returns base64 ciphertext.
+
+    Raises RuntimeError if Fernet is not available (cryptography not installed).
+    """
     if not value:
         return value
     f = _get_fernet()
     if f is None:
-        return value  # fallback: store plaintext if encryption unavailable
+        raise RuntimeError(
+            "Secret encryption unavailable: cryptography package not installed. "
+            "Install it with: pip install cryptography"
+        )
     return f.encrypt(value.encode()).decode()
 
 
 def decrypt_secret(value: str | None) -> str | None:
-    """Decrypt a Fernet-encrypted secret. Returns plaintext."""
+    """Decrypt a Fernet-encrypted secret. Returns plaintext.
+
+    Raises RuntimeError if Fernet is not available.
+    Raises ValueError if decryption fails (wrong key or corrupted data).
+    """
     if not value:
         return value
     f = _get_fernet()
     if f is None:
-        return value  # fallback: assume plaintext
+        raise RuntimeError(
+            "Secret decryption unavailable: cryptography package not installed. "
+            "Install it with: pip install cryptography"
+        )
     try:
         return f.decrypt(value.encode()).decode()
-    except Exception:
-        return value  # not encrypted or wrong key, return as-is
+    except Exception as exc:
+        raise ValueError(
+            f"Failed to decrypt secret (wrong key or corrupted data): {exc}"
+        ) from exc
 
 
 # ── PII Detection ──

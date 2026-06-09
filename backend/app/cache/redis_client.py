@@ -22,6 +22,7 @@ _redis = None
 # ── In-memory fallback cache (when Redis is unavailable) ──
 _mem_cache: dict = {}
 _MEM_TTL = 3600  # 1 hour, same as Redis TTL
+_MEM_MAX_VALUE_BYTES = 512 * 1024  # 512 KB per-value size limit
 
 
 # Bump to invalidate all cached RAG responses (e.g. after retrieval logic changes)
@@ -85,7 +86,11 @@ def _mem_get(query: str) -> Optional[str]:
 
 
 def _mem_set(query: str, response: str, ttl: int = _MEM_TTL):
-    """Store in in-memory cache with expiry."""
+    """Store in in-memory cache with expiry. Skips if value exceeds size limit."""
+    # Skip oversized values to prevent OOM
+    if len(response) > _MEM_MAX_VALUE_BYTES:
+        logger.debug("In-memory cache: skipping oversized value (%d bytes)", len(response))
+        return
     full_key = _mem_cache_key(query)
     _mem_cache[full_key] = (response, time.monotonic() + ttl)
     # Evict old entries if cache is too large (keep max 500)

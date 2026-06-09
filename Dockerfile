@@ -30,9 +30,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 预下载 BGE-small-zh embedding 模型（~130MB，消除冷启动延迟）
-RUN python3 -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-small-zh-v1.5')" \
-    || HF_ENDPOINT=https://hf-mirror.com python3 -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-small-zh-v1.5')"
+# 默认跳过本地 BGE 模型（Railway CPU-only 加载 1.3GB large 模型太慢，且索引用 DashScope 1024d）
+# 如需本地嵌入，在 Railway 环境变量中设置 SKIP_LOCAL_EMBED=false
+ENV SKIP_LOCAL_EMBED=true
 
 # 后端代码
 COPY backend/ .

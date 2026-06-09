@@ -8,7 +8,11 @@ import re
 from typing import List, Dict, Any
 from pathlib import Path
 
+import structlog
+
 from app.utils.lang_detect import detect_language as _detect_text_language
+
+logger = structlog.get_logger()
 
 
 def detect_doc_language(content: str, frontmatter_lang: str = None) -> str:
@@ -198,7 +202,7 @@ def load_markdown_files(articles_dir: str) -> List[Dict[str, Any]]:
     docs = []
     path = Path(articles_dir)
     if not path.exists():
-        print(f"[RAG] Articles dir not found: {articles_dir}")
+        logger.warning("Articles dir not found: %s", articles_dir)
         return docs
 
     for fpath in sorted(path.rglob("*.md")):
@@ -219,5 +223,5 @@ def load_markdown_files(articles_dir: str) -> List[Dict[str, Any]]:
         }
         docs.append(doc)
 
-    print(f"[RAG] Loaded {len(docs)} documents from {articles_dir}")
+    logger.info("Loaded %d documents from %s", len(docs), articles_dir)
     return docs
