@@ -128,8 +128,18 @@ async def rag_query_endpoint(req: RAGQueryRequest, request: Request):
             filter_lang=req.language,
         )
     except AureonException:
+        latency_ms = int((time.time() - start_time) * 1000)
+        try:
+            asyncio.create_task(record_query(req.query, 0, latency_ms))
+        except Exception:
+            pass
         raise
     except Exception as e:
+        latency_ms = int((time.time() - start_time) * 1000)
+        try:
+            asyncio.create_task(record_query(req.query, 0, latency_ms))
+        except Exception:
+            pass
         logger.error("rag_query_with_cache failed: %s", e)
         raise AureonException(status_code=500, detail=f"Query processing error: {str(e)[:100]}")
     latency_ms = int((time.time() - start_time) * 1000)
@@ -161,14 +171,27 @@ async def rag_query_async_endpoint(req: RAGQueryRequest, request: Request):
     async def llm_call(messages):
         return (await llm.ainvoke(messages)).content
 
-    result = await rag_query_async(
-        query=req.query,
-        llm_call_fn=llm_call,
-        top_k=req.top_k or 3,
-        lang=None,  # 让 rag_query_async 自动检测语言
-        filter_lang=req.language,
-        request_id=request_id,
-    )
+    start_time = time.time()
+    try:
+        result = await rag_query_async(
+            query=req.query,
+            llm_call_fn=llm_call,
+            top_k=req.top_k or 3,
+            lang=None,  # 让 rag_query_async 自动检测语言
+            filter_lang=req.language,
+            request_id=request_id,
+        )
+    except AureonException:
+        raise
+    except Exception as e:
+        logger.error("rag_query_async failed: %s", e)
+        raise AureonException(status_code=500, detail=f"Query processing error: {str(e)[:100]}")
+
+    latency_ms = int((time.time() - start_time) * 1000)
+    try:
+        asyncio.create_task(record_query(req.query, len(result.sources), latency_ms))
+    except Exception:
+        pass
     return result
 
 

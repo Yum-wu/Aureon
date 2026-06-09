@@ -1,6 +1,7 @@
 import os
 from typing import Optional
 
+from pydantic import Field
 from pydantic_settings import BaseSettings
 
 
@@ -80,6 +81,9 @@ class Settings(BaseSettings):
     auto_index_enabled: bool = True
 
     # Adaptive Re-ranking
+    rerank_enabled: bool = Field(
+        default_factory=lambda: os.getenv("RERANK_ENABLED", "true").lower() == "true"
+    )
     adaptive_rerank_enabled: bool = True
     ensemble_rerank_enabled: bool = False
     rerank_candidates: int = 12
