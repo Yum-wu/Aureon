@@ -47,7 +47,7 @@ from app.routers import rag as rag_router
 from app.routers import crew as crew_router
 from app.agent.llm import create_llm
 from app.tools import ALL_TOOLS
-from app.memory.db import init_db
+from app.memory.db import init_db, close_db
 from app.memory.manager import manager as memory_manager
 from app.config import settings
 from app.cache.redis_client import close_redis
@@ -78,7 +78,120 @@ logger = structlog.get_logger()
 # ── Rate limiter ──
 limiter = Limiter(key_func=get_remote_address)
 
-app = FastAPI(title="Aureon API", version="0.1.0")
+# ── Global state for health checks ──
+_bm25_warmup_done = False  # starts False; background thread sets True when ready
+_index_ready = False  # True once index check completes
+
+
+def _warmup_bm25():
+    """Build BM25 index and auto-rebuild vector index if empty.
+
+    Runs in background thread at startup. Non-blocking.
+    When index is empty (e.g. after Railway restart), automatically
+    rebuilds using API embedding — no local BGE model, no OOM.
+    Also eagerly loads GPU models for faster first-request latency.
+    """
+    global _bm25_warmup_done, _index_ready
+    try:
+        from app.rag.vector_store import _build_kw_index, check_index_stale, get_collection_stats
+        _build_kw_index()
+        logger.info("BM25 index warmup complete")
+
+        # Check if vector index needs rebuild
+        base_dir = os.path.dirname(os.path.dirname(__file__))
+        articles_dir = os.path.join(base_dir, "data", "articles")
+        status = check_index_stale(articles_dir)
+        doc_count, chunk_count = get_collection_stats()
+
+        if status["stale"] and doc_count == 0:
+            # Index empty — auto-rebuild via API embedding (no local model, no OOM)
+            logger.info("Index empty, auto-rebuilding via API embedding...")
+            try:
+                from app.rag.qa_chain import run_index_pipeline
+                result = run_index_pipeline(articles_dir)
+                logger.info("Auto-rebuild complete: %d docs, %d chunks, %.1fs",
+                            result.get("documents_indexed", 0),
+                            result.get("chunks_created", 0),
+                            result.get("elapsed_seconds", 0))
+            except Exception as e:
+                logger.error("Auto-rebuild failed: %s", e)
+        else:
+            logger.info("Index OK: %d docs, %d chunks", doc_count, chunk_count)
+
+        # Eagerly load GPU models for faster first-request latency
+        try:
+            from app.rag.embed_gpu import eager_load_models
+            eager_load_models()
+        except Exception as e:
+            logger.warning("GPU model eager loading failed (non-fatal): %s", e)
+
+    except Exception as e:
+        logger.warning("BM25 warmup / index check failed (non-fatal): %s", e)
+    finally:
+        _index_ready = True
+        _bm25_warmup_done = True
+
+
+from contextlib import asynccontextmanager
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan: startup and shutdown logic."""
+    # ── Startup ──
+    if not settings.llm_api_key and not settings.fallback_api_key:
+        logger.warning("LLM_API_KEY 未配置，Agent 调用将失败")
+    if settings.langchain_api_key:
+        os.environ.setdefault("LANGCHAIN_API_KEY", settings.langchain_api_key)
+        os.environ.setdefault("LANGCHAIN_PROJECT", settings.langchain_project)
+        os.environ.setdefault("LANGCHAIN_ENDPOINT", "https://api.smith.langchain.com")
+    init_db()
+    from app.features import init_feature_flags_table
+    from app.observability import init_query_traces_table
+    from app.security import init_pii_detection_table, init_sso_providers_table
+    from app.evaluation import init_evaluation_tables
+    from app.cost import init_cost_tables
+    from app.reliability import init_reliability_tables
+    from app.knowledge import init_knowledge_tables
+    from app.ai_platform import init_ai_platform_tables
+    from app.integration import init_integration_tables
+    from app.audit import init_audit_tables
+    from app.memory.pg import init_pg_tables
+    init_feature_flags_table()
+    init_query_traces_table()
+    init_pii_detection_table()
+    init_sso_providers_table()
+    init_evaluation_tables()
+    init_cost_tables()
+    init_reliability_tables()
+    init_knowledge_tables()
+    init_ai_platform_tables()
+    init_integration_tables()
+    init_audit_tables()
+    await init_pg_tables()
+    memory_manager.init_background_tasks()
+
+    # Background BM25 + ChromaDB warmup + auto-rebuild (non-blocking)
+    threading.Thread(target=_warmup_bm25, daemon=True).start()
+
+    # OpenTelemetry distributed tracing
+    try:
+        from app.observability.tracing import init_tracing
+        init_tracing(app)
+    except Exception as e:
+        logger.warning("OpenTelemetry tracing init failed (non-fatal): %s", e)
+
+    logger.info("Startup complete")
+
+    yield  # Application runs here
+
+    # ── Shutdown ──
+    memory_manager.flush_all_scenarios()
+    close_db()
+    await close_redis()
+
+
+app = FastAPI(title="Aureon API", version="0.1.0", lifespan=lifespan)
 
 # ── Custom ThreadPoolExecutor for async routes ──
 # Configure max_workers to handle concurrent requests across multiple Uvicorn workers
@@ -169,112 +282,6 @@ async def logging_middleware(request: Request, call_next):
         elapsed_ms=elapsed,
     )
     return response
-
-
-def _warmup_bm25():
-    """Build BM25 index and auto-rebuild vector index if empty.
-
-    Runs in background thread at startup. Non-blocking.
-    When index is empty (e.g. after Railway restart), automatically
-    rebuilds using API embedding — no local BGE model, no OOM.
-    Also eagerly loads GPU models for faster first-request latency.
-    """
-    global _bm25_warmup_done, _index_ready
-    try:
-        from app.rag.vector_store import _build_kw_index, check_index_stale, get_collection_stats
-        _build_kw_index()
-        logger.info("BM25 index warmup complete")
-
-        # Check if vector index needs rebuild
-        base_dir = os.path.dirname(os.path.dirname(__file__))
-        articles_dir = os.path.join(base_dir, "data", "articles")
-        status = check_index_stale(articles_dir)
-        doc_count, chunk_count = get_collection_stats()
-
-        if status["stale"] and doc_count == 0:
-            # Index empty — auto-rebuild via API embedding (no local model, no OOM)
-            logger.info("Index empty, auto-rebuilding via API embedding...")
-            try:
-                from app.rag.qa_chain import run_index_pipeline
-                result = run_index_pipeline(articles_dir)
-                logger.info("Auto-rebuild complete: %d docs, %d chunks, %.1fs",
-                            result.get("documents_indexed", 0),
-                            result.get("chunks_created", 0),
-                            result.get("elapsed_seconds", 0))
-            except Exception as e:
-                logger.error("Auto-rebuild failed: %s", e)
-        else:
-            logger.info("Index OK: %d docs, %d chunks", doc_count, chunk_count)
-
-        # Eagerly load GPU models for faster first-request latency
-        try:
-            from app.rag.embed_gpu import eager_load_models
-            eager_load_models()
-        except Exception as e:
-            logger.warning("GPU model eager loading failed (non-fatal): %s", e)
-
-    except Exception as e:
-        logger.warning("BM25 warmup / index check failed (non-fatal): %s", e)
-    finally:
-        _index_ready = True
-        _bm25_warmup_done = True
-
-
-_bm25_warmup_done = False  # starts False; background thread sets True when ready
-_index_ready = False  # True once index check completes
-
-
-@app.on_event("startup")
-async def startup():
-    if not settings.llm_api_key and not settings.fallback_api_key:
-        logger.warning("LLM_API_KEY 未配置，Agent 调用将失败")
-    if settings.langchain_api_key:
-        os.environ.setdefault("LANGCHAIN_API_KEY", settings.langchain_api_key)
-        os.environ.setdefault("LANGCHAIN_PROJECT", settings.langchain_project)
-        os.environ.setdefault("LANGCHAIN_ENDPOINT", "https://api.smith.langchain.com")
-    init_db()
-    from app.features import init_feature_flags_table
-    from app.observability import init_query_traces_table
-    from app.security import init_pii_detection_table, init_sso_providers_table
-    from app.evaluation import init_evaluation_tables
-    from app.cost import init_cost_tables
-    from app.reliability import init_reliability_tables
-    from app.knowledge import init_knowledge_tables
-    from app.ai_platform import init_ai_platform_tables
-    from app.integration import init_integration_tables
-    from app.audit import init_audit_tables
-    from app.memory.pg import init_pg_tables
-    init_feature_flags_table()
-    init_query_traces_table()
-    init_pii_detection_table()
-    init_sso_providers_table()
-    init_evaluation_tables()
-    init_cost_tables()
-    init_reliability_tables()
-    init_knowledge_tables()
-    init_ai_platform_tables()
-    init_integration_tables()
-    init_audit_tables()
-    await init_pg_tables()
-    memory_manager.init_background_tasks()
-
-    # Background BM25 + ChromaDB warmup + auto-rebuild (non-blocking)
-    threading.Thread(target=_warmup_bm25, daemon=True).start()
-
-    # OpenTelemetry distributed tracing (Task 5.1)
-    try:
-        from app.observability.tracing import init_tracing
-        init_tracing(app)
-    except Exception as e:
-        logger.warning("OpenTelemetry tracing init failed (non-fatal): %s", e)
-
-    logger.info("Startup complete")
-
-
-@app.on_event("shutdown")
-async def shutdown():
-    memory_manager.flush_all_scenarios()
-    await close_redis()
 
 
 class LangGraphRunRequest(BaseModel):

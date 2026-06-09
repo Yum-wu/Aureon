@@ -43,6 +43,20 @@ def get_db() -> sqlite3.Connection:
         return conn
 
 
+def close_db():
+    """Close the thread-local SQLite connection if open.
+
+    Call during application shutdown to release resources.
+    """
+    conn = getattr(_thread_local, "conn", None)
+    if conn is not None:
+        try:
+            conn.close()
+        except Exception:
+            pass
+        _thread_local.conn = None
+
+
 # -- Schema Versioning --
 # Lightweight migration mechanism for raw SQLite (no Alembic/SQLAlchemy needed).
 # Each migration is a function that receives a connection and bumps the version.

@@ -58,7 +58,8 @@ async def stream_agent(
                 yield sse_event({"type": "tool_end", "content": {"tool": name, "result": str(output)}})
 
     except Exception as e:
-        yield sse_event({"type": "error", "content": {"message": str(e)}})
+        logger.error("Agent stream error: %s", e, exc_info=True)
+        yield sse_event({"type": "error", "content": {"message": "An internal error occurred while processing your request."}})
 
     yield sse_event({"type": "done", "content": None})
 

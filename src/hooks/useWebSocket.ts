@@ -13,6 +13,7 @@ import type {
 interface UseWebSocketOptions {
   clientId?: string;
   autoConnect?: boolean;
+  maxReconnectAttempts?: number;
 }
 
 interface UseWebSocketReturn {
@@ -27,8 +28,13 @@ interface UseWebSocketReturn {
   disconnect: () => void;
 }
 
+/** Exponential backoff delay in ms: 1s, 2s, 4s, 8s, max 30s */
+function getReconnectDelay(attempt: number): number {
+  return Math.min(1000 * Math.pow(2, attempt), 30000);
+}
+
 export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketReturn {
-  const { clientId = 'default', autoConnect = true } = options;
+  const { clientId = 'default', autoConnect = true, maxReconnectAttempts = 5 } = options;
 
   const [isConnected, setIsConnected] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -40,6 +46,37 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   const wsRef = useRef<AureonWebSocket | null>(null);
   const streamingTextRef = useRef('');
   const handlersRegisteredRef = useRef(false);
+  const reconnectAttemptRef = useRef(0);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const intentionalDisconnectRef = useRef(false);
+
+  // Clear any pending reconnect timer
+  const clearReconnectTimer = useCallback(() => {
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+  }, []);
+
+  // Attempt reconnection with exponential backoff
+  const attemptReconnect = useCallback(() => {
+    if (intentionalDisconnectRef.current) return;
+    if (reconnectAttemptRef.current >= maxReconnectAttempts) {
+      setError('Connection lost. Please refresh the page to reconnect.');
+      return;
+    }
+
+    const delay = getReconnectDelay(reconnectAttemptRef.current);
+    reconnectAttemptRef.current += 1;
+
+    reconnectTimerRef.current = setTimeout(() => {
+      if (!wsRef.current || intentionalDisconnectRef.current) return;
+      wsRef.current.connect().catch((err) => {
+        console.error('Reconnect attempt failed:', err);
+        attemptReconnect();
+      });
+    }, delay);
+  }, [maxReconnectAttempts]);
 
   // Initialize WebSocket
   useEffect(() => {
@@ -55,6 +92,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
         ws.connect().catch((err) => {
           console.error('Failed to connect:', err);
           setError('Failed to connect to server');
+          attemptReconnect();
         });
       }
       return;
@@ -64,6 +102,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     // Register message handlers
     ws.onMessage('connected', (msg) => {
       console.log('Connected to chat:', msg.conversation_id);
+      reconnectAttemptRef.current = 0; // Reset on successful connect
     });
 
     ws.onMessage('sources', (msg) => {
@@ -101,29 +140,37 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
       // Heartbeat acknowledged
     });
 
-    // Register connection handler
+    // Register connection handler — auto-reconnect on disconnect
     ws.onConnection((connected) => {
       setIsConnected(connected);
       if (connected) {
-        // Clear any previous disconnect error on reconnect
         setError(null);
+        reconnectAttemptRef.current = 0;
+        clearReconnectTimer();
       } else {
-        setError('Disconnected from server');
+        if (!intentionalDisconnectRef.current) {
+          setError('Disconnected from server');
+          attemptReconnect();
+        }
       }
     });
 
     // Connect
+    intentionalDisconnectRef.current = false;
     ws.connect().catch((err) => {
       console.error('Failed to connect:', err);
       setError('Failed to connect to server');
+      attemptReconnect();
     });
 
     // Cleanup
     return () => {
+      intentionalDisconnectRef.current = true;
+      clearReconnectTimer();
       ws.disconnect();
       handlersRegisteredRef.current = false;
     };
-  }, [clientId, autoConnect]);
+  }, [clientId, autoConnect, attemptReconnect, clearReconnectTimer]);
 
   // Send user message
   const sendMessage = useCallback(
@@ -158,10 +205,12 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
 
   // Disconnect
   const disconnect = useCallback(() => {
+    intentionalDisconnectRef.current = true;
+    clearReconnectTimer();
     if (wsRef.current) {
       wsRef.current.disconnect();
     }
-  }, []);
+  }, [clearReconnectTimer]);
 
   return {
     isConnected,

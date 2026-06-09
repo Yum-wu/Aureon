@@ -508,7 +508,8 @@ def embed_texts_as_list(texts: List[str]) -> List[np.ndarray]:
 def embed_texts_llm(texts: List[str], batch_size: int = 10) -> np.ndarray:
     """Multi-provider embedding with fallback chain.
 
-    Priority: local BGE (512d) → DashScope (512d) → SiliconFlow → Zhipu.
+    Priority: local BGE (1024d) → DashScope (1024d) → SiliconFlow → Zhipu.
+    Set SKIP_LOCAL_EMBED=true to skip local model (recommended for Railway/CPU).
     Raises if ALL providers fail. Never returns zero vectors.
     """
     from app.config import settings
@@ -1441,7 +1442,7 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
         embeddings = embedder.encode(texts, batch_size=settings.embedding_batch_size)
     except Exception as e:
         logger.warning("Adaptive embedding failed: %s, falling back to local/API", e)
-        embeddings = _embed_local(texts)
+        embeddings = _embed_local(texts) if not _skip_local_embed else None
         if embeddings is None:
             embeddings = embed_texts_llm(texts)
 

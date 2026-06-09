@@ -93,6 +93,20 @@ export function useChat() {
     }
   }, [isLoading, messages]);
 
+  // 组件卸载时中止进行中的请求
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+      if (flushTimerRef.current) {
+        clearTimeout(flushTimerRef.current);
+        flushTimerRef.current = null;
+      }
+    };
+  }, []);
+
   const handleEvent = useCallback((
     event: SSEEvent,
     assistantId: string,
