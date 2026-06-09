@@ -30,6 +30,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Force rebuild: 2026-06-09 monkey-patch CrossEncoder
+RUN echo "Rebuild triggered at $(date +%s)"
+
 # 默认跳过本地 BGE 模型（Railway CPU-only 加载 1.3GB large 模型太慢，且索引用 DashScope 1024d）
 # 如需本地嵌入，在 Railway 环境变量中设置 SKIP_LOCAL_EMBED=false
 ENV SKIP_LOCAL_EMBED=true
