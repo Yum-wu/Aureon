@@ -9,6 +9,12 @@ logger = structlog.get_logger()
 SCENARIOS_DIR = Path("offloads/scenarios").resolve()
 MAX_SCENARIOS = 50
 
+# Reject any session_id that would let the file path escape SCENARIOS_DIR.
+# Characters that are always unsafe in a path component: separators, NUL.
+# The resolved-path check below is the actual safety net; this filter is a
+# fast-path rejection of obviously malicious input.
+_UNSAFE_SESSION_ID_CHARS = set("/\\\0")
+
 # ── Cache for scenario file listing (invalidated after 60s) ──
 _scenario_cache: list[tuple[Path, float]] | None = None
 _scenario_cache_ts: float = 0
@@ -34,10 +40,17 @@ def _list_scenarios():
 
 def finalize_scenario(session_id: str, summary: str = ""):
     """Generate and save a L2 scenario markdown file."""
+    # Path-traversal guard: session_id is used directly in the filename.
+    if not session_id or any(c in _UNSAFE_SESSION_ID_CHARS for c in session_id):
+        logger.warning("L2 scenario skipped: unsafe session_id")
+        return
     SCENARIOS_DIR.mkdir(parents=True, exist_ok=True)
     date_str = datetime.now().strftime("%Y%m%d")
     filename = f"{session_id}_{date_str}.md"
-    filepath = SCENARIOS_DIR / filename
+    filepath = (SCENARIOS_DIR / filename).resolve()
+    if not str(filepath).startswith(str(SCENARIOS_DIR)):
+        logger.warning("L2 scenario skipped: path traversal blocked for %s", session_id)
+        return
 
     atoms = l1_atom.get_atoms_by_session(session_id)
     atom_lines = "\n".join(

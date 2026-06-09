@@ -181,10 +181,12 @@ def compress_context(query: str, chunks: List[Dict[str, Any]], threshold: float 
 _HIGH_SCORE_SKIP_THRESHOLD = float(os.getenv("HIGH_SCORE_SKIP_THRESHOLD", "0.01"))
 
 # LLM Classifier cache: avoid redundant API calls for the same query.
-# Keyed by normalized query hash, TTL-based expiry.
+# Bounded LRU with TTL-based expiry to prevent unbounded memory growth.
 import hashlib as _hashlib
+from collections import OrderedDict
 
-_CLASSIFIER_CACHE: Dict[str, bool] = {}
+_CLASSIFIER_CACHE_MAX = int(os.getenv("CLASSIFIER_CACHE_MAX", "10000"))
+_CLASSIFIER_CACHE: "OrderedDict[str, bool]" = OrderedDict()
 _CLASSIFIER_CACHE_TIMESTAMPS: Dict[str, float] = {}
 _CLASSIFIER_CACHE_TTL = float(os.getenv("CLASSIFIER_CACHE_TTL", "3600"))  # seconds
 
@@ -195,23 +197,35 @@ def _classifier_cache_key(query: str) -> str:
 
 
 def _classifier_cache_get(query: str) -> bool | None:
-    """Return cached result or None if miss/expired."""
+    """Return cached result or None if miss/expired. Expired entries are pruned."""
     if _CLASSIFIER_CACHE_TTL <= 0:
         return None
     key = _classifier_cache_key(query)
     ts = _CLASSIFIER_CACHE_TIMESTAMPS.get(key)
-    if ts is not None and (time.time() - ts) < _CLASSIFIER_CACHE_TTL:
-        return _CLASSIFIER_CACHE.get(key)
-    return None
+    if ts is None:
+        return None
+    if (time.time() - ts) >= _CLASSIFIER_CACHE_TTL:
+        # Expired — drop it so it cannot accumulate indefinitely.
+        _CLASSIFIER_CACHE.pop(key, None)
+        _CLASSIFIER_CACHE_TIMESTAMPS.pop(key, None)
+        return None
+    # LRU touch
+    _CLASSIFIER_CACHE.move_to_end(key)
+    return _CLASSIFIER_CACHE.get(key)
 
 
 def _classifier_cache_set(query: str, answerable: bool) -> None:
-    """Store classifier result in memory cache."""
+    """Store classifier result in bounded LRU cache."""
     if _CLASSIFIER_CACHE_TTL <= 0:
         return
     key = _classifier_cache_key(query)
     _CLASSIFIER_CACHE[key] = answerable
     _CLASSIFIER_CACHE_TIMESTAMPS[key] = time.time()
+    _CLASSIFIER_CACHE.move_to_end(key)
+    # Evict oldest entries to keep the cache bounded.
+    while len(_CLASSIFIER_CACHE) > _CLASSIFIER_CACHE_MAX:
+        evicted_key, _ = _CLASSIFIER_CACHE.popitem(last=False)
+        _CLASSIFIER_CACHE_TIMESTAMPS.pop(evicted_key, None)
 
 
 async def classify_query_answerable(query: str, model: str = None) -> bool:

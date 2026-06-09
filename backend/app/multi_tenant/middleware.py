@@ -8,6 +8,7 @@ Supports multiple tenant_id extraction methods:
 """
 
 from contextvars import ContextVar
+import os
 from typing import Optional
 
 import structlog
@@ -98,14 +99,82 @@ def _extract_tenant_from_jwt(token: str) -> Optional[str]:
         return None
 
 
+def _extract_verified_tenant_from_jwt(token: str) -> Optional[str]:
+    """Extract tenant_id from a JWT *with signature verification*.
+
+    Falls back to None on any verification error (expired, bad signature,
+    malformed).  Never accepts an unverified claim.
+    """
+    try:
+        from app.security import verify_token
+        payload = verify_token(token)
+    except Exception as e:
+        logger.debug("JWT verification failed: %s", e)
+        return None
+    return payload.get("tenant_id")
+
+
+def _resolve_api_key_tenant(request: Request) -> Optional[str]:
+    """Map an API key to a tenant id.
+
+    The mapping is read from the ``API_KEY_TENANT_MAP`` environment variable
+    formatted as ``"<key>:<tenant>;<key>:<tenant>"``.  When ``API_AUTH_KEY``
+    is set but no mapping exists, all callers share the ``default`` tenant
+    (single-tenant mode).
+    """
+    from app.config import settings
+
+    api_key = request.headers.get("X-API-Key")
+    if not api_key or not settings.api_auth_key:
+        return None
+    if api_key != settings.api_auth_key:
+        # Invalid key — do not leak which tenant is associated.
+        return None
+
+    raw = os.environ.get("API_KEY_TENANT_MAP", "")
+    if not raw:
+        return "default"
+    try:
+        for entry in raw.split(";"):
+            if not entry.strip():
+                continue
+            k, _, tenant = entry.partition(":")
+            if k == api_key and tenant:
+                return tenant.strip()
+    except Exception as e:
+        logger.debug("Failed to parse API_KEY_TENANT_MAP: %s", e)
+    return "default"
+
+
+async def _resolve_principal_tenant(request: Request) -> Optional[str]:
+    """Resolve the authenticated principal's tenant from the request.
+
+    Priority:
+    1. Verified JWT ``tenant_id`` claim.
+    2. API-key-to-tenant mapping (when ``X-API-Key`` is provided).
+
+    Returns None when the caller is unauthenticated.
+    """
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:]
+        tenant = _extract_verified_tenant_from_jwt(token)
+        if tenant:
+            return tenant
+
+    return _resolve_api_key_tenant(request)
+
+
 class TenantMiddleware(BaseHTTPMiddleware):
     """FastAPI middleware for tenant isolation.
 
     Extracts tenant_id from request and stores it in contextvars.
     Extraction priority:
-    1. X-Tenant-ID header
-    2. JWT token tenant_id claim
-    3. Default "default" tenant
+    1. X-Tenant-ID header (only trusted when an authenticated principal
+       agrees with the value — see `_verify_tenant_header`)
+    2. JWT token tenant_id claim (verified)
+    3. API-key-to-tenant mapping (when API_AUTH_KEY is configured)
+    4. Default "default" tenant
     """
 
     async def dispatch(
@@ -113,21 +182,45 @@ class TenantMiddleware(BaseHTTPMiddleware):
     ) -> Response:
         tenant_id = "default"  # Default tenant
 
-        # 1. Try X-Tenant-ID header (highest priority)
+        # 1. Try X-Tenant-ID header, but only trust it if it matches an
+        # authenticated principal (JWT claim or API-key mapping).
         header_tenant = request.headers.get("X-Tenant-ID")
         if header_tenant:
-            tenant_id = header_tenant
-            logger.debug("Tenant ID from header: %s", tenant_id)
+            principal_tenant = await _resolve_principal_tenant(request)
+            if principal_tenant is None:
+                # No authenticated principal — reject header-based claim.
+                logger.warning("Rejected X-Tenant-ID without authenticated principal")
+            elif header_tenant == principal_tenant:
+                tenant_id = header_tenant
+                logger.debug("Tenant ID from header (verified): %s", tenant_id)
+            else:
+                # Header disagrees with authenticated principal — spoofing attempt.
+                logger.warning(
+                    "Tenant header mismatch: header=%s principal=%s",
+                    header_tenant, principal_tenant,
+                )
+                return Response(
+                    content='{"detail":"Tenant header does not match authenticated principal"}',
+                    status_code=403,
+                    media_type="application/json",
+                )
 
-        # 2. Try JWT token tenant_id claim
+        # 2. Try JWT token tenant_id claim (verified signature)
         if tenant_id == "default":  # Only if not set from header
             auth_header = request.headers.get("Authorization", "")
             if auth_header.startswith("Bearer "):
                 token = auth_header[7:]  # Remove "Bearer " prefix
-                jwt_tenant = _extract_tenant_from_jwt(token)
+                jwt_tenant = _extract_verified_tenant_from_jwt(token)
                 if jwt_tenant:
                     tenant_id = jwt_tenant
-                    logger.debug("Tenant ID from JWT: %s", tenant_id)
+                    logger.debug("Tenant ID from verified JWT: %s", tenant_id)
+
+        # 3. Try API-key-to-tenant mapping
+        if tenant_id == "default":
+            key_tenant = _resolve_api_key_tenant(request)
+            if key_tenant:
+                tenant_id = key_tenant
+                logger.debug("Tenant ID from API key: %s", tenant_id)
 
         # Set tenant context
         TenantContext.set_tenant_id(tenant_id)
