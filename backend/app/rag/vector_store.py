@@ -1088,6 +1088,16 @@ def _get_reranker():
     """Lazy-load cross-encoder reranker. Returns None if unavailable."""
     global _reranker
     if _reranker is None:
+        # Memory guard: skip loading if <500MB free to prevent OOM on constrained containers
+        try:
+            import psutil
+            avail_mb = psutil.virtual_memory().available / (1024 * 1024)
+            if avail_mb < 500:
+                logger.warning("Skipping reranker load: only %.0fMB RAM available (need ~2200MB)", avail_mb)
+                _reranker = False
+                return None
+        except ImportError:
+            pass  # psutil not installed, proceed without memory check
         try:
             from sentence_transformers import CrossEncoder
             _reranker = CrossEncoder(_RERANKER_MODEL)
@@ -1110,15 +1120,14 @@ def rerank(query: str, chunks: List[Dict[str, Any]], top_k: int = 3) -> List[Dic
     if not chunks or len(chunks) <= 1:
         return chunks
 
-    # Disabled explicitly
-    import os
-    if os.environ.get("RERANK_ENABLED", "true").lower() == "false":
+    # Disabled explicitly via env var or settings
+    from app.config import settings
+    if not settings.rerank_enabled:
         return chunks[:top_k]
 
     # Try GPU reranker first for continuous GPU utilization
     try:
         from app.rag.embed_gpu import get_gpu_reranker
-        from app.config import settings
         if settings.gpu_enabled:
             gpu_reranker = get_gpu_reranker()
             return gpu_reranker.rerank(query, chunks, top_k=top_k)

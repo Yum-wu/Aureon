@@ -264,7 +264,19 @@ async def logging_middleware(request: Request, call_next):
                 )
 
     start = time.time()
-    response = await call_next(request)
+    try:
+        response = await call_next(request)
+    except Exception as e:
+        elapsed = int((time.time() - start) * 1000)
+        logger.error("unhandled_exception", path=request.url.path, error=str(e)[:200], elapsed_ms=elapsed)
+        return JSONResponse(
+            status_code=503,
+            content={
+                "error": "service_unavailable",
+                "detail": "Request processing failed. Please try again.",
+                "request_id": request_id,
+            },
+        )
     elapsed = int((time.time() - start) * 1000)
 
     # Security headers
