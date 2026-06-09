@@ -104,7 +104,10 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     // Register connection handler
     ws.onConnection((connected) => {
       setIsConnected(connected);
-      if (!connected) {
+      if (connected) {
+        // Clear any previous disconnect error on reconnect
+        setError(null);
+      } else {
         setError('Disconnected from server');
       }
     });

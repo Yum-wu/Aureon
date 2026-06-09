@@ -5,7 +5,7 @@
     {
       "label": "Recall@3 (Hybrid)",
       "value": "96.5%",
-      "detail": "192 QA pairs, BM25 + Vector RRF fusion + Reranker¾«ÅÅ"
+      "detail": "192 QA pairs, BM25 + Vector RRF fusion + Rerankerç²¾æŽ’"
     },
     {
       "label": "Recall@5 (Hybrid)",
@@ -85,7 +85,7 @@
     {
       "label": "Benchmark Pass Rate",
       "value": "13/14",
-      "detail": "92.9% pass rate (Cross-article Recall@3 85.7%, target ¡Ý90%)"
+      "detail": "92.9% pass rate (Cross-article Recall@3 85.7%, target â‰¥90%)"
     },
     {
       "label": "Concurrent QPS",
@@ -96,10 +96,10 @@
   "services": {
     "llm": "DeepSeek v4-flash",
     "embedding": "DashScope text-embedding-v3 (1024d) + BGE-small-zh fallback",
-    "vector_db": "ChromaDB (persistent) + Qdrant (±¸)",
-    "hybrid_search": "BM25 + Vector ¡ú RRF fusion ¡ú Reranker¾«ÅÅ",
+    "vector_db": "ChromaDB (persistent) + Qdrant (å¤‡)",
+    "hybrid_search": "BM25 + Vector â†’ RRF fusion â†’ Rerankerç²¾æŽ’",
     "cross_article": "Rule-based multi-query expansion + RRF fusion",
-    "negative_detection": "Keyword quickÉ¸ + LLM classifier (conditional)",
+    "negative_detection": "Keyword quickç­› + LLM classifier (conditional)",
     "reranking": "bge-reranker-v2-m3 cross-encoder (adaptive skip)",
     "guardrails": "Hallucination + Citation Verification",
     "streaming": "SSE /api/rag/query/stream",

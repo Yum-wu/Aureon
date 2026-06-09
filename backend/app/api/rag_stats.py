@@ -319,17 +319,16 @@ class BenchmarkData(BaseModel):
 @router.get("/api/rag/benchmark")
 async def get_benchmark():
     """Read benchmark results from file — dynamic data source."""
+    if not BENCHMARK_FILE.exists():
+        logger.warning("Benchmark file not found: %s", BENCHMARK_FILE)
+        return BenchmarkData(metrics=[], services={})
     try:
-        if BENCHMARK_FILE.exists():
-            with open(BENCHMARK_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            return BenchmarkData(**data)
-        else:
-            logger.warning("Benchmark file not found: %s", BENCHMARK_FILE)
-            return BenchmarkData(metrics=[], services={})
-    except Exception as e:
-        logger.error("Failed to read benchmark file: %s", e)
-        raise AureonException(status_code=500, error_type="benchmark_read_error", detail=str(e))
+        with open(BENCHMARK_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return BenchmarkData(**data)
+    except (UnicodeDecodeError, json.JSONDecodeError, OSError) as e:
+        logger.error("Benchmark file corrupted or unreadable: %s", e)
+        return BenchmarkData(metrics=[], services={})
 
 
 # ── Query Volume API ──
