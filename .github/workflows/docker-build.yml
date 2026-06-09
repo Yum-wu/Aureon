@@ -39,7 +39,10 @@ jobs:
       - name: Validate docker-compose.yml
         env:
           ES_PASSWORD: ci_validation_only
-        run: docker compose config --quiet
+        run: |
+          # Create dummy .env if missing (excluded from repo via .gitignore)
+          test -f backend/.env || touch backend/.env
+          docker compose config --quiet
 
       - name: Lint Dockerfile
         uses: hadolint/hadolint-action@v3.1.0
