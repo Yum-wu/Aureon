@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { authFetch } from "../services/authFetch";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -102,7 +103,7 @@ export function CrewGenerator() {
     logIdRef.current = 0;
 
     try {
-      const response = await fetch(`${CREW_API}/generate/stream`, {
+      const response = await authFetch(`${CREW_API}/generate/stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ topic: trimmed }),

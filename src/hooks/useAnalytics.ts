@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { authFetch } from '../services/authFetch';
 
 interface UsageData {
   timeRange: string;
@@ -59,10 +60,10 @@ export function useAnalytics(timeRange: string = '24h'): AnalyticsHook {
 
     try {
       const [usageRes, latencyRes, tokensRes, cacheRes] = await Promise.all([
-        fetch(`/api/rag/analytics/usage?time_range=${timeRange}`),
-        fetch(`/api/rag/analytics/latency?time_range=${timeRange}`),
-        fetch(`/api/rag/analytics/tokens?time_range=${timeRange}`),
-        fetch('/api/rag/analytics/cache'),
+        authFetch(`/api/rag/analytics/usage?time_range=${timeRange}`),
+        authFetch(`/api/rag/analytics/latency?time_range=${timeRange}`),
+        authFetch(`/api/rag/analytics/tokens?time_range=${timeRange}`),
+        authFetch('/api/rag/analytics/cache'),
       ]);
 
       if (!usageRes.ok || !latencyRes.ok || !tokensRes.ok || !cacheRes.ok) {

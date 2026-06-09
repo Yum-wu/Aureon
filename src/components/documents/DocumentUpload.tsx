@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, type DragEvent, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { authFetch } from "../../services/authFetch";
 
 type UploadStatus = "idle" | "uploading" | "success" | "error";
 
@@ -55,7 +56,7 @@ export function DocumentUpload({ onUploadSuccess }: DocumentUploadProps) {
         const formData = new FormData();
         formData.append("file", file);
 
-        const res = await fetch("/api/rag/upload", {
+        const res = await authFetch("/api/rag/upload", {
           method: "POST",
           body: formData,
         });

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { authFetch } from "../services/authFetch";
 
 interface BlogConfig {
   url: string;
@@ -13,7 +14,7 @@ export function useBlogConfig() {
   useEffect(() => {
     async function fetchConfig() {
       try {
-        const res = await fetch("/api/rag/blog/config");
+        const res = await authFetch("/api/rag/blog/config");
         if (res.ok) {
           setConfig(await res.json());
         }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { authFetch } from "../services/authFetch";
 
 export interface BenchmarkMetric {
   label: string;
@@ -29,14 +30,14 @@ export function useBenchmark() {
     async function fetchBenchmark() {
       try {
         // 1st: GET /benchmark (reads benchmark_results.json)
-        let res = await fetch(`${BASE_URL}/benchmark`);
+        let res = await authFetch(`${BASE_URL}/benchmark`);
         let body: BenchmarkData | null = null;
 
         if (res.ok) {
           body = await res.json();
         } else {
           // 2nd fallback: GET /benchmark/history (take latest run)
-          res = await fetch(`${BASE_URL}/benchmark/history?limit=1`);
+          res = await authFetch(`${BASE_URL}/benchmark/history?limit=1`);
           if (res.ok) {
             const json = await res.json() as { runs?: BenchmarkData[] };
             const runs = json.runs ?? [];

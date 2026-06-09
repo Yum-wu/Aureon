@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { authFetch } from "../services/authFetch";
 import type { StatsResponse, RecentQuery } from "../types/dashboard";
 
 interface DashboardData {
@@ -36,9 +37,9 @@ export function useDashboardStats(): DashboardData {
     async function fetchAll() {
       try {
         const [statsRes, recentRes, volumeRes] = await Promise.all([
-          fetch(STATS_URL),
-          fetch(RECENT_URL),
-          fetch(VOLUME_URL),
+          authFetch(STATS_URL),
+          authFetch(RECENT_URL),
+          authFetch(VOLUME_URL),
         ]);
 
         if (!statsRes.ok) {

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { authFetch } from "../services/authFetch";
 import { useDocuments } from "../hooks/useDocuments";
 import { useBlogConfig } from "../hooks/useBlogConfig";
 import { DocumentUpload } from "../components/documents/DocumentUpload";
@@ -79,7 +80,7 @@ export function Documents() {
           {blogConfig?.sync_enabled && (
             <button
               onClick={async () => {
-                const res = await fetch("/api/rag/blog/sync", { method: "POST" });
+                const res = await authFetch("/api/rag/blog/sync", { method: "POST" });
                 if (res.ok) {
                   refetch();
                 }

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { authFetch } from "../services/authFetch";
 
 interface DocumentItem {
   title: string;
@@ -29,7 +30,7 @@ export function useDocuments(): DocumentsData {
 
   const fetchDocs = useCallback(async (signal?: AbortSignal) => {
     try {
-      const res = await fetch(DOCS_URL, { signal });
+      const res = await authFetch(DOCS_URL, { signal });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setDocuments(data.documents ?? []);

@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { authFetch } from "../services/authFetch";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import i18n from "../i18n/config";
@@ -60,7 +61,7 @@ export function RagQuery() {
 
   const fetchUploadedFiles = useCallback(async () => {
     try {
-      const res = await fetch(RAG_UPLOAD_URL.replace("/upload", "/uploads"));
+      const res = await authFetch(RAG_UPLOAD_URL.replace("/upload", "/uploads"));
       if (!res.ok) return;
       const data = await res.json();
       setUploadedFiles((data.files || []).map((f: { filename: string }) => f.filename));
@@ -76,7 +77,7 @@ export function RagQuery() {
 
   const handleDeleteFile = useCallback(async (filename: string) => {
     try {
-      const res = await fetch(`${RAG_UPLOAD_URL}/${encodeURIComponent(filename)}`, {
+      const res = await authFetch(`${RAG_UPLOAD_URL}/${encodeURIComponent(filename)}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -104,7 +105,7 @@ export function RagQuery() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch(RAG_UPLOAD_URL, {
+      const res = await authFetch(RAG_UPLOAD_URL, {
         method: "POST",
         body: formData,
       });
@@ -162,7 +163,7 @@ export function RagQuery() {
     saveToHistory(trimmed);
 
     try {
-      const res = await fetch(RAG_STREAM_URL, {
+      const res = await authFetch(RAG_STREAM_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: trimmed, top_k: 3, use_mmr: true, language: (i18n.language || "en").startsWith("zh") ? "zh" : "en" }),

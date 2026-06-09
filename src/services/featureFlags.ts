@@ -31,7 +31,9 @@ export interface FeatureFlagUpdate {
   conditions?: Record<string, unknown>;
 }
 
-const API_BASE = import.meta.env.VITE_API_URL || "/api";
+import { authFetch } from "./authFetch";
+
+const API_BASE = "/api";
 
 export const featureFlagsApi = {
   /**
@@ -41,7 +43,7 @@ export const featureFlagsApi = {
     const url = status
       ? `${API_BASE}/feature-flags/?status=${status}`
       : `${API_BASE}/feature-flags/`;
-    const response = await fetch(url);
+    const response = await authFetch(url);
     if (!response.ok) {
       throw new Error("Failed to list feature flags");
     }
@@ -52,7 +54,7 @@ export const featureFlagsApi = {
    * 获取单个 Feature Flag
    */
   async get(name: string): Promise<FeatureFlag> {
-    const response = await fetch(`${API_BASE}/feature-flags/${name}`);
+    const response = await authFetch(`${API_BASE}/feature-flags/${name}`);
     if (!response.ok) {
       throw new Error("Feature flag not found");
     }
@@ -63,7 +65,7 @@ export const featureFlagsApi = {
    * 创建 Feature Flag
    */
   async create(flag: FeatureFlagCreate): Promise<FeatureFlag> {
-    const response = await fetch(`${API_BASE}/feature-flags/`, {
+    const response = await authFetch(`${API_BASE}/feature-flags/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(flag),
@@ -79,7 +81,7 @@ export const featureFlagsApi = {
    * 更新 Feature Flag
    */
   async update(name: string, update: FeatureFlagUpdate): Promise<FeatureFlag> {
-    const response = await fetch(`${API_BASE}/feature-flags/${name}`, {
+    const response = await authFetch(`${API_BASE}/feature-flags/${name}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(update),
@@ -94,7 +96,7 @@ export const featureFlagsApi = {
    * 删除 Feature Flag
    */
   async delete(name: string): Promise<void> {
-    const response = await fetch(`${API_BASE}/feature-flags/${name}`, {
+    const response = await authFetch(`${API_BASE}/feature-flags/${name}`, {
       method: "DELETE",
     });
     if (!response.ok) {
@@ -114,7 +116,7 @@ export const featureFlagsApi = {
     if (userId) params.append("user_id", userId);
     if (workspaceId) params.append("workspace_id", workspaceId);
 
-    const response = await fetch(
+    const response = await authFetch(
       `${API_BASE}/feature-flags/evaluate/${name}?${params.toString()}`
     );
     if (!response.ok) {

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { authFetch } from '../services/authFetch';
 import { SearchBar } from '../components/search/SearchBar';
 import { StreamingAnswer } from '../components/search/StreamingAnswer';
 import { CitationList } from '../components/search/CitationList';
@@ -19,7 +20,7 @@ export function Search() {
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    fetch('/api/rag/suggestions')
+    authFetch('/api/rag/suggestions')
       .then(r => r.json())
       .then(d => setSuggestions(d.suggestions || []))
       .catch(() => {});
