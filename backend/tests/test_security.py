@@ -76,6 +76,22 @@ class TestPIIDetection:
         assert data["document_id"] == "doc-123"
 
 
+def _admin_headers():
+    """Return Authorization headers with an ADMIN JWT for SSO tests.
+
+    SSO management endpoints now require ADMIN role (security fix).
+    In dev mode (no API_AUTH_KEY), require_role returns a dev-user with
+    ADMIN role, so no header is needed.  When API_AUTH_KEY is set, we
+    must provide a valid ADMIN JWT.
+    """
+    from app.config import settings
+    if not settings.api_auth_key:
+        return {}
+    from app.security import create_access_token
+    token = create_access_token({"sub": "test-admin", "role": "ADMIN"})
+    return {"Authorization": f"Bearer {token}"}
+
+
 class TestSSOProviders:
     """Test SSO Provider endpoints"""
 
@@ -90,6 +106,7 @@ class TestSSOProviders:
                 "client_id": "test-client-id",
                 "enabled": True,
             },
+            headers=_admin_headers(),
         )
         assert response.status_code == 201
         data = response.json()
@@ -98,7 +115,10 @@ class TestSSOProviders:
 
     def test_list_sso_providers(self):
         """Test listing SSO providers"""
-        response = client.get("/api/security/sso/providers")
+        response = client.get(
+            "/api/security/sso/providers",
+            headers=_admin_headers(),
+        )
         assert response.status_code == 200
         assert isinstance(response.json(), list)
 
@@ -108,13 +128,20 @@ class TestSSOProviders:
         client.post(
             "/api/security/sso/providers",
             json={"name": provider_name, "provider_type": "OIDC"},
+            headers=_admin_headers(),
         )
-        response = client.delete(f"/api/security/sso/providers/{provider_name}")
+        response = client.delete(
+            f"/api/security/sso/providers/{provider_name}",
+            headers=_admin_headers(),
+        )
         assert response.status_code == 204
 
     def test_delete_nonexistent_sso_provider(self):
         """Test deleting non-existent SSO provider"""
-        response = client.delete("/api/security/sso/providers/nonexistent")
+        response = client.delete(
+            "/api/security/sso/providers/nonexistent",
+            headers=_admin_headers(),
+        )
         assert response.status_code == 404
 
 
