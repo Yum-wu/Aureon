@@ -122,9 +122,20 @@ class SemanticLLMCache:
         return _redis
 
     def _load_embedding_model(self):
-        """Lazy-load the BGE embedding model on first use."""
+        """Lazy-load the BGE embedding model on first use.
+
+        Skips loading if SKIP_LOCAL_EMBED=true (recommended for Railway/CPU).
+        """
         if self._embedding_model_loaded:
             return self._embedding_model is not None
+
+        # Check if local embedding is disabled (e.g., Railway with limited memory)
+        import os
+        skip_local = os.getenv("SKIP_LOCAL_EMBED", "").lower() in ("1", "true", "yes")
+        if skip_local:
+            logger.info("Skipping local BGE embed (SKIP_LOCAL_EMBED=true), semantic cache will use exact match only")
+            self._embedding_model_loaded = True
+            return False
 
         try:
             from sentence_transformers import SentenceTransformer
