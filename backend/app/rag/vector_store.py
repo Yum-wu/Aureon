@@ -1122,14 +1122,13 @@ def _get_reranker():
 
 
 def rerank(query: str, chunks: List[Dict[str, Any]], top_k: int = 3) -> List[Dict[str, Any]]:
-    """Rerank chunks using cross-encoder. Returns top_k results.
+    """Rerank chunks using cross-encoder. Returns top_k results."""
+    # HARD STOP: always skip reranking on Railway (prevents OOM)
+    import os
+    if os.environ.get("RERANK_ENABLED", "true").lower() in ("false", "0", "no"):
+        print(f"[RERANK-SKIP] RERANK_ENABLED=false, returning top {top_k} by score", flush=True)
+        return chunks[:top_k]
 
-    Cross-encoder jointly encodes query + document for precise relevance scoring.
-    More accurate than bi-encoder cosine similarity but slower (~300-600ms CPU).
-
-    Uses GPU reranker when available for continuous GPU utilization.
-    Disabled when fewer than 4 candidates or when RERANK_ENABLED=false.
-    """
     if not chunks or len(chunks) <= 1:
         return chunks
 
