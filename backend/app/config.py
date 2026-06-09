@@ -127,7 +127,7 @@ class Settings(BaseSettings):
     # Post-generation reflection
     reflection_enabled: bool = False
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
+    model_config = {"env_file_encoding": "utf-8", "extra": "ignore"}
 
     def model_post_init(self, __context):
         """Support VECTOR_DB env var as alias for vector_backend."""
