@@ -103,7 +103,12 @@ class TestWebSocketChat:
 
     @pytest.mark.asyncio
     async def test_websocket_error_sends_error_message(self, mock_websocket):
-        """Test that exceptions are caught and error message is sent."""
+        """Test that exceptions are caught and error message is sent.
+
+        The error message sent to the client should NOT contain the raw
+        exception message (to avoid leaking internal details), but it MUST
+        be a structured error message with type='error'.
+        """
         mock_websocket.receive_json.side_effect = [
             {"type": "user_message", "query": "test"},
             Exception("Test error"),
@@ -118,7 +123,10 @@ class TestWebSocketChat:
         calls = [call[0][0] for call in mock_websocket.send_json.call_args_list]
         error_calls = [call for call in calls if isinstance(call, dict) and call.get("type") == "error"]
         assert len(error_calls) >= 1
-        assert "Test error" in error_calls[0].get("message", "")
+        # Internal exception message should NOT leak to client
+        assert "Test error" not in error_calls[-1].get("message", "")
+        # But it SHOULD have a generic user-facing error message
+        assert len(error_calls[-1].get("message", "")) > 0
 
     @pytest.mark.asyncio
     async def test_tool_result_handling(self, mock_websocket):
