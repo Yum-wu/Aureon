@@ -29,7 +29,7 @@ if _rerank_disabled:
             def __getattr__(self, name):
                 raise RuntimeError("CrossEncoder disabled (RERANK_ENABLED=false)")
         _st.CrossEncoder = _DisabledCrossEncoder
-        logging.getLogger(__name__).info("CrossEncoder disabled via RERANK_ENABLED=false (monkey-patch active)")
+        print("[SAFETY] CrossEncoder disabled via RERANK_ENABLED=false (monkey-patch active)", flush=True)
     except ImportError:
         pass  # sentence-transformers not installed, nothing to patch
 
