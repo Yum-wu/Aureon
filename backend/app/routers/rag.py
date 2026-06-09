@@ -594,8 +594,11 @@ async def rag_benchmark():
     )
     if not os.path.isfile(benchmark_path):
         return {"metrics": [], "services": {}, "timestamp": None}
-    with open(benchmark_path, encoding="utf-8") as f:
-        return json.load(f)
+    try:
+        with open(benchmark_path, encoding="utf-8") as f:
+            return json.load(f)
+    except (UnicodeDecodeError, json.JSONDecodeError, OSError):
+        return {"metrics": [], "services": {}, "timestamp": None}
 
 
 @router.post("/cache/clear")
