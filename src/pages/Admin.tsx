@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { authFetch } from '../services/authFetch';
 
 interface SSOProvider {
   id: number;
@@ -29,8 +30,8 @@ const Admin = () => {
   useEffect(() => {
     const controller = new AbortController();
     Promise.all([
-      fetch('/api/security/sso/providers', { signal: controller.signal }).then(r => r.ok ? r.json() : []),
-      fetch('/api/observability/traces?limit=20', { signal: controller.signal }).then(r => r.ok ? r.json() : { traces: [] }),
+      authFetch('/api/security/sso/providers', { signal: controller.signal }).then(r => r.ok ? r.json() : []),
+      authFetch('/api/observability/traces?limit=20', { signal: controller.signal }).then(r => r.ok ? r.json() : { traces: [] }),
     ]).then(([provs, traces]) => {
       setProviders(Array.isArray(provs) ? provs : []);
       setAuditLogs(traces.traces || []);

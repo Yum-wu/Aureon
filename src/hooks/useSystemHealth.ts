@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { authFetch } from "../services/authFetch";
 
 export interface SystemHealth {
   status: string;
@@ -28,7 +29,7 @@ export function useSystemHealth() {
 
     async function fetchHealth() {
       try {
-        const res = await fetch(HEALTH_URL);
+        const res = await authFetch(HEALTH_URL);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data: SystemHealth = await res.json();
         if (!cancelled) setHealth(data);

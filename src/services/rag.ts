@@ -1,6 +1,7 @@
 /** RAG 查询后端 SSE streaming 地址 */
 const RAG_STREAM_URL = "/api/rag/query/stream";
 
+import { authFetch } from "./authFetch";
 import i18n from "../i18n/config";
 
 /** Get current i18n language for query filtering */
@@ -99,7 +100,7 @@ export async function streamRAGQuery(
   const { onToken, onCitations, onError, signal } = options;
 
   try {
-    const response = await fetch(RAG_STREAM_URL, {
+    const response = await authFetch(RAG_STREAM_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ query: question, language: getQueryLanguage() }),

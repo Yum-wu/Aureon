@@ -4,6 +4,8 @@ const API_URL = (import.meta.env.VITE_API_URL as string) || "/api/chat/stream";
 /** 增强 API 地址（含 RAG 意图路由） */
 const ENHANCED_API_URL = (import.meta.env.VITE_ENHANCED_API_URL as string) || "/api/chat/enhanced/stream";
 
+import { authFetch } from "./authFetch";
+
 /** SSE 事件数据结构 */
 export interface SSEEvent {
   type: "session" | "text" | "tool_start" | "tool_end" | "sources" | "intent" | "route" | "done" | "error";
@@ -29,7 +31,7 @@ export async function streamChat(params: StreamChatParams): Promise<void> {
   const { message, sessionId, onEvent, onError, signal } = params;
 
   try {
-    const response = await fetch(API_URL, {
+    const response = await authFetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -100,7 +102,7 @@ export async function streamEnhancedChat(params: StreamChatParams): Promise<void
   const { message, sessionId, onEvent, onError, signal } = params;
 
   try {
-    const response = await fetch(ENHANCED_API_URL, {
+    const response = await authFetch(ENHANCED_API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message, session_id: sessionId }),

@@ -42,14 +42,16 @@ export interface EvaluationSummary {
   success_rate: number;
 }
 
-const API_BASE = import.meta.env.VITE_API_URL || "/api";
+import { authFetch } from "./authFetch";
+
+const API_BASE = "/api";
 
 export const evaluationApi = {
   /**
    * 获取评估摘要
    */
   async getSummary(): Promise<EvaluationSummary> {
-    const response = await fetch(`${API_BASE}/evaluation/summary`);
+    const response = await authFetch(`${API_BASE}/evaluation/summary`);
     if (!response.ok) {
       throw new Error("Failed to fetch evaluation summary");
     }
@@ -63,7 +65,7 @@ export const evaluationApi = {
     const url = metricType
       ? `${API_BASE}/evaluation/metrics?metric_type=${metricType}`
       : `${API_BASE}/evaluation/metrics`;
-    const response = await fetch(url);
+    const response = await authFetch(url);
     if (!response.ok) {
       throw new Error("Failed to fetch evaluation metrics");
     }
@@ -82,7 +84,7 @@ export const evaluationApi = {
     if (benchmarkSet) params.append("benchmark_set", benchmarkSet);
     if (limit) params.append("limit", limit.toString());
 
-    const response = await fetch(
+    const response = await authFetch(
       `${API_BASE}/evaluation/benchmarks?${params.toString()}`
     );
     if (!response.ok) {

@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { authFetch } from "../services/authFetch";
 import type { SystemHealth } from "../hooks/useSystemHealth";
 import { useBenchmark } from "../hooks/useBenchmark";
 
@@ -132,7 +133,7 @@ export function SystemStatus({ health, loading, error }: SystemStatusProps) {
             <button
               onClick={async () => {
                 try {
-                  const res = await fetch("/api/rag/health");
+                  const res = await authFetch("/api/rag/health");
                   const data = await res.json();
                   alert(JSON.stringify(data, null, 2));
                 } catch {
