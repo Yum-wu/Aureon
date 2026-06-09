@@ -207,6 +207,9 @@ class GPUReranker:
         if self._model is not None:
             return
 
+        import os
+        print(f"[DEBUG] GPUReranker._load_model called, RERANK_ENABLED={os.environ.get('RERANK_ENABLED')}", flush=True)
+
         start = time.time()
 
         try:
