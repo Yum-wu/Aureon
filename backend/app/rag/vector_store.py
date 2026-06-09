@@ -1085,9 +1085,22 @@ _RERANKER_MODEL = "BAAI/bge-reranker-v2-m3"
 
 
 def _get_reranker():
-    """Lazy-load cross-encoder reranker. Returns None if unavailable."""
+    """Lazy-load cross-encoder reranker. Returns None if unavailable.
+
+    Always skips loading when:
+    - RERANK_ENABLED=false (env var)
+    - GPU_ENABLED=false (env var) — prevents OOM on Railway
+    - Less than 500MB RAM available
+    """
     global _reranker
     if _reranker is None:
+        # Hard check: skip if RERANK_ENABLED is explicitly disabled
+        import os
+        if os.environ.get("RERANK_ENABLED", "true").lower() in ("false", "0", "no"):
+            logger.info("Reranker disabled (RERANK_ENABLED=false), skipping CrossEncoder load")
+            _reranker = False
+            return None
+
         # Memory guard: skip loading if <500MB free to prevent OOM on constrained containers
         try:
             import psutil
