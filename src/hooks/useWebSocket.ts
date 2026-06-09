@@ -49,6 +49,12 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   const reconnectAttemptRef = useRef(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const intentionalDisconnectRef = useRef(false);
+  const maxReconnectAttemptsRef = useRef(maxReconnectAttempts);
+
+  // Keep ref in sync with prop changes
+  useEffect(() => {
+    maxReconnectAttemptsRef.current = maxReconnectAttempts;
+  }, [maxReconnectAttempts]);
 
   // Clear any pending reconnect timer
   const clearReconnectTimer = useCallback(() => {
@@ -58,10 +64,14 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     }
   }, []);
 
+  // Reconnect handler kept in a ref to avoid circular dependency
+  // (useCallback referencing itself inside its own body).
+  const reconnectHandlerRef = useRef<() => void>(() => {});
+
   // Attempt reconnection with exponential backoff
   const attemptReconnect = useCallback(() => {
     if (intentionalDisconnectRef.current) return;
-    if (reconnectAttemptRef.current >= maxReconnectAttempts) {
+    if (reconnectAttemptRef.current >= maxReconnectAttemptsRef.current) {
       setError('Connection lost. Please refresh the page to reconnect.');
       return;
     }
@@ -73,10 +83,10 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
       if (!wsRef.current || intentionalDisconnectRef.current) return;
       wsRef.current.connect().catch((err) => {
         console.error('Reconnect attempt failed:', err);
-        attemptReconnect();
+        reconnectHandlerRef.current();
       });
     }, delay);
-  }, [maxReconnectAttempts]);
+  }, []);
 
   // Initialize WebSocket
   useEffect(() => {
@@ -84,6 +94,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
 
     const ws = getWebSocket(clientId);
     wsRef.current = ws;
+    reconnectHandlerRef.current = attemptReconnect;
 
     // Only register handlers once to prevent duplicates
     if (handlersRegisteredRef.current) {
