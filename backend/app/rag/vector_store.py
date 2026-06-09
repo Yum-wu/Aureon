@@ -1121,6 +1121,12 @@ def rerank(query: str, chunks: List[Dict[str, Any]], top_k: int = 3) -> List[Dic
         return chunks
 
     # Disabled explicitly via env var or settings
+    # Read directly from os.environ to bypass any .env file override
+    import os
+    rerank_env = os.environ.get("RERANK_ENABLED", "true").lower()
+    if rerank_env in ("false", "0", "no"):
+        return chunks[:top_k]
+
     from app.config import settings
     if not settings.rerank_enabled:
         return chunks[:top_k]
