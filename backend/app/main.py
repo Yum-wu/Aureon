@@ -10,6 +10,29 @@ from concurrent.futures import ThreadPoolExecutor
 # Suppress noisy ChromaDB telemetry errors
 logging.getLogger("chromadb.telemetry").setLevel(logging.CRITICAL)
 
+# ── Safety: prevent CrossEncoder OOM on constrained environments ──
+# When RERANK_ENABLED=false, monkey-patch CrossEncoder to block loading.
+# This is a hard guard: regardless of pydantic-settings, .env file caching,
+# or Docker layer caching, the CrossEncoder CANNOT be loaded.
+_rerank_disabled = os.environ.get("RERANK_ENABLED", "true").lower() in ("false", "0", "no")
+if _rerank_disabled:
+    try:
+        import sentence_transformers as _st
+        _OrigCE = _st.CrossEncoder
+        class _DisabledCrossEncoder:
+            """Stub that prevents CrossEncoder from loading (avoids OOM on Railway)."""
+            def __init__(self, *args, **kwargs):
+                raise RuntimeError(
+                    "CrossEncoder disabled (RERANK_ENABLED=false). "
+                    "Set RERANK_ENABLED=true or increase memory to enable reranking."
+                )
+            def __getattr__(self, name):
+                raise RuntimeError("CrossEncoder disabled (RERANK_ENABLED=false)")
+        _st.CrossEncoder = _DisabledCrossEncoder
+        logging.getLogger(__name__).info("CrossEncoder disabled via RERANK_ENABLED=false (monkey-patch active)")
+    except ImportError:
+        pass  # sentence-transformers not installed, nothing to patch
+
 from fastapi import FastAPI, Request, HTTPException, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
