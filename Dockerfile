@@ -31,16 +31,7 @@ COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Force rebuild: 2026-06-09 monkey-patch CrossEncoder
-RUN echo "Rebuild triggered at $(date +%s)" && python3 -c "
-# Verify .env is NOT in the image
-import os
-if os.path.exists('/app/.env'):
-    print('WARNING: .env file exists in image!')
-    os.remove('/app/.env')
-    print('Removed .env from image')
-else:
-    print('OK: .env not in image')
-"
+RUN echo "Rebuild triggered at $(date +%s)" && rm -f /app/.env /app/backend/.env && echo "Cleaned .env files"
 
 # 默认跳过本地 BGE 模型（Railway CPU-only 加载 1.3GB large 模型太慢，且索引用 DashScope 1024d）
 # 如需本地嵌入，在 Railway 环境变量中设置 SKIP_LOCAL_EMBED=false
