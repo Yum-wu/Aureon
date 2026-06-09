@@ -37,6 +37,9 @@ ENV SKIP_LOCAL_EMBED=true
 # 后端代码
 COPY backend/ .
 
+# 强制删除 .env 文件（.dockerignore 可能未正确排除）
+RUN rm -f /app/.env /app/backend/.env
+
 # 强制覆盖 .env 中的 GPU/rerank 设置（.env 有 GPU_ENABLED=true，会导致 OOM）
 ENV GPU_ENABLED=false
 ENV RERANK_ENABLED=false
