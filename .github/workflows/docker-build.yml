@@ -1,6 +1,7 @@
 name: Docker Build
 
 on:
+  workflow_dispatch:
   pull_request:
     branches: [main]
     paths:
@@ -12,6 +13,7 @@ on:
       - 'nginx.conf'
       - 'package.json'
       - 'package-lock.json'
+      - '.github/workflows/docker-build.yml'
   push:
     branches: [main]
     paths:
@@ -23,6 +25,7 @@ on:
       - 'nginx.conf'
       - 'package.json'
       - 'package-lock.json'
+      - '.github/workflows/docker-build.yml'
 
 jobs:
   validate:
