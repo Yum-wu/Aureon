@@ -194,6 +194,9 @@ class GPUReranker:
         device: str = "cuda",
         use_fp16: bool = True,
     ):
+        # Hard guard: refuse to instantiate when reranking is disabled
+        if os.environ.get("RERANK_ENABLED", "true").lower() in ("false", "0", "no"):
+            raise RuntimeError("GPUReranker disabled (RERANK_ENABLED=false)")
         self.model_name = model_name
         self.device = device
         self.use_fp16 = use_fp16 and device == "cuda"
