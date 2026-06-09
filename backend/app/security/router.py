@@ -19,7 +19,9 @@ router = APIRouter(tags=["Security"])
 pii_detector = PIIDetector()
 
 # All SSO management requires ADMIN role (matches the docstrings).
-_sso_admin = Depends(require_role(UserRole.ADMIN))
+# We call require_role inline instead of using dependencies=[...] because
+# the HTTPBearer sub-dependency in require_role interferes with request
+# body parsing when declared as a router-level dependency.
 
 
 # ── PII Detection Endpoints ──
@@ -67,20 +69,20 @@ async def scan_document(
 
 # ── SSO Endpoints ──
 
-@router.post("/sso/providers", response_model=SSOProvider, status_code=201, dependencies=[_sso_admin])
-async def create_sso_provider_endpoint(provider: SSOProvider):
+@router.post("/sso/providers", response_model=SSOProvider, status_code=201)
+async def create_sso_provider_endpoint(provider: SSOProvider, _=Depends(require_role(UserRole.ADMIN))):
     """创建 SSO 提供商 (需要 ADMIN 角色)"""
     return create_sso_provider(provider)
 
 
-@router.get("/sso/providers", response_model=list[SSOProvider], dependencies=[_sso_admin])
-async def list_sso_providers_endpoint():
+@router.get("/sso/providers", response_model=list[SSOProvider])
+async def list_sso_providers_endpoint(_=Depends(require_role(UserRole.ADMIN))):
     """列出所有 SSO 提供商 (需要 ADMIN 角色)"""
     return list_sso_providers()
 
 
-@router.delete("/sso/providers/{name}", status_code=204, dependencies=[_sso_admin])
-async def delete_sso_provider_endpoint(name: str):
+@router.delete("/sso/providers/{name}", status_code=204)
+async def delete_sso_provider_endpoint(name: str, _=Depends(require_role(UserRole.ADMIN))):
     """删除 SSO 提供商 (需要 ADMIN 角色)"""
     success = delete_sso_provider(name)
     if not success:

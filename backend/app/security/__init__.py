@@ -158,29 +158,20 @@ def require_role(min_role: UserRole):
     header, decodes the token, and compares the role.
     """
     from fastapi import Request
-    from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
     from app.exceptions import AuthenticationError, AuthorizationError
 
-    bearer_scheme = HTTPBearer(auto_error=False)
-
-    async def _role_checker(
-        request: Request,
-        credentials: Optional[HTTPAuthorizationCredentials] = None,
-    ) -> dict:
+    async def _role_checker(request: Request) -> dict:
         # Skip RBAC when API_AUTH_KEY is not configured (dev mode)
         from app.config import settings
         if not settings.api_auth_key:
             return {"sub": "dev-user", "role": "ADMIN", "_role": UserRole.ADMIN}
 
-        # Allow credentials from Depends or direct extraction
-        if credentials is None:
-            auth_header = request.headers.get("Authorization", "")
-            if auth_header.startswith("Bearer "):
-                token = auth_header[7:]
-            else:
-                raise AuthenticationError("Missing or invalid Authorization header")
+        # Extract token from Authorization header directly
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]
         else:
-            token = credentials.credentials
+            raise AuthenticationError("Missing or invalid Authorization header")
 
         if not token:
             raise AuthenticationError("Token is required")
