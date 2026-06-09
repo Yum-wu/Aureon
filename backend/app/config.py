@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     # SiliconFlow — secondary API fallback, hosts BGE models
     siliconflow_api_key: str = ""
     siliconflow_base_url: str = "https://api.siliconflow.cn/v1"
-    siliconflow_model: str = "BAAI/bge-small-zh-v1.5"
+    siliconflow_model: str = "BAAI/bge-large-zh-v1.5"
 
     tavily_api_key: str = ""
 
