@@ -46,7 +46,7 @@ services:
       qdrant:
         condition: service_healthy
       elasticsearch:
-        condition: service_started
+        condition: service_healthy
     volumes:
       - ./offloads:/app/offloads
       - ./data:/app/data
@@ -86,8 +86,15 @@ services:
       - "9200:9200"
     volumes:
       - es_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf -u elastic:$${ELASTIC_PASSWORD} http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
 
 volumes:
   qdrant_data:
   es_data:
+  redis_data:

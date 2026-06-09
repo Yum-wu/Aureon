@@ -43,9 +43,11 @@ COPY backend/ .
 # 强制删除 .env 文件（.dockerignore 可能未正确排除）
 RUN rm -f /app/.env /app/backend/.env
 
-# 强制覆盖 .env 中的 GPU/rerank 设置（.env 有 GPU_ENABLED=true，会导致 OOM）
+# GPU disabled on Railway (no CUDA); rerank via remote API to avoid OOM
+# Set COHERE_API_KEY in Railway dashboard to enable API reranking
 ENV GPU_ENABLED=false
-ENV RERANK_ENABLED=false
+ENV RERANK_ENABLED=true
+ENV RERANK_BACKEND=api
 
 # Chroma 向量库持久化目录
 RUN mkdir -p /app/data/vectors /app/offloads
