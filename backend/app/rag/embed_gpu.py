@@ -208,7 +208,7 @@ class GPUReranker:
             return
 
         import os
-        print(f"[DEBUG] GPUReranker._load_model called, RERANK_ENABLED={os.environ.get('RERANK_ENABLED')}", flush=True)
+        logger.info("GPUReranker._load_model called, RERANK_ENABLED=%s", os.environ.get("RERANK_ENABLED"))
 
         start = time.time()
 
