@@ -84,6 +84,11 @@ class Settings(BaseSettings):
     rerank_enabled: bool = Field(
         default_factory=lambda: os.getenv("RERANK_ENABLED", "true").lower() == "true"
     )
+    # Rerank backend: "local" (CrossEncoder) or "api" (Cohere/Jina remote API)
+    # Use "api" on memory-constrained environments (e.g. Railway) to avoid OOM
+    rerank_backend: str = Field(
+        default_factory=lambda: os.getenv("RERANK_BACKEND", "local")
+    )
     adaptive_rerank_enabled: bool = True
     ensemble_rerank_enabled: bool = False
     rerank_candidates: int = 12

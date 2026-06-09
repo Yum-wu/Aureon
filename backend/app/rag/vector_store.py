@@ -13,6 +13,7 @@ import numpy as np
 from typing import List, Dict, Any, Optional
 
 import structlog
+from app.common import mask_secret
 from app.multi_tenant.middleware import get_current_tenant_id
 logger = structlog.get_logger()
 
@@ -47,8 +48,16 @@ def _get_gpu_embedder():
             return None
     return _gpu_embedder
 
-import chromadb
-from chromadb.api.types import EmbeddingFunction
+# ChromaDB is optional (primary backend is Qdrant). Import lazily to avoid
+# ImportError when chromadb is not installed, and to reduce memory footprint.
+try:
+    import chromadb
+    from chromadb.api.types import EmbeddingFunction as _EmbeddingFunctionBase
+    _has_chromadb = True
+except ImportError:
+    chromadb = None  # type: ignore[assignment]
+    _EmbeddingFunctionBase = object  # fallback base class
+    _has_chromadb = False
 
 VECTOR_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "vectors")
 
@@ -99,7 +108,7 @@ def _embed_local(texts: List[str]) -> Optional[np.ndarray]:
 
 
 # ── ChromaDB singleton ──
-_chroma_client: Optional[chromadb.PersistentClient] = None
+_chroma_client: Optional[Any] = None
 _chroma_collection = None
 _chroma_lock = threading.Lock()  # Thread-safe singleton init
 
@@ -143,8 +152,13 @@ def _get_jieba():
     return _jieba if _jieba is not False else None
 
 
-def _get_chroma(path: str = None) -> chromadb.PersistentClient:
+def _get_chroma(path: str = None) -> Any:
     """Get or create ChromaDB client (singleton per path, thread-safe)."""
+    if not _has_chromadb:
+        raise ImportError(
+            "chromadb is required for ChromaDB backend. "
+            "Install it with: pip install chromadb>=0.5"
+        )
     global _chroma_client
     save_path = path or VECTOR_DIR
     if _chroma_client is None:
@@ -624,7 +638,7 @@ def embed_texts_llm(texts: List[str], batch_size: int = 10) -> np.ndarray:
 
 # ── Chroma embedding function wrapper ──
 
-class ZhipuEmbeddingFn(EmbeddingFunction):
+class ZhipuEmbeddingFn(_EmbeddingFunctionBase):
     """ChromaDB-compatible embedding function with multi-provider fallback.
 
     Tries: local BGE → DashScope → SiliconFlow → Zhipu API.
@@ -1121,27 +1135,131 @@ def _get_reranker():
     return _reranker if _reranker is not False else None
 
 
+def _rerank_via_api(query: str, chunks: List[Dict[str, Any]], top_k: int = 3) -> Optional[List[Dict[str, Any]]]:
+    """Rerank chunks via remote API (Cohere or Jina). Returns None if unavailable.
+
+    Supports two backends:
+    - Cohere Rerank API: requires COHERE_API_KEY env var
+    - Jina Reranker API: requires JINA_API_KEY env var (fallback)
+    """
+    import os
+    import httpx
+
+    texts = [c["text"] for c in chunks]
+
+    # Try Cohere first
+    cohere_key = os.environ.get("COHERE_API_KEY") or (
+        getattr(settings, "cohere_api_key", None)
+    )
+    if cohere_key:
+        try:
+            logger.debug("Cohere rerank: key=%s", mask_secret(cohere_key))
+            model = getattr(settings, "cohere_rerank_model", "rerank-multilingual-v3.0")
+            resp = httpx.post(
+                "https://api.cohere.ai/v2/rerank",
+                headers={
+                    "Authorization": f"Bearer {cohere_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": model,
+                    "query": query,
+                    "documents": texts,
+                    "top_n": top_k,
+                },
+                timeout=15.0,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+
+            scored = []
+            for item in data.get("results", []):
+                idx = item["index"]
+                score = item["relevance_score"]
+                chunk = chunks[idx].copy()
+                chunk["rerank_score"] = float(score)
+                scored.append(chunk)
+
+            scored.sort(key=lambda x: x["rerank_score"], reverse=True)
+            logger.info(
+                "API rerank (Cohere): %d chunks -> %d results", len(chunks), len(scored)
+            )
+            return scored[:top_k]
+        except Exception as e:
+            logger.warning("Cohere API rerank failed: %s", e)
+
+    # Fallback: Jina Reranker API
+    jina_key = os.environ.get("JINA_API_KEY") or (
+        getattr(settings, "jina_api_key", None)
+    )
+    if jina_key:
+        try:
+            logger.debug("Jina rerank: key=%s", mask_secret(jina_key))
+            resp = httpx.post(
+                "https://api.jina.ai/v1/rerank",
+                headers={
+                    "Authorization": f"Bearer {jina_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": "jina-reranker-v2-base-multilingual",
+                    "query": query,
+                    "documents": texts,
+                    "top_n": top_k,
+                },
+                timeout=15.0,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+
+            scored = []
+            for item in data.get("results", []):
+                idx = item["index"]
+                score = item["relevance_score"]
+                chunk = chunks[idx].copy()
+                chunk["rerank_score"] = float(score)
+                scored.append(chunk)
+
+            scored.sort(key=lambda x: x["rerank_score"], reverse=True)
+            logger.info(
+                "API rerank (Jina): %d chunks -> %d results", len(chunks), len(scored)
+            )
+            return scored[:top_k]
+        except Exception as e:
+            logger.warning("Jina API rerank failed: %s", e)
+
+    # No API key configured
+    return None
+
+
 def rerank(query: str, chunks: List[Dict[str, Any]], top_k: int = 3) -> List[Dict[str, Any]]:
-    """Rerank chunks using cross-encoder. Returns top_k results."""
-    # HARD STOP: always skip reranking on Railway (prevents OOM)
+    """Rerank chunks using cross-encoder or remote API. Returns top_k results.
+
+    Backend selection (env: RERANK_BACKEND):
+    - "api"   → Cohere / Jina remote API (no local model loading, safe for Railway)
+    - "local" → CrossEncoder (GPU or CPU, requires ~500MB+ RAM)
+    """
+    # HARD STOP: always skip reranking when explicitly disabled
     import os
     if os.environ.get("RERANK_ENABLED", "true").lower() in ("false", "0", "no"):
-        print(f"[RERANK-SKIP] RERANK_ENABLED=false, returning top {top_k} by score", flush=True)
+        logger.debug("RERANK_ENABLED=false, returning top %d by score", top_k)
         return chunks[:top_k]
 
     if not chunks or len(chunks) <= 1:
         return chunks
 
-    # Disabled explicitly via env var or settings
-    # Read directly from os.environ to bypass any .env file override
-    import os
-    rerank_env = os.environ.get("RERANK_ENABLED", "true").lower()
-    if rerank_env in ("false", "0", "no"):
-        return chunks[:top_k]
-
     from app.config import settings
     if not settings.rerank_enabled:
         return chunks[:top_k]
+
+    # ── API reranker (zero local memory, ideal for Railway / serverless) ──
+    rerank_backend = os.environ.get("RERANK_BACKEND", settings.rerank_backend)
+    if rerank_backend == "api":
+        api_result = _rerank_via_api(query, chunks, top_k=top_k)
+        if api_result is not None:
+            return api_result
+        # API unavailable, fall through to local reranker
+        logger.warning("API reranker unavailable, falling back to local CrossEncoder")
 
     # Try GPU reranker first for continuous GPU utilization
     try:
