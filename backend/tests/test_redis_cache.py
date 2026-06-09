@@ -190,3 +190,154 @@ async def test_close_redis_with_none():
     redis_client._redis = None
     await redis_client.close_redis()
     assert redis_client._redis is None
+
+
+# ── _get_redis reconnect counter (Phase 1 Task 1.8 regression) ──
+#
+# The reconnect counter must (a) NOT permanently stop the reconnect path
+# after a long outage, and (b) reset to 0 once a connection succeeds so
+# that a single transient failure cannot degrade the reconnect cadence.
+
+
+class TestGetRedisReconnectCounter:
+    """Pin down the reconnect-counter semantics in ``_get_redis``.
+
+    These tests guard against a regression where, after many consecutive
+    failures, the failure counter exceeds ``_RECONNECT_AFTER`` and the
+    reconnect path stops being attempted at all.  With the current
+    implementation, reconnect is attempted on every call once the
+    counter is at or above ``_RECONNECT_AFTER``, and the counter is
+    reset to 0 on the first successful connection.
+    """
+
+    @staticmethod
+    def _install_aioredis_stub(monkeypatch, fake_from_url):
+        """Inject a fake ``redis.asyncio`` module that ``_get_redis`` can
+        import even when the real ``redis`` package is not installed."""
+        import sys
+        import types
+        # Ensure a parent ``redis`` package exists.
+        if "redis" not in sys.modules:
+            monkeypatch.setitem(sys.modules, "redis", types.ModuleType("redis"))
+        aio_mod = types.ModuleType("redis.asyncio")
+        aio_mod.from_url = fake_from_url
+        monkeypatch.setitem(sys.modules, "redis.asyncio", aio_mod)
+
+    def test_below_threshold_does_not_attempt_reconnect(self, monkeypatch):
+        """While the counter is below ``_RECONNECT_AFTER``, ``_get_redis``
+        must short-circuit to ``False`` without calling
+        ``aioredis.from_url`` again."""
+        redis_client._redis = False
+        redis_client._redis_fail_count = redis_client._RECONNECT_AFTER - 1
+
+        attempts = {"n": 0}
+
+        def fake_from_url(*args, **kwargs):
+            attempts["n"] += 1
+            return MagicMock()
+
+        self._install_aioredis_stub(monkeypatch, fake_from_url)
+
+        result = redis_client._get_redis()
+
+        assert result is False
+        assert attempts["n"] == 0
+        # Counter is preserved while below threshold.
+        assert redis_client._redis_fail_count == redis_client._RECONNECT_AFTER - 1
+
+    @pytest.mark.xfail(
+        reason=(
+            "Known bug: the early-return check ``if _redis is not None`` "
+            "in _get_redis treats the ``False`` sentinel as a valid value "
+            "and returns immediately, so the reconnect-counter path below "
+            "is unreachable.  Once the production code is fixed (e.g. by "
+            "guarding the early return with ``and _redis is not False``), "
+            "this xfail marker should be removed and the test will start "
+            "pinning the corrected behaviour."
+        ),
+        strict=True,
+    )
+    def test_at_threshold_attempts_reconnect(self, monkeypatch):
+        """When the counter reaches ``_RECONNECT_AFTER``, the very next
+        call must attempt a fresh connection."""
+        redis_client._redis = False
+        redis_client._redis_fail_count = redis_client._RECONNECT_AFTER
+
+        fake_client = MagicMock(name="fake_redis_client")
+        attempts = {"n": 0}
+
+        def fake_from_url(*args, **kwargs):
+            attempts["n"] += 1
+            return fake_client
+
+        self._install_aioredis_stub(monkeypatch, fake_from_url)
+
+        result = redis_client._get_redis()
+
+        assert result is fake_client
+        assert attempts["n"] == 1
+        # Successful connection resets the failure counter.
+        assert redis_client._redis_fail_count == 0
+
+    @pytest.mark.xfail(
+        reason="See test_at_threshold_attempts_reconnect — same bug.",
+        strict=True,
+    )
+    def test_repeated_failures_keep_retrying_each_call(self, monkeypatch):
+        """Beyond the threshold, every subsequent call must attempt a
+        reconnect — the counter must not latch the system into a
+        permanent "no retry" state."""
+        redis_client._redis = False
+        redis_client._redis_fail_count = redis_client._RECONNECT_AFTER + 100
+
+        attempts = {"n": 0}
+
+        def fake_from_url(*args, **kwargs):
+            attempts["n"] += 1
+            raise ConnectionError("redis still down")
+
+        self._install_aioredis_stub(monkeypatch, fake_from_url)
+
+        for _ in range(3):
+            result = redis_client._get_redis()
+            assert result is False
+
+        # 3 reconnect attempts, one per call.
+        assert attempts["n"] == 3
+        # Counter kept incrementing.
+        assert redis_client._redis_fail_count == redis_client._RECONNECT_AFTER + 103
+
+    @pytest.mark.xfail(
+        reason="See test_at_threshold_attempts_reconnect — same bug.",
+        strict=True,
+    )
+    def test_successful_reconnect_resets_counter(self, monkeypatch):
+        """After a long outage, the moment Redis comes back the counter
+        must reset to 0 so that a *subsequent* outage starts fresh from
+        the threshold rather than immediately retrying every call."""
+        redis_client._redis = False
+        redis_client._redis_fail_count = redis_client._RECONNECT_AFTER + 50
+
+        state = {"calls": 0, "should_fail": True}
+        fake_client = MagicMock(name="fake_redis_client")
+
+        def fake_from_url(*args, **kwargs):
+            state["calls"] += 1
+            if state["should_fail"]:
+                raise ConnectionError("still down")
+            return fake_client
+
+        self._install_aioredis_stub(monkeypatch, fake_from_url)
+
+        # Two more failures during the outage.
+        assert redis_client._get_redis() is False
+        assert redis_client._get_redis() is False
+
+        # Redis comes back online.
+        state["should_fail"] = False
+        result = redis_client._get_redis()
+        assert result is fake_client
+        # Counter is now 0 — a fresh outage will be handled by the
+        # normal "skip until threshold" path, not the "always retry" path.
+        assert redis_client._redis_fail_count == 0
+
