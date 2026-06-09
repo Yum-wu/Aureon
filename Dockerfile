@@ -37,6 +37,10 @@ ENV SKIP_LOCAL_EMBED=true
 # 后端代码
 COPY backend/ .
 
+# 强制覆盖 .env 中的 GPU/rerank 设置（.env 有 GPU_ENABLED=true，会导致 OOM）
+ENV GPU_ENABLED=false
+ENV RERANK_ENABLED=false
+
 # Chroma 向量库持久化目录
 RUN mkdir -p /app/data/vectors /app/offloads
 
