@@ -66,6 +66,11 @@ _embed_cache: Dict[str, np.ndarray] = {}
 _EMBED_CACHE_MAX = 500
 _embed_cache_lock = threading.Lock()  # Thread-safe access to _embed_cache
 
+# ── Thread-local storage for query embedding reuse ──
+# retrieve_qdrant stores the query embedding here so compress_context
+# can reuse it without a redundant embedding API call.
+_thread_local = threading.local()
+
 # ── Local embedding model (lazy-loaded singleton) ──
 _local_embed_model = None
 _LOCAL_MODEL_NAME = "BAAI/bge-large-zh-v1.5"
@@ -88,6 +93,19 @@ def _get_embedding_dim() -> int:
 
 def _cache_key(text: str) -> str:
     return hashlib.md5(text.encode()).hexdigest()
+
+
+def get_thread_query_embedding() -> Optional[np.ndarray]:
+    """Retrieve the last query embedding stored by retrieve_qdrant in this thread.
+
+    Used by compress_context to avoid redundant embedding API calls.
+    """
+    return getattr(_thread_local, "query_embedding", None)
+
+
+def _set_thread_query_embedding(emb: np.ndarray) -> None:
+    """Store query embedding in thread-local storage for downstream reuse."""
+    _thread_local.query_embedding = emb
 
 
 def _get_local_model():
@@ -1204,7 +1222,7 @@ def _rerank_via_api(query: str, chunks: List[Dict[str, Any]], top_k: int = 3) ->
 
     providers = []
     if preferred == "dashscope" and ds_key:
-        providers.append(("dashscope", ds_key, settings.dashscope_rerank_model, settings.dashscope_base_url))
+        providers.append(("dashscope", ds_key, settings.dashscope_rerank_model, settings.dashscope_rerank_url))
     if sf_key:
         providers.append(("siliconflow", sf_key, "BAAI/bge-reranker-v2-m3", settings.siliconflow_base_url))
     if cohere_key:
@@ -1213,10 +1231,12 @@ def _rerank_via_api(query: str, chunks: List[Dict[str, Any]], top_k: int = 3) ->
         providers.append(("jina", jina_key, "jina-reranker-v2-base-multilingual", "https://api.jina.ai/v1"))
     # Add dashscope as fallback if it wasn't the preferred
     if preferred != "dashscope" and ds_key:
-        providers.append(("dashscope", ds_key, settings.dashscope_rerank_model, settings.dashscope_base_url))
+        providers.append(("dashscope", ds_key, settings.dashscope_rerank_model, settings.dashscope_rerank_url))
 
     for name, key, model, base_url in providers:
-        url = f"{base_url.rstrip('/')}/rerank"
+        # DashScope qwen3-rerank uses /reranks (plural), others use /rerank
+        suffix = "reranks" if name == "dashscope" else "rerank"
+        url = f"{base_url.rstrip('/')}/{suffix}"
         result = _call_rerank(url, key, model, name)
         if result is not None:
             return result
@@ -1633,14 +1653,21 @@ def retrieve_qdrant(query: str, top_k: int = 3, collection_name: str = "aureon",
         tenant_id = get_current_tenant_id()
 
     try:
-        from app.rag.embed_gpu import get_adaptive_embedder
-        embedder = get_adaptive_embedder()
-        query_emb = embedder.encode([query])
+        # When SKIP_LOCAL_EMBED=true, skip local model entirely — use API directly
+        if _skip_local_embed:
+            query_emb = embed_texts_llm([query])
+        else:
+            from app.rag.embed_gpu import get_adaptive_embedder
+            embedder = get_adaptive_embedder()
+            query_emb = embedder.encode([query])
     except Exception as e:
         logger.warning("Adaptive embedding failed: %s, falling back to API", e)
         query_emb = embed_texts_llm([query])
 
     query_vector = query_emb[0].tolist()
+
+    # Store query embedding in thread-local for compress_context reuse
+    _set_thread_query_embedding(query_emb[0])
 
     # Check if stored data actually has tenant_id — skip filter if not
     _has_tenant_id = False
