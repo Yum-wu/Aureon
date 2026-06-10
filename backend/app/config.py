@@ -10,7 +10,7 @@ class Settings(BaseSettings):
 
     # Primary LLM (DashScope Qwen, Singapore OpenAI-compatible endpoint)
     llm_api_key: str = ""
-    llm_model: str = "qwen3.5-flash"
+    llm_model: str = "qwen3.6-flash"
     llm_base_url: str = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
 
     # Fallback LLM (Zhipu AI, used when primary fails)
