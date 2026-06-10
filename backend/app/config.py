@@ -8,10 +8,10 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     """Application configuration loaded from .env file."""
 
-    # Primary LLM (DeepSeek)
+    # Primary LLM (DashScope Qwen, Singapore OpenAI-compatible endpoint)
     llm_api_key: str = ""
-    llm_model: str = "deepseek-v4-flash"
-    llm_base_url: str = "https://api.deepseek.com"
+    llm_model: str = "qwen3.5-flash"
+    llm_base_url: str = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
 
     # Fallback LLM (Zhipu AI, used when primary fails)
     fallback_api_key: str = ""
