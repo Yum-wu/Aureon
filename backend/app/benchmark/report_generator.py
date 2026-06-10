@@ -77,8 +77,9 @@ def generate_terminal_output(results: Dict) -> str:
     # Concurrency
     concurrency = results.get("concurrency", [])
     if concurrency:
-        conc_100 = next((c for c in concurrency if c.get("level") == 100), concurrency[-1])
-        lines.append(_colorize(f"> Concurrency ({conc_100.get('level', 100)} concurrent)", "cyan"))
+        conc_100 = next((c for c in concurrency if c.get("level", c.get("concurrency")) == 100), concurrency[-1])
+        level_val = conc_100.get('level', conc_100.get('concurrency', 100))
+        lines.append(_colorize(f"> Concurrency ({level_val} concurrent)", "cyan"))
         qps = conc_100.get("qps", 0)
         lines.append(f"  QPS:           {qps:.1f}   {_check_mark(qps >= 50)} (target: ≥50)")
         success_rate = conc_100.get("success_rate", 0)
@@ -156,7 +157,8 @@ def generate_markdown_report(results: Dict, output_path: str) -> str:
 |-------|-----|-------------|--------------|
 """
     for c in concurrency:
-        report += f"| {c.get('level', 0)} | {c.get('qps', 0):.1f} | {c.get('p99_latency_ms', 0):.0f}ms | {c.get('success_rate', 0)*100:.1f}% |\n"
+        level = c.get('level', c.get('concurrency', 0))
+        report += f"| {level} | {c.get('qps', 0):.1f} | {c.get('p99_latency_ms', 0):.0f}ms | {c.get('success_rate', 0)*100:.1f}% |\n"
 
     report += f"""
 ### Cost Analysis

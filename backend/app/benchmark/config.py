@@ -21,7 +21,7 @@ class ConcurrencyConfig:
     """Concurrency and connection pool configuration."""
     http_pool_limit: int = 100
     semaphores: Dict[str, int] = field(default_factory=dict)
-    timeout_seconds: int = 30
+    timeout_seconds: int = 120
     queue_timeout_seconds: int = 60
 
     def __post_init__(self):

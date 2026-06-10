@@ -1,0 +1,106 @@
+{
+  "metadata": {
+    "timestamp": "2026-06-10T20:42:50",
+    "mode": "railway",
+    "vector_backend": "qdrant",
+    "embedding_provider": "dashscope",
+    "rerank_provider": "dashscope",
+    "server_rate_limit": "2/second",
+    "full_pipeline_latency": "~45s",
+    "timeout_seconds": 120
+  },
+  "quality": {},
+  "latency": {},
+  "concurrency": [
+    {
+      "concurrency": 1,
+      "total_queries": 1,
+      "successes": 1,
+      "failures": 0,
+      "elapsed_seconds": 1.82,
+      "qps": 0.55,
+      "avg_latency_ms": 1819.9,
+      "p99_latency_ms": 1819.9,
+      "bottlenecks": [],
+      "success_rate": 1.0
+    },
+    {
+      "concurrency": 5,
+      "total_queries": 5,
+      "successes": 5,
+      "failures": 0,
+      "elapsed_seconds": 9.65,
+      "qps": 0.52,
+      "avg_latency_ms": 5940.0,
+      "p99_latency_ms": 9651.8,
+      "bottlenecks": [],
+      "success_rate": 1.0
+    },
+    {
+      "concurrency": 10,
+      "total_queries": 10,
+      "successes": 10,
+      "failures": 0,
+      "elapsed_seconds": 3.95,
+      "qps": 2.53,
+      "avg_latency_ms": 1461.7,
+      "p99_latency_ms": 3947.0,
+      "bottlenecks": [],
+      "success_rate": 1.0
+    },
+    {
+      "concurrency": 20,
+      "total_queries": 20,
+      "successes": 20,
+      "failures": 0,
+      "elapsed_seconds": 5.38,
+      "qps": 3.71,
+      "avg_latency_ms": 2081.1,
+      "p99_latency_ms": 5380.4,
+      "bottlenecks": [],
+      "success_rate": 1.0
+    },
+    {
+      "concurrency": 50,
+      "total_queries": 50,
+      "successes": 21,
+      "failures": 29,
+      "elapsed_seconds": 148.63,
+      "qps": 0.34,
+      "avg_latency_ms": 34941.6,
+      "p99_latency_ms": 139605.6,
+      "bottlenecks": [],
+      "success_rate": 0.42
+    },
+    {
+      "concurrency": 100,
+      "total_queries": 100,
+      "successes": 27,
+      "failures": 73,
+      "elapsed_seconds": 183.76,
+      "qps": 0.54,
+      "avg_latency_ms": 95358.6,
+      "p99_latency_ms": 137479.7,
+      "bottlenecks": [
+        "rate_limit: 15"
+      ],
+      "success_rate": 0.27
+    }
+  ],
+  "cost": {
+    "total_tokens": 0,
+    "embedding_tokens": 0,
+    "rerank_tokens": 0,
+    "llm_tokens": 0,
+    "estimated_cost_usd": 0.0,
+    "queries": 0,
+    "avg_tokens_per_query": 0,
+    "cost_per_query_usd": 0.0
+  },
+  "client_stats": {
+    "request_count": 84,
+    "total_latency_ms": 3396211.9,
+    "avg_latency_ms": 40431.1,
+    "retry_count": 216
+  }
+}
