@@ -77,7 +77,8 @@ _HYDE_ENABLED = os.getenv("HYDE_ENABLED", "false").lower() == "true"
 _HYDE_FALLBACK_THRESHOLD = float(os.getenv("HYDE_FALLBACK_THRESHOLD", "0.01"))
 
 
-def compress_context(query: str, chunks: List[Dict[str, Any]], threshold: float = None) -> List[Dict[str, Any]]:
+def compress_context(query: str, chunks: List[Dict[str, Any]], threshold: float = None,
+                     query_embedding: np.ndarray = None) -> List[Dict[str, Any]]:
     """Filter chunks by embedding similarity to query (lightweight context compression).
 
     Computes cosine similarity between query embedding and each chunk embedding.
@@ -90,6 +91,8 @@ def compress_context(query: str, chunks: List[Dict[str, Any]], threshold: float 
         query: User query text
         chunks: List of retrieved chunk dicts with 'text' field and optional '_embedding'
         threshold: Minimum cosine similarity (default: _CONTEXT_COMPRESSION_THRESHOLD)
+        query_embedding: Pre-computed query embedding (avoids redundant API call).
+            When None, retrieved from thread-local or computed via API.
 
     Returns:
         Filtered list of chunks above threshold, sorted by similarity descending.
@@ -115,11 +118,13 @@ def compress_context(query: str, chunks: List[Dict[str, Any]], threshold: float 
             else:
                 new_embeddings = np.empty((0, 0), dtype=np.float32)
 
-            # Get query embedding from thread-local (set by retrieve_qdrant)
-            query_emb = get_thread_query_embedding()
+            # Get query embedding: explicit param > thread-local > API fallback
+            query_emb = query_embedding
+            if query_emb is None:
+                query_emb = get_thread_query_embedding()
             if query_emb is None:
                 # Fallback: compute query embedding (should rarely happen)
-                logger.debug("Context compression: no thread-local query embedding, computing via API")
+                logger.debug("Context compression: no query embedding available, computing via API")
                 fallback = embed_texts_llm([query])
                 query_emb = fallback[0]
 
@@ -137,17 +142,19 @@ def compress_context(query: str, chunks: List[Dict[str, Any]], threshold: float 
                 len(cached_indices), len(chunks),
             )
         else:
-            # No cached embeddings: compute all (GPU-first, then API fallback)
+            # No cached embeddings: compute all (API-only when SKIP_LOCAL_EMBED=true)
             texts = [query] + [c["text"] for c in chunks]
 
             embeddings = None
-            try:
-                from app.rag.vector_store import _get_gpu_embedder
-                gpu_embedder = _get_gpu_embedder()
-                if gpu_embedder is not None:
-                    embeddings = gpu_embedder.encode(texts, batch_size=len(texts))
-            except Exception:
-                pass
+            from app.rag.vector_store import _skip_local_embed
+            if not _skip_local_embed:
+                try:
+                    from app.rag.vector_store import _get_gpu_embedder
+                    gpu_embedder = _get_gpu_embedder()
+                    if gpu_embedder is not None:
+                        embeddings = gpu_embedder.encode(texts, batch_size=len(texts))
+                except Exception:
+                    pass
 
             if embeddings is None:
                 embeddings = embed_texts_llm(texts)

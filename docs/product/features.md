@@ -8,7 +8,7 @@ Production-grade hybrid retrieval platform with streaming answers, citations, an
 
 #### Hybrid Retrieval
 - BM25 keyword search for exact matches
-- Dense semantic search via BGE embeddings
+- Dense semantic search via DashScope text-embedding-v4
 - Context Compression (embedding similarity filter)
 - RRF score fusion
 - 95.1% Recall@3
