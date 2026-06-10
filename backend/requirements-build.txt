@@ -1,0 +1,6 @@
+# Build-only dependencies for downloading models at Docker build time.
+# These are NOT included in the final production image.
+# Used by: docker build (model download step only)
+torch>=2.0.0
+sentence-transformers>=2.2.2
+accelerate>=0.26.0

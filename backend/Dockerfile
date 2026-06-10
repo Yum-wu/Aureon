@@ -1,10 +1,10 @@
-# ── Aureon Backend: FastAPI + Chroma ──
-# Stage: Python 3.12 slim
+# ── Aureon Backend: FastAPI + Qdrant ──
+# Stage: Python 3.12 slim (Railway-optimized: no torch in final image)
 FROM python:3.12-slim AS backend
 
 WORKDIR /app
 
-# 系统依赖：Chroma 需要 sqlite 较新版本
+# 系统依赖
 RUN apt-get update && apt-get install -y --no-install-recommends \
     sqlite3 \
     && rm -rf /var/lib/apt/lists/*
@@ -13,14 +13,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 预下载 BGE-small-zh embedding 模型（~130MB，消除冷启动延迟）
-RUN python3 -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-small-zh-v1.5')" \
-    || HF_ENDPOINT=https://hf-mirror.com python3 -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-small-zh-v1.5')"
+# 临时安装 torch + sentence-transformers 用于下载 BGE 模型
+# 下载完成后立即卸载，最终镜像不含这些包（节省 ~2GB 内存）
+COPY backend/requirements-build.txt .
+RUN pip install --no-cache-dir -r requirements-build.txt \
+    && python3 -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-small-zh-v1.5')" \
+        || HF_ENDPOINT=https://hf-mirror.com python3 -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-small-zh-v1.5')" \
+    && pip uninstall -y torch accelerate 2>/dev/null; \
+       rm -rf /root/.cache/huggingface /root/.cache/torch
 
 # 复制后端代码
 COPY backend/ .
 
-# Chroma 向量库持久化目录
+# 向量数据目录
 RUN mkdir -p /app/data/vectors
 
 EXPOSE ${PORT:-8000}
