@@ -761,14 +761,17 @@ def _add_to_index_qdrant(chunks: List[Dict[str, Any]]):
     except Exception:
         existing_count = 0
 
-    # Embed texts using adaptive dispatch (CPU for small batches, GPU for large)
+    # Embed texts using API (skip local model when SKIP_LOCAL_EMBED=true)
     texts = [c["text"] for c in chunks]
-    try:
-        from app.rag.embed_gpu import get_adaptive_embedder
-        embedder = get_adaptive_embedder()
-        embeddings = embedder.encode(texts, batch_size=64)
-    except Exception:
+    if _skip_local_embed:
         embeddings = embed_texts_llm(texts)
+    else:
+        try:
+            from app.rag.embed_gpu import get_adaptive_embedder
+            embedder = get_adaptive_embedder()
+            embeddings = embedder.encode(texts, batch_size=64)
+        except Exception:
+            embeddings = embed_texts_llm(texts)
 
     # Upsert in batches
     batch_size = 100
@@ -1599,17 +1602,18 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
         vectors_config=VectorParams(size=dim, distance=Distance.COSINE),
     )
 
-    # Embed all texts using adaptive dispatch (CPU for small batches, GPU for large)
+    # Embed all texts (skip local model when SKIP_LOCAL_EMBED=true)
     texts = [c["text"] for c in chunks]
-    try:
-        from app.config import settings
-        from app.rag.embed_gpu import get_adaptive_embedder
-        embedder = get_adaptive_embedder()
-        embeddings = embedder.encode(texts, batch_size=settings.embedding_batch_size)
-    except Exception as e:
-        logger.warning("Adaptive embedding failed: %s, falling back to local/API", e)
-        embeddings = _embed_local(texts) if not _skip_local_embed else None
-        if embeddings is None:
+    if _skip_local_embed:
+        embeddings = embed_texts_llm(texts)
+    else:
+        try:
+            from app.config import settings
+            from app.rag.embed_gpu import get_adaptive_embedder
+            embedder = get_adaptive_embedder()
+            embeddings = embedder.encode(texts, batch_size=settings.embedding_batch_size)
+        except Exception as e:
+            logger.warning("Adaptive embedding failed: %s, falling back to API", e)
             embeddings = embed_texts_llm(texts)
 
     # Upsert in batches
@@ -1821,12 +1825,15 @@ def switch_to_qdrant(batch_size: int = 100) -> dict:
     # 3. Prepare embeddings — if ChromaDB doesn't have them, recompute
     if len(all_embeddings) != len(all_ids):
         logger.info("Recomputing embeddings for %d chunks (ChromaDB did not store them)", len(all_ids))
-        try:
-            from app.rag.embed_gpu import get_adaptive_embedder
-            embedder = get_adaptive_embedder()
-            embeddings_np = embedder.encode(all_documents, batch_size=64)
-        except Exception:
+        if _skip_local_embed:
             embeddings_np = embed_texts_llm(all_documents)
+        else:
+            try:
+                from app.rag.embed_gpu import get_adaptive_embedder
+                embedder = get_adaptive_embedder()
+                embeddings_np = embedder.encode(all_documents, batch_size=64)
+            except Exception:
+                embeddings_np = embed_texts_llm(all_documents)
     else:
         embeddings_np = _np.array(all_embeddings, dtype=_np.float32)
 
