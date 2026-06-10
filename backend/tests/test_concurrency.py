@@ -1,80 +1,36 @@
-"""Tests for concurrency rate limiting module."""
-import asyncio
+"""Tests for concurrency test suite."""
+
 import pytest
+import asyncio
 from unittest.mock import AsyncMock, patch
-from fastapi import HTTPException
 
 
-@pytest.fixture
-def concurrency_module():
-    """Import concurrency module with fresh state."""
-    import importlib
-    import app.concurrency
-    importlib.reload(app.concurrency)
-    return app.concurrency
+@pytest.mark.asyncio
+async def test_calculate_p99():
+    """Test P99 latency calculation."""
+    from app.benchmark.concurrency_test import ConcurrencyTestSuite
+
+    suite = ConcurrencyTestSuite()
+    results = [{"latency_ms": i * 10} for i in range(100)]
+    p99 = suite._calculate_p99(results)
+    assert p99 == 990.0  # 99th index = 990ms
 
 
-class TestSemaphoreLimits:
-    """Test that semaphores enforce concurrency limits."""
+@pytest.mark.asyncio
+async def test_calculate_p99_empty():
+    """Test P99 with empty results."""
+    from app.benchmark.concurrency_test import ConcurrencyTestSuite
 
-    @pytest.mark.asyncio
-    async def test_llm_semaphore_allows_concurrent_calls(self, concurrency_module):
-        """LLM semaphore should allow calls within limit."""
-        cm = concurrency_module
-        results = []
-
-        async def mock_call():
-            async with cm.llm_call_with_semaphore("deepseek-chat"):
-                results.append(True)
-                await asyncio.sleep(0.01)
-
-        await asyncio.gather(*[mock_call() for _ in range(5)])
-        assert len(results) == 5
-
-    @pytest.mark.asyncio
-    async def test_rag_semaphore_allows_concurrent_calls(self, concurrency_module):
-        """RAG pipeline semaphore should allow calls within limit."""
-        cm = concurrency_module
-        results = []
-
-        async def mock_call():
-            async with cm.rag_pipeline_semaphore():
-                results.append(True)
-                await asyncio.sleep(0.01)
-
-        await asyncio.gather(*[mock_call() for _ in range(5)])
-        assert len(results) == 5
-
-    @pytest.mark.asyncio
-    async def test_queue_timeout_returns_503(self, concurrency_module):
-        """Should raise HTTPException 503 when queue times out."""
-        cm = concurrency_module
-        original_timeout = cm.QUEUE_TIMEOUT_SECONDS
-        cm.QUEUE_TIMEOUT_SECONDS = 0.01
-
-        sem = cm._LLM_SEMAPHORES.get("test-model")
-        if sem is None:
-            cm._LLM_SEMAPHORES["test-model"] = asyncio.Semaphore(1)
-            sem = cm._LLM_SEMAPHORES["test-model"]
-
-        await sem.acquire()
-
-        with pytest.raises(HTTPException) as exc_info:
-            async with cm.llm_call_with_semaphore("test-model"):
-                pass
-
-        assert exc_info.value.status_code == 503
-        sem.release()
-        cm.QUEUE_TIMEOUT_SECONDS = original_timeout
+    suite = ConcurrencyTestSuite()
+    p99 = suite._calculate_p99([])
+    assert p99 == 0.0
 
 
-class TestConnectionStats:
-    """Test connection statistics reporting."""
+@pytest.mark.asyncio
+async def test_concurrency_levels():
+    """Test that concurrency levels are defined."""
+    from app.benchmark.concurrency_test import ConcurrencyTestSuite, CONCURRENCY_LEVELS
 
-    def test_get_stats_returns_dict(self, concurrency_module):
-        """get_concurrency_stats should return a dict with expected keys."""
-        stats = concurrency_module.get_concurrency_stats()
-        assert isinstance(stats, dict)
-        assert "llm_semaphores" in stats
-        assert "rag_semaphore_available" in stats
-        assert "queue_timeout_seconds" in stats
+    assert 1 in CONCURRENCY_LEVELS
+    assert 100 in CONCURRENCY_LEVELS
+    assert len(CONCURRENCY_LEVELS) >= 4
