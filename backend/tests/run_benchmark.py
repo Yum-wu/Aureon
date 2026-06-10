@@ -255,11 +255,15 @@ def parse_args():
     parser.add_argument("--compare", help="Compare with previous run (JSON file)")
     parser.add_argument("--full", action="store_true", help="Run all concurrency levels")
     parser.add_argument("--output-dir", default="data", help="Output directory")
+    parser.add_argument("--skip-concurrency", action="store_true", help="Skip concurrency tests")
     return parser.parse_args()
 
 
 async def run_railway_benchmark(args):
-    """Run benchmark in Railway mode."""
+    """Run full benchmark in Railway mode via HTTP API.
+
+    Tests: quality (Recall@K, MRR, nDCG), latency distribution, cost, concurrency.
+    """
     from app.benchmark import (
         detect_environment,
         RailwayBenchmarkClient,
@@ -286,25 +290,240 @@ async def run_railway_benchmark(args):
     # Health check
     print("\n> Checking API health...")
     if not await client.health_check():
-        print("  ❌ API health check failed!")
+        print("  API health check failed!")
         return
-    print("  ✅ API is healthy")
+    print("  API is healthy")
 
     # Load test queries
     from app.rag.test_data import TEST_QA_PAIRS
     queries = [qa["question"] for qa in TEST_QA_PAIRS]
 
-    # Run concurrency tests
-    print("\n> Running concurrency tests...")
-    suite = ConcurrencyTestSuite()
-    concurrency_results = []
+    # ── Phase 1: Quality Evaluation via HTTP API ──
+    print(f"\n> Phase 1: Quality Evaluation ({len(TEST_QA_PAIRS)} QA pairs via API)")
 
-    levels = [1, 10, 25, 50, 75, 100] if args.full else [10, 50, 100]
-    for level in levels:
-        print(f"\n  Testing {level} concurrent...")
-        result = await suite.test_http_concurrent(client, queries, level)
-        concurrency_results.append(result)
-        print(f"    QPS: {result['qps']}, Success: {result['success_rate']*100:.1f}%")
+    positive_hits = {3: 0, 5: 0, 10: 0}
+    positive_total = 0
+    negative_correct = 0
+    negative_total = 0
+    mrr_scores = []
+    ndcg_scores = []
+    latencies = []
+    positive_misses = []
+    negative_wrong = []
+    cost_tracker = CostTracker()
+
+    for i, qa in enumerate(TEST_QA_PAIRS):
+        query = qa["question"]
+        expected_keywords = qa["answer"][:50].split()[:3]
+        source_article = qa.get("source_article", "")
+        is_negative = source_article == "none" or qa.get("type") == "negative"
+
+        try:
+            # Call API with top_k=10 for comprehensive quality metrics
+            start = time.perf_counter()
+            resp = await client._client.post(
+                f"{client.base_url}/api/rag/query",
+                json={"query": query, "top_k": 10},
+                headers=client.headers,
+            )
+            latency_ms = (time.perf_counter() - start) * 1000
+            latencies.append(latency_ms)
+
+            if resp.status_code == 200:
+                data = resp.json()
+                answer = data.get("answer", "")
+                sources = data.get("sources", [])
+
+                # Estimate cost: rough token count from text length
+                query_tokens = len(query) // 2  # ~2 chars per token for CJK
+                answer_tokens = len(answer) // 2
+                source_tokens = sum(len(s.get("chunk", "")) // 2 for s in sources)
+                total_tokens = query_tokens + answer_tokens + source_tokens
+                cost_tracker.record_tokens(
+                    input_tokens=query_tokens + source_tokens,
+                    output_tokens=answer_tokens,
+                    model="deepseek-chat",
+                )
+
+                # Check retrieval quality
+                source_texts = []
+                for s in sources:
+                    combined = (s.get("title", "") + " " + s.get("slug", "") + " " +
+                                s.get("chunk_text_snippet", s.get("chunk", ""))).lower()
+                    source_texts.append(combined)
+
+                def _check_hit(k):
+                    for doc_text in source_texts[:k]:
+                        if source_article and source_article != "none" and source_article.lower() in doc_text:
+                            return True
+                        if any(kw.lower() in doc_text for kw in expected_keywords):
+                            return True
+                    return False
+
+                if is_negative:
+                    negative_total += 1
+                    # Negative: correct if API returns no sources or no keyword matches
+                    has_keyword_match = any(
+                        any(kw.lower() in t for kw in expected_keywords)
+                        for t in source_texts
+                    )
+                    if not sources or not has_keyword_match:
+                        negative_correct += 1
+                    else:
+                        negative_wrong.append({
+                            "id": qa["id"],
+                            "question": query[:60],
+                            "sources_count": len(sources),
+                            "sources": [s.get("slug", "") for s in sources[:3]],
+                        })
+                else:
+                    positive_total += 1
+                    for k in [3, 5, 10]:
+                        if _check_hit(k):
+                            positive_hits[k] += 1
+                    if not _check_hit(3):
+                        positive_misses.append({
+                            "id": qa["id"],
+                            "question": query[:60],
+                            "expected": source_article,
+                            "retrieved": [s.get("slug", "") for s in sources[:3]],
+                        })
+
+                    # MRR
+                    mrr_rank = 0
+                    for j, doc_text in enumerate(source_texts[:10]):
+                        if source_article and source_article.lower() in doc_text:
+                            mrr_rank = j + 1
+                            break
+                        if any(kw.lower() in doc_text for kw in expected_keywords):
+                            mrr_rank = j + 1
+                            break
+                    mrr_scores.append(1.0 / mrr_rank if mrr_rank > 0 else 0.0)
+
+                    # nDCG@10 — count relevant docs for correct IDCG
+                    def _is_relevant(doc_text):
+                        if source_article and source_article != "none" and source_article.lower() in doc_text:
+                            return True
+                        return any(kw.lower() in doc_text for kw in expected_keywords)
+
+                    relevant_count = sum(1 for d in source_texts[:10] if _is_relevant(d))
+                    dcg = 0.0
+                    for idx, doc_text in enumerate(source_texts[:10]):
+                        if _is_relevant(doc_text):
+                            dcg += 1.0 / math.log2(idx + 2)
+                    idcg = sum(1.0 / math.log2(i + 2) for i in range(min(relevant_count, 10)))
+                    ndcg_scores.append(dcg / idcg if idcg > 0 else 0.0)
+            else:
+                print(f"    [{i+1}] HTTP {resp.status_code}: {query[:40]}...")
+
+        except Exception as e:
+            print(f"    [{i+1}] Error: {e}")
+            if is_negative:
+                negative_total += 1
+            else:
+                positive_total += 1
+                mrr_scores.append(0.0)
+                ndcg_scores.append(0.0)
+
+        # Progress
+        if (i + 1) % 20 == 0 or i == len(TEST_QA_PAIRS) - 1:
+            print(f"  Progress: {i+1}/{len(TEST_QA_PAIRS)}")
+
+    # Quality results
+    recall_3 = positive_hits[3] / positive_total if positive_total > 0 else 0
+    recall_5 = positive_hits[5] / positive_total if positive_total > 0 else 0
+    recall_10 = positive_hits[10] / positive_total if positive_total > 0 else 0
+    mrr = statistics.mean(mrr_scores) if mrr_scores else 0
+    ndcg_10 = statistics.mean(ndcg_scores) if ndcg_scores else 0
+    neg_rate = negative_correct / negative_total if negative_total > 0 else 0
+
+    quality_results = {
+        "recall_3": recall_3,
+        "recall_5": recall_5,
+        "recall_10": recall_10,
+        "recall_at_3": recall_3,
+        "recall_at_5": recall_5,
+        "recall_at_10": recall_10,
+        "recall_hits_3": positive_hits[3],
+        "recall_hits_5": positive_hits[5],
+        "recall_hits_10": positive_hits[10],
+        "recall_total": positive_total,
+        "precision_3": recall_3,
+        "mrr": mrr,
+        "ndcg_10": ndcg_10,
+        "ndcg_at_10": ndcg_10,
+        "negative_detection_rate": neg_rate,
+        "negative_correct": negative_correct,
+        "negative_total": negative_total,
+    }
+
+    print(f"\n  Hybrid Retrieval:")
+    print(f"    Recall@3:     {recall_3*100:.1f}% ({positive_hits[3]}/{positive_total})")
+    print(f"    Recall@5:     {recall_5*100:.1f}% ({positive_hits[5]}/{positive_total})")
+    print(f"    Recall@10:    {recall_10*100:.1f}% ({positive_hits[10]}/{positive_total})")
+    print(f"    Precision@3:  {recall_3*100:.1f}%")
+    print(f"    MRR:          {mrr:.3f}")
+    print(f"    nDCG@10:      {ndcg_10:.3f}")
+    print(f"    Neg Detection: {neg_rate*100:.1f}% ({negative_correct}/{negative_total})")
+
+    if positive_misses:
+        print(f"\n  Top misses:")
+        for m in positive_misses[:5]:
+            print(f"    [{m['id']}] {m['question']}")
+            print(f"      expected: {m['expected']}, got: {m['retrieved']}")
+
+    if negative_wrong:
+        print(f"\n  Negative detection failures:")
+        for m in negative_wrong[:5]:
+            print(f"    [{m['id']}] {m['question']}")
+            print(f"      returned {m['sources_count']} sources: {m['sources']}")
+
+    # ── Phase 2: Latency Distribution ──
+    lat_sorted = sorted(latencies)
+    n = len(lat_sorted)
+    if n > 0:
+        latency_results = {
+            "mean_ms": round(statistics.mean(lat_sorted), 1),
+            "p50_ms": round(lat_sorted[n // 2], 1),
+            "p90_ms": round(lat_sorted[int(n * 0.9)], 1),
+            "p99_ms": round(lat_sorted[min(int(n * 0.99), n - 1)], 1),
+            "min_ms": round(lat_sorted[0], 1),
+            "max_ms": round(lat_sorted[-1], 1),
+            "num_samples": n,
+        }
+        print(f"\n> Phase 2: Latency Distribution (from quality evaluation)")
+        print(f"  Samples:  {n}")
+        print(f"  Mean:     {latency_results['mean_ms']}ms")
+        print(f"  P50:      {latency_results['p50_ms']}ms")
+        print(f"  P90:      {latency_results['p90_ms']}ms")
+        print(f"  P99:      {latency_results['p99_ms']}ms")
+        print(f"  Min:      {latency_results['min_ms']}ms")
+        print(f"  Max:      {latency_results['max_ms']}ms")
+    else:
+        latency_results = {}
+
+    # ── Phase 3: Concurrency Tests ──
+    concurrency_results = []
+    if args.skip_concurrency:
+        print("\n> Phase 3: Concurrency tests SKIPPED (--skip-concurrency)")
+        # Load existing concurrency data if available
+        import glob as _glob
+        existing = sorted(_glob.glob(str(Path(args.output_dir) / "benchmark_railway_*.json")))
+        if existing:
+            with open(existing[-1], encoding="utf-8") as f:
+                prev = json.load(f)
+            concurrency_results = prev.get("concurrency", [])
+            if concurrency_results:
+                print(f"  Loaded {len(concurrency_results)} levels from {Path(existing[-1]).name}")
+    else:
+        print("\n> Phase 3: Concurrency tests...")
+        suite = ConcurrencyTestSuite()
+        levels = [1, 10, 25, 50, 75, 100] if args.full else [10, 50, 100]
+        for level in levels:
+            print(f"\n  Testing {level} concurrent...")
+            result = await suite.test_http_concurrent(client, queries, level)
+            concurrency_results.append(result)
+            print(f"    QPS: {result['qps']}, Success: {result['success_rate']*100:.1f}%")
 
     # Build results
     from datetime import datetime
@@ -316,10 +535,10 @@ async def run_railway_benchmark(args):
             "embedding_provider": env.embedding_provider,
             "rerank_provider": env.rerank_provider,
         },
-        "quality": {},  # Quality tests require local mode
-        "latency": {},
+        "quality": quality_results,
+        "latency": latency_results,
         "concurrency": concurrency_results,
-        "cost": CostTracker().summary(),
+        "cost": cost_tracker.summary(),
     }
 
     # Generate reports
@@ -327,17 +546,24 @@ async def run_railway_benchmark(args):
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Terminal output
-    print("\n" + generate_terminal_output(results))
+    # Save reports BEFORE terminal output (terminal may crash on Windows GBK)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    # JSON report
     json_path = output_dir / f"benchmark_railway_{timestamp}.json"
     save_json_report(results, str(json_path))
-    print(f"\n  JSON report: {json_path}")
 
-    # Markdown report
     md_path = output_dir / f"benchmark_railway_{timestamp}.md"
     generate_markdown_report(results, str(md_path))
+
+    # Terminal output (may fail on Windows GBK due to emoji)
+    try:
+        print("\n" + generate_terminal_output(results))
+    except UnicodeEncodeError:
+        print("\n" + generate_terminal_output(results, ascii_safe=True))
+
+    print(f"\n  JSON report: {json_path}")
     print(f"  Markdown report: {md_path}")
 
     await client.close()

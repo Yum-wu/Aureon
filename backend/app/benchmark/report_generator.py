@@ -17,8 +17,10 @@ COLORS = {
 }
 
 
-def _check_mark(value: bool) -> str:
+def _check_mark(value: bool, ascii_safe: bool = False) -> str:
     """Return checkmark or X mark."""
+    if ascii_safe:
+        return "[PASS]" if value else "[FAIL]"
     return f"{COLORS['green']}✅{COLORS['reset']}" if value else f"{COLORS['red']}❌{COLORS['reset']}"
 
 
@@ -27,7 +29,7 @@ def _colorize(text: str, color: str) -> str:
     return f"{COLORS.get(color, '')}{text}{COLORS['reset']}"
 
 
-def generate_terminal_output(results: Dict) -> str:
+def generate_terminal_output(results: Dict, ascii_safe: bool = False) -> str:
     """Generate colored terminal output.
 
     Args:
@@ -37,6 +39,7 @@ def generate_terminal_output(results: Dict) -> str:
         Formatted string for terminal display
     """
     lines = []
+    _cm = lambda v: _check_mark(v, ascii_safe=ascii_safe)
 
     # Header
     lines.append("=" * 70)
@@ -57,18 +60,18 @@ def generate_terminal_output(results: Dict) -> str:
     quality = results.get("quality", {})
     lines.append(_colorize("> Retrieval Quality", "cyan"))
     recall_5 = quality.get("recall_at_5", 0)
-    lines.append(f"  Recall@5:      {recall_5*100:.1f}%  {_check_mark(recall_5 >= 0.95)} (target: ≥95%)")
+    lines.append(f"  Recall@5:      {recall_5*100:.1f}%  {_cm(recall_5 >= 0.95)} (target: ≥95%)")
     mrr = quality.get("mrr", 0)
-    lines.append(f"  MRR:           {mrr:.3f}  {_check_mark(mrr >= 0.80)} (target: ≥0.80)")
+    lines.append(f"  MRR:           {mrr:.3f}  {_cm(mrr >= 0.80)} (target: ≥0.80)")
     ndcg = quality.get("ndcg_at_10", 0)
-    lines.append(f"  nDCG@10:       {ndcg:.3f}  {_check_mark(ndcg >= 0.80)} (target: ≥0.80)")
+    lines.append(f"  nDCG@10:       {ndcg:.3f}  {_cm(ndcg >= 0.80)} (target: ≥0.80)")
     lines.append("")
 
     # Latency
     latency = results.get("latency", {})
     lines.append(_colorize("> Latency", "cyan"))
     p50 = latency.get("p50_ms", 0)
-    lines.append(f"  P50:           {p50:.1f}ms {_check_mark(p50 <= 20)} (target: ≤20ms)")
+    lines.append(f"  P50:           {p50:.1f}ms {_cm(p50 <= 20)} (target: ≤20ms)")
     lines.append(f"  P90:           {latency.get('p90_ms', 0):.1f}ms")
     p99 = latency.get("p99_ms", 0)
     lines.append(f"  P99:           {p99:.1f}ms")
@@ -81,11 +84,11 @@ def generate_terminal_output(results: Dict) -> str:
         level_val = conc_100.get('level', conc_100.get('concurrency', 100))
         lines.append(_colorize(f"> Concurrency ({level_val} concurrent)", "cyan"))
         qps = conc_100.get("qps", 0)
-        lines.append(f"  QPS:           {qps:.1f}   {_check_mark(qps >= 50)} (target: ≥50)")
+        lines.append(f"  QPS:           {qps:.1f}   {_cm(qps >= 50)} (target: ≥50)")
         success_rate = conc_100.get("success_rate", 0)
-        lines.append(f"  Success rate:  {success_rate*100:.1f}%  {_check_mark(success_rate >= 0.95)} (target: ≥95%)")
+        lines.append(f"  Success rate:  {success_rate*100:.1f}%  {_cm(success_rate >= 0.95)} (target: ≥95%)")
         lines.append(f"  Avg latency:   {conc_100.get('avg_latency_ms', 0):.0f}ms")
-        lines.append(f"  P99 latency:   {conc_100.get('p99_latency_ms', 0):.0f}ms {_check_mark(conc_100.get('p99_latency_ms', 0) <= 3000)} (target: ≤3s)")
+        lines.append(f"  P99 latency:   {conc_100.get('p99_latency_ms', 0):.0f}ms {_cm(conc_100.get('p99_latency_ms', 0) <= 3000)} (target: ≤3s)")
         lines.append("")
 
     # Cost Analysis
