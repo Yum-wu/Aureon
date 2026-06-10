@@ -66,10 +66,13 @@ _embed_cache: Dict[str, np.ndarray] = {}
 _EMBED_CACHE_MAX = 500
 _embed_cache_lock = threading.Lock()  # Thread-safe access to _embed_cache
 
-# ── Thread-local storage for query embedding reuse ──
+# ── Query embedding reuse (module-level) ──
 # retrieve_qdrant stores the query embedding here so compress_context
 # can reuse it without a redundant embedding API call.
-_thread_local = threading.local()
+# Uses module-level (not thread-local) because asyncio.to_thread runs
+# compress_context in a different worker thread than retrieve_qdrant.
+_last_query_embedding: Optional[np.ndarray] = None
+_last_query_embedding_lock = threading.Lock()
 
 # ── Local embedding model (lazy-loaded singleton) ──
 _local_embed_model = None
@@ -96,16 +99,20 @@ def _cache_key(text: str) -> str:
 
 
 def get_thread_query_embedding() -> Optional[np.ndarray]:
-    """Retrieve the last query embedding stored by retrieve_qdrant in this thread.
+    """Retrieve the last query embedding stored by retrieve_qdrant.
 
     Used by compress_context to avoid redundant embedding API calls.
+    Uses module-level storage (not thread-local) to work across asyncio.to_thread boundaries.
     """
-    return getattr(_thread_local, "query_embedding", None)
+    with _last_query_embedding_lock:
+        return _last_query_embedding
 
 
 def _set_thread_query_embedding(emb: np.ndarray) -> None:
-    """Store query embedding in thread-local storage for downstream reuse."""
-    _thread_local.query_embedding = emb
+    """Store query embedding for downstream reuse by compress_context."""
+    global _last_query_embedding
+    with _last_query_embedding_lock:
+        _last_query_embedding = emb
 
 
 def _get_local_model():
@@ -552,8 +559,8 @@ def embed_texts_as_list(texts: List[str]) -> List[np.ndarray]:
 def embed_texts_llm(texts: List[str], batch_size: int = 10) -> np.ndarray:
     """Multi-provider embedding with fallback chain.
 
-    Priority: local BGE (1024d) → DashScope (1024d) → SiliconFlow → Zhipu.
-    Set SKIP_LOCAL_EMBED=true to skip local model (recommended for Railway/CPU).
+    Priority: local BGE (1024d) → DashScope (768d) → SiliconFlow → Zhipu.
+    Set SKIP_LOCAL_EMBED=true to skip local model (recommended for Railway/API-only).
     Raises if ALL providers fail. Never returns zero vectors.
     """
     from app.config import settings

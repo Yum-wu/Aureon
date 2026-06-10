@@ -220,7 +220,13 @@ class EnsembleReranker:
         """Load BGE cross-encoder reranker.
 
         Uses GPU-accelerated reranker if available, falls back to CPU.
+        Skipped when SKIP_LOCAL_EMBED=true (API-only mode).
         """
+        import os
+        if os.getenv("SKIP_LOCAL_EMBED", "").lower() in ("1", "true", "yes"):
+            logger.info("Skipping local BGE reranker (SKIP_LOCAL_EMBED=true)")
+            return None
+
         model_name = config.model_name or "BAAI/bge-reranker-v2-m3"
 
         # Try GPU-accelerated reranker first

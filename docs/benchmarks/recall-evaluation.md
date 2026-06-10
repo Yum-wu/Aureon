@@ -109,7 +109,7 @@
 ## 检索管线
 
 ```
-Query → BM25 (jieba 分词) + Vector (BGE-small-zh 512d)
+Query → BM25 (jieba 分词) + Vector (DashScope text-embedding-v4 768d)
      → Pre-RRF 过滤 (cosine ≥ 0.10)
      → RRF 融合 (k=200, BM25 10% boost, vector max 3 contrib, confidence ≥ 0.35)
      → 标题/Slug 关键词 Boost
@@ -146,7 +146,15 @@ Query → BM25 (jieba 分词) + Vector (BGE-small-zh 512d)
 ## 运行 Benchmark
 
 ```bash
+# Railway 模式（测试生产环境）
+cd backend
+BENCHMARK_MODE=railway RAILWAY_API_URL=https://aureon-production-1247.up.railway.app python tests/run_benchmark.py
+
+# 本地模式
 cd backend && python tests/run_benchmark.py
+
+# 跳过并发测试（只跑质量+延迟+成本）
+python tests/run_benchmark.py --skip-concurrency
 ```
 
-结果保存到 `backend/data/benchmark_actual.json`。
+结果保存到 `backend/data/benchmark_railway_<timestamp>.{json,md}`。
