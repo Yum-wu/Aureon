@@ -24,6 +24,16 @@ class CostTracker:
         """Record token usage for a request."""
         self.usages.append(usage)
 
+    def record_tokens(self, input_tokens: int = 0, output_tokens: int = 0, model: str = "deepseek-chat"):
+        """Convenience: record from input/output token counts (mapped to llm field)."""
+        total = input_tokens + output_tokens
+        self.usages.append(TokenUsage(
+            embedding=0,
+            rerank=0,
+            llm=total,
+            total=total,
+        ))
+
     def summary(self) -> Dict:
         """Calculate cost summary across all recorded usages."""
         total = TokenUsage()
@@ -36,7 +46,8 @@ class CostTracker:
         # Calculate costs using pricing table
         embedding_cost = total.embedding * PRICING["dashscope_embedding"] / 1000
         rerank_cost = total.rerank * PRICING["dashscope_rerank"] / 1000
-        total_cost = embedding_cost + rerank_cost
+        llm_cost = total.llm * PRICING["deepseek_chat"] / 1000
+        total_cost = embedding_cost + rerank_cost + llm_cost
 
         num_queries = len(self.usages)
         avg_tokens = total.total // max(num_queries, 1)
