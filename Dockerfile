@@ -48,6 +48,7 @@ RUN rm -f /app/.env /app/backend/.env
 ENV GPU_ENABLED=false
 ENV RERANK_ENABLED=true
 ENV RERANK_BACKEND=api
+ENV RERANK_PROVIDER=dashscope
 
 # Chroma 向量库持久化目录
 RUN mkdir -p /app/data/vectors /app/offloads

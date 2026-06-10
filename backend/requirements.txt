@@ -23,9 +23,10 @@ langchain-text-splitters>=0.3,<0.4
 # Vector store backends (Qdrant is primary; ChromaDB is optional fallback)
 # chromadb>=0.5,<0.6  # Optional: pip install chromadb if using VECTOR_BACKEND=chroma
 qdrant-client>=1.12.0
-sentence-transformers>=2.2.2
-torch>=2.0.0
-accelerate>=0.26.0
+# NOTE: torch, sentence-transformers, accelerate are NOT in production requirements.
+# They are only used in local dev / GPU environments.
+# Railway deploys use API-based embedding (DashScope) and API reranker instead.
+# See backend/requirements-build.txt for the Docker build-time model download.
 jieba>=0.42
 
 # LangGraph dependencies
