@@ -31,7 +31,7 @@ class Settings(BaseSettings):
 
     # DashScope (通义千问) — primary API fallback, supports adjustable dimensions
     dashscope_api_key: str = ""
-    dashscope_base_url: str = "https://ws-97tmccfwk5azrb8u.ap-southeast-1.maas.aliyuncs.com/api/v1"
+    dashscope_base_url: str = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
     dashscope_model: str = "text-embedding-v4"
     dashscope_dimensions: int = 768
 
@@ -87,7 +87,7 @@ class Settings(BaseSettings):
     # Adaptive Re-ranking
     rerank_enabled: bool = True
     # Rerank backend: "local" (CrossEncoder) or "api" (remote API, safe for Railway)
-    rerank_backend: str = "local"
+    rerank_backend: str = "api"
     adaptive_rerank_enabled: bool = True
     ensemble_rerank_enabled: bool = False
     rerank_candidates: int = 12
@@ -104,6 +104,8 @@ class Settings(BaseSettings):
     jina_api_key: Optional[str] = None
 
     # DashScope Reranker (qwen3-rerank, same platform as embedding)
+    # Note: qwen3-rerank uses compatible-api (not compatible-mode) endpoint
+    dashscope_rerank_url: str = "https://dashscope-intl.aliyuncs.com/compatible-api/v1"
     dashscope_rerank_model: str = "qwen3-rerank"
     # Rerank provider priority: "dashscope" → "siliconflow" → "cohere" → "jina"
     rerank_provider: str = "dashscope"

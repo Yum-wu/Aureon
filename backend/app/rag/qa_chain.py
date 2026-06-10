@@ -9,7 +9,7 @@ import os
 import numpy as np
 from typing import List, Dict, Any, Optional
 
-from app.rag.vector_store import retrieve, retrieve_keyword, format_context, save_index, embed_texts_llm, load_index, rerank
+from app.rag.vector_store import retrieve, retrieve_keyword, format_context, save_index, embed_texts_llm, load_index, rerank, get_thread_query_embedding
 from app.rag.query_rewriter import is_cross_article_query, expand_queries_rules, hyde_retrieve, hyde_retrieve_async
 from app.rag.models import RAGQueryResponse, SourceItem
 from app.rag.query_classifier import classify_query_complexity, get_reranking_strategy
@@ -106,16 +106,25 @@ def compress_context(query: str, chunks: List[Dict[str, Any]], threshold: float 
         has_cached = len(cached_indices) > 0
 
         if has_cached:
-            # Reuse stored embeddings: embed only the query + any uncached chunks
-            # Use embed_texts_llm (not GPU) to match the embedding model used by
-            # ChromaDB/Qdrant during indexing — ensures consistent embedding space
+            # Reuse stored embeddings: embed only uncached chunks (NOT the query).
+            # Query embedding is reused from retrieve_qdrant via thread-local storage,
+            # avoiding a redundant embedding API call.
             uncached_texts = [chunks[i]["text"] for i in range(len(chunks)) if i not in cached_indices]
-            to_embed = [query] + uncached_texts
-            new_embeddings = embed_texts_llm(to_embed)
+            if uncached_texts:
+                new_embeddings = embed_texts_llm(uncached_texts)
+            else:
+                new_embeddings = np.empty((0, 0), dtype=np.float32)
 
-            query_emb = new_embeddings[0]
+            # Get query embedding from thread-local (set by retrieve_qdrant)
+            query_emb = get_thread_query_embedding()
+            if query_emb is None:
+                # Fallback: compute query embedding (should rarely happen)
+                logger.debug("Context compression: no thread-local query embedding, computing via API")
+                fallback = embed_texts_llm([query])
+                query_emb = fallback[0]
+
             chunk_embs = []
-            uncached_iter = iter(new_embeddings[1:])
+            uncached_iter = iter(new_embeddings) if len(new_embeddings) > 0 else iter([])
             for i in range(len(chunks)):
                 if i in cached_indices:
                     chunk_embs.append(chunks[i]["_embedding"])
