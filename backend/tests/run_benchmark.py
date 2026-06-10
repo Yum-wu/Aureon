@@ -18,6 +18,8 @@ import time
 import statistics
 import json
 import math
+import argparse
+import asyncio
 from pathlib import Path
 from collections import defaultdict
 
@@ -239,6 +241,106 @@ def measure_latency(fn, qa_pairs, num_runs=3):
         "max_ms": round(sorted_lats[-1], 1),
         "num_samples": n,
     }
+
+
+def parse_args():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(description="Aureon RAG Benchmark")
+    parser.add_argument(
+        "--mode",
+        choices=["local", "railway"],
+        default=os.getenv("BENCHMARK_MODE", "local"),
+        help="Benchmark mode",
+    )
+    parser.add_argument("--compare", help="Compare with previous run (JSON file)")
+    parser.add_argument("--full", action="store_true", help="Run all concurrency levels")
+    parser.add_argument("--output-dir", default="data", help="Output directory")
+    return parser.parse_args()
+
+
+async def run_railway_benchmark(args):
+    """Run benchmark in Railway mode."""
+    from app.benchmark import (
+        detect_environment,
+        RailwayBenchmarkClient,
+        ConcurrencyTestSuite,
+        CostTracker,
+    )
+    from app.benchmark.report_generator import (
+        generate_terminal_output,
+        generate_markdown_report,
+        save_json_report,
+    )
+
+    env = detect_environment()
+    print(f"\n> Environment: {env.mode.upper()}")
+    print(f"  URL: {env.base_url}")
+    print(f"  Vector: {env.vector_backend}")
+
+    # Create client
+    client = RailwayBenchmarkClient(
+        base_url=env.base_url,
+        api_key=env.api_key,
+    )
+
+    # Health check
+    print("\n> Checking API health...")
+    if not await client.health_check():
+        print("  ❌ API health check failed!")
+        return
+    print("  ✅ API is healthy")
+
+    # Load test queries
+    from app.rag.test_data import TEST_QA_PAIRS
+    queries = [qa["question"] for qa in TEST_QA_PAIRS]
+
+    # Run concurrency tests
+    print("\n> Running concurrency tests...")
+    suite = ConcurrencyTestSuite()
+    concurrency_results = []
+
+    levels = [1, 10, 25, 50, 75, 100] if args.full else [10, 50, 100]
+    for level in levels:
+        print(f"\n  Testing {level} concurrent...")
+        result = await suite.test_http_concurrent(client, queries, level)
+        concurrency_results.append(result)
+        print(f"    QPS: {result['qps']}, Success: {result['success_rate']*100:.1f}%")
+
+    # Build results
+    from datetime import datetime
+    results = {
+        "metadata": {
+            "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
+            "mode": env.mode,
+            "vector_backend": env.vector_backend,
+            "embedding_provider": env.embedding_provider,
+            "rerank_provider": env.rerank_provider,
+        },
+        "quality": {},  # Quality tests require local mode
+        "latency": {},
+        "concurrency": concurrency_results,
+        "cost": CostTracker().summary(),
+    }
+
+    # Generate reports
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Terminal output
+    print("\n" + generate_terminal_output(results))
+
+    # JSON report
+    json_path = output_dir / f"benchmark_railway_{timestamp}.json"
+    save_json_report(results, str(json_path))
+    print(f"\n  JSON report: {json_path}")
+
+    # Markdown report
+    md_path = output_dir / f"benchmark_railway_{timestamp}.md"
+    generate_markdown_report(results, str(md_path))
+    print(f"  Markdown report: {md_path}")
+
+    await client.close()
 
 
 def main():
@@ -510,4 +612,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+
+    if args.mode == "railway":
+        asyncio.run(run_railway_benchmark(args))
+    else:
+        main()
