@@ -69,9 +69,21 @@ _embed_cache_lock = threading.Lock()  # Thread-safe access to _embed_cache
 # ── Local embedding model (lazy-loaded singleton) ──
 _local_embed_model = None
 _LOCAL_MODEL_NAME = "BAAI/bge-large-zh-v1.5"
-_LOCAL_MODEL_DIM = 1024
+_LOCAL_MODEL_DIM = 1024  # fallback; overridden by settings.embedding_dim at runtime
 # Set True if collection was built with API (different dim than local model)
 _skip_local_embed = os.getenv("SKIP_LOCAL_EMBED", "").lower() in ("1", "true", "yes")
+
+
+def _get_embedding_dim() -> int:
+    """Return the active embedding dimension from settings or env var.
+
+    Priority: EMBEDDING_DIMENSION env → settings.embedding_dim → _LOCAL_MODEL_DIM (1024).
+    """
+    try:
+        from app.config import settings
+        return settings.embedding_dim
+    except Exception:
+        return _LOCAL_MODEL_DIM
 
 
 def _cache_key(text: str) -> str:
@@ -1136,99 +1148,79 @@ def _get_reranker():
 
 
 def _rerank_via_api(query: str, chunks: List[Dict[str, Any]], top_k: int = 3) -> Optional[List[Dict[str, Any]]]:
-    """Rerank chunks via remote API (Cohere or Jina). Returns None if unavailable.
+    """Rerank chunks via remote API. Returns None if unavailable.
 
-    Supports two backends:
-    - Cohere Rerank API: requires COHERE_API_KEY env var
-    - Jina Reranker API: requires JINA_API_KEY env var (fallback)
+    Provider priority (env: RERANK_PROVIDER):
+    1. DashScope qwen3-rerank (same platform as embedding, <5ms from Singapore)
+    2. SiliconFlow BAAI/bge-reranker-v2-m3
+    3. Cohere rerank-multilingual-v3.0
+    4. Jina jina-reranker-v2-base-multilingual
     """
     import os
     import httpx
 
     texts = [c["text"] for c in chunks]
+    preferred = os.environ.get("RERANK_PROVIDER", "dashscope")
 
-    # Try Cohere first
-    cohere_key = os.environ.get("COHERE_API_KEY") or (
-        getattr(settings, "cohere_api_key", None)
-    )
+    # ── Helper: generic rerank POST ──
+    def _call_rerank(url: str, api_key: str, model: str, provider_name: str,
+                     extra_body: dict | None = None) -> Optional[List[Dict[str, Any]]]:
+        body: dict = {
+            "model": model,
+            "query": query,
+            "documents": texts,
+            "top_n": top_k,
+        }
+        if extra_body:
+            body.update(extra_body)
+        try:
+            resp = httpx.post(
+                url,
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                json=body,
+                timeout=15.0,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            scored = []
+            for item in data.get("results", []):
+                idx = item["index"]
+                score = item["relevance_score"]
+                chunk = chunks[idx].copy()
+                chunk["rerank_score"] = float(score)
+                scored.append(chunk)
+            scored.sort(key=lambda x: x["rerank_score"], reverse=True)
+            logger.info("API rerank (%s): %d chunks -> %d results", provider_name, len(chunks), len(scored))
+            return scored[:top_k]
+        except Exception as e:
+            logger.warning("%s API rerank failed: %s", provider_name, e)
+            return None
+
+    # ── Build provider list (preferred first, then fallbacks) ──
+    ds_key = os.environ.get("DASHSCOPE_API_KEY") or getattr(settings, "dashscope_api_key", "")
+    sf_key = os.environ.get("SILICONFLOW_API_KEY") or getattr(settings, "siliconflow_api_key", "")
+    cohere_key = os.environ.get("COHERE_API_KEY") or getattr(settings, "cohere_api_key", None)
+    jina_key = os.environ.get("JINA_API_KEY") or getattr(settings, "jina_api_key", None)
+
+    providers = []
+    if preferred == "dashscope" and ds_key:
+        providers.append(("dashscope", ds_key, settings.dashscope_rerank_model, settings.dashscope_base_url))
+    if sf_key:
+        providers.append(("siliconflow", sf_key, "BAAI/bge-reranker-v2-m3", settings.siliconflow_base_url))
     if cohere_key:
-        try:
-            logger.debug("Cohere rerank: key=%s", mask_secret(cohere_key))
-            model = getattr(settings, "cohere_rerank_model", "rerank-multilingual-v3.0")
-            resp = httpx.post(
-                "https://api.cohere.ai/v2/rerank",
-                headers={
-                    "Authorization": f"Bearer {cohere_key}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": model,
-                    "query": query,
-                    "documents": texts,
-                    "top_n": top_k,
-                },
-                timeout=15.0,
-            )
-            resp.raise_for_status()
-            data = resp.json()
-
-            scored = []
-            for item in data.get("results", []):
-                idx = item["index"]
-                score = item["relevance_score"]
-                chunk = chunks[idx].copy()
-                chunk["rerank_score"] = float(score)
-                scored.append(chunk)
-
-            scored.sort(key=lambda x: x["rerank_score"], reverse=True)
-            logger.info(
-                "API rerank (Cohere): %d chunks -> %d results", len(chunks), len(scored)
-            )
-            return scored[:top_k]
-        except Exception as e:
-            logger.warning("Cohere API rerank failed: %s", e)
-
-    # Fallback: Jina Reranker API
-    jina_key = os.environ.get("JINA_API_KEY") or (
-        getattr(settings, "jina_api_key", None)
-    )
+        providers.append(("cohere", cohere_key, settings.cohere_rerank_model, "https://api.cohere.ai/v2"))
     if jina_key:
-        try:
-            logger.debug("Jina rerank: key=%s", mask_secret(jina_key))
-            resp = httpx.post(
-                "https://api.jina.ai/v1/rerank",
-                headers={
-                    "Authorization": f"Bearer {jina_key}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": "jina-reranker-v2-base-multilingual",
-                    "query": query,
-                    "documents": texts,
-                    "top_n": top_k,
-                },
-                timeout=15.0,
-            )
-            resp.raise_for_status()
-            data = resp.json()
+        providers.append(("jina", jina_key, "jina-reranker-v2-base-multilingual", "https://api.jina.ai/v1"))
+    # Add dashscope as fallback if it wasn't the preferred
+    if preferred != "dashscope" and ds_key:
+        providers.append(("dashscope", ds_key, settings.dashscope_rerank_model, settings.dashscope_base_url))
 
-            scored = []
-            for item in data.get("results", []):
-                idx = item["index"]
-                score = item["relevance_score"]
-                chunk = chunks[idx].copy()
-                chunk["rerank_score"] = float(score)
-                scored.append(chunk)
+    for name, key, model, base_url in providers:
+        url = f"{base_url.rstrip('/')}/rerank"
+        result = _call_rerank(url, key, model, name)
+        if result is not None:
+            return result
 
-            scored.sort(key=lambda x: x["rerank_score"], reverse=True)
-            logger.info(
-                "API rerank (Jina): %d chunks -> %d results", len(chunks), len(scored)
-            )
-            return scored[:top_k]
-        except Exception as e:
-            logger.warning("Jina API rerank failed: %s", e)
-
-    # No API key configured
     return None
 
 
@@ -1545,16 +1537,25 @@ def _check_qdrant_available() -> bool:
 
 
 def _get_qdrant():
-    """Get or create Qdrant client singleton."""
+    """Get or create Qdrant client singleton.
+
+    Auto-detects mode from URL scheme:
+    - https:// → Qdrant Cloud (REST only, no gRPC)
+    - http://localhost → local Qdrant (gRPC preferred)
+    """
     global _qdrant_client
     if _qdrant_client is None:
         from qdrant_client import QdrantClient
         from app.config import settings
-        kwargs = {
-            "url": settings.qdrant_url,
-            "prefer_grpc": True,  # Use gRPC for lower latency (port 6334)
-            "grpc_port": 6334,
-        }
+        url = settings.qdrant_url
+        kwargs: dict = {"url": url}
+        if url.startswith("https://"):
+            # Qdrant Cloud: REST only, gRPC not supported
+            pass
+        else:
+            # Local Qdrant: prefer gRPC for lower latency
+            kwargs["prefer_grpc"] = True
+            kwargs["grpc_port"] = 6334
         if settings.qdrant_api_key:
             kwargs["api_key"] = settings.qdrant_api_key
         _qdrant_client = QdrantClient(**kwargs)
@@ -1565,7 +1566,7 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
     """Save chunks to Qdrant vector store."""
     from qdrant_client.models import VectorParams, Distance, PointStruct
     client = _get_qdrant()
-    dim = _LOCAL_MODEL_DIM
+    dim = _get_embedding_dim()
 
     # Delete and recreate collection
     try:
@@ -1805,7 +1806,7 @@ def switch_to_qdrant(batch_size: int = 100) -> dict:
     # 4. Ensure Qdrant collection exists with correct dimensions
     qdrant_client = _get_qdrant()
     collection_name = _get_qdrant_collection_name()
-    dim = embeddings_np.shape[1] if len(embeddings_np) > 0 else _LOCAL_MODEL_DIM
+    dim = embeddings_np.shape[1] if len(embeddings_np) > 0 else _get_embedding_dim()
 
     try:
         qdrant_client.delete_collection(collection_name)

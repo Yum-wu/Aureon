@@ -19,17 +19,21 @@ class Settings(BaseSettings):
     fallback_base_url: str = "https://open.bigmodel.cn/api/paas/v4/"
 
     # Embedding API — multi-provider fallback chain
-    # Priority: local BGE (512d) → DashScope → SiliconFlow → Zhipu
+    # Priority: local BGE (1024d) → DashScope (768d) → SiliconFlow → Zhipu
     embedding_api_key: str = ""
     embedding_base_url: str = "https://open.bigmodel.cn/api/paas/v4/"
     embedding_model: str = "embedding-2"
     embedding_dimensions: int = 1024  # only used by APIs that support dimension control
 
-    # DashScope (通义千问) — primary API fallback, supports 512d
+    # Global embedding dimension (used by vector store for index size)
+    # Set to 768 when using DashScope text-embedding-v4 for smaller storage footprint
+    embedding_dim: int = 768
+
+    # DashScope (通义千问) — primary API fallback, supports adjustable dimensions
     dashscope_api_key: str = ""
-    dashscope_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-    dashscope_model: str = "text-embedding-v3"
-    dashscope_dimensions: int = 1024
+    dashscope_base_url: str = "https://ws-97tmccfwk5azrb8u.ap-southeast-1.maas.aliyuncs.com/api/v1"
+    dashscope_model: str = "text-embedding-v4"
+    dashscope_dimensions: int = 768
 
     # SiliconFlow — secondary API fallback, hosts BGE models
     siliconflow_api_key: str = ""
@@ -81,14 +85,9 @@ class Settings(BaseSettings):
     auto_index_enabled: bool = True
 
     # Adaptive Re-ranking
-    rerank_enabled: bool = Field(
-        default_factory=lambda: os.getenv("RERANK_ENABLED", "true").lower() == "true"
-    )
-    # Rerank backend: "local" (CrossEncoder) or "api" (Cohere/Jina remote API)
-    # Use "api" on memory-constrained environments (e.g. Railway) to avoid OOM
-    rerank_backend: str = Field(
-        default_factory=lambda: os.getenv("RERANK_BACKEND", "local")
-    )
+    rerank_enabled: bool = True
+    # Rerank backend: "local" (CrossEncoder) or "api" (remote API, safe for Railway)
+    rerank_backend: str = "local"
     adaptive_rerank_enabled: bool = True
     ensemble_rerank_enabled: bool = False
     rerank_candidates: int = 12
@@ -103,6 +102,11 @@ class Settings(BaseSettings):
     cohere_api_key: Optional[str] = None
     cohere_rerank_model: str = "rerank-multilingual-v3.0"
     jina_api_key: Optional[str] = None
+
+    # DashScope Reranker (qwen3-rerank, same platform as embedding)
+    dashscope_rerank_model: str = "qwen3-rerank"
+    # Rerank provider priority: "dashscope" → "siliconflow" → "cohere" → "jina"
+    rerank_provider: str = "dashscope"
 
     # WebSocket Configuration
     websocket_enabled: bool = True
@@ -132,7 +136,7 @@ class Settings(BaseSettings):
     # Post-generation reflection
     reflection_enabled: bool = False
 
-    model_config = {"env_file_encoding": "utf-8", "extra": "ignore"}
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
     def model_post_init(self, __context):
         """Support VECTOR_DB env var as alias for vector_backend."""
