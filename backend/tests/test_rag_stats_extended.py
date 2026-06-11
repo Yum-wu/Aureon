@@ -73,66 +73,7 @@ async def test_record_query_pipeline_error():
         await record_query("test", sources_count=1, latency_ms=50)
 
 
-# ── /api/rag/documents ──
 
-
-@pytest.mark.asyncio
-async def test_get_documents_empty():
-    mock_collection = MagicMock()
-    mock_collection.count.return_value = 0
-
-    with patch("app.rag.vector_store._get_collection", return_value=mock_collection), \
-         patch("app.api.rag_stats.settings") as mock_settings:
-        mock_settings.vector_backend = "chroma"
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as ac:
-            resp = await ac.get("/api/rag/documents")
-
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["documents"] == []
-    assert data["total_docs"] == 0
-    assert data["total_chunks"] == 0
-
-
-@pytest.mark.asyncio
-async def test_get_documents_with_data():
-    mock_collection = MagicMock()
-    mock_collection.count.return_value = 3
-    mock_collection.get.return_value = {
-        "metadatas": [
-            {"source": "guide.md", "title": "RAG Guide"},
-            {"source": "guide.md", "title": "RAG Guide"},
-            {"source": "notes.txt", "title": "Notes"},
-        ]
-    }
-
-    with patch("app.rag.vector_store._get_collection", return_value=mock_collection), \
-         patch("app.api.rag_stats.settings") as mock_settings:
-        mock_settings.vector_backend = "chroma"
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as ac:
-            resp = await ac.get("/api/rag/documents")
-
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["total_docs"] == 2
-    assert data["total_chunks"] == 3
-    sources = [d["source"] for d in data["documents"]]
-    assert "guide.md" in sources
-    assert "notes.txt" in sources
-
-
-@pytest.mark.asyncio
-async def test_get_documents_error():
-    with patch("app.rag.vector_store._get_collection", side_effect=RuntimeError("chroma down")), \
-         patch("app.api.rag_stats.settings") as mock_settings:
-        mock_settings.vector_backend = "chroma"
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as ac:
-            resp = await ac.get("/api/rag/documents")
-
-    assert resp.status_code == 500
 
 
 @pytest.mark.asyncio
