@@ -5,7 +5,7 @@
 ### 后端（新增）
 | 组件 | 技术 | 说明 |
 |------|------|------|
-| 运行时 | Python 3.14+ | 系统 Python |
+| 运行时 | Python 3.12+ | 系统 Python |
 | 框架 | FastAPI + uvicorn | REST + SSE 流式端点 |
 | Agent 框架 | LangChain >=0.3 | Tool Calling Agent |
 | LLM 接口 | langchain-openai (ChatOpenAI) | OpenAI 兼容接口，适配智谱/DeepSeek |
@@ -112,12 +112,12 @@ data: {"type": "error",     "content": {"message": "错误描述"}}
 
 ```bash
 # 终端 1：后端
-cd Chatbot/backend
+cd backend
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 
 # 终端 2：前端
-cd Chatbot
+cd .
 npm install
 npm run dev    # 默认 http://localhost:5173
 ```

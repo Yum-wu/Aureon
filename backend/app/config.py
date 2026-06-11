@@ -154,16 +154,17 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
         env_nested_delimiter="__",
+        # Treat empty env vars as unset so Railway / PaaS placeholders
+        # (e.g. DATABASE='') don't crash pydantic-settings when it tries
+        # to json.loads() them as complex sub-model values.
+        env_ignore_empty=True,
     )
 
     def model_post_init(self, __context):
-        """Re-read flat and nested (__-delimited) env vars into sub-models.
+        """Re-read flat env vars into sub-models for backward compat.
 
-        Nested env vars take priority over flat env vars. Empty string values
-        are skipped to avoid coercing them to invalid types (e.g. int("")).
-        This avoids the pydantic-settings JSONDecodeError on empty
-        DATABASE__DATABASE_URL, because we never ask pydantic-settings to
-        parse nested env vars as JSON.
+        Only applies flat env var when the corresponding nested
+        (__-delimited) env var is NOT set, so nested takes priority.
         """
         cls_fields = type(self).model_fields
         for sub_field in cls_fields:
@@ -173,12 +174,8 @@ class Settings(BaseSettings):
                 for field_name in sub_model.model_fields:
                     flat_name = field_name.upper()
                     nested_name = f"{sub_field.upper()}__{flat_name}"
-                    nested_val = os.environ.get(nested_name, "")
-                    flat_val = os.environ.get(flat_name, "")
-                    if nested_val != "":
-                        updates[field_name] = nested_val
-                    elif flat_val != "":
-                        updates[field_name] = flat_val
+                    if flat_name in os.environ and nested_name not in os.environ:
+                        updates[field_name] = os.environ[flat_name]
                 if updates:
                     current = sub_model.model_dump()
                     current.update(updates)
@@ -199,12 +196,25 @@ class Settings(BaseSettings):
 
 try:
     settings = Settings()
-except Exception:
-    # Fallback: Railway may set empty env vars that pydantic-settings can't parse.
-    # Re-init with env_nested_delimiter disabled as safety net.
+except Exception as _init_err:
+    # Safety net for hosts that set env vars to non-JSON placeholders that
+    # pydantic-settings still tries to decode (e.g. DATABASE='null' or
+    # DATABASE='postgres' without a JSON object). Strip empty / non-JSON
+    # sub-model env vars so the retry can succeed.
     import warnings
-    warnings.warn("Settings init failed, falling back to defaults", stacklevel=2)
-    Settings.model_config["env_nested_delimiter"] = None
+    warnings.warn(
+        f"Settings init failed ({type(_init_err).__name__}), "
+        "sanitizing env vars and retrying with defaults",
+        stacklevel=2,
+    )
+    for _sub_field in Settings.model_fields:
+        _env_name = _sub_field.upper()
+        if _env_name in os.environ:
+            _val = os.environ[_env_name]
+            if not _val or not _val.lstrip().startswith("{"):
+                # Empty, or non-JSON scalar: drop it so pydantic-settings
+                # doesn't try to json.loads() it for the sub-model.
+                os.environ.pop(_env_name, None)
     settings = Settings()
 
 

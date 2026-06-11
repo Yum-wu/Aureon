@@ -19,7 +19,7 @@ Aureon 全栈 AI 应用开发指南。
 
 - **RAG**：检索增强生成，基于文档的知识问答
 - **Agent**：LangChain Agent，具备 Tool Calling 能力的对话代理
-- **Memory**：三层记忆（L0 对话 / L1 原子记忆 / L3 人格）
+- **Memory**：四层记忆（L0 对话 / L1 原子记忆 / L2 场景记忆 / L3 人格）
 - **LangGraph**：状态图编排，支持流式输出的 Agent 工作流
 - **Semantic Cache**：两层缓存架构（Exact + Semantic），延迟降低 97%
 - **Adaptive Re-ranking**：Query-aware 策略选择，精度提升 22%
