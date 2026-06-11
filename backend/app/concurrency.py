@@ -46,12 +46,9 @@ async def llm_call_with_semaphore(model: str):
     try:
         await asyncio.wait_for(sem.acquire(), timeout=QUEUE_TIMEOUT_SECONDS)
     except asyncio.TimeoutError:
-        from fastapi import HTTPException
+        from app.exceptions import LLMServiceError
         logger.warning("LLM semaphore timeout", model=model, timeout=QUEUE_TIMEOUT_SECONDS)
-        raise HTTPException(
-            status_code=503,
-            detail="System busy. Please try again later.",
-        )
+        raise LLMServiceError(detail="System busy. Please try again later.")
     try:
         yield
     finally:
@@ -69,12 +66,9 @@ async def rag_pipeline_semaphore():
     try:
         await asyncio.wait_for(_RAG_SEMAPHORE.acquire(), timeout=QUEUE_TIMEOUT_SECONDS)
     except asyncio.TimeoutError:
-        from fastapi import HTTPException
+        from app.exceptions import LLMServiceError
         logger.warning("RAG pipeline semaphore timeout", timeout=QUEUE_TIMEOUT_SECONDS)
-        raise HTTPException(
-            status_code=503,
-            detail="RAG pipeline busy. Please try again later.",
-        )
+        raise LLMServiceError(detail="RAG pipeline busy. Please try again later.")
     try:
         yield
     finally:

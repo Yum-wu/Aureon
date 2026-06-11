@@ -338,7 +338,7 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
 @limiter.limit("1/second")
 @audit_action("index", "index")
 async def rag_index_endpoint(request: Request, user=Depends(require_role(UserRole.EDITOR))):
-    """Re-index all articles into Chroma + clear caches + rebuild BM25.
+    """Re-index all articles into Qdrant + clear caches + rebuild BM25.
 
     Requires EDITOR role or higher.
     When Contextual Retrieval is enabled (default), each chunk gets an
@@ -366,7 +366,7 @@ async def rag_index_endpoint(request: Request, user=Depends(require_role(UserRol
     _mem_cache.clear()
     await clear_cache_by_prefix("llm_cache:")
 
-    # Force BM25 rebuild from Chroma
+    # Force BM25 rebuild from Qdrant
     from app.rag.vector_store import _build_kw_index
     _build_kw_index(force=True)
 
@@ -507,7 +507,7 @@ async def rag_delete_upload(filename: str):
 
     filepath = os.path.join(UPLOADS_DIR, filename)
 
-    # 1. Remove from Chroma index
+    # 1. Remove from Qdrant index
     from app.rag.vector_store import delete_from_index
 
     delete_from_index(filename)

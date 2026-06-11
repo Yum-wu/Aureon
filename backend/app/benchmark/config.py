@@ -11,7 +11,7 @@ class BenchmarkEnv:
     mode: str  # "local" | "railway"
     base_url: Optional[str]
     api_key: Optional[str]
-    vector_backend: str  # "chroma" | "qdrant"
+    vector_backend: str  # "qdrant" (default) | "chroma" (legacy)
     embedding_provider: str  # "local" | "dashscope" | "siliconflow"
     rerank_provider: str  # "api" | "local"
 
@@ -81,7 +81,7 @@ def detect_environment() -> BenchmarkEnv:
                 mode="local",
                 base_url=None,
                 api_key=None,
-                vector_backend=os.getenv("VECTOR_BACKEND", "chroma"),
+                vector_backend=os.getenv("VECTOR_BACKEND", "qdrant"),
                 embedding_provider="local",
                 rerank_provider="api",
             )

@@ -106,8 +106,13 @@ def get_audit_logs(
     return AuditLogsResponse(logs=logs, total=total, limit=limit, offset=offset)
 
 
-def get_audit_stats(tenant_id: str = "default") -> AuditStatsResponse:
-    """Aggregate audit statistics for a tenant."""
+def get_audit_stats(tenant_id: str = "default", now: datetime | None = None) -> AuditStatsResponse:
+    """Aggregate audit statistics for a tenant.
+
+    Args:
+        tenant_id: 租户 ID
+        now: 用于计算最近窗口的基准时间。默认为当前 UTC 时间。
+    """
     conn: sqlite3.Connection = get_db()
 
     total_row = conn.execute(
@@ -131,7 +136,7 @@ def get_audit_stats(tenant_id: str = "default") -> AuditStatsResponse:
     resource_types = {row["resource_type"]: row["cnt"] for row in rt_rows}
 
     # Recent counts
-    now = datetime.now(timezone.utc)
+    now = now or datetime.now(timezone.utc)
     one_hour_ago = (now - timedelta(hours=1)).isoformat()
     one_day_ago = (now - timedelta(hours=24)).isoformat()
 

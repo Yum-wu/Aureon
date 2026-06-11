@@ -72,3 +72,5 @@ docker-compose.override.yml
 backend/data/vectors/
 backend/data/chroma.sqlite3
 backend/nul
+# Added by code-review-graph
+.code-review-graph/

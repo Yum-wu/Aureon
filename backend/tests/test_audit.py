@@ -306,7 +306,9 @@ class TestAuditServiceE2E:
         )
         conn.commit()
 
-        stats = get_audit_stats(tenant_id=tenant)
+        from datetime import datetime, timezone
+        fixed_now = datetime(2026, 6, 10, 12, 0, 0, tzinfo=timezone.utc)  # same day as row timestamps
+        stats = get_audit_stats(tenant_id=tenant, now=fixed_now)
         assert stats.total_logs == 3
         assert stats.actions == {"upload": 2, "query": 1}
         assert stats.resource_types == {"document": 2, "config": 1}

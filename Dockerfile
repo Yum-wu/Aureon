@@ -3,7 +3,7 @@ FROM node:22-alpine AS frontend-builder
 
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --prefer-offline
 COPY . .
 
 ARG VITE_API_URL

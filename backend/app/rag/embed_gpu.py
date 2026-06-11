@@ -196,8 +196,9 @@ class GPUReranker:
         use_fp16: bool = True,
     ):
         # Hard guard: refuse to instantiate when reranking is disabled
-        if os.environ.get("RERANK_ENABLED", "true").lower() in ("false", "0", "no"):
-            raise RuntimeError("GPUReranker disabled (RERANK_ENABLED=false)")
+        from app.config import settings as _cfg
+        if not _cfg.rerank.rerank_enabled:
+            raise RuntimeError("GPUReranker disabled (rerank_enabled=false)")
         self.model_name = model_name
         self.device = device
         self.use_fp16 = use_fp16 and device == "cuda"
@@ -207,9 +208,6 @@ class GPUReranker:
         """Lazy-load the cross-encoder model with optimizations."""
         if self._model is not None:
             return
-
-        import os
-        logger.info("GPUReranker._load_model called, RERANK_ENABLED=%s", os.environ.get("RERANK_ENABLED"))
 
         start = time.time()
 

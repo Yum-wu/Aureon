@@ -86,7 +86,7 @@ async def run_workflow(query: str, session_id: str = "") -> dict:
                 "node": "rag", "output": answer[:100] + "..." if len(answer) > 100 else answer
             })
             state["mcp_calls"].append({
-                "from": "rag_node", "to": "chroma_knowledge_base",
+                "from": "rag_node", "to": "qdrant_knowledge_base",
                 "tool": "knowledge_retrieval",
                 "duration_ms": state["node_times"]["rag"],
             })
