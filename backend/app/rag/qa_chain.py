@@ -1062,18 +1062,21 @@ async def rag_query_with_cache(
             sources = cached_data.get("sources", [])
             sources = [SourceItem(**s) for s in sources]
         except (json.JSONDecodeError, TypeError):
-            answer = cached
-            sources = []
-        # Record cache hit in stats
-        try:
-            from app.cache.redis_client import get_redis
-            from app.api.rag_stats import STATS_PREFIX
-            redis = get_redis()
-            if redis:
-                await redis.incr(f"{STATS_PREFIX}:cache_hits")
-        except Exception:
-            pass
-        return RAGQueryResponse(answer=answer, sources=sources)
+            # Corrupt cache entry (raw string, not JSON) — skip and re-query.
+            # The next successful query will overwrite with correct JSON.
+            logger.warning("Corrupt cache entry detected (non-JSON), re-querying")
+            cached = None
+        if cached is not None:
+            # Record cache hit in stats
+            try:
+                from app.cache.redis_client import get_redis
+                from app.api.rag_stats import STATS_PREFIX
+                redis = get_redis()
+                if redis:
+                    await redis.incr(f"{STATS_PREFIX}:cache_hits")
+            except Exception:
+                pass
+            return RAGQueryResponse(answer=answer, sources=sources)
 
     # Cache miss: run RAG pipeline
     result = rag_query(query, llm_call_fn, top_k, use_mmr, lang, filter_lang)

@@ -622,11 +622,12 @@ async def rag_benchmark():
 
 @router.post("/cache/clear")
 async def rag_cache_clear():
-    """Clear all RAG query caches (Redis + in-memory)."""
+    """Clear all RAG query caches (Redis exact + semantic + in-memory)."""
     from app.cache.redis_client import clear_cache_by_prefix, _mem_cache
     _mem_cache.clear()
-    cleared = await clear_cache_by_prefix("llm_cache:")
-    return {"status": "ok", "cleared_keys": cleared}
+    cleared_exact = await clear_cache_by_prefix("llm_cache:")
+    cleared_semantic = await clear_cache_by_prefix("semantic:")
+    return {"status": "ok", "cleared_exact": cleared_exact, "cleared_semantic": cleared_semantic}
 
 
 @router.get("/suggestions")
