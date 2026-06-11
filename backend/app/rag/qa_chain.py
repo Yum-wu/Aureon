@@ -13,7 +13,6 @@ from app.rag.vector_store import retrieve, retrieve_keyword, format_context, sav
 from app.rag.query_rewriter import is_cross_article_query, expand_queries_rules, hyde_retrieve, hyde_retrieve_async
 from app.rag.models import RAGQueryResponse, SourceItem
 from app.rag.ensemble_reranker import get_ensemble_reranker
-from app.rag.query_classifier import get_reranking_strategy
 from app.utils.lang_detect import detect_language, lang_instruction
 
 from app.config import settings
@@ -439,6 +438,7 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
     if _ADAPTIVE_RERANK_ENABLED and len(candidates) > top_k:
         try:
             # Get query complexity and re-ranking strategy
+            from app.rag.query_classifier import get_reranking_strategy
             strategy = get_reranking_strategy(query)
             complexity = strategy["complexity"]
 
