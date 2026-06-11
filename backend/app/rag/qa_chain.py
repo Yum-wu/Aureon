@@ -13,6 +13,7 @@ from app.rag.vector_store import retrieve, retrieve_keyword, format_context, sav
 from app.rag.query_rewriter import is_cross_article_query, expand_queries_rules, hyde_retrieve, hyde_retrieve_async
 from app.rag.models import RAGQueryResponse, SourceItem
 from app.rag.ensemble_reranker import get_ensemble_reranker
+from app.rag.query_classifier import get_reranking_strategy
 from app.utils.lang_detect import detect_language, lang_instruction
 
 from app.config import settings
@@ -272,17 +273,28 @@ async def classify_query_answerable(query: str, model: str = None) -> bool:
 
 # ── Negative detection: keyword fast-path ──
 # Queries matching these patterns are almost certainly unanswerable by the KB.
-# Checked BEFORE the LLM classifier to save API calls and improve accuracy.
+# Pure rule-based (no LLM call) — eliminates 3-5s latency per query.
 _NEGATIVE_KEYWORDS_ZH = [
-    "定价", "价格", "收费", "费用", "免费额度",
+    # Pricing / cost
+    "定价", "价格", "收费", "费用", "免费额度", "成本是多少", "售价",
+    # Team / people
     "团队有多少人", "团队规模", "多少人",
+    # Training data
     "训练数据量", "训练数据", "数据量是多少",
-    "版本号", "最新版本", "当前版本",
-    "什么时候发布", "发布时间", "发布日期",
+    # Version / release
+    "版本号", "最新版本", "当前版本", "什么时候发布", "发布时间", "发布日期",
+    "最新更新",
+    # Education / personal
     "毕业于", "教育背景", "学历",
+    # Company info
     "创始人", "CEO", "公司地址",
-]
-_NEGATIVE_KEYWORDS_EN = [
+    # Competitive / external
+    "更适合", "对比", "哪个更好",
+    # Future plans
+    "下一步计划", "未来规划", "路线图",
+    # Stars / popularity
+    "GitHub Stars", "star 数", "有多少 star",
+    # Pricing (English)
     "pricing", "price", "cost", "how much",
     "team size", "how many people",
     "training data size", "training data volume",
@@ -290,6 +302,7 @@ _NEGATIVE_KEYWORDS_EN = [
     "when was", "release date",
     "university", "education",
     "founder", "CEO", "headquarters",
+    "roadmap", "next steps",
 ]
 
 
@@ -297,47 +310,19 @@ def _is_negative_by_keywords(query: str) -> bool:
     """Fast heuristic: detect obviously unanswerable queries by keywords."""
     q = query.lower()
     for kw in _NEGATIVE_KEYWORDS_ZH:
-        if kw in q:
-            return True
-    for kw in _NEGATIVE_KEYWORDS_EN:
-        if kw in q:
+        if kw.lower() in q:
             return True
     return False
 
 
-def classify_query_answerable_sync(query: str, llm_call_fn) -> bool:
-    """Sync version: use LLM to determine if a query can be answered by the knowledge base."""
-    # Fast-path: keyword heuristic before LLM call
+def classify_query_answerable_sync(query: str, llm_call_fn=None) -> bool:
+    """Rule-based classifier: no LLM call. Eliminates 3-5s latency per query.
+
+    Returns False for queries about pricing, versions, team size, external facts, etc.
+    """
     if _is_negative_by_keywords(query):
         return False
-
-    # Cache check: skip LLM call for repeated queries
-    cached = _classifier_cache_get(query)
-    if cached is not None:
-        logger.debug("Classifier cache hit (sync): query=%s answerable=%s", query[:40], cached)
-        return cached
-
-    prompt = (
-        "你是一个企业知识库的查询分类器。判断以下查询是否能在"
-        "\"AI技术、开发经验、部署实践\"相关的知识库中找到答案。\n\n"
-        f"查询：{query}\n\n"
-        "只回答 YES 或 NO。如果查询涉及以下内容，回答 NO：\n"
-        "- 未在知识库中覆盖的具体技术细节（如特定云服务商配置、定价、团队规模）\n"
-        "- 与知识库主题无关的领域（如量子计算、生物医学）\n"
-        "- 要求最新实时信息的问题（如当前股价、今日天气）\n\n"
-        "如果查询涉及以下内容，回答 YES：\n"
-        "- RAG、LangChain、LangGraph、BM25、向量检索等 AI 技术\n"
-        "- 开发流程、部署实践、性能优化\n"
-        "- 知识库中可能涵盖的通用技术问题"
-    )
-    try:
-        response = llm_call_fn([{"role": "user", "content": prompt}])
-        answerable = "YES" in str(response).upper()
-        _classifier_cache_set(query, answerable)
-        return answerable
-    except Exception as e:
-        logger.warning("Sync LLM classifier failed: %s, defaulting to answerable", e)
-        return True
+    return True
 
 
 def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List[Dict[str, Any]]:
@@ -454,7 +439,7 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
     if _ADAPTIVE_RERANK_ENABLED and len(candidates) > top_k:
         try:
             # Get query complexity and re-ranking strategy
-            strategy = get_re-ranking_strategy(query)
+            strategy = get_reranking_strategy(query)
             complexity = strategy["complexity"]
 
             if complexity == "simple":
@@ -644,9 +629,13 @@ QA_SYSTEM_PROMPT = """你是精准的知识库问答助手。你的唯一任务�
 - 如果文档中没有答案，直接说"文档中未提及"
 
 ## 回答结构（必须遵守）
-1. **直接回答**（1-2 句话，直接回答问题核心）
-2. **补充细节**（仅当用户问题需要更详细解释时）
+1. **直接回答**（1-2 句话，直接回答问题核心，控制在 200 字以内）
+2. **补充细节**（仅当用户问题需要更详细解释时，不超过 500 字）
 3. **引用来源**（格式：[来源: 文章标题]）
+
+## 字数限制
+- 总回答长度控制在 500 字以内
+- 能用一句话回答的不要用两句话
 
 ## 禁止行为
 - ❌ 禁止以"根据文档"、"文档介绍了"、"参考文档提到"开头
@@ -1512,7 +1501,7 @@ async def hybrid_retrieve_async(
     # ── Adaptive Re-ranking based on Query Complexity ──
     if _ADAPTIVE_RERANK_ENABLED and len(candidates) > top_k:
         try:
-            strategy = get_re-ranking_strategy(query)
+            strategy = get_reranking_strategy(query)
             complexity = strategy["complexity"]
 
             if complexity == "simple":
