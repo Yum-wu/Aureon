@@ -1,5 +1,7 @@
 from typing import Optional
 
+import os
+
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -52,7 +54,7 @@ class VectorStoreSettings(BaseModel):
     low_score_threshold: float = 0.004
     negative_detection_enabled: bool = True
     context_compression_enabled: bool = True
-    context_compression_threshold: float = 0.35
+    context_compression_threshold: float = 0.15
     kw_min_raw_score: float = 0.15
     stats_cache_ttl: float = 60.0
     hyde_enabled: bool = False
@@ -153,6 +155,25 @@ class Settings(BaseSettings):
         extra="ignore",
         env_nested_delimiter="__",
     )
+
+    def model_post_init(self, __context):
+        """Re-read flat env vars into sub-models for backward compat."""
+        cls_fields = type(self).model_fields
+        for sub_field in cls_fields:
+            sub_model = getattr(self, sub_field)
+            if isinstance(sub_model, BaseModel):
+                updates = {}
+                for field_name in sub_model.model_fields:
+                    flat_name = field_name.upper()
+                    if flat_name in os.environ:
+                        updates[field_name] = os.environ[flat_name]
+                if updates:
+                    current = sub_model.model_dump()
+                    current.update(updates)
+                    object.__setattr__(
+                        self, sub_field,
+                        type(sub_model).model_validate(current),
+                    )
 
     def __getattr__(self, name: str):
         cls_fields = type(self).model_fields

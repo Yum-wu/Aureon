@@ -107,7 +107,7 @@ async def rag_query_endpoint(req: RAGQueryRequest, request: Request):
     # Log index status (non-blocking)
     await _ensure_index_ready()
 
-    llm = create_llm(model=req.model)
+    llm = create_llm(model=req.model, streaming=False)
 
     def _llm_call(messages):
         try:

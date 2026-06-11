@@ -1,11 +1,12 @@
 """
-LLM wrapper with retry logic and fallback support.
+LLM wrapper with retry logic, fallback support, and connection pooling.
 
-Primary LLM uses `settings.llm_*` (DeepSeek).
+Primary LLM uses `settings.llm_*` (DashScope Qwen).
 Fallback LLM uses `settings.fallback_*` (Zhipu AI).
 """
 
 import os
+import threading
 
 from langchain_openai import ChatOpenAI
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
@@ -16,9 +17,32 @@ from app.config import settings
 
 logger = structlog.get_logger()
 
+# ── LLM instance pool (reuse connections across requests) ──
+_llm_pool: dict[str, ChatOpenAI] = {}
+_llm_pool_lock = threading.Lock()
+
+# Default parameters per LangChain best practices
+_DEFAULT_MAX_TOKENS = 2048
+_DEFAULT_TIMEOUT = 20  # seconds
+_DEFAULT_MAX_RETRIES = 2
+_DEFAULT_TEMPERATURE = 0.3  # RAG: low temperature for accuracy
+
 
 def create_llm(model: str = None, **kwargs):
-    """Factory: create ChatOpenAI instance. Supports DeepSeek/OpenAI/Claude via MODEL_REGISTRY."""
+    """Factory: create ChatOpenAI instance with connection pooling.
+
+    Reuses instances when same model+streaming combo is requested.
+    Follows LangChain best practices: max_tokens, timeout, max_retries.
+    """
+    model_name = model or settings.llm_model
+    streaming = kwargs.get("streaming", True)
+    pool_key = f"{model_name}:{streaming}"
+
+    # Return cached instance if available
+    with _llm_pool_lock:
+        if pool_key in _llm_pool:
+            return _llm_pool[pool_key]
+
     if model:
         from app.config import MODEL_REGISTRY
         if model in MODEL_REGISTRY:
@@ -26,22 +50,34 @@ def create_llm(model: str = None, **kwargs):
             api_key = cfg["api_key"] or os.environ.get(f"{cfg['provider'].upper()}_API_KEY", "")
             if not api_key:
                 raise ValueError(f"No API key for {model}. Set {cfg['provider'].upper()}_API_KEY env var.")
-            return ChatOpenAI(
+            llm = ChatOpenAI(
                 model=cfg["model"],
                 api_key=api_key,
                 base_url=cfg["base_url"],
-                temperature=kwargs.get("temperature", 0.7),
-                streaming=kwargs.get("streaming", True),
-                max_tokens=cfg["max_tokens"],
+                temperature=kwargs.get("temperature", _DEFAULT_TEMPERATURE),
+                streaming=streaming,
+                max_tokens=cfg.get("max_tokens", _DEFAULT_MAX_TOKENS),
+                timeout=_DEFAULT_TIMEOUT,
+                max_retries=_DEFAULT_MAX_RETRIES,
             )
-    # Default: DeepSeek (existing behavior unchanged)
-    return ChatOpenAI(
+            with _llm_pool_lock:
+                _llm_pool[pool_key] = llm
+            return llm
+
+    # Default: DashScope Qwen
+    llm = ChatOpenAI(
         model=settings.llm_model,
         api_key=settings.llm_api_key,
         base_url=settings.llm_base_url,
-        temperature=kwargs.get("temperature", 0.7),
-        streaming=kwargs.get("streaming", True),
+        temperature=kwargs.get("temperature", _DEFAULT_TEMPERATURE),
+        streaming=streaming,
+        max_tokens=kwargs.get("max_tokens", _DEFAULT_MAX_TOKENS),
+        timeout=_DEFAULT_TIMEOUT,
+        max_retries=_DEFAULT_MAX_RETRIES,
     )
+    with _llm_pool_lock:
+        _llm_pool[pool_key] = llm
+    return llm
 
 
 def create_fallback_llm(**kwargs):
