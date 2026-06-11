@@ -39,6 +39,8 @@ jobs:
       - name: Validate docker-compose.yml
         env:
           ES_PASSWORD: ci_validation_only
+          REDIS_PASSWORD: ci_validation_only
+          QDRANT_API_KEY: ci_validation_only
         run: |
           # Create dummy .env if missing (excluded from repo via .gitignore)
           test -f backend/.env || touch backend/.env
