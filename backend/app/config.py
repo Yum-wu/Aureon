@@ -156,10 +156,13 @@ class Settings(BaseSettings):
     )
 
     def model_post_init(self, __context):
-        """Re-read flat env vars into sub-models for backward compat.
+        """Re-read flat and nested (__-delimited) env vars into sub-models.
 
-        Only applies flat env var when the corresponding nested
-        (__-delimited) env var is NOT set, so nested takes priority.
+        Nested env vars take priority over flat env vars. Empty string values
+        are skipped to avoid coercing them to invalid types (e.g. int("")).
+        This avoids the pydantic-settings JSONDecodeError on empty
+        DATABASE__DATABASE_URL, because we never ask pydantic-settings to
+        parse nested env vars as JSON.
         """
         cls_fields = type(self).model_fields
         for sub_field in cls_fields:
@@ -169,8 +172,12 @@ class Settings(BaseSettings):
                 for field_name in sub_model.model_fields:
                     flat_name = field_name.upper()
                     nested_name = f"{sub_field.upper()}__{flat_name}"
-                    if flat_name in os.environ and nested_name not in os.environ:
-                        updates[field_name] = os.environ[flat_name]
+                    nested_val = os.environ.get(nested_name, "")
+                    flat_val = os.environ.get(flat_name, "")
+                    if nested_val != "":
+                        updates[field_name] = nested_val
+                    elif flat_val != "":
+                        updates[field_name] = flat_val
                 if updates:
                     current = sub_model.model_dump()
                     current.update(updates)

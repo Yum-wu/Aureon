@@ -76,6 +76,29 @@ class TestSettingsEnvParsing:
         assert s.cache.semantic_cache_ttl == 3600
 
 
+class TestSettingsEnvParsingEdgeCases:
+    """Regression: empty env vars must not crash Settings() and nested must beat flat."""
+
+    def test_empty_database_url_does_not_crash(self, monkeypatch):
+        """Railway injects DATABASE_URL=''; old env_nested_delimiter caused json.loads('') crash."""
+        monkeypatch.setenv("DATABASE_URL", "")
+        monkeypatch.setenv("DATABASE__DATABASE_URL", "")
+        s = Settings(_env_file=None)
+        assert s.database.database_url == ""
+
+    def test_nested_takes_priority_over_flat(self, monkeypatch):
+        monkeypatch.setenv("QDRANT_URL", "http://flat:6333")
+        monkeypatch.setenv("VECTOR_STORE__QDRANT_URL", "http://nested:6333")
+        s = Settings(_env_file=None)
+        assert s.vector_store.qdrant_url == "http://nested:6333"
+
+    def test_empty_nested_falls_through_to_flat(self, monkeypatch):
+        monkeypatch.setenv("DATABASE__DATABASE_URL", "")
+        monkeypatch.setenv("DATABASE_URL", "postgres://real/db")
+        s = Settings(_env_file=None)
+        assert s.database.database_url == "postgres://real/db"
+
+
 class TestSettingsBackwardCompat:
     """Flat field access should still work via __getattr__ fallback."""
 
