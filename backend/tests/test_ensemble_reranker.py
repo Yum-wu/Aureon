@@ -329,14 +329,29 @@ class TestCreateDefaultEnsemble:
         assert bge_configs[0].enabled is True
 
     def test_cohere_enabled_with_key(self):
-        with patch.object(settings.rerank, "cohere_api_key", "test-key"):
+        # Patch app.config.settings so create_default_ensemble's
+        # local import always sees the patched value, even after
+        # importlib.reload in other test modules.
+        with patch("app.config.settings") as mock_settings:
+            mock_settings.cohere_api_key = "test-key"
+            mock_settings.jina_api_key = None
+            mock_settings.ensemble_bge_weight = 0.6
+            mock_settings.ensemble_cohere_weight = 0.3
+            mock_settings.ensemble_jina_weight = 0.1
+            mock_settings.cohere_rerank_model = "rerank-multilingual-v3.0"
             reranker = create_default_ensemble()
             cohere_configs = [c for c in reranker.configs if c.name == "cohere"]
             assert len(cohere_configs) == 1
             assert cohere_configs[0].enabled is True
 
     def test_jina_enabled_with_key(self):
-        with patch.object(settings.rerank, "jina_api_key", "test-key"):
+        with patch("app.config.settings") as mock_settings:
+            mock_settings.cohere_api_key = None
+            mock_settings.jina_api_key = "test-key"
+            mock_settings.ensemble_bge_weight = 0.6
+            mock_settings.ensemble_cohere_weight = 0.3
+            mock_settings.ensemble_jina_weight = 0.1
+            mock_settings.cohere_rerank_model = "rerank-multilingual-v3.0"
             reranker = create_default_ensemble()
             jina_configs = [c for c in reranker.configs if c.name == "jina"]
             assert len(jina_configs) == 1

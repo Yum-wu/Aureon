@@ -18,6 +18,7 @@ env/
 dist/
 build/
 *.egg-info/
+*.whl
 
 # IDE
 .vscode/
@@ -72,5 +73,9 @@ docker-compose.override.yml
 backend/data/vectors/
 backend/data/chroma.sqlite3
 backend/nul
+
+# Pip artifact files (e.g. =0.20, =2.6 from broken pip install)
+backend/=*
+
 # Added by code-review-graph
 .code-review-graph/
