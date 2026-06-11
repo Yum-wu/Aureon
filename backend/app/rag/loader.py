@@ -3,7 +3,6 @@ Document loader for RAG system.
 Loads Markdown blog posts, parses frontmatter, and splits into chunks.
 """
 
-import os
 import re
 from typing import List, Dict, Any
 from pathlib import Path

@@ -1,7 +1,7 @@
 """Analytics API endpoints for usage, latency, and token tracking."""
 
 from fastapi import APIRouter, Depends, Query
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Optional
 import structlog
 
@@ -28,7 +28,7 @@ async def get_usage_analytics(
     """
     if not redis:
         # In-memory fallback from rag_stats
-        from app.api.rag_stats import _mem_count, _mem_latencies
+        from app.api.rag_stats import _mem_count
         total = _mem_count
         per_hour = round(total / 24, 1) if total > 0 else 0
         return {
@@ -48,7 +48,7 @@ async def get_usage_analytics(
         by_intent = {k: int(v) for k, v in intents_raw.items()} if intents_raw else {}
 
         # 计算每小时平均查询量
-        now = datetime.now(timezone.utc)
+        datetime.now(timezone.utc)
         per_hour = round(total / 24, 1) if total > 0 else 0
 
         return {

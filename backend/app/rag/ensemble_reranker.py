@@ -369,7 +369,6 @@ class EnsembleReranker:
         documents: List[Dict[str, Any]],
     ) -> Optional[np.ndarray]:
         """Rerank using REST API (Cohere, Jina)."""
-        import aiohttp
 
         if "client" in config:
             # Cohere

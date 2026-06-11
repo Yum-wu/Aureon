@@ -67,7 +67,7 @@ async def _stream_rag(
 ) -> AsyncGenerator[dict, None]:
     t0 = time.time()
     chunks = retrieve_keyword(query, top_k=top_k)
-    retrieve_ms = int((time.time() - t0) * 1000)
+    int((time.time() - t0) * 1000)
 
     if not chunks:
         no_result = (

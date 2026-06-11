@@ -14,7 +14,7 @@ Reference: https://www.anthropic.com/news/contextual-retrieval
 
 import re
 import structlog
-from typing import List, Callable, Optional, Dict, Any
+from typing import List, Callable, Dict, Any
 
 import numpy as np
 

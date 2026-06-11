@@ -225,7 +225,6 @@ def init_query_traces_table():
 
 def save_query_trace(trace: QueryTrace) -> int:
     """保存查询追踪"""
-    import json
     from app.memory.db import get_db
 
     conn = get_db()
@@ -266,7 +265,6 @@ def save_query_trace(trace: QueryTrace) -> int:
 
 def get_recent_traces(limit: int = 100) -> list[QueryTrace]:
     """获取最近的查询追踪"""
-    import json
     from app.memory.db import get_db
 
     conn = get_db()

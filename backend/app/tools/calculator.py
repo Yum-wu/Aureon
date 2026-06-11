@@ -45,9 +45,9 @@ def _safe_eval(expr: str) -> str:
             args = [_walk(a) for a in node.args]
             return _ALLOWED_NAMES[node.func.id](*args)
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
-            raise ValueError(f"不允许的操作: method call")
+            raise ValueError("不允许的操作: method call")
         if isinstance(node, ast.Attribute):
-            raise ValueError(f"不允许的操作: Attribute access")
+            raise ValueError("不允许的操作: Attribute access")
         raise ValueError(f"不允许的操作: {type(node).__name__}")
 
     return str(_walk(tree))

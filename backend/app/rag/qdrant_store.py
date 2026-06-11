@@ -6,7 +6,6 @@ Replaces ChromaDB for production deployments. Supports:
 - Metadata filtering (language, source, etc.)
 - Batch operations for indexing
 """
-import os
 from typing import List, Dict, Any, Optional
 import numpy as np
 

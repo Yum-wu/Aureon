@@ -5,7 +5,6 @@ from app.reliability import (
     BackupRecord,
     IncidentRecord,
     SLOConfig,
-    CircuitBreaker,
     create_backup_record,
     complete_backup,
     get_recent_backups,

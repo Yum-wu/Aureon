@@ -16,7 +16,6 @@ Unified error format::
     }
 """
 
-import uuid
 
 from fastapi import HTTPException
 

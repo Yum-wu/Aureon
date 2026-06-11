@@ -3,7 +3,6 @@ from typing import Optional
 from fastapi import APIRouter, Query
 from app.knowledge import (
     DocumentVersion,
-    ExportRequest,
     ExportRecord,
     create_document_version,
     get_document_versions,

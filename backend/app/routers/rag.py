@@ -15,9 +15,7 @@ Routes:
 
 import asyncio
 import json
-import logging
 import os
-import sys
 import time
 
 from fastapi import APIRouter, Request, UploadFile, File, Form, Depends
@@ -34,8 +32,6 @@ from app.common import SSE_HEADERS, sse_event
 from app.exceptions import (
     LLMServiceError,
     AuthenticationError,
-    AuthorizationError,
-    NotFoundError,
     AureonException,
 )
 from app.security import UserRole, require_role
@@ -53,7 +49,7 @@ from app.rag.qa_chain import (
     run_incremental_index,
 )
 from app.rag.evaluator import run_full_evaluation
-from app.rag.prompt_experiment import run_experiment, STRATEGIES
+from app.rag.prompt_experiment import run_experiment
 from app.rag.test_data import TEST_QA_PAIRS
 from app.rag.vector_store import retrieve
 from app.audit.decorator import audit_action
@@ -354,7 +350,8 @@ async def rag_index_endpoint(request: Request, user=Depends(require_role(UserRol
     tenant_id = get_current_tenant_id()
 
     llm = create_llm(temperature=0.0, streaming=False)
-    llm_call_fn = lambda msgs: llm.invoke(msgs).content
+    def llm_call_fn(msgs):
+        return llm.invoke(msgs).content
 
     result = run_index_pipeline(ARTICLES_DIR, llm_call_fn=llm_call_fn, enable_contextual=True)
 
@@ -423,7 +420,6 @@ async def rag_upload_endpoint(
     if expected_key and api_key != expected_key:
         raise AuthenticationError("Invalid API key")
 
-    import shutil
 
     # Validate filename
     if not file.filename:

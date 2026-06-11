@@ -3,7 +3,6 @@
 LLM instance is cached at module level (not created per call).
 """
 
-from typing import Optional, Type
 from pydantic import BaseModel, Field
 from langchain.tools import tool
 
