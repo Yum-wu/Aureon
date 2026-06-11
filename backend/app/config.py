@@ -153,6 +153,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
+        env_nested_delimiter="__",
     )
 
     def model_post_init(self, __context):
@@ -189,7 +190,15 @@ class Settings(BaseSettings):
         raise AttributeError(msg)
 
 
-settings = Settings()
+try:
+    settings = Settings()
+except Exception:
+    # Fallback: Railway may set empty env vars that pydantic-settings can't parse.
+    # Re-init with env_nested_delimiter disabled as safety net.
+    import warnings
+    warnings.warn("Settings init failed, falling back to defaults", stacklevel=2)
+    Settings.model_config["env_nested_delimiter"] = None
+    settings = Settings()
 
 
 def get_settings() -> Settings:
