@@ -11,7 +11,6 @@ from pydantic import BaseModel
 from ..dependencies import get_redis_or_none
 from ..exceptions import AureonException, VectorStoreError
 from ..rag.vector_store import get_collection_stats
-from ..config import settings
 
 logger = structlog.get_logger()
 
