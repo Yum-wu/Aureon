@@ -130,6 +130,7 @@ class SemanticLLMCache:
             return self._embedding_model is not None
 
         # Check if local embedding is disabled (e.g., Railway with limited memory)
+        from app.config import settings
         skip_local = settings.skip_local_embed
         if skip_local:
             logger.info("Skipping local BGE embed (SKIP_LOCAL_EMBED=true), semantic cache will use exact match only")
