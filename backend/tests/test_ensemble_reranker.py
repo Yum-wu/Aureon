@@ -329,14 +329,14 @@ class TestCreateDefaultEnsemble:
         assert bge_configs[0].enabled is True
 
     def test_cohere_enabled_with_key(self):
-        with patch.object(settings, "cohere_api_key", "test-key"):
+        with patch.object(settings.rerank, "cohere_api_key", "test-key"):
             reranker = create_default_ensemble()
             cohere_configs = [c for c in reranker.configs if c.name == "cohere"]
             assert len(cohere_configs) == 1
             assert cohere_configs[0].enabled is True
 
     def test_jina_enabled_with_key(self):
-        with patch.object(settings, "jina_api_key", "test-key"):
+        with patch.object(settings.rerank, "jina_api_key", "test-key"):
             reranker = create_default_ensemble()
             jina_configs = [c for c in reranker.configs if c.name == "jina"]
             assert len(jina_configs) == 1

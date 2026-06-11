@@ -10,10 +10,8 @@ from concurrent.futures import ThreadPoolExecutor
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 # ── Safety: prevent CrossEncoder OOM on constrained environments ──
-# When RERANK_ENABLED=false, monkey-patch CrossEncoder to block loading.
-# This is a hard guard: regardless of pydantic-settings, .env file caching,
-# or Docker layer caching, the CrossEncoder CANNOT be loaded.
-_rerank_disabled = os.environ.get("RERANK_ENABLED", "true").lower() in ("false", "0", "no")
+from app.config import settings as _cfg
+_rerank_disabled = not _cfg.rerank.rerank_enabled
 if _rerank_disabled:
     try:
         import sentence_transformers as _st

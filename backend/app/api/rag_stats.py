@@ -257,11 +257,9 @@ class DocumentItem(BaseModel):
 
 @router.get("/api/rag/documents")
 async def get_documents():
-    """List all indexed documents from the active vector store (Qdrant or ChromaDB)."""
+    """List all indexed documents from Qdrant vector store."""
     try:
-        if settings.vector_backend == "qdrant":
-            return _get_documents_qdrant()
-        return _get_documents_chroma()
+        return _get_documents_qdrant()
     except Exception as e:
         if isinstance(e, VectorStoreError):
             raise
@@ -324,44 +322,6 @@ def _get_documents_qdrant():
     return {"documents": [d.model_dump() for d in documents],
             "total_docs": len(documents), "total_chunks": total}
 
-
-def _get_documents_chroma():
-    """ChromaDB implementation of get_documents."""
-    from ..rag.vector_store import _get_collection
-    collection = _get_collection()
-    total = collection.count()
-    if total == 0:
-        return {"documents": [], "total_docs": 0, "total_chunks": 0}
-
-    all_data = collection.get(include=["metadatas"])
-    doc_map: dict[str, dict] = defaultdict(lambda: {
-        "title": "", "source": "", "file_type": "md", "language": "unknown", "chunk_count": 0
-    })
-    for meta in all_data.get("metadatas", []):
-        if not meta or not isinstance(meta, dict):
-            continue
-        src = meta.get("source") or meta.get("title", "unknown")
-        doc = doc_map[src]
-        doc["source"] = src
-        doc["title"] = meta.get("title", src.replace(".md", "").replace("_", " "))
-        doc["chunk_count"] += 1
-        doc["language"] = meta.get("language", "unknown")
-        if src.endswith(".pdf"):
-            doc["file_type"] = "pdf"
-        elif src.endswith(".docx"):
-            doc["file_type"] = "docx"
-        elif src.endswith(".xlsx") or src.endswith(".xls"):
-            doc["file_type"] = "xlsx"
-        elif src.endswith(".txt"):
-            doc["file_type"] = "txt"
-
-    documents = [
-        DocumentItem(title=d["title"], source=d["source"], file_type=d["file_type"],
-                     language=d["language"], chunk_count=d["chunk_count"], status="ready")
-        for d in sorted(doc_map.values(), key=lambda x: x["title"])
-    ]
-    return {"documents": [d.model_dump() for d in documents],
-            "total_docs": len(documents), "total_chunks": total}
 
 
 # ── Benchmark API ──
