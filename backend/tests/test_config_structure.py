@@ -128,3 +128,52 @@ class TestSettingsRailwayEnvCompat:
         assert config_module.settings is not None
         # The malformed value should be ignored, defaults preserved.
         assert config_module.settings.database.database_url == ""
+
+    def test_url_valued_submodel_env_does_not_crash(self, monkeypatch):
+        # Railway may set DATABASE=postgres://user:pass@host:5432/db
+        # which is a valid URL but not a JSON object.
+        monkeypatch.setenv("DATABASE", "postgres://user:pass@host:5432/db")
+        import importlib
+        import app.config as config_module
+        importlib.reload(config_module)
+        assert config_module.settings is not None
+        assert config_module.settings.database.database_url == ""
+
+    def test_json_null_submodel_env_does_not_crash(self, monkeypatch):
+        # Some PaaS set LLM=null — valid JSON but not a dict.
+        monkeypatch.setenv("LLM", "null")
+        import importlib
+        import app.config as config_module
+        importlib.reload(config_module)
+        assert config_module.settings is not None
+        assert config_module.settings.llm.llm_api_key == ""
+
+    def test_json_bool_submodel_env_does_not_crash(self, monkeypatch):
+        # LLM=true is valid JSON but not a dict.
+        monkeypatch.setenv("LLM", "true")
+        import importlib
+        import app.config as config_module
+        importlib.reload(config_module)
+        assert config_module.settings is not None
+
+    def test_valid_json_dict_submodel_env_is_kept(self, monkeypatch):
+        # A proper JSON object should be parsed and kept.
+        monkeypatch.setenv("DATABASE", '{"database_url": "sqlite:///test.db"}')
+        import importlib
+        import app.config as config_module
+        importlib.reload(config_module)
+        assert config_module.settings is not None
+        assert config_module.settings.database.database_url == "sqlite:///test.db"
+
+    def test_multiple_malformed_submodel_envs(self, monkeypatch):
+        # Multiple sub-model env vars set to non-JSON values simultaneously.
+        monkeypatch.setenv("DATABASE", "postgres://host/db")
+        monkeypatch.setenv("LLM", "sk-12345")
+        monkeypatch.setenv("CACHE", "redis://host:6379")
+        import importlib
+        import app.config as config_module
+        importlib.reload(config_module)
+        assert config_module.settings is not None
+        assert config_module.settings.database.database_url == ""
+        assert config_module.settings.llm.llm_api_key == ""
+        assert config_module.settings.cache.redis_url == ""

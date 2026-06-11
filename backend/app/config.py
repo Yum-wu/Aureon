@@ -171,7 +171,7 @@ class Settings(BaseSettings):
             sub_model = getattr(self, sub_field)
             if isinstance(sub_model, BaseModel):
                 updates = {}
-                for field_name in sub_model.model_fields:
+                for field_name in type(sub_model).model_fields:
                     flat_name = field_name.upper()
                     nested_name = f"{sub_field.upper()}__{flat_name}"
                     if flat_name in os.environ and nested_name not in os.environ:
@@ -194,28 +194,65 @@ class Settings(BaseSettings):
         raise AttributeError(msg)
 
 
+def _sanitize_submodel_env() -> list[tuple[str, str]]:
+    """Remove env vars matching sub-model names that aren't valid JSON dicts.
+
+    PaaS platforms (Railway, Render, Heroku) may set env vars like
+    DATABASE=postgres://... or LLM=null which pydantic-settings tries to
+    json.loads() as complex sub-model values, causing SettingsError.
+    Only valid JSON object values (e.g. DATABASE='{"database_url":"..."}')
+    are kept; everything else is stripped so defaults take over.
+    """
+    import json as _json
+
+    removed: list[tuple[str, str]] = []
+    for _sub_field in Settings.model_fields:
+        _env_name = _sub_field.upper()
+        if _env_name not in os.environ:
+            continue
+        _val = os.environ[_env_name]
+        _keep = False
+        if _val:
+            try:
+                _parsed = _json.loads(_val)
+                _keep = isinstance(_parsed, dict)
+            except (_json.JSONDecodeError, ValueError):
+                pass
+        if not _keep:
+            removed.append((_env_name, _val))
+            os.environ.pop(_env_name)
+    return removed
+
+
+# Proactively sanitize before first Settings() creation so the normal path
+# never hits a SettingsError from non-JSON sub-model env vars.
+_sanitize_submodel_env()
+
 try:
     settings = Settings()
 except Exception as _init_err:
-    # Safety net for hosts that set env vars to non-JSON placeholders that
-    # pydantic-settings still tries to decode (e.g. DATABASE='null' or
-    # DATABASE='postgres' without a JSON object). Strip empty / non-JSON
-    # sub-model env vars so the retry can succeed.
+    # Safety net: if Settings() still fails (e.g. a nested __ env var with
+    # an invalid value, or a validation error), strip ALL sub-model-related
+    # env vars and retry with pure defaults.
     import warnings
+
     warnings.warn(
         f"Settings init failed ({type(_init_err).__name__}), "
-        "sanitizing env vars and retrying with defaults",
+        "removing all sub-model env vars and retrying with defaults",
         stacklevel=2,
     )
-    for _sub_field in Settings.model_fields:
-        _env_name = _sub_field.upper()
-        if _env_name in os.environ:
-            _val = os.environ[_env_name]
-            if not _val or not _val.lstrip().startswith("{"):
-                # Empty, or non-JSON scalar: drop it so pydantic-settings
-                # doesn't try to json.loads() it for the sub-model.
-                os.environ.pop(_env_name, None)
-    settings = Settings()
+    _saved_env: dict[str, str] = {}
+    for _key in list(os.environ.keys()):
+        for _sub_field in Settings.model_fields:
+            _prefix = _sub_field.upper() + "__"
+            if _key.upper() == _sub_field.upper() or _key.upper().startswith(_prefix):
+                _saved_env[_key] = os.environ.pop(_key)
+    try:
+        settings = Settings()
+    finally:
+        # Restore env vars so other code (e.g. model_post_init flat reads)
+        # and downstream services can still access them.
+        os.environ.update(_saved_env)
 
 
 def get_settings() -> Settings:
