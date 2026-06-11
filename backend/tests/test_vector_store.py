@@ -12,7 +12,6 @@ from app.rag.vector_store import (
     format_context,
     get_bm25_stats,
     retrieve_keyword,
-    ZhipuEmbeddingFn,
 )
 
 
@@ -216,23 +215,3 @@ class TestRetrieveKeyword:
         with patch("app.rag.vector_store._build_kw_index"):
             result = retrieve_keyword("RAG")
         assert result == []
-
-
-# ── ZhipuEmbeddingFn ──
-
-
-class TestZhipuEmbeddingFn:
-    @patch("app.rag.vector_store.embed_texts_llm")
-    def test_returns_list_of_embeddings(self, mock_embed):
-        mock_embed.return_value = np.array([[0.1, 0.2, 0.3]], dtype=np.float32)
-        fn = ZhipuEmbeddingFn()
-        result = fn(["test text"])
-        assert len(result) == 1
-        assert len(result[0]) == 3
-
-    @patch("app.rag.vector_store.embed_texts_llm")
-    def test_raises_on_failure(self, mock_embed):
-        mock_embed.side_effect = RuntimeError("All embedding providers failed")
-        fn = ZhipuEmbeddingFn()
-        with pytest.raises(RuntimeError, match="All embedding providers failed"):
-            fn(["test"])
