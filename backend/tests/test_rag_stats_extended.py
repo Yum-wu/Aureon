@@ -81,7 +81,9 @@ async def test_get_documents_empty():
     mock_collection = MagicMock()
     mock_collection.count.return_value = 0
 
-    with patch("app.rag.vector_store._get_collection", return_value=mock_collection):
+    with patch("app.rag.vector_store._get_collection", return_value=mock_collection), \
+         patch("app.api.rag_stats.settings") as mock_settings:
+        mock_settings.vector_backend = "chroma"
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             resp = await ac.get("/api/rag/documents")
@@ -105,7 +107,9 @@ async def test_get_documents_with_data():
         ]
     }
 
-    with patch("app.rag.vector_store._get_collection", return_value=mock_collection):
+    with patch("app.rag.vector_store._get_collection", return_value=mock_collection), \
+         patch("app.api.rag_stats.settings") as mock_settings:
+        mock_settings.vector_backend = "chroma"
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             resp = await ac.get("/api/rag/documents")
@@ -121,12 +125,60 @@ async def test_get_documents_with_data():
 
 @pytest.mark.asyncio
 async def test_get_documents_error():
-    with patch("app.rag.vector_store._get_collection", side_effect=RuntimeError("chroma down")):
+    with patch("app.rag.vector_store._get_collection", side_effect=RuntimeError("chroma down")), \
+         patch("app.api.rag_stats.settings") as mock_settings:
+        mock_settings.vector_backend = "chroma"
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             resp = await ac.get("/api/rag/documents")
 
     assert resp.status_code == 500
+
+
+@pytest.mark.asyncio
+async def test_get_documents_qdrant_empty():
+    """Qdrant backend: empty collection returns empty documents."""
+    mock_client = MagicMock()
+    mock_info = MagicMock()
+    mock_info.points_count = 0
+    mock_client.get_collection.return_value = mock_info
+
+    with patch("app.api.rag_stats._get_documents_qdrant") as mock_qdrant, \
+         patch("app.api.rag_stats.settings") as mock_settings:
+        mock_settings.vector_backend = "qdrant"
+        mock_qdrant.return_value = {"documents": [], "total_docs": 0, "total_chunks": 0}
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.get("/api/rag/documents")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["documents"] == []
+    assert data["total_docs"] == 0
+
+
+@pytest.mark.asyncio
+async def test_get_documents_qdrant_with_data():
+    """Qdrant backend: returns documents from Qdrant scroll."""
+    with patch("app.api.rag_stats._get_documents_qdrant") as mock_qdrant, \
+         patch("app.api.rag_stats.settings") as mock_settings:
+        mock_settings.vector_backend = "qdrant"
+        mock_qdrant.return_value = {
+            "documents": [
+                {"title": "RAG Guide", "source": "guide.md", "file_type": "md",
+                 "language": "zh", "chunk_count": 5, "status": "ready"},
+            ],
+            "total_docs": 1, "total_chunks": 5,
+        }
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.get("/api/rag/documents")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total_docs"] == 1
+    assert data["total_chunks"] == 5
+    assert data["documents"][0]["source"] == "guide.md"
 
 
 # ── Stats edge cases ──

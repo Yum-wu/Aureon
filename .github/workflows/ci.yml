@@ -21,6 +21,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Audit dependencies
+        run: npm audit --audit-level=high --production || true
+
       - name: Run lint
         run: npm run lint
 
@@ -44,9 +47,14 @@ jobs:
         run: |
           cd backend
           pip install -r requirements.txt
-          pip install pytest
+          pip install pytest ruff
+
+      - name: Lint backend code
+        run: |
+          cd backend
+          ruff check app/ --select E,F,W --ignore E501
 
       - name: Run tests
         run: |
           cd backend
-          PYTHONPATH=. pytest tests/ -v --ignore=tests/test_rag_quality.py --ignore=tests/test_rag_router_extended.py
+          PYTHONPATH=. pytest tests/ -v

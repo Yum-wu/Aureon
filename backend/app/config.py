@@ -1,4 +1,3 @@
-import os
 from typing import Optional
 
 from pydantic import Field
@@ -23,7 +22,6 @@ class Settings(BaseSettings):
     embedding_api_key: str = ""
     embedding_base_url: str = "https://open.bigmodel.cn/api/paas/v4/"
     embedding_model: str = "embedding-2"
-    embedding_dimensions: int = 1024  # only used by APIs that support dimension control
 
     # Global embedding dimension (used by vector store for index size)
     # Set to 768 when using DashScope text-embedding-v4 for smaller storage footprint
@@ -42,17 +40,26 @@ class Settings(BaseSettings):
 
     tavily_api_key: str = ""
 
+    # Multi-tenant isolation
+    # Allowed tenant IDs for X-Tenant-ID header validation (comma-separated)
+    # Empty string means all values are accepted (no whitelist)
+    tenant_allowlist: str = ""
+
     # Blog sync configuration
     blog_url: str = ""  # Personal blog URL for sync feature
     blog_sync_enabled: bool = False  # Enable/disable blog sync feature
+    blog_sync_api_key: str = ""  # API key for blog sync authentication
+
+    # Database (PostgreSQL, optional)
+    database_url: str = ""
 
     redis_url: str = ""
 
     # API Authentication
     api_auth_key: str = ""  # Shared API key for authentication (empty = disabled)
 
-    # Vector store backend ("chroma" or "qdrant")
-    vector_backend: str = "chroma"  # env: VECTOR_DB or VECTOR_BACKEND
+    # Vector store backend ("qdrant" recommended; "chroma" deprecated)
+    vector_backend: str = "qdrant"
     qdrant_url: str = "http://localhost:6333"  # env: QDRANT_URL
     qdrant_api_key: str = ""  # env: QDRANT_API_KEY
     qdrant_collection: str = "aureon"  # env: QDRANT_COLLECTION
@@ -83,6 +90,40 @@ class Settings(BaseSettings):
 
     # Auto index rebuild on startup when articles change
     auto_index_enabled: bool = True
+
+    # RAG retrieval tuning
+    rrf_k: int = 200
+    retrieval_multiplier: int = 7
+    multi_query_enabled: bool = True
+    semantic_chunking_enabled: bool = True
+    min_relevance_score: float = 0.003
+    vector_min_cosine: float = 0.001
+    vector_max_contrib: int = 10
+    vector_confidence_threshold: float = 0.01
+    low_score_threshold: float = 0.004
+    negative_detection_enabled: bool = True
+    context_compression_enabled: bool = True
+    context_compression_threshold: float = 0.35
+    kw_min_raw_score: float = 0.15
+    stats_cache_ttl: float = 60.0
+    skip_local_embed: bool = False
+
+    # GPU embed threshold
+    embed_gpu_threshold: int = 4
+
+    # HyDE (Hypothetical Document Embedding)
+    hyde_enabled: bool = False
+    hyde_fallback_threshold: float = 0.01
+
+    # RAG classifier cache
+    high_score_skip_threshold: float = 0.01
+    classifier_cache_ttl: float = 3600.0
+
+    # Benchmark
+    benchmark_mode: str = "local"
+
+    # CORS
+    cors_origins: str = "http://localhost:5173"
 
     # Adaptive Re-ranking
     rerank_enabled: bool = True
@@ -126,8 +167,11 @@ class Settings(BaseSettings):
     # Concurrency limits
     queue_timeout_seconds: float = 30.0
     llm_semaphore_deepseek: int = 30
+    llm_semaphore_reasoner: int = 10
     llm_semaphore_embedding: int = 50
+    llm_semaphore_default: int = 20
     rag_semaphore: int = 40
+    rerank_semaphore: int = 40
 
     # CRAG confidence thresholds
     crag_enabled: bool = False
@@ -139,21 +183,6 @@ class Settings(BaseSettings):
     reflection_enabled: bool = False
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
-
-    def model_post_init(self, __context):
-        """Support VECTOR_DB env var as alias for vector_backend."""
-        if not self.vector_backend or self.vector_backend == "chroma":
-            vdb = os.environ.get("VECTOR_DB", "")
-            if vdb:
-                object.__setattr__(self, "vector_backend", vdb)
-
-
-def _resolve_vector_backend() -> str:
-    """Resolve vector backend from settings or VECTOR_DB env var."""
-    vdb = os.environ.get("VECTOR_DB", "")
-    if vdb:
-        return vdb
-    return settings.vector_backend
 
 
 settings = Settings()

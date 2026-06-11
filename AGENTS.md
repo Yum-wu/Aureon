@@ -14,7 +14,7 @@ Aureon/
 │   ├── agent/        # LLM 工厂、Agent 工厂、流式执行器
 │   ├── tools/        # @tool 装饰器，__init__.py 统一注册 ALL_TOOLS
 │   ├── memory/       # L0-L3 四层记忆 + 上下文卸载
-│   ├── rag/          # ChromaDB + Hybrid Search + Context Compression
+│   ├── rag/          # Qdrant + Hybrid Search + Context Compression + Adaptive Re-ranking
 │   │   ├── vector_store.py  # 向量库 + BM25 检索
 │   │   ├── qa_chain.py      # RAG pipeline（检索→CRAG→压缩→生成→来源）
 │   │   ├── guardrails.py    # Prompt Injection 检测
@@ -36,7 +36,7 @@ Aureon/
 │   ├── common.py     # SSE_HEADERS, sse_event(), mask_secret
 │   ├── config.py     # pydantic_settings
 │   └── main.py       # FastAPI 入口 + Auth Middleware
-├── backend/tests/     # 426 tests
+├── backend/tests/     # 600+ tests
 ├── src/               # React 前端
 │   ├── components/ hooks/ pages/ services/ i18n/ types/
 │   ├── hooks/AuthContext.ts    # Auth 状态定义
@@ -66,6 +66,10 @@ Aureon/
   - `RERANK_CANDIDATES`：rerank 候选数，默认 `12`
   - `ADAPTIVE_RERANK_THRESHOLD`：自适应跳过阈值，默认 `0.5`（top1/top2 分差比例）
   - `RETRIEVAL_MULTIPLIER`：检索乘数，默认 `7`
+- **Embedding/Reranker API**（新加坡节点）：
+  - Embedding: `dashscope-intl.aliyuncs.com/compatible-mode/v1`
+  - Rerank: `dashscope-intl.aliyuncs.com/compatible-api/v1`（注意：`compatible-api` 不是 `compatible-mode`）
+  - 向量后端: Qdrant Cloud（`VECTOR_BACKEND=qdrant`）
 
 ### 前端
 - TypeScript + Tailwind CSS 4 + tailwindcss-animate

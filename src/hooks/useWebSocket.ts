@@ -111,8 +111,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     handlersRegisteredRef.current = true;
 
     // Register message handlers
-    ws.onMessage('connected', (msg) => {
-      console.log('Connected to chat:', msg.conversation_id);
+    ws.onMessage('connected', () => {
       reconnectAttemptRef.current = 0; // Reset on successful connect
     });
 

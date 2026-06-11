@@ -1,7 +1,5 @@
-"""
-Vector store management for RAG system.
-Uses ChromaDB as persistent vector store with local BGE embeddings.
-Falls back to Zhipu AI embedding API if local model unavailable.
+"""Vector store management for RAG system.
+Uses Qdrant as persistent vector store with multi-provider embedding fallback.
 """
 
 import logging
@@ -14,6 +12,7 @@ from typing import List, Dict, Any, Optional
 
 import structlog
 from app.common import mask_secret
+from app.config import settings
 from app.multi_tenant.middleware import get_current_tenant_id
 logger = structlog.get_logger()
 
@@ -48,16 +47,7 @@ def _get_gpu_embedder():
             return None
     return _gpu_embedder
 
-# ChromaDB is optional (primary backend is Qdrant). Import lazily to avoid
-# ImportError when chromadb is not installed, and to reduce memory footprint.
-try:
-    import chromadb
-    from chromadb.api.types import EmbeddingFunction as _EmbeddingFunctionBase
-    _has_chromadb = True
-except ImportError:
-    chromadb = None  # type: ignore[assignment]
-    _EmbeddingFunctionBase = object  # fallback base class
-    _has_chromadb = False
+# ChromaDB support removed — Qdrant is the sole vector backend.
 
 VECTOR_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "vectors")
 
@@ -79,13 +69,13 @@ _local_embed_model = None
 _LOCAL_MODEL_NAME = "BAAI/bge-large-zh-v1.5"
 _LOCAL_MODEL_DIM = 1024  # fallback; overridden by settings.embedding_dim at runtime
 # Set True if collection was built with API (different dim than local model)
-_skip_local_embed = os.getenv("SKIP_LOCAL_EMBED", "").lower() in ("1", "true", "yes")
+_skip_local_embed = settings.skip_local_embed
 
 
 def _get_embedding_dim() -> int:
     """Return the active embedding dimension from settings or env var.
 
-    Priority: EMBEDDING_DIMENSION env → settings.embedding_dim → _LOCAL_MODEL_DIM (1024).
+    Priority: EMBEDDING_DIMENSION env -> settings.embedding_dim -> _LOCAL_MODEL_DIM (1024).
     """
     try:
         from app.config import settings
@@ -144,17 +134,14 @@ def _embed_local(texts: List[str]) -> Optional[np.ndarray]:
         return None
 
 
-# ── ChromaDB singleton ──
-_chroma_client: Optional[Any] = None
-_chroma_collection = None
-_chroma_lock = threading.Lock()  # Thread-safe singleton init
+# (ChromaDB singleton removed — Qdrant is the sole vector backend)
 
 # ── Keyword search index (no embeddings, <10ms queries) ──
 _kw_docs: List[Dict] = []
 _kw_idf: Dict[str, float] = {}
 _kw_avgdl: float = 0.0
 _kw_lock = threading.Lock()  # Thread-safe access to keyword index
-_KW_MIN_RAW_SCORE = float(os.getenv("KW_MIN_RAW_SCORE", "0.15"))
+_KW_MIN_RAW_SCORE = settings.kw_min_raw_score
 _KW_MIN_IDF = 0.3  # skip only very high-frequency terms (appear in >85% docs)
 
 # Chinese stop words — function words, interrogatives, particles.
@@ -189,41 +176,7 @@ def _get_jieba():
     return _jieba if _jieba is not False else None
 
 
-def _get_chroma(path: str = None) -> Any:
-    """Get or create ChromaDB client (singleton per path, thread-safe)."""
-    if not _has_chromadb:
-        raise ImportError(
-            "chromadb is required for ChromaDB backend. "
-            "Install it with: pip install chromadb>=0.5"
-        )
-    global _chroma_client
-    save_path = path or VECTOR_DIR
-    if _chroma_client is None:
-        with _chroma_lock:
-            if _chroma_client is None:
-                os.makedirs(save_path, exist_ok=True)
-                _chroma_client = chromadb.PersistentClient(path=save_path)
-    return _chroma_client
-
-
-def _get_collection(client=None, name: str = "articles"):
-    """Get or create Chroma collection with embedding function (thread-safe)."""
-    global _chroma_collection
-    if _chroma_collection is None or client is not None:
-        with _chroma_lock:
-            c = client or _get_chroma()
-            _chroma_collection = c.get_or_create_collection(
-                name=name,
-                embedding_function=ZhipuEmbeddingFn(),
-            )
-    return _chroma_collection
-
-
-def _reset_chroma():
-    """Reset ChromaDB singleton (for testing / reindex)."""
-    global _chroma_client, _chroma_collection
-    _chroma_client = None
-    _chroma_collection = None
+# ChromaDB helper functions removed (_get_chroma, _get_collection, _reset_chroma)
 
 
 # ── Keyword / BM25 retrieval (no embeddings, <10ms) ──
@@ -268,7 +221,7 @@ def _build_kw_index(force: bool = False):
     """Build in-memory BM25 index from vector store documents.
 
     Pre-tokenizes all documents so retrieve_keyword() avoids re-tokenizing
-    476+ docs on every query (saves ~150ms per query).
+    hundreds of docs on every query (saves ~150ms per query).
     Supports both ChromaDB and Qdrant backends.
     """
     global _kw_docs, _kw_idf, _kw_avgdl
@@ -673,28 +626,7 @@ def embed_texts_llm(texts: List[str], batch_size: int = 10) -> np.ndarray:
     return np.array(result, dtype=np.float32)
 
 
-# ── Chroma embedding function wrapper ──
-
-class ZhipuEmbeddingFn(_EmbeddingFunctionBase):
-    """ChromaDB-compatible embedding function with multi-provider fallback.
-
-    Tries: local BGE → DashScope → SiliconFlow → Zhipu API.
-    Raises on complete failure instead of returning zero vectors.
-    """
-
-    def name(self) -> str:
-        return "multi-embed"
-
-    def __call__(self, input):
-        texts = input if isinstance(input, list) else [input]
-        embeddings = embed_texts_llm(texts)
-        return embeddings.tolist()
-
-    def embed_query(self, input):
-        return self(input)
-
-    def supported_spaces(self):
-        return ["l2", "ip", "cosine"]
+# ── Embedding functions (ChromaDB wrapper removed — Qdrant is sole backend) ──
 
     def default_space(self):
         return "cosine"
@@ -1328,7 +1260,7 @@ def get_bm25_stats() -> dict:
 
 # ── Stats cache (avoid full-scan on every health check) ──
 _stats_cache: dict = {"doc_count": 0, "chunk_count": 0, "updated_at": 0.0}
-_STATS_CACHE_TTL = float(os.getenv("STATS_CACHE_TTL", "60"))  # seconds
+_STATS_CACHE_TTL = settings.stats_cache_ttl  # seconds
 
 
 def get_collection_stats() -> tuple[int, int]:

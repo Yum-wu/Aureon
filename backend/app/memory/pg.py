@@ -80,7 +80,8 @@ def get_database_url() -> Optional[str]:
     Returns ``None`` when the variable is not set, which triggers a fallback
     to the async SQLite driver.
     """
-    url = os.getenv("DATABASE_URL")
+    from app.config import settings
+    url = settings.database_url
     if not url:
         return None
     # Normalise to asyncpg driver if a plain postgresql:// was given

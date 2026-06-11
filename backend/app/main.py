@@ -7,8 +7,8 @@ import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 
-# Suppress noisy ChromaDB telemetry errors
-logging.getLogger("chromadb.telemetry").setLevel(logging.CRITICAL)
+# Suppress noisy telemetry
+logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 # ── Safety: prevent CrossEncoder OOM on constrained environments ──
 # When RERANK_ENABLED=false, monkey-patch CrossEncoder to block loading.
@@ -29,7 +29,7 @@ if _rerank_disabled:
             def __getattr__(self, name):
                 raise RuntimeError("CrossEncoder disabled (RERANK_ENABLED=false)")
         _st.CrossEncoder = _DisabledCrossEncoder
-        print("[SAFETY] CrossEncoder disabled via RERANK_ENABLED=false (monkey-patch active)", flush=True)
+        structlog.get_logger().info("CrossEncoder disabled via RERANK_ENABLED=false")
     except ImportError:
         pass  # sentence-transformers not installed, nothing to patch
 
@@ -226,7 +226,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")],
+    allow_origins=[o.strip() for o in settings.cors_origins.split(",")],
     allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["*"],
 )
@@ -342,6 +342,25 @@ async def health():
         "tools": [t.name for t in ALL_TOOLS] if _bm25_warmup_done else [],
         "index_ready": _index_ready,
     }
+
+
+@app.get("/health/ready")
+async def health_ready():
+    """Readiness probe — checks if dependency services are reachable."""
+    checks = {"index_ready": _index_ready}
+    # Lightweight Redis check
+    try:
+        from app.cache.redis_client import get_redis
+        r = get_redis()
+        if r:
+            r.ping()
+            checks["redis"] = "ok"
+        else:
+            checks["redis"] = "skipped"
+    except Exception as e:
+        checks["redis"] = f"error: {e}"
+    all_ok = _index_ready and checks.get("redis") in ("ok", "skipped")
+    return {"status": "ready" if all_ok else "not_ready", "checks": checks}
 
 
 # ── Legacy /api/ routes (backward compatible, kept alongside /api/v1/) ──

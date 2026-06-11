@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from ..dependencies import get_redis_or_none
 from ..exceptions import AureonException, RedisUnavailableError, VectorStoreError
 from ..rag.vector_store import get_collection_stats
+from ..config import settings
 
 logger = structlog.get_logger()
 
@@ -196,7 +197,7 @@ async def get_stats(redis=Depends(get_redis_or_none)):
         count = _mem_count
         avg_latency = sum(_mem_latencies) / len(_mem_latencies) if _mem_latencies else 0.0
 
-    # Real collection stats from Chroma
+    # Real collection stats from vector store
     doc_count = 0
     chunk_count = 0
     try:
@@ -256,20 +257,46 @@ class DocumentItem(BaseModel):
 
 @router.get("/api/rag/documents")
 async def get_documents():
-    """List all indexed documents grouped by source from Chroma collection."""
+    """List all indexed documents from the active vector store (Qdrant or ChromaDB)."""
     try:
-        from ..rag.vector_store import _get_collection
-        collection = _get_collection()
-        total = collection.count()
-        if total == 0:
-            return {"documents": [], "total_docs": 0, "total_chunks": 0}
+        if settings.vector_backend == "qdrant":
+            return _get_documents_qdrant()
+        return _get_documents_chroma()
+    except Exception as e:
+        if isinstance(e, VectorStoreError):
+            raise
+        logger.warning("get_documents failed: %s", e)
+        raise VectorStoreError(detail=f"Failed to fetch documents: {str(e)}")
 
-        all_data = collection.get(include=["metadatas"])
-        # Group chunks by source file
-        doc_map: dict[str, dict] = defaultdict(lambda: {
-            "title": "", "source": "", "file_type": "md", "language": "unknown", "chunk_count": 0
-        })
-        for meta in all_data.get("metadatas", []):
+
+def _get_documents_qdrant():
+    """Qdrant implementation of get_documents."""
+    from ..rag.vector_store import _get_qdrant, _get_qdrant_collection_name
+    client = _get_qdrant()
+    collection_name = _get_qdrant_collection_name()
+    try:
+        info = client.get_collection(collection_name)
+        total = info.points_count or 0
+    except Exception as e:
+        raise VectorStoreError(detail=f"Qdrant collection error: {str(e)}")
+
+    if total == 0:
+        return {"documents": [], "total_docs": 0, "total_chunks": 0}
+
+    doc_map: dict[str, dict] = defaultdict(lambda: {
+        "title": "", "source": "", "file_type": "md", "language": "unknown", "chunk_count": 0
+    })
+    offset = None
+    while True:
+        points, offset = client.scroll(
+            collection_name=collection_name,
+            limit=100,
+            offset=offset,
+            with_payload=True,
+            with_vectors=False,
+        )
+        for pt in points:
+            meta = pt.payload.get("metadata", {}) if pt.payload else {}
             if not meta or not isinstance(meta, dict):
                 continue
             src = meta.get("source") or meta.get("title", "unknown")
@@ -286,19 +313,55 @@ async def get_documents():
                 doc["file_type"] = "xlsx"
             elif src.endswith(".txt"):
                 doc["file_type"] = "txt"
+        if offset is None:
+            break
 
-        documents = [
-            DocumentItem(title=d["title"], source=d["source"], file_type=d["file_type"],
-                         language=d["language"], chunk_count=d["chunk_count"], status="ready")
-            for d in sorted(doc_map.values(), key=lambda x: x["title"])
-        ]
-        return {"documents": [d.model_dump() for d in documents],
-                "total_docs": len(documents), "total_chunks": total}
-    except Exception as e:
-        if isinstance(e, VectorStoreError):
-            raise
-        logger.warning("get_documents failed: %s", e)
-        raise VectorStoreError(detail=f"Failed to fetch documents: {str(e)}")
+    documents = [
+        DocumentItem(title=d["title"], source=d["source"], file_type=d["file_type"],
+                     language=d["language"], chunk_count=d["chunk_count"], status="ready")
+        for d in sorted(doc_map.values(), key=lambda x: x["title"])
+    ]
+    return {"documents": [d.model_dump() for d in documents],
+            "total_docs": len(documents), "total_chunks": total}
+
+
+def _get_documents_chroma():
+    """ChromaDB implementation of get_documents."""
+    from ..rag.vector_store import _get_collection
+    collection = _get_collection()
+    total = collection.count()
+    if total == 0:
+        return {"documents": [], "total_docs": 0, "total_chunks": 0}
+
+    all_data = collection.get(include=["metadatas"])
+    doc_map: dict[str, dict] = defaultdict(lambda: {
+        "title": "", "source": "", "file_type": "md", "language": "unknown", "chunk_count": 0
+    })
+    for meta in all_data.get("metadatas", []):
+        if not meta or not isinstance(meta, dict):
+            continue
+        src = meta.get("source") or meta.get("title", "unknown")
+        doc = doc_map[src]
+        doc["source"] = src
+        doc["title"] = meta.get("title", src.replace(".md", "").replace("_", " "))
+        doc["chunk_count"] += 1
+        doc["language"] = meta.get("language", "unknown")
+        if src.endswith(".pdf"):
+            doc["file_type"] = "pdf"
+        elif src.endswith(".docx"):
+            doc["file_type"] = "docx"
+        elif src.endswith(".xlsx") or src.endswith(".xls"):
+            doc["file_type"] = "xlsx"
+        elif src.endswith(".txt"):
+            doc["file_type"] = "txt"
+
+    documents = [
+        DocumentItem(title=d["title"], source=d["source"], file_type=d["file_type"],
+                     language=d["language"], chunk_count=d["chunk_count"], status="ready")
+        for d in sorted(doc_map.values(), key=lambda x: x["title"])
+    ]
+    return {"documents": [d.model_dump() for d in documents],
+            "total_docs": len(documents), "total_chunks": total}
 
 
 # ── Benchmark API ──
@@ -491,7 +554,7 @@ async def sync_blog_documents():
         )
 
     # TODO: Implement actual blog sync logic
-    # This would fetch articles from the blog and index them into Chroma
+    # This would fetch articles from the blog and index them into the vector store
     return {
         "status": "success",
         "message": "Blog sync endpoint ready — implementation pending",

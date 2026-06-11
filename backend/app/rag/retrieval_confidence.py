@@ -9,14 +9,14 @@ Based on CRAG (arXiv:2401.15884) three-way branching.
 Reference: docs/RAG_OPTIMIZATION_PROMPT.md section 2.2
 """
 
-import os
 from typing import List, Dict, Any
 import structlog
+from app.config import settings
 
 logger = structlog.get_logger()
 
-CRAG_HIGH_CONFIDENCE = float(os.getenv("CRAG_HIGH_CONFIDENCE", "0.05"))
-CRAG_LOW_CONFIDENCE = float(os.getenv("CRAG_LOW_CONFIDENCE", "0.01"))
+CRAG_HIGH_CONFIDENCE = settings.crag_high_confidence
+CRAG_LOW_CONFIDENCE = settings.crag_low_confidence
 
 
 def evaluate_retrieval_confidence(chunks: List[Dict[str, Any]]) -> str:

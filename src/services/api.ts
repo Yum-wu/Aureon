@@ -25,19 +25,25 @@ export interface StreamChatParams {
 const BACKPRESSURE_HIGH_WATER = 50; // 未处理事件超过此数则暂停读取
 
 /**
- * 以 SSE 流式方式调用后端 Chat API，带背压控制
+ * 通用 SSE 流处理函数
+ * @param url - API 端点 URL
+ * @param body - 请求体
+ * @param onEvent - 事件回调
+ * @param onError - 错误回调
+ * @param signal - AbortSignal
  */
-export async function streamChat(params: StreamChatParams): Promise<void> {
-  const { message, sessionId, onEvent, onError, signal } = params;
-
+async function fetchSSE(
+  url: string,
+  body: Record<string, unknown>,
+  onEvent: (event: SSEEvent) => void,
+  onError: (error: string) => void,
+  signal?: AbortSignal,
+): Promise<void> {
   try {
-    const response = await authFetch(API_URL, {
+    const response = await authFetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message,
-        session_id: sessionId,
-      }),
+      body: JSON.stringify(body),
       signal,
     });
 
@@ -96,63 +102,29 @@ export async function streamChat(params: StreamChatParams): Promise<void> {
 }
 
 /**
+ * 以 SSE 流式方式调用后端 Chat API，带背压控制
+ */
+export async function streamChat(params: StreamChatParams): Promise<void> {
+  const { message, sessionId, onEvent, onError, signal } = params;
+  await fetchSSE(
+    API_URL,
+    { message, session_id: sessionId },
+    onEvent,
+    onError,
+    signal,
+  );
+}
+
+/**
  * 以 SSE 流式方式调用增强 Chat API（含 RAG 意图路由）
  */
 export async function streamEnhancedChat(params: StreamChatParams): Promise<void> {
   const { message, sessionId, onEvent, onError, signal } = params;
-
-  try {
-    const response = await authFetch(ENHANCED_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message, session_id: sessionId }),
-      signal,
-    });
-
-    if (!response.ok) {
-      onError(`请求失败 (${response.status})`);
-      return;
-    }
-
-    const reader = response.body?.getReader();
-    if (!reader) {
-      onError("无法读取响应流");
-      return;
-    }
-
-    const decoder = new TextDecoder();
-    let buffer = "";
-    let pendingEvents = 0;
-
-    while (true) {
-      if (pendingEvents > BACKPRESSURE_HIGH_WATER) {
-        await new Promise((resolve) => setTimeout(resolve, 10));
-        continue;
-      }
-
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || "";
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed || !trimmed.startsWith("data:")) continue;
-        const data = trimmed.slice(5).trim();
-        try {
-          const event: SSEEvent = JSON.parse(data);
-          pendingEvents++;
-          onEvent(event);
-          setTimeout(() => pendingEvents--, 0);
-        } catch {
-          continue;
-        }
-      }
-    }
-  } catch (err: unknown) {
-    if (err instanceof DOMException && err.name === "AbortError") return;
-    onError(err instanceof Error ? err.message : "网络请求异常");
-  }
+  await fetchSSE(
+    ENHANCED_API_URL,
+    { message, session_id: sessionId },
+    onEvent,
+    onError,
+    signal,
+  );
 }

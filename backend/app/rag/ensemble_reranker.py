@@ -222,8 +222,8 @@ class EnsembleReranker:
         Uses GPU-accelerated reranker if available, falls back to CPU.
         Skipped when SKIP_LOCAL_EMBED=true (API-only mode).
         """
-        import os
-        if os.getenv("SKIP_LOCAL_EMBED", "").lower() in ("1", "true", "yes"):
+        from app.config import settings
+        if settings.skip_local_embed:
             logger.info("Skipping local BGE reranker (SKIP_LOCAL_EMBED=true)")
             return None
 

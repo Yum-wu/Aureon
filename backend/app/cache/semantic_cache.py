@@ -130,8 +130,7 @@ class SemanticLLMCache:
             return self._embedding_model is not None
 
         # Check if local embedding is disabled (e.g., Railway with limited memory)
-        import os
-        skip_local = os.getenv("SKIP_LOCAL_EMBED", "").lower() in ("1", "true", "yes")
+        skip_local = settings.skip_local_embed
         if skip_local:
             logger.info("Skipping local BGE embed (SKIP_LOCAL_EMBED=true), semantic cache will use exact match only")
             self._embedding_model_loaded = True

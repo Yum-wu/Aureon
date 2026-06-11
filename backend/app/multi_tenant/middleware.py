@@ -112,12 +112,27 @@ class TenantMiddleware(BaseHTTPMiddleware):
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
         tenant_id = "default"  # Default tenant
+        source = "default"
 
         # 1. Try X-Tenant-ID header (highest priority)
         header_tenant = request.headers.get("X-Tenant-ID")
         if header_tenant:
-            tenant_id = header_tenant
-            logger.debug("Tenant ID from header: %s", tenant_id)
+            # Validate against allowlist if configured
+            from app.config import settings
+            if settings.tenant_allowlist:
+                allowed = {t.strip() for t in settings.tenant_allowlist.split(",") if t.strip()}
+                if allowed and header_tenant not in allowed:
+                    logger.warning(
+                        "tenant.header_rejected",
+                        tenant_id=header_tenant,
+                        path=request.url.path,
+                        client=request.client.host if request.client else "unknown",
+                    )
+                    header_tenant = None  # Reject invalid tenant
+            if header_tenant:
+                tenant_id = header_tenant
+                source = "header"
+                logger.debug("Tenant ID from header: %s", tenant_id)
 
         # 2. Try JWT token tenant_id claim
         if tenant_id == "default":  # Only if not set from header
@@ -127,6 +142,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
                 jwt_tenant = _extract_tenant_from_jwt(token)
                 if jwt_tenant:
                     tenant_id = jwt_tenant
+                    source = "jwt"
                     logger.debug("Tenant ID from JWT: %s", tenant_id)
 
         # Set tenant context
@@ -134,6 +150,16 @@ class TenantMiddleware(BaseHTTPMiddleware):
 
         # Add tenant_id to request state for easy access
         request.state.tenant_id = tenant_id
+
+        # Audit log for tenant context (only for non-default tenants)
+        if tenant_id != "default":
+            logger.info(
+                "tenant.context_set",
+                tenant_id=tenant_id,
+                source=source,
+                method=request.method,
+                path=request.url.path,
+            )
 
         try:
             response = await call_next(request)
