@@ -157,7 +157,11 @@ class Settings(BaseSettings):
     )
 
     def model_post_init(self, __context):
-        """Re-read flat env vars into sub-models for backward compat."""
+        """Re-read flat env vars into sub-models for backward compat.
+
+        Only applies flat env var when the corresponding nested
+        (__-delimited) env var is NOT set, so nested takes priority.
+        """
         cls_fields = type(self).model_fields
         for sub_field in cls_fields:
             sub_model = getattr(self, sub_field)
@@ -165,7 +169,8 @@ class Settings(BaseSettings):
                 updates = {}
                 for field_name in sub_model.model_fields:
                     flat_name = field_name.upper()
-                    if flat_name in os.environ:
+                    nested_name = f"{sub_field.upper()}__{flat_name}"
+                    if flat_name in os.environ and nested_name not in os.environ:
                         updates[field_name] = os.environ[flat_name]
                 if updates:
                     current = sub_model.model_dump()
