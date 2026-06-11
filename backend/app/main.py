@@ -26,6 +26,7 @@ if _rerank_disabled:
             def __getattr__(self, name):
                 raise RuntimeError("CrossEncoder disabled (RERANK_ENABLED=false)")
         _st.CrossEncoder = _DisabledCrossEncoder
+        import structlog
         structlog.get_logger().info("CrossEncoder disabled via RERANK_ENABLED=false")
     except ImportError:
         pass  # sentence-transformers not installed, nothing to patch
