@@ -7,12 +7,11 @@ import json
 import time
 import os
 import numpy as np
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 
-from app.rag.vector_store import retrieve, retrieve_keyword, format_context, save_index, embed_texts_llm, load_index, rerank, get_thread_query_embedding
+from app.rag.vector_store import retrieve, retrieve_keyword, format_context, save_index, embed_texts_llm, rerank, get_thread_query_embedding
 from app.rag.query_rewriter import is_cross_article_query, expand_queries_rules, hyde_retrieve, hyde_retrieve_async
 from app.rag.models import RAGQueryResponse, SourceItem
-from app.rag.query_classifier import classify_query_complexity, get_reranking_strategy
 from app.rag.ensemble_reranker import get_ensemble_reranker
 from app.utils.lang_detect import detect_language, lang_instruction
 

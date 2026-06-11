@@ -384,7 +384,6 @@ def log_pii_detection(
     action_taken: str = "mask",
 ):
     """记录 PII 检测"""
-    import hashlib
     from app.memory.db import get_db
 
     conn = get_db()

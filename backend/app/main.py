@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import os
 import sys
@@ -33,9 +32,8 @@ if _rerank_disabled:
     except ImportError:
         pass  # sentence-transformers not installed, nothing to patch
 
-from fastapi import FastAPI, Request, HTTPException, APIRouter
+from fastapi import FastAPI, Request, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from prometheus_fastapi_instrumentator import Instrumentator
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -43,7 +41,6 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 import structlog
 
-from app.api.models import StatusResponse
 from app.api.rag_stats import router as stats_router
 from app.api.analytics import router as analytics_router
 from app.features.router import router as feature_flags_router
@@ -59,22 +56,15 @@ from app.audit.router import router as audit_router
 from app.api.websocket_chat import router as websocket_chat_router
 from app.exceptions import (
     AureonException,
-    AuthenticationError,
-    AuthorizationError,
-    NotFoundError,
-    RateLimitError,
-    LLMServiceError,
 )
 from app.routers import chat as chat_router
 from app.routers import rag as rag_router
 from app.routers import crew as crew_router
-from app.agent.llm import create_llm
 from app.tools import ALL_TOOLS
 from app.memory.db import init_db, close_db
 from app.memory.manager import manager as memory_manager
 from app.config import settings
 from app.cache.redis_client import close_redis
-from app.common import SSE_HEADERS
 from app.multi_tenant.middleware import TenantMiddleware
 
 # ── CrewAI (merged, lazy-imported in route handlers) ──

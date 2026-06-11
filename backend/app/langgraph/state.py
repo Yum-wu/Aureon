@@ -1,6 +1,6 @@
 """LangGraph 工作流 — 状态类型定义"""
 
-from typing import TypedDict, List, Optional, Any
+from typing import TypedDict, List, Optional
 
 
 class AgentState(TypedDict):

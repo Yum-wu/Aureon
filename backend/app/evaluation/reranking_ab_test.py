@@ -17,7 +17,7 @@ import time
 import asyncio
 import numpy as np
 from typing import List, Dict, Any, Callable, Optional
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import structlog
 

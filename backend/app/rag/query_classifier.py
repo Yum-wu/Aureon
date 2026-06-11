@@ -3,7 +3,6 @@ Query complexity classifier for adaptive re-ranking.
 Rule-based classification with <1ms latency (no LLM calls).
 """
 
-import re
 from typing import Literal, Dict, Any
 import structlog
 

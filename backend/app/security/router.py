@@ -1,6 +1,6 @@
 """Security API Router"""
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends
 from app.security import (
     PIIDetector,
     SSOProvider,
@@ -11,7 +11,7 @@ from app.security import (
     log_pii_detection,
     require_role,
 )
-from app.exceptions import NotFoundError, AureonException
+from app.exceptions import NotFoundError
 
 router = APIRouter(tags=["Security"])
 

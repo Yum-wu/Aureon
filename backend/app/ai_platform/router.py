@@ -1,9 +1,7 @@
 """AI Platform API Router"""
-from typing import Optional
 from fastapi import APIRouter, Query
 from app.ai_platform import (
     LLMProvider,
-    LLMRouteConfig,
     ConfidenceScore,
     ConversationSession,
     ConversationMessage,

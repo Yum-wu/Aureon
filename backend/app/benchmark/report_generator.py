@@ -2,7 +2,7 @@
 
 import json
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict
 from pathlib import Path
 
 
@@ -39,7 +39,8 @@ def generate_terminal_output(results: Dict, ascii_safe: bool = False) -> str:
         Formatted string for terminal display
     """
     lines = []
-    _cm = lambda v: _check_mark(v, ascii_safe=ascii_safe)
+    def _cm(v):
+        return _check_mark(v, ascii_safe=ascii_safe)
 
     # Header
     lines.append("=" * 70)

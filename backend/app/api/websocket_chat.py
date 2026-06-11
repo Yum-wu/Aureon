@@ -2,7 +2,6 @@
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from typing import Dict, Any, Optional
-import json
 import asyncio
 import structlog
 

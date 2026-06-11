@@ -4,7 +4,7 @@ Production guardrails: hallucination detection, citation verification.
 import json
 import structlog
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List
 
 logger = structlog.get_logger()
 

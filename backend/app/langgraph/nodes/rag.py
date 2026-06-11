@@ -3,7 +3,6 @@ RAG 检索节点。
 封装 P1 RAG 模块，通过 MCP 协议暴露为 tool。
 """
 
-import time
 
 from app.rag.models import RAGQueryResponse
 

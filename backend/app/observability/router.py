@@ -1,5 +1,4 @@
 """Observability API Router"""
-from typing import Optional
 from fastapi import APIRouter, Query
 from app.observability import (
     get_recent_traces,

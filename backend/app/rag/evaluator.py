@@ -116,7 +116,7 @@ def evaluate_faithfulness(
 
     for qa in pairs:
         q = qa["question"]
-        expected = qa["answer"]
+        qa["answer"]
 
         result: RAGQueryResponse = rag_query_fn(q)
         if not result.sources:

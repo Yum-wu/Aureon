@@ -1,5 +1,4 @@
 """Cost Governance API Router"""
-from typing import Optional
 from fastapi import APIRouter, Query
 from app.cost import (
     CostRecord,

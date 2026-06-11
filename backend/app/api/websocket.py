@@ -4,7 +4,6 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime
 from fastapi import WebSocket, WebSocketDisconnect
 from app.config import settings
-import json
 import asyncio
 import structlog
 

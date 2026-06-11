@@ -39,7 +39,7 @@ def evaluate_thresholds(
     tp = sum(1 for s in positive_scores if s >= config.high)
     ambiguous = sum(1 for s in positive_scores if config.low <= s < config.high)
     fn = sum(1 for s in positive_scores if s < config.low)
-    tn = sum(1 for s in negative_scores if s < config.low)
+    sum(1 for s in negative_scores if s < config.low)
     fp = sum(1 for s in negative_scores if s >= config.low)
 
     # Ambiguous scores are "at least ambiguous" — not false negatives.

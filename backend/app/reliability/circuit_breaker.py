@@ -16,9 +16,8 @@ Features:
 import asyncio
 import functools
 import time
-from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Callable, Optional, TypeVar, cast
+from typing import Callable, Optional, TypeVar
 from contextlib import asynccontextmanager
 
 import structlog

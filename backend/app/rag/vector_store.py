@@ -2,7 +2,6 @@
 Uses Qdrant as persistent vector store with multi-provider embedding fallback.
 """
 
-import logging
 import os
 import hashlib
 import threading
@@ -11,7 +10,6 @@ import numpy as np
 from typing import List, Dict, Any, Optional
 
 import structlog
-from app.common import mask_secret
 from app.config import settings
 from app.multi_tenant.middleware import get_current_tenant_id
 logger = structlog.get_logger()
@@ -380,7 +378,7 @@ def retrieve_keyword(query: str, top_k: int = 3, lang_filter: str = None) -> Lis
         return []
 
     # Filter: require at least one query term with meaningful IDF
-    has_meaningful_term = any(
+    any(
         kw_idf.get(t, 0) >= _KW_MIN_IDF for t in set(q_terms)
     )
 

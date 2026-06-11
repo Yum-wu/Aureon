@@ -8,7 +8,6 @@ Routes:
 """
 
 import asyncio
-import json
 from typing import Any
 
 from fastapi import APIRouter, Request

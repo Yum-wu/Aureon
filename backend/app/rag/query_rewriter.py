@@ -7,7 +7,7 @@ Includes HyDE (Hypothetical Document Embedding) implementation:
 3. Return retrieval results
 """
 import structlog
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 
 logger = structlog.get_logger()
 
