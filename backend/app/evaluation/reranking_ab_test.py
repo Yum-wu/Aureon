@@ -395,7 +395,7 @@ async def run_ab_test():
 
     # Generate report
     report = ab_test.generate_report(results)
-    print(report)
+    logger.info("reranking_ab.report", report=report)
 
     return results
 

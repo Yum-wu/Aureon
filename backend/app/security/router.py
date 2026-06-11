@@ -65,19 +65,27 @@ async def scan_document(
 # ── SSO Endpoints ──
 
 @router.post("/sso/providers", response_model=SSOProvider, status_code=201)
-async def create_sso_provider_endpoint(provider: SSOProvider):
+async def create_sso_provider_endpoint(
+    provider: SSOProvider,
+    user: dict = Depends(require_role(UserRole.ADMIN)),
+):
     """创建 SSO 提供商 (需要 ADMIN 角色)"""
     return create_sso_provider(provider)
 
 
 @router.get("/sso/providers", response_model=list[SSOProvider])
-async def list_sso_providers_endpoint():
+async def list_sso_providers_endpoint(
+    user: dict = Depends(require_role(UserRole.ADMIN)),
+):
     """列出所有 SSO 提供商 (需要 ADMIN 角色)"""
     return list_sso_providers()
 
 
 @router.delete("/sso/providers/{name}", status_code=204)
-async def delete_sso_provider_endpoint(name: str):
+async def delete_sso_provider_endpoint(
+    name: str,
+    user: dict = Depends(require_role(UserRole.ADMIN)),
+):
     """删除 SSO 提供商 (需要 ADMIN 角色)"""
     success = delete_sso_provider(name)
     if not success:

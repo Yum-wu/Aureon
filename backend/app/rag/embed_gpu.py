@@ -14,6 +14,7 @@ import os
 import time
 from typing import List, Dict, Any, Optional
 import numpy as np
+from app.config import settings
 
 import structlog
 
@@ -343,7 +344,7 @@ class AdaptiveDeviceEmbedder:
     """
 
     # Batch size threshold: >= this uses GPU, < this uses CPU
-    GPU_THRESHOLD = int(os.getenv("EMBED_GPU_THRESHOLD", "4"))
+    GPU_THRESHOLD = settings.embed_gpu_threshold
 
     def __init__(self, model_name: str = "BAAI/bge-large-zh-v1.5"):
         self.model_name = model_name

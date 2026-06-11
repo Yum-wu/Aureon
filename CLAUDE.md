@@ -11,8 +11,8 @@ Aureon 全栈 AI 应用开发指南。
 | 前端 | React 19 + Vite + TypeScript + Tailwind CSS |
 | 后端 | Python FastAPI + LangChain + LangGraph |
 | 端口 | 前端 5173 / 后端 8000 |
-| 数据库 | SQLite（记忆）+ Chroma（向量库）|
-| AI API | DeepSeek / 智谱 AI / DashScope (embedding) |
+| 数据库 | SQLite（记忆）+ Qdrant（向量库）|
+| AI API | DeepSeek / 智谱 AI / DashScope (embedding + rerank) |
 | 安全 | API Key Auth, Prompt Injection Guard, Fernet Encryption |
 
 ## 核心概念

@@ -19,6 +19,7 @@ const Analytics = lazy(() => import("./pages/Analytics"));
 const Admin = lazy(() => import("./pages/Admin"));
 const Architecture = lazy(() => import("./pages/Architecture").then(m => ({ default: m.Architecture })));
 const Portfolio = lazy(() => import("./pages/Portfolio").then(m => ({ default: m.Portfolio })));
+const NotFound = lazy(() => import("./pages/NotFound"));
 const SupportWidget = lazy(() => import("./components/SupportWidget").then(m => ({ default: m.SupportWidget })));
 
 function PageFallback() {
@@ -116,6 +117,8 @@ function AppLayout() {
             {/* Protected routes — require auth */}
             <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+            {/* Catch-all 404 route */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
       </div>

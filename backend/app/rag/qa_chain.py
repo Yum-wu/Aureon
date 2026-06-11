@@ -16,20 +16,22 @@ from app.rag.query_classifier import classify_query_complexity, get_reranking_st
 from app.rag.ensemble_reranker import get_ensemble_reranker
 from app.utils.lang_detect import detect_language, lang_instruction
 
+from app.config import settings
+
 import structlog
 
 logger = structlog.get_logger()
 
-_RRF_K = int(os.getenv("RRF_K", "200"))
-_RETRIEVAL_MULTIPLIER = int(os.getenv("RETRIEVAL_MULTIPLIER", "7"))
-_RERANK_CANDIDATES = int(os.getenv("RERANK_CANDIDATES", "12"))
-_ADAPTIVE_RERANK_THRESHOLD = float(os.getenv("ADAPTIVE_RERANK_THRESHOLD", "0.5"))
-MULTI_QUERY_ENABLED = os.getenv("MULTI_QUERY_ENABLED", "true").lower() == "true"
-SEMANTIC_CHUNKING_ENABLED = os.getenv("SEMANTIC_CHUNKING_ENABLED", "true").lower() == "true"
+_RRF_K = settings.rrf_k
+_RETRIEVAL_MULTIPLIER = settings.retrieval_multiplier
+_RERANK_CANDIDATES = settings.rerank_candidates
+_ADAPTIVE_RERANK_THRESHOLD = settings.adaptive_rerank_threshold
+MULTI_QUERY_ENABLED = settings.multi_query_enabled
+SEMANTIC_CHUNKING_ENABLED = settings.semantic_chunking_enabled
 
 # Adaptive re-ranking based on query complexity
-_ADAPTIVE_RERANK_ENABLED = os.getenv("ADAPTIVE_RERANK_ENABLED", "true").lower() == "true"
-_ENSEMBLE_RERANK_ENABLED = os.getenv("ENSEMBLE_RERANK_ENABLED", "false").lower() == "true"
+_ADAPTIVE_RERANK_ENABLED = settings.adaptive_rerank_enabled
+_ENSEMBLE_RERANK_ENABLED = settings.ensemble_rerank_enabled
 
 # Keywords that uniquely identify specific articles — used for title/slug boost.
 # Only terms that are specific enough to disambiguate between articles.
@@ -49,32 +51,32 @@ def _extract_title_keywords(query: str) -> List[str]:
 
 # RRF score threshold: conservative floor — catches truly empty results.
 # The reranker is the primary quality gate; this is just a safety net.
-_MIN_RELEVANCE_SCORE = float(os.getenv("MIN_RELEVANCE_SCORE", "0.003"))
+_MIN_RELEVANCE_SCORE = settings.min_relevance_score
 
 # Pre-RRF cosine threshold: filters vector results BEFORE fusion.
 # RRF rank-1 = 1/(200+1) ≈ 0.005, so post-RRF thresholds are too low.
-_VECTOR_MIN_COSINE = float(os.getenv("VECTOR_MIN_COSINE", "0.001"))
+_VECTOR_MIN_COSINE = settings.vector_min_cosine
 
 # Vector RRF contribution cap: limit how many vector results enter RRF fusion.
 # Prevents low-confidence vector matches from drowning precise BM25 results.
-_VECTOR_MAX_CONTRIB = int(os.getenv("VECTOR_MAX_CONTRIB", "10"))
-_VECTOR_CONFIDENCE_THRESHOLD = float(os.getenv("VECTOR_CONFIDENCE_THRESHOLD", "0.01"))
+_VECTOR_MAX_CONTRIB = settings.vector_max_contrib
+_VECTOR_CONFIDENCE_THRESHOLD = settings.vector_confidence_threshold
 
 # LLM-based negative detection: when top retrieval score is below this threshold,
 # use an LLM classifier to decide if the query is answerable by the knowledge base.
-_LOW_SCORE_THRESHOLD = float(os.getenv("LOW_SCORE_THRESHOLD", "0.004"))
-_NEGATIVE_DETECTION_ENABLED = os.getenv("NEGATIVE_DETECTION_ENABLED", "true").lower() == "true"
+_LOW_SCORE_THRESHOLD = settings.low_score_threshold
+_NEGATIVE_DETECTION_ENABLED = settings.negative_detection_enabled
 
 # Context Compression: filter chunks by embedding similarity to query.
 # Removes semantically irrelevant chunks before passing to LLM, reducing token waste 30-50%.
-_CONTEXT_COMPRESSION_ENABLED = os.getenv("CONTEXT_COMPRESSION_ENABLED", "true").lower() == "true"
-_CONTEXT_COMPRESSION_THRESHOLD = float(os.getenv("CONTEXT_COMPRESSION_THRESHOLD", "0.35"))
+_CONTEXT_COMPRESSION_ENABLED = settings.context_compression_enabled
+_CONTEXT_COMPRESSION_THRESHOLD = settings.context_compression_threshold
 
 # HyDE (Hypothetical Document Embedding): generate hypothetical answer for retrieval.
 # Improves retrieval accuracy by using LLM-generated answer instead of raw query.
 # Reference: Gao et al., 2022 "Precise Zero-Shot Dense Retrieval without Relevance Labels"
-_HYDE_ENABLED = os.getenv("HYDE_ENABLED", "false").lower() == "true"
-_HYDE_FALLBACK_THRESHOLD = float(os.getenv("HYDE_FALLBACK_THRESHOLD", "0.01"))
+_HYDE_ENABLED = settings.hyde_enabled
+_HYDE_FALLBACK_THRESHOLD = settings.hyde_fallback_threshold
 
 
 def compress_context(query: str, chunks: List[Dict[str, Any]], threshold: float = None,
@@ -194,7 +196,7 @@ def compress_context(query: str, chunks: List[Dict[str, Any]], threshold: float 
 
 # Skip Negative Detection when top RRF score is above this threshold.
 # High scores indicate confident retrieval — LLM classifier is wasteful.
-_HIGH_SCORE_SKIP_THRESHOLD = float(os.getenv("HIGH_SCORE_SKIP_THRESHOLD", "0.01"))
+_HIGH_SCORE_SKIP_THRESHOLD = settings.high_score_skip_threshold
 
 # LLM Classifier cache: avoid redundant API calls for the same query.
 # Keyed by normalized query hash, TTL-based expiry.
@@ -202,7 +204,7 @@ import hashlib as _hashlib
 
 _CLASSIFIER_CACHE: Dict[str, bool] = {}
 _CLASSIFIER_CACHE_TIMESTAMPS: Dict[str, float] = {}
-_CLASSIFIER_CACHE_TTL = float(os.getenv("CLASSIFIER_CACHE_TTL", "3600"))  # seconds
+_CLASSIFIER_CACHE_TTL = settings.classifier_cache_ttl  # seconds
 
 
 def _classifier_cache_key(query: str) -> str:
@@ -1159,7 +1161,7 @@ def run_incremental_index(filepath: str) -> dict:
 
     elapsed = time.time() - start
     fname = os.path.basename(filepath).encode("ascii", errors="replace").decode("ascii")
-    print(f"[RAG] Incremental index: {fname} -> {len(chunks)} chunks in {elapsed:.1f}s")
+    logger.info("rag.incremental_index", file=fname, chunks=len(chunks), elapsed_s=round(elapsed, 1))
 
     return {
         "status": "ok",
@@ -1354,8 +1356,7 @@ def run_index_pipeline(
     save_index(chunks, embeddings)
 
     elapsed = time.time() - start
-    print(f"[RAG] Index complete: {len(docs)} docs, {len(chunks)} chunks "
-          f"({contextual_count} contextual) in {elapsed:.1f}s")
+    logger.info("rag.index_complete", docs=len(docs), chunks=len(chunks), contextual=contextual_count, elapsed_s=round(elapsed, 1))
 
     return {
         "status": "ok",

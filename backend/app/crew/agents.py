@@ -1,15 +1,15 @@
 """Multi-Agent Article Generator — Agent Definitions (crewai 0.80+)"""
 
-import os
 from crewai import Agent
 from crewai.tools import tool
+from app.config import settings
 
 
 @tool("web_search")
 def web_search(query: str) -> str:
     """Search the web for current information on a topic. Use for research.
     Falls back to explaining unavailability if TAVILY_API_KEY is not set."""
-    api_key = os.getenv("TAVILY_API_KEY")
+    api_key = settings.tavily_api_key
     if not api_key:
         return (
             "[Web search unavailable: TAVILY_API_KEY not configured. "

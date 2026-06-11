@@ -26,7 +26,8 @@ class ConcurrencyConfig:
 
     def __post_init__(self):
         if not self.semaphores:
-            mode = os.getenv("BENCHMARK_MODE", "local").lower()
+            from app.config import settings
+            mode = settings.benchmark_mode.lower()
             if mode == "railway":
                 self.semaphores = {
                     "deepseek-chat": int(os.getenv("LLM_SEMAPHORE_DEEPSEEK", "80")),

@@ -419,7 +419,7 @@ async def rag_upload_endpoint(
     tenant_id = get_current_tenant_id()
 
     # 验证 API Key（如果配置了）
-    expected_key = os.getenv("BLOG_SYNC_API_KEY")
+    expected_key = settings.blog_sync_api_key
     if expected_key and api_key != expected_key:
         raise AuthenticationError("Invalid API key")
 
@@ -604,7 +604,7 @@ async def rag_health():
         "hybrid_search_enabled": True,
         "guardrails_enabled": True,
         "langsmith_enabled": bool(
-            settings.langchain_api_key or os.getenv("LANGCHAIN_API_KEY")
+            settings.langchain_api_key
         ),
     }
 

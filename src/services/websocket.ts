@@ -69,7 +69,6 @@ export class AureonWebSocket {
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
-        console.log('WebSocket connected');
         this.reconnectAttempts = 0;
         this.startHeartbeat();
         this.notifyConnectionHandlers(true);
@@ -86,7 +85,6 @@ export class AureonWebSocket {
       };
 
       this.ws.onclose = (event) => {
-        console.log('WebSocket closed:', event.code, event.reason);
         this.stopHeartbeat();
         this.notifyConnectionHandlers(false);
 
@@ -212,8 +210,6 @@ export class AureonWebSocket {
 
     this.reconnectAttempts++;
     const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
-
-    console.log(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
 
     setTimeout(() => {
       this.connect().catch(console.error);

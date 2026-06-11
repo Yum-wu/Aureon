@@ -1,9 +1,9 @@
 """WebSocket connection manager for real-time chat."""
 
-import os
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 from fastapi import WebSocket, WebSocketDisconnect
+from app.config import settings
 import json
 import asyncio
 import structlog
@@ -32,7 +32,7 @@ class WebSocketManager:
         self.active_connections: Dict[str, WebSocket] = {}
         self.connection_metadata: Dict[str, Dict[str, Any]] = {}
         self._heartbeat_task: Optional[asyncio.Task] = None
-        self._max_connections = int(os.getenv("WEBSOCKET_MAX_CONNECTIONS", "300"))
+        self._max_connections = settings.websocket_max_connections
         self._connection_order: list = []
 
     async def connect(self, websocket: WebSocket, client_id: str):

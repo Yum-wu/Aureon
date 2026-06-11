@@ -8,30 +8,30 @@ Based on RAG_OPTIMIZATION_PROMPT.md §5.3.
 """
 
 import asyncio
-import os
 from contextlib import asynccontextmanager
 from typing import Dict
 
 import structlog
+from app.config import settings
 
 logger = structlog.get_logger()
 
 # ── Configuration ──
 
-QUEUE_TIMEOUT_SECONDS = float(os.getenv("QUEUE_TIMEOUT_SECONDS", "30"))
+QUEUE_TIMEOUT_SECONDS = settings.queue_timeout_seconds
 
 # LLM API semaphores (per model)
 _LLM_SEMAPHORES: Dict[str, asyncio.Semaphore] = {
-    "deepseek-chat": asyncio.Semaphore(int(os.getenv("LLM_SEMAPHORE_DEEPSEEK", "30"))),
-    "deepseek-reasoner": asyncio.Semaphore(int(os.getenv("LLM_SEMAPHORE_REASONER", "10"))),
-    "dashscope-embedding": asyncio.Semaphore(int(os.getenv("LLM_SEMAPHORE_EMBEDDING", "50"))),
+    "deepseek-chat": asyncio.Semaphore(settings.llm_semaphore_deepseek),
+    "deepseek-reasoner": asyncio.Semaphore(settings.llm_semaphore_reasoner),
+    "dashscope-embedding": asyncio.Semaphore(settings.llm_semaphore_embedding),
 }
 
 # RAG pipeline semaphore (vector retrieval + rerank)
-_RAG_SEMAPHORE = asyncio.Semaphore(int(os.getenv("RAG_SEMAPHORE", "40")))
+_RAG_SEMAPHORE = asyncio.Semaphore(settings.rag_semaphore)
 
 # Default semaphore for unknown models
-_DEFAULT_LLM_SEMAPHORE = asyncio.Semaphore(int(os.getenv("LLM_SEMAPHORE_DEFAULT", "20")))
+_DEFAULT_LLM_SEMAPHORE = asyncio.Semaphore(settings.llm_semaphore_default)
 
 
 @asynccontextmanager

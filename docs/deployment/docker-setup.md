@@ -40,7 +40,22 @@ docker-compose up -d
 # backend/.env
 LLM_API_KEY=your_deepseek_api_key
 LLM_MODEL=deepseek-v4-flash
-DASHSCOPE_API_KEY=your_dashscope_api_key  # Embedding
+
+# Embedding: DashScope (Singapore)
+DASHSCOPE_API_KEY=your_dashscope_api_key
+DASHSCOPE_BASE_URL=https://dashscope-intl.aliyuncs.com/compatible-mode/v1
+DASHSCOPE_MODEL=text-embedding-v4
+SKIP_LOCAL_EMBED=true
+
+# Reranker: DashScope qwen3-rerank (different endpoint than embedding!)
+DASHSCOPE_RERANK_URL=https://dashscope-intl.aliyuncs.com/compatible-api/v1
+RERANK_BACKEND=api
+RERANK_PROVIDER=dashscope
+
+# Vector store: Qdrant Cloud
+VECTOR_BACKEND=qdrant
+QDRANT_URL=https://your-qdrant-cluster.qdrant.io
+QDRANT_API_KEY=your_qdrant_api_key
 
 # Authentication (production)
 API_AUTH_KEY=your_secure_api_key_here
@@ -51,6 +66,10 @@ REDIS_PASSWORD=your_redis_password
 # Elasticsearch auth
 ES_PASSWORD=your_es_password
 ```
+
+> ?? **Important**: DashScope Embedding and Rerank use different base URLs:
+> - Embedding: `compatible-mode/v1`
+> - Rerank: `compatible-api/v1` (with `reranks` endpoint, plural)
 
 ## Security
 
