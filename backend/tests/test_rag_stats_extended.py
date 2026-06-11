@@ -84,9 +84,7 @@ async def test_get_documents_qdrant_empty():
     mock_info.points_count = 0
     mock_client.get_collection.return_value = mock_info
 
-    with patch("app.api.rag_stats._get_documents_qdrant") as mock_qdrant, \
-         patch("app.api.rag_stats.settings") as mock_settings:
-        mock_settings.vector_backend = "qdrant"
+    with patch("app.api.rag_stats._get_documents_qdrant") as mock_qdrant:
         mock_qdrant.return_value = {"documents": [], "total_docs": 0, "total_chunks": 0}
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -101,9 +99,7 @@ async def test_get_documents_qdrant_empty():
 @pytest.mark.asyncio
 async def test_get_documents_qdrant_with_data():
     """Qdrant backend: returns documents from Qdrant scroll."""
-    with patch("app.api.rag_stats._get_documents_qdrant") as mock_qdrant, \
-         patch("app.api.rag_stats.settings") as mock_settings:
-        mock_settings.vector_backend = "qdrant"
+    with patch("app.api.rag_stats._get_documents_qdrant") as mock_qdrant:
         mock_qdrant.return_value = {
             "documents": [
                 {"title": "RAG Guide", "source": "guide.md", "file_type": "md",
