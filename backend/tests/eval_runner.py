@@ -6,11 +6,9 @@ Generates reports and stores results in the evaluation database.
 Run: cd backend && python -m tests.eval_runner [dataset_name]
 """
 
-import json
 import os
 import sys
 import subprocess
-import time
 from datetime import datetime
 from typing import Dict, Any
 
@@ -33,7 +31,7 @@ def get_recent_changes(n: int = 5) -> list:
     """Get recent git commit messages."""
     try:
         result = subprocess.run(
-            ["git", "log", f"--oneline", f"-{n}"],
+            ["git", "log", "--oneline", f"-{n}"],
             capture_output=True, text=True, timeout=5
         )
         return [line.strip() for line in result.stdout.strip().split("\n") if line.strip()]
@@ -211,25 +209,25 @@ def generate_report(results: Dict[str, Any], output_dir: str = None) -> str:
     changes = results.get("recent_changes", [])
 
     lines = []
-    lines.append(f"# RAG 评估报告")
-    lines.append(f"")
+    lines.append("# RAG 评估报告")
+    lines.append("")
     lines.append(f"**日期**: {timestamp}")
     lines.append(f"**数据集**: {results.get('dataset', {}).get('version', 'N/A')} ({results.get('dataset', {}).get('total', 0)} QA)")
     lines.append(f"**RAG 版本**: main@{results.get('git_version', 'N/A')}")
     lines.append(f"**系统配置**: {config.get('embedding_model', 'N/A')} / {config.get('llm_model', 'N/A')} / {config.get('vector_backend', 'N/A')}")
-    lines.append(f"")
+    lines.append("")
 
     if changes:
-        lines.append(f"**最近改动**:")
+        lines.append("**最近改动**:")
         for change in changes:
             lines.append(f"- {change}")
-        lines.append(f"")
+        lines.append("")
 
     # Retrieval quality
-    lines.append(f"## 检索质量")
-    lines.append(f"")
-    lines.append(f"| 指标 | 分数 | 阈值 | 状态 |")
-    lines.append(f"|------|------|------|------|")
+    lines.append("## 检索质量")
+    lines.append("")
+    lines.append("| 指标 | 分数 | 阈值 | 状态 |")
+    lines.append("|------|------|------|------|")
 
     for name, display, threshold, higher in [
         ("recall_at_3", "Recall@3", 0.85, True),
@@ -243,11 +241,11 @@ def generate_report(results: Dict[str, Any], output_dir: str = None) -> str:
         lines.append(f"| {display} | {val:.3f} | {'≥' if higher else '≤'}{threshold:.2f} | {'✅' if ok else '⚠️'} |")
 
     # Generation quality
-    lines.append(f"")
-    lines.append(f"## 生成质量")
-    lines.append(f"")
-    lines.append(f"| 指标 | 分数 | 阈值 | 状态 |")
-    lines.append(f"|------|------|------|------|")
+    lines.append("")
+    lines.append("## 生成质量")
+    lines.append("")
+    lines.append("| 指标 | 分数 | 阈值 | 状态 |")
+    lines.append("|------|------|------|------|")
 
     for name, display, threshold, higher in [
         ("faithfulness", "Faithfulness", 0.70, True),
@@ -260,19 +258,19 @@ def generate_report(results: Dict[str, Any], output_dir: str = None) -> str:
 
     # Latency
     if results.get("latency_p50_ms"):
-        lines.append(f"")
-        lines.append(f"## 延迟")
-        lines.append(f"")
-        lines.append(f"| 指标 | 值 |")
-        lines.append(f"|------|-----|")
+        lines.append("")
+        lines.append("## 延迟")
+        lines.append("")
+        lines.append("| 指标 | 值 |")
+        lines.append("|------|-----|")
         lines.append(f"| P50 | {results['latency_p50_ms']:.0f}ms |")
         lines.append(f"| P99 | {results.get('latency_p99_ms', 0):.0f}ms |")
         lines.append(f"| Mean | {results.get('latency_mean_ms', 0):.0f}ms |")
 
     # Summary
-    lines.append(f"")
-    lines.append(f"## 总结")
-    lines.append(f"")
+    lines.append("")
+    lines.append("## 总结")
+    lines.append("")
     pass_rate = results.get("deepeval_pass_rate", 0)
     lines.append(f"- **DeepEval Pass Rate**: {pass_rate:.0%}")
     lines.append(f"- **评估耗时**: {results.get('deepeval_elapsed', 0):.1f}s")
@@ -290,10 +288,10 @@ if __name__ == "__main__":
     dataset_name = sys.argv[1] if len(sys.argv) > 1 else "core_regression_27qa"
     skip_db = "--no-db" in sys.argv
 
-    print(f"=" * 60)
-    print(f"  Aureon RAG — Full Evaluation Suite")
+    print("=" * 60)
+    print("  Aureon RAG — Full Evaluation Suite")
     print(f"  Dataset: {dataset_name}")
-    print(f"=" * 60)
+    print("=" * 60)
 
     results = run_full_suite(dataset_name=dataset_name)
 

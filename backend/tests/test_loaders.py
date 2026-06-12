@@ -1,5 +1,4 @@
 """Tests for multi-format document loaders (PDF, DOCX, Excel)."""
-import os
 import pytest
 
 

@@ -1,7 +1,6 @@
 """Tests for multi-query retrieval with cross-article support."""
 
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from app.rag.qa_chain import multi_query_retrieve
 
 
@@ -28,7 +27,7 @@ class TestMultiQueryRetrieve:
             [_make_chunk("llamaindex", score=0.7)],
             [_make_chunk("langchain", score=0.6)],
         ]
-        result = multi_query_retrieve("比较 LangChain 和 LlamaIndex 的 RAG 实现", top_k=3)
+        multi_query_retrieve("比较 LangChain 和 LlamaIndex 的 RAG 实现", top_k=3)
         assert mock_hybrid.call_count >= 2
 
     @patch("app.rag.qa_chain.hybrid_retrieve")
@@ -60,5 +59,5 @@ class TestMultiQueryRetrieve:
     @patch("app.rag.qa_chain.hybrid_retrieve")
     def test_disabled_via_env(self, mock_hybrid):
         mock_hybrid.return_value = [_make_chunk("react-tips")]
-        result = multi_query_retrieve("比较 LangChain 和 LlamaIndex", top_k=3)
+        multi_query_retrieve("比较 LangChain 和 LlamaIndex", top_k=3)
         assert mock_hybrid.call_count == 1

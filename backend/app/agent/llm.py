@@ -127,7 +127,7 @@ def llm_invoke_with_retry(llm, messages):
 def llm_invoke_with_fallback(messages, primary=None, fallback=None, **kwargs):
     """Invoke LLM with automatic fallback on failure.
 
-    Tries primary (DeepSeek) first. On error, falls back to Zhipu.
+    Tries primary (Qwen) first. On error, falls back to Zhipu.
     Creates LLMs automatically if not provided.
     """
     if primary is None:

@@ -1,7 +1,7 @@
 """Security API Router"""
 from typing import Optional
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field
 from app.security import (
     PIIDetector,
     SSOProvider,

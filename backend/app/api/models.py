@@ -10,7 +10,7 @@ class ChatRequest(BaseModel):
         description="用户消息",
     )
     session_id: str | None = None
-    model: Optional[str] = Field(default=None, description="Model name from MODEL_REGISTRY (e.g. 'deepseek', 'zhipu')")
+    model: Optional[str] = Field(default=None, description="Model name from MODEL_REGISTRY (e.g. 'qwen3.6-flash', 'zhipu')")
 
     @field_validator("message")
     @classmethod

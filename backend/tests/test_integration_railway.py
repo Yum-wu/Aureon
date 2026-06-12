@@ -2,7 +2,6 @@
 
 import os
 import pytest
-import asyncio
 
 
 @pytest.mark.skipif(

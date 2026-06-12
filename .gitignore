@@ -80,3 +80,18 @@ backend/=*
 
 # Added by code-review-graph
 .code-review-graph/
+
+# 临时调试文件
+_*.py
+_*.bat
+_eslint_*
+process.exit*
+.playwright-mcp/
+
+# 基准测试临时文件
+backend/bench_*.py
+backend/data/benchmark_*.json
+backend/data/benchmark_*.md
+
+# DeepEval 缓存
+backend/.deepeval/

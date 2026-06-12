@@ -14,8 +14,6 @@ Run with: python -m pytest tests/test_semantic_cache.py -v
 
 import asyncio
 import pytest
-import time
-from unittest.mock import patch, AsyncMock, MagicMock
 
 # Import the semantic cache module
 try:
@@ -110,7 +108,7 @@ def test_exact_cache_key_deterministic(cache):
 
 def test_exact_cache_key_format(cache):
     """Test key format is correct."""
-    key = cache._exact_cache_key("test", "deepseek", 0.0, 500)
+    key = cache._exact_cache_key("test", "qwen3.6-flash", 0.0, 500)
 
     assert key.startswith("semantic:v1:exact:")
     assert len(key) == len("semantic:v1:exact:") + 16  # 16 char hash
@@ -119,35 +117,35 @@ def test_exact_cache_key_format(cache):
 def test_exact_cache_key_normalization(cache):
     """Test key normalizes query properly."""
     # Whitespace and case variations should produce same key
-    key1 = cache._exact_cache_key("What is RAG?", "deepseek", 0.0, 500)
-    key2 = cache._exact_cache_key("  what is rag?  ", "deepseek", 0.0, 500)
+    key1 = cache._exact_cache_key("What is RAG?", "qwen3.6-flash", 0.0, 500)
+    key2 = cache._exact_cache_key("  what is rag?  ", "qwen3.6-flash", 0.0, 500)
 
     assert key1 == key2
 
 
 def test_exact_cache_key_unique_per_params(cache):
     """Test different parameters produce different keys."""
-    base_key = cache._exact_cache_key("test", "deepseek", 0.0, 500)
+    base_key = cache._exact_cache_key("test", "qwen3.6-flash", 0.0, 500)
 
     # Different model
     model_key = cache._exact_cache_key("test", "gpt-4", 0.0, 500)
     assert model_key != base_key
 
     # Different temperature
-    temp_key = cache._exact_cache_key("test", "deepseek", 0.7, 500)
+    temp_key = cache._exact_cache_key("test", "qwen3.6-flash", 0.7, 500)
     assert temp_key != base_key
 
     # Different max_tokens
-    tokens_key = cache._exact_cache_key("test", "deepseek", 0.0, 1000)
+    tokens_key = cache._exact_cache_key("test", "qwen3.6-flash", 0.0, 1000)
     assert tokens_key != base_key
 
 
 def test_semantic_cache_key_format(cache):
     """Test semantic cache key format is correct."""
-    key = cache._semantic_cache_key("deepseek", 0.0, 500, "abc123")
+    key = cache._semantic_cache_key("qwen3.6-flash", 0.0, 500, "abc123")
 
     assert key.startswith("semantic:v1:semantic:")
-    assert "deepseek" in key
+    assert "qwen3.6-flash" in key
     assert "abc123" in key
 
 
@@ -247,7 +245,7 @@ async def test_exact_cache_miss(cache):
     """Test exact cache miss when entry doesn't exist."""
     cached = await cache.get_exact(
         query="nonexistent query",
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -265,7 +263,7 @@ async def test_exact_cache_miss_different_model(cache):
     await cache.set(
         query=query,
         response=response,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -291,7 +289,7 @@ async def test_exact_cache_hit_after_ttl(cache):
     await cache.set(
         query=query,
         response=response,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
         ttl=0,
@@ -303,7 +301,7 @@ async def test_exact_cache_hit_after_ttl(cache):
     # Lookup should miss
     cached = await cache.get_exact(
         query=query,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -319,7 +317,7 @@ async def test_exact_cache_lru_eviction(small_cache):
         await small_cache.set(
             query=f"Query {i}",
             response=f"Response {i}",
-            model="deepseek",
+            model="qwen3.6-flash",
             temperature=0.0,
             max_tokens=500,
         )
@@ -367,7 +365,7 @@ async def test_cache_stats_hit_rate(cache):
         await cache.set(
             query=f"Query {i}",
             response=f"Response {i}",
-            model="deepseek",
+            model="qwen3.6-flash",
             temperature=0.0,
             max_tokens=500,
         )
@@ -376,7 +374,7 @@ async def test_cache_stats_hit_rate(cache):
     for i in range(3):
         await cache.get_exact(
             query=f"Query {i}",
-            model="deepseek",
+            model="qwen3.6-flash",
             temperature=0.0,
             max_tokens=500,
         )
@@ -397,7 +395,7 @@ async def test_cache_stats_in_memory_sizes(cache):
         await cache.set(
             query=f"Query {i}",
             response=f"Response {i}",
-            model="deepseek",
+            model="qwen3.6-flash",
             temperature=0.0,
             max_tokens=500,
         )
@@ -421,7 +419,7 @@ async def test_cache_clear_all(cache):
         await cache.set(
             query=f"Query {i}",
             response=f"Response {i}",
-            model="deepseek",
+            model="qwen3.6-flash",
             temperature=0.0,
             max_tokens=500,
         )
@@ -434,7 +432,7 @@ async def test_cache_clear_all(cache):
     # Verify entries are gone
     cached = await cache.get_exact(
         query="Query 0",
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -456,7 +454,7 @@ async def test_cache_empty_query(cache):
     success = await cache.set(
         query=query,
         response=response,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -465,7 +463,7 @@ async def test_cache_empty_query(cache):
 
     cached = await cache.get_exact(
         query=query,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -482,7 +480,7 @@ async def test_cache_long_query(cache):
     success = await cache.set(
         query=query,
         response=response,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -499,7 +497,7 @@ async def test_cache_unicode_query(cache):
     success = await cache.set(
         query=query,
         response=response,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -508,7 +506,7 @@ async def test_cache_unicode_query(cache):
 
     cached = await cache.get_exact(
         query=query,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -525,7 +523,7 @@ async def test_cache_special_characters(cache):
     success = await cache.set(
         query=query,
         response=response,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )

@@ -39,7 +39,7 @@
       "cost": {
         "value": "~$0.001",
         "label": "每次查询成本",
-        "detail": "DeepSeek pricing"
+        "detail": "Qwen pricing"
       }
     },
     "features_title": "核心功能",

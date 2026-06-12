@@ -1,8 +1,6 @@
 """Tests for concurrency test suite."""
 
 import pytest
-import asyncio
-from unittest.mock import AsyncMock, patch
 
 
 @pytest.mark.asyncio
@@ -29,7 +27,7 @@ async def test_calculate_p99_empty():
 @pytest.mark.asyncio
 async def test_concurrency_levels():
     """Test that concurrency levels are defined."""
-    from app.benchmark.concurrency_test import ConcurrencyTestSuite, CONCURRENCY_LEVELS
+    from app.benchmark.concurrency_test import CONCURRENCY_LEVELS
 
     assert 1 in CONCURRENCY_LEVELS
     assert 100 in CONCURRENCY_LEVELS

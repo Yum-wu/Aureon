@@ -1,8 +1,8 @@
 """Tests for WebSocket connection manager."""
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock
-from datetime import datetime, timedelta
+from unittest.mock import AsyncMock
+from datetime import datetime
 from fastapi import WebSocket, WebSocketDisconnect
 
 from app.api.websocket import WebSocketManager

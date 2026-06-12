@@ -10,8 +10,6 @@ import time
 import os
 import sys
 import statistics
-import json
-from typing import List, Dict
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
@@ -213,7 +211,7 @@ def run_e2e_benchmark():
     print("=" * 70)
 
     # --- Hybrid Retrieval (RRF) ---
-    print(f"\n  === Hybrid Retrieval (RRF) ===")
+    print("\n  === Hybrid Retrieval (RRF) ===")
     print(f"  Total queries:         {len(TEST_QA_PAIRS)}")
     for k in [3, 5, 10]:
         rate = rrf_results["recall"][k] / len(TEST_QA_PAIRS) * 100
@@ -224,19 +222,19 @@ def run_e2e_benchmark():
     print(f"  MRR:                   {rrf_mrr:.3f}  [{'OK' if rrf_mrr >= 0.6 else 'WARN'}]")
     print(f"  Hit Rate:              {rrf_results['hits']}/{len(TEST_QA_PAIRS)} = {rrf_results['hits']/len(TEST_QA_PAIRS)*100:.1f}%")
 
-    print(f"\n  --- RRF Value Analysis ---")
+    print("\n  --- RRF Value Analysis ---")
     print(f"  Vector alone found:    {rrf_results['vector_only_hits']}/{len(TEST_QA_PAIRS)}")
     print(f"  BM25 alone found:      {rrf_results['bm25_only_hits']}/{len(TEST_QA_PAIRS)}")
     print(f"  RRF found (neither):   {rrf_results['rrf_extra']}/{len(TEST_QA_PAIRS)}  <-- RRF unique contribution")
 
     lat_sorted = sorted(rrf_results["latencies"])
-    print(f"\n  --- Retrieval Latency ---")
+    print("\n  --- Retrieval Latency ---")
     print(f"  P50:                   {lat_sorted[len(lat_sorted)//2]:.1f}ms")
     print(f"  P90:                   {lat_sorted[int(len(lat_sorted)*0.9)]:.1f}ms")
     print(f"  Avg:                   {statistics.mean(rrf_results['latencies']):.1f}ms")
 
     # --- E2E RAG ---
-    print(f"\n  === E2E RAG (Retrieval + LLM) ===")
+    print("\n  === E2E RAG (Retrieval + LLM) ===")
     print(f"  Tested:                {len(test_sample)} queries")
 
     # Stage breakdown
@@ -245,7 +243,7 @@ def run_e2e_benchmark():
         for k in stages:
             stages[k].append(sl[k])
 
-    print(f"\n  --- Per-Stage Latency ---")
+    print("\n  --- Per-Stage Latency ---")
     for stage_name, stage_label in [("embed", "Embedding"), ("retrieve", "Retrieval (RRF)"),
                                      ("format", "Context Format"), ("llm", "LLM Generation"),
                                      ("total", "TOTAL")]:
@@ -257,13 +255,13 @@ def run_e2e_benchmark():
     # LLM contribution
     llm_pct = statistics.mean(stages["llm"]) / statistics.mean(stages["total"]) * 100
     retrieve_pct = statistics.mean(stages["retrieve"]) / statistics.mean(stages["total"]) * 100
-    print(f"\n  --- Time Distribution ---")
+    print("\n  --- Time Distribution ---")
     print(f"  LLM Generation:        {llm_pct:.0f}% of total")
     print(f"  Retrieval (RRF):       {retrieve_pct:.0f}% of total")
     print(f"  Embedding + Format:    {100-llm_pct-retrieve_pct:.0f}% of total")
 
     # Quality
-    print(f"\n  --- Answer Quality ---")
+    print("\n  --- Answer Quality ---")
     avg_relevance = statistics.mean([q["relevance"] for q in e2e_results["quality_scores"]])
     avg_completeness = statistics.mean([q["completeness"] for q in e2e_results["quality_scores"]])
     faithful_count = sum(1 for q in e2e_results["quality_scores"] if q["faithful"])
@@ -272,7 +270,7 @@ def run_e2e_benchmark():
     print(f"  Faithful:              {faithful_count}/{len(test_sample)} = {faithful_count/len(test_sample)*100:.0f}%")
 
     # Sample answers
-    print(f"\n  --- Sample Answers ---")
+    print("\n  --- Sample Answers ---")
     for item in e2e_results["answers"][:3]:
         print(f"  Q: {item['query'][:60]}...")
         print(f"  A: {item['answer'][:100]}...")

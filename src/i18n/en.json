@@ -39,7 +39,7 @@
       "cost": {
         "value": "~$0.001",
         "label": "Cost per Query",
-        "detail": "DeepSeek pricing"
+        "detail": "Qwen pricing"
       }
     },
     "features_title": "Core Capabilities",

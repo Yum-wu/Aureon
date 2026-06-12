@@ -1,9 +1,8 @@
 """
 Tests for Memory Manager: session tracking, background tasks, flush.
 """
-import pytest
 import time
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from app.memory.manager import MemoryManager
 
 

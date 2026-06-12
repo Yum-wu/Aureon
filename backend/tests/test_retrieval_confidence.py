@@ -1,5 +1,4 @@
 """Tests for CRAG retrieval confidence gating."""
-import pytest
 from app.rag.retrieval_confidence import (
     evaluate_retrieval_confidence,
     build_answer_with_confidence,

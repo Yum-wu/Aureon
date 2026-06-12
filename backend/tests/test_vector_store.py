@@ -1,8 +1,6 @@
 """Tests for app.rag.vector_store — utility functions, BM25, format, diversity."""
 
-import numpy as np
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from app.rag.vector_store import (
     _cache_key,

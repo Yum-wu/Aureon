@@ -1,6 +1,5 @@
 """Tests for nested config structure (TDD Phase 1.1)."""
 
-import pytest
 from app.config import Settings
 
 

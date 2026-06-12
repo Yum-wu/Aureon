@@ -10,13 +10,12 @@ Implements RAGAS-standard metrics via DeepEval:
 Run: cd backend && python -m tests.deepeval_eval
 """
 
-import json
 import os
 import re
 import sys
 import time
 import logging
-from typing import List, Dict, Any, Callable, Optional
+from typing import List, Dict, Any, Callable
 from difflib import SequenceMatcher
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))

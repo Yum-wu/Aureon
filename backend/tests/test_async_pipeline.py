@@ -1,7 +1,6 @@
 """Tests for async RAG pipeline."""
 import pytest
-import asyncio
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch, AsyncMock
 
 
 class TestAsyncPipeline:

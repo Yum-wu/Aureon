@@ -8,7 +8,6 @@ Covers:
 - Strategy selection (direct, cot, few_shot, en/zh)
 """
 
-import pytest
 from unittest.mock import MagicMock, patch
 from app.rag.prompt_experiment import (
     run_experiment,

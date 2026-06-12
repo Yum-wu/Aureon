@@ -5,8 +5,6 @@ Uses mocks to avoid model downloads on CI. Real model tests are in
 test_embed_gpu_integration.py (run locally with GPU).
 """
 import sys
-import pytest
-import numpy as np
 from unittest.mock import patch, MagicMock
 
 
@@ -34,7 +32,7 @@ class TestGPUEmbeddingUnit:
 
     def test_singleton_embedder(self):
         """get_gpu_embedder returns same instance."""
-        from app.rag.embed_gpu import get_gpu_embedder, _embedder_instance
+        from app.rag.embed_gpu import get_gpu_embedder
         # Reset singleton for test
         import app.rag.embed_gpu as mod
         mod._embedder_instance = None

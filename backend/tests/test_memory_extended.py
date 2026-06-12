@@ -11,22 +11,19 @@ Covers:
 import pytest
 import time
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
-from app.memory.db import init_db, get_db
-from app.memory.l0_conversation import record_message
+from app.memory.db import init_db
 from app.memory.l1_atom import save_atom
 from app.memory.l2_scenario import (
     finalize_scenario,
     get_recent_scenarios,
     _list_scenarios,
-    _cleanup_old_scenarios,
     SCENARIOS_DIR,
 )
 from app.memory.l3_persona import (
     update_persona,
     get_persona,
-    PERSONA_PATH,
 )
 from app.memory.offload import (
     offload_if_needed,
@@ -210,7 +207,6 @@ class TestOffloadExtended:
 
     def test_read_ref_valid_file(self):
         """read_ref returns file content for valid path."""
-        content = "Test offloaded content"
         offload_if_needed("tool", "x" * 2000, "sess_read")
 
         files = list(REFS_DIR.glob("sess_read_tool_*.md"))

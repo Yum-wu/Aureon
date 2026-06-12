@@ -1,7 +1,7 @@
 """Tests for app.main — health, langgraph_run, exception handler, middleware."""
 
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, patch
 from httpx import AsyncClient, ASGITransport
 
 from app.main import app
@@ -87,7 +87,6 @@ async def test_crew_generate_import_error():
 @pytest.mark.asyncio
 async def test_aureon_exception_handler():
     """When Redis is unavailable, get_stats returns 200 with default values (graceful degradation)."""
-    from app.exceptions import RedisUnavailableError
     app.dependency_overrides[get_redis_or_none] = lambda: None
 
     with patch("app.cache.redis_client._get_redis", return_value=None):

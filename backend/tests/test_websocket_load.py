@@ -19,9 +19,9 @@ import sys
 import time
 import statistics
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Optional
 from dataclasses import dataclass, field
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -109,7 +109,7 @@ async def test_websocket_manager_unit(target: int = TARGET_CONNECTIONS) -> LoadT
     print(f"    Connection order length: {len(manager._connection_order)}")
 
     # Phase 2: Verify connection state
-    print(f"\n  [Phase 2] Verifying connection state...")
+    print("\n  [Phase 2] Verifying connection state...")
     assert actual_connected == target, f"Expected {target} connections, got {actual_connected}"
     for i in range(target):
         client_id = f"load-test-{i}"
@@ -121,7 +121,7 @@ async def test_websocket_manager_unit(target: int = TARGET_CONNECTIONS) -> LoadT
     print(f"    All {target} connections verified in active_connections dict")
 
     # Phase 3: Heartbeat under load
-    print(f"\n  [Phase 3] Heartbeat under load...")
+    print("\n  [Phase 3] Heartbeat under load...")
     for i in range(target):
         client_id = f"load-test-{i}"
         manager.update_heartbeat(client_id)
@@ -159,7 +159,7 @@ async def test_websocket_manager_unit(target: int = TARGET_CONNECTIONS) -> LoadT
     assert len(manager.active_connections) == 0, "All connections should be disconnected"
     assert len(manager.connection_metadata) == 0, "All metadata should be cleaned up"
     assert len(manager._connection_order) == 0, "Connection order should be empty"
-    print(f"    All connections cleaned up successfully")
+    print("    All connections cleaned up successfully")
 
     total_ms = (time.perf_counter() - start) * 1000
 
@@ -225,7 +225,7 @@ async def test_websocket_live(target: int = TARGET_CONNECTIONS) -> LoadTestResul
     start = time.perf_counter()
 
     print(f"\n  Connecting {target} WebSocket clients to {LIVE_URL}...")
-    print(f"  (This may take a moment due to connection ramp-up)")
+    print("  (This may take a moment due to connection ramp-up)")
 
     # Connect in batches to avoid overwhelming
     batch_size = 50
@@ -263,7 +263,7 @@ async def test_websocket_live(target: int = TARGET_CONNECTIONS) -> LoadTestResul
     results.errors = errors
     results.total_time_ms = total_ms
 
-    print(f"\n  Results:")
+    print("\n  Results:")
     print(f"    Connected:       {successful}/{target}")
     print(f"    Welcome msg:     {welcome_ok}/{successful}")
     print(f"    Heartbeat ack:   {heartbeat_ok}/{successful}")
@@ -299,7 +299,7 @@ def print_results(results: LoadTestResults):
         times = results.connection_times_ms
         sorted_times = sorted(times)
         n = len(sorted_times)
-        print(f"\n  Connection latency:")
+        print("\n  Connection latency:")
         print(f"    Mean:   {statistics.mean(times):.1f}ms")
         print(f"    P50:    {sorted_times[n//2]:.1f}ms")
         print(f"    P90:    {sorted_times[int(n*0.9)]:.1f}ms")
@@ -320,7 +320,7 @@ def print_results(results: LoadTestResults):
 
     if results.errors:
         unique_errors = list(set(results.errors))[:5]
-        print(f"\n  Sample errors:")
+        print("\n  Sample errors:")
         for e in unique_errors:
             print(f"    - {e}")
 

@@ -14,11 +14,11 @@ Test coverage:
 import asyncio
 import pytest
 import time
-from unittest.mock import patch, AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 # Import the semantic cache module
 try:
-    from app.cache.semantic_cache import SemanticLLMCache, get_semantic_cache
+    from app.cache.semantic_cache import SemanticLLMCache
     from app.cache.redis_client import (
         get_cached_with_semantic,
         set_cached_with_semantic,
@@ -165,9 +165,9 @@ async def test_exact_cache_hit_in_memory(mock_redis):
     cache._redis = mock_redis
 
     # Lookup should hit in-memory first
-    result = await cache.get_exact(
+    await cache.get_exact(
         query="test query",
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -198,7 +198,7 @@ async def test_exact_cache_hit_redis_fallback(semantic_cache):
     )
 
     # Get the exact key
-    cache_key = semantic_cache._exact_cache_key(
+    semantic_cache._exact_cache_key(
         query, model, temperature, max_tokens
     )
 
@@ -238,7 +238,7 @@ async def test_semantic_cache_hit(semantic_cache):
     await semantic_cache.set(
         query=original_query,
         response=response,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -246,7 +246,7 @@ async def test_semantic_cache_hit(semantic_cache):
     # Query with similar phrasing
     result = await semantic_cache.get_semantic(
         query=similar_query,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -272,15 +272,15 @@ async def test_semantic_cache_hit_different_language(semantic_cache):
     await semantic_cache.set(
         query=query_en,
         response=response,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
 
     # Query in Chinese (may or may not hit depending on model)
-    result = await semantic_cache.get_semantic(
+    await semantic_cache.get_semantic(
         query=query_zh,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -297,13 +297,12 @@ async def test_semantic_cache_hit_with_different_temperature(semantic_cache):
     """
     query = "What is deep learning?"
     response1 = "Deep learning uses neural networks."  # temp=0.0
-    response2 = "Deep learning is a machine learning approach."  # temp=0.7
 
     # Store with temperature=0.0
     await semantic_cache.set(
         query=query,
         response=response1,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -311,7 +310,7 @@ async def test_semantic_cache_hit_with_different_temperature(semantic_cache):
     # Query with temperature=0.7 (should not match)
     result = await semantic_cache.get_semantic(
         query=query,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.7,  # Different temperature
         max_tokens=500,
     )
@@ -339,7 +338,7 @@ async def test_cache_miss_unrelated_query(semantic_cache):
     await semantic_cache.set(
         query=original_query,
         response=response,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -347,14 +346,14 @@ async def test_cache_miss_unrelated_query(semantic_cache):
     # Query completely different topic
     result_exact = await semantic_cache.get_exact(
         query=unrelated_query,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
 
     result_semantic = await semantic_cache.get_semantic(
         query=unrelated_query,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -377,7 +376,7 @@ async def test_cache_miss_expired_entry(semantic_cache):
     await semantic_cache.set(
         query=query,
         response=response,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
         ttl=0,  # Expires immediately
@@ -389,7 +388,7 @@ async def test_cache_miss_expired_entry(semantic_cache):
     # Lookup should miss
     result = await semantic_cache.get_exact(
         query=query,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -406,11 +405,11 @@ async def test_cache_miss_different_model(semantic_cache):
     query = "What is natural language processing?"
     response = "NLP is a field of AI."
 
-    # Store with model="deepseek"
+    # Store with model="qwen3.6-flash"
     await semantic_cache.set(
         query=query,
         response=response,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -472,7 +471,7 @@ async def test_cache_stats_hit_rate(semantic_cache):
         await semantic_cache.set(
             query=f"Query {i}",
             response=f"Response {i}",
-            model="deepseek",
+            model="qwen3.6-flash",
             temperature=0.0,
             max_tokens=500,
         )
@@ -481,7 +480,7 @@ async def test_cache_stats_hit_rate(semantic_cache):
     for i in range(3):
         await semantic_cache.get_exact(
             query=f"Query {i}",
-            model="deepseek",
+            model="qwen3.6-flash",
             temperature=0.0,
             max_tokens=500,
         )
@@ -508,7 +507,7 @@ async def test_cache_stats_memory_size(semantic_cache):
         await semantic_cache.set(
             query=f"Test query {i}",
             response=f"Test response {i}",
-            model="deepseek",
+            model="qwen3.6-flash",
             temperature=0.0,
             max_tokens=500,
         )
@@ -536,7 +535,7 @@ async def test_cache_clear_all(semantic_cache):
         await semantic_cache.set(
             query=f"Query {i}",
             response=f"Response {i}",
-            model="deepseek",
+            model="qwen3.6-flash",
             temperature=0.0,
             max_tokens=500,
         )
@@ -550,7 +549,7 @@ async def test_cache_clear_all(semantic_cache):
     # Verify entries are gone
     result = await semantic_cache.get_exact(
         query="Query 0",
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -567,18 +566,18 @@ async def test_cache_clear_by_prefix(semantic_cache):
     await semantic_cache.set(
         query="Query 1",
         response="Response 1",
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
 
     # Clear with non-matching prefix (should not clear anything)
-    cleared = await semantic_cache.clear(prefix="nonexistent")
+    await semantic_cache.clear(prefix="nonexistent")
 
     # Verify entry still exists
     result = await semantic_cache.get_exact(
         query="Query 1",
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -653,10 +652,10 @@ def test_exact_cache_key_deterministic(semantic_cache):
     Verifies that same inputs produce the same key.
     """
     key1 = semantic_cache._exact_cache_key(
-        "test query", "deepseek", 0.0, 500
+        "test query", "qwen3.6-flash", 0.0, 500
     )
     key2 = semantic_cache._exact_cache_key(
-        "test query", "deepseek", 0.0, 500
+        "test query", "qwen3.6-flash", 0.0, 500
     )
 
     assert key1 == key2, "Same inputs should produce same key"
@@ -668,7 +667,7 @@ def test_exact_cache_key_format(semantic_cache):
     Verifies key format: semantic:v1:exact:{hash}
     """
     key = semantic_cache._exact_cache_key(
-        "test query", "deepseek", 0.0, 500
+        "test query", "qwen3.6-flash", 0.0, 500
     )
 
     assert key.startswith("semantic:v1:exact:"), f"Key should start with 'semantic:v1:exact:': {key}"
@@ -681,16 +680,16 @@ def test_exact_cache_key_changes_with_params(semantic_cache):
     Verifies that changing any parameter produces a different key.
     """
     key1 = semantic_cache._exact_cache_key(
-        "test query", "deepseek", 0.0, 500
+        "test query", "qwen3.6-flash", 0.0, 500
     )
     key2 = semantic_cache._exact_cache_key(
         "test query", "gpt-4", 0.0, 500  # Different model
     )
     key3 = semantic_cache._exact_cache_key(
-        "test query", "deepseek", 0.7, 500  # Different temperature
+        "test query", "qwen3.6-flash", 0.7, 500  # Different temperature
     )
     key4 = semantic_cache._exact_cache_key(
-        "test query", "deepseek", 0.0, 1000  # Different max_tokens
+        "test query", "qwen3.6-flash", 0.0, 1000  # Different max_tokens
     )
 
     assert key1 != key2, "Different model should produce different key"
@@ -717,7 +716,7 @@ async def test_in_memory_cache_lru_eviction(semantic_cache):
         await semantic_cache.set(
             query=f"Query {i}",
             response=f"Response {i}",
-            model="deepseek",
+            model="qwen3.6-flash",
             temperature=0.0,
             max_tokens=500,
         )
@@ -740,7 +739,7 @@ async def test_in_memory_cache_ttl_expiry(semantic_cache):
     await semantic_cache.set(
         query="Short TTL query",
         response="Short TTL response",
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
         ttl=0,  # Expires immediately
@@ -752,7 +751,7 @@ async def test_in_memory_cache_ttl_expiry(semantic_cache):
     # Lookup should miss
     result = await semantic_cache.get_exact(
         query="Short TTL query",
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -790,7 +789,7 @@ async def test_redis_set_and_get(semantic_cache):
     semantic_cache._mem_exact_cache.clear()
 
     # Get from Redis
-    cached = await semantic_cache.get_exact(
+    await semantic_cache.get_exact(
         query=query,
         model=model,
         temperature=temperature,
@@ -815,7 +814,7 @@ async def test_redis_graceful_fallback(semantic_cache):
     success = await semantic_cache.set(
         query="Fallback test",
         response="In-memory answer",
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -825,7 +824,7 @@ async def test_redis_graceful_fallback(semantic_cache):
     # Get from cache
     cached = await semantic_cache.get_exact(
         query="Fallback test",
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -852,7 +851,7 @@ async def test_two_layer_cache_exact_then_semantic():
     await set_cached_with_semantic(
         query=query,
         response=response,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -860,7 +859,7 @@ async def test_two_layer_cache_exact_then_semantic():
     # Lookup same query (should hit exact cache)
     result = await get_cached_with_semantic(
         query=query,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -884,15 +883,15 @@ async def test_two_layer_cache_semantic_fallback():
     await set_cached_with_semantic(
         query=original_query,
         response=response,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
 
     # Lookup with similar phrasing (should hit semantic cache)
-    result = await get_cached_with_semantic(
+    await get_cached_with_semantic(
         query=similar_query,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -914,7 +913,7 @@ async def test_two_layer_cache_miss():
     await set_cached_with_semantic(
         query=query,
         response=response,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -922,7 +921,7 @@ async def test_two_layer_cache_miss():
     # Lookup completely different query
     result = await get_cached_with_semantic(
         query="How to make pasta?",
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -1000,7 +999,7 @@ async def test_cache_empty_query(semantic_cache):
     success = await semantic_cache.set(
         query=query,
         response=response,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -1010,7 +1009,7 @@ async def test_cache_empty_query(semantic_cache):
     # Get
     cached = await semantic_cache.get_exact(
         query=query,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -1031,7 +1030,7 @@ async def test_cache_long_query(semantic_cache):
     success = await semantic_cache.set(
         query=query,
         response=response,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -1052,7 +1051,7 @@ async def test_cache_special_characters(semantic_cache):
     success = await semantic_cache.set(
         query=query,
         response=response,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -1062,7 +1061,7 @@ async def test_cache_special_characters(semantic_cache):
     # Get
     cached = await semantic_cache.get_exact(
         query=query,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -1083,7 +1082,7 @@ async def test_cache_unicode_query(semantic_cache):
     success = await semantic_cache.set(
         query=query,
         response=response,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )
@@ -1093,7 +1092,7 @@ async def test_cache_unicode_query(semantic_cache):
     # Get
     cached = await semantic_cache.get_exact(
         query=query,
-        model="deepseek",
+        model="qwen3.6-flash",
         temperature=0.0,
         max_tokens=500,
     )

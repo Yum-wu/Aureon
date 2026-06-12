@@ -5,7 +5,6 @@ Note: rewrite_query and expand_queries were removed as dead code (LLM-based
 versions never called in production). Only rule-based functions are tested.
 """
 
-import pytest
 
 from app.rag.query_rewriter import (
     is_cross_article_query,

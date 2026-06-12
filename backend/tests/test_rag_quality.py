@@ -9,7 +9,6 @@ Usage:
 
 import os
 import sys
-import time
 import pytest
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
@@ -65,7 +64,8 @@ def evaluation_results():
         return rag_query(query, llm_call_fn=lambda msgs: llm.invoke(msgs).content, top_k=3)
 
     # 用超时保护包裹 rag_query_fn
-    safe_rag_query_fn = lambda query: _rag_query_with_timeout(rag_query_fn, query)
+    def safe_rag_query_fn(query):
+        return _rag_query_with_timeout(rag_query_fn, query)
 
     article_texts = _load_article_texts()
     test_cases, used_qa_indices = build_test_cases(
@@ -146,7 +146,7 @@ class TestRAGQualityGate:
 def ragas_evaluation_results():
     """Run RAGAS evaluation once per test module."""
     from tests.test_data_golden import load_dataset, get_dataset_info
-    from app.rag.qa_chain import hybrid_retrieve, rag_query
+    from app.rag.qa_chain import rag_query
     from app.agent.llm import create_llm
     from app.rag.evaluator import run_ragas_evaluation, RAGAS_AVAILABLE
 
@@ -163,7 +163,8 @@ def ragas_evaluation_results():
         return rag_query(query, llm_call_fn=lambda msgs: llm.invoke(msgs).content, top_k=3)
 
     # 用超时保护包裹 rag_query_fn
-    safe_rag_query_fn = lambda query: _rag_query_with_timeout(rag_query_fn, query)
+    def safe_rag_query_fn(query):
+        return _rag_query_with_timeout(rag_query_fn, query)
 
     scores = run_ragas_evaluation(safe_rag_query_fn, qa_pairs=qa_pairs)
     scores["dataset_info"] = info

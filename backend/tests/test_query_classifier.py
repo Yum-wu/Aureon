@@ -2,7 +2,6 @@
 Tests for query complexity classifier.
 """
 
-import pytest
 from app.rag.query_classifier import classify_query_complexity, get_reranking_strategy
 
 

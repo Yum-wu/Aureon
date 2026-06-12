@@ -11,7 +11,6 @@ import os
 import sys
 import statistics
 import tracemalloc
-from typing import List, Dict
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
@@ -169,7 +168,7 @@ def run_full_benchmark():
     print(f"  Documents in index:       {doc_count}")
     print(f"  Chunks in index:          {chunk_count}")
 
-    print(f"\n  --- Vector Search ---")
+    print("\n  --- Vector Search ---")
     for k in [3, 5, 10]:
         rate = vector_results["recall"][k] / total_qa * 100
         target = "OK" if rate >= 80 else "WARN"
@@ -189,7 +188,7 @@ def run_full_benchmark():
     print(f"  Latency P99:            {v_lat_sorted[int(len(v_lat_sorted)*0.99)]:.1f}ms")
     print(f"  Latency Avg:            {statistics.mean(v_lat):.1f}ms")
 
-    print(f"\n  --- BM25 Keyword Search ---")
+    print("\n  --- BM25 Keyword Search ---")
     for k in [3, 5, 10]:
         rate = bm25_results["recall"][k] / total_qa * 100
         target = "OK" if rate >= 70 else "WARN"
@@ -205,12 +204,12 @@ def run_full_benchmark():
     print(f"  Latency P50:            {b_lat_sorted[len(b_lat_sorted)//2]:.1f}ms")
     print(f"  Latency Avg:            {statistics.mean(b_lat):.1f}ms")
 
-    print(f"\n  --- Embedding Cache ---")
+    print("\n  --- Embedding Cache ---")
     print(f"  Cold (API):             {t_cold*1000:.0f}ms")
     print(f"  Warm (cache):           {avg_warm*1000:.2f}ms")
     print(f"  Speedup:                {t_cold/avg_warm:.0f}x" if avg_warm > 0 else "  Speedup: N/A")
 
-    print(f"\n  --- Category Breakdown (Vector) ---")
+    print("\n  --- Category Breakdown (Vector) ---")
     categories = {}
     for qa in TEST_QA_PAIRS:
         cat = qa.get("category", "unknown")

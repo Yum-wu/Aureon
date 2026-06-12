@@ -114,8 +114,6 @@ async def test_rag_benchmark():
 @pytest.mark.asyncio
 async def test_upload_requires_api_key_when_configured():
     """When BLOG_SYNC_API_KEY is set, upload requires valid API key."""
-    import io
-    import os
 
     # Mock file upload
     mock_file = MagicMock()

@@ -3,7 +3,6 @@
 import pytest
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
-from typing import AsyncIterator
 from fastapi import WebSocket, WebSocketDisconnect
 
 from app.api.websocket_chat import websocket_chat

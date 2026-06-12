@@ -1,7 +1,5 @@
 """Tests for A/B Testing Framework for Re-ranking Strategies."""
 import pytest
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
 from app.evaluation.reranking_ab_test import RerankingABTest, ABTestResult
 
 

@@ -9,9 +9,7 @@ Tests:
 """
 
 import pytest
-import asyncio
-from unittest.mock import AsyncMock, patch
-import json
+from unittest.mock import AsyncMock
 
 from app.api.websocket import WebSocketManager
 from app.api.conversation_manager import ConversationManager
