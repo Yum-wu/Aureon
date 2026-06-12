@@ -101,6 +101,104 @@ Aureon/
 | L3 | offloads/persona.md | 用户画像 (≤2KB) |
 | 卸载 | offloads/refs/*.md | 长工具输出外存 |
 
+## 测试体系
+
+### 测试金字塔
+
+```
+                    ┌─────────────┐
+                    │  生产冒烟    │  @pytest.mark.smoke
+                    │  (3-5 测试)  │  每次部署后手动跑
+                   ┌┴─────────────┴┐
+                   │  质量门禁      │  @pytest.mark.quality
+                   │  (DeepEval)   │  本地手动 / 合并前跑
+                  ┌┴───────────────┴┐
+                  │  性能基准        │  @pytest.mark.benchmark
+                  │  (延迟/QPS/并发) │  本地手动跑
+                 ┌┴─────────────────┴┐
+                 │  单元测试          │  无 marker（CI 默认跑）
+                 │  (753 tests)      │  每次 push 自动跑
+                 └───────────────────┘
+```
+
+### Marker 体系
+
+| Marker | 用途 | 运行环境 | CI |
+|--------|------|---------|-----|
+| （无） | 单元测试 | CI + 本地 | 自动跑 |
+| `integration` | 需外部服务（Qdrant/LLM API） | 本地 | 默认跳过 |
+| `benchmark` | 检索性能基准（延迟/Recall@K/MRR/QPS/并发） | 本地 | 跳过 |
+| `quality` | DeepEval 质量门禁（走完整 rag_query pipeline） | 本地 | 跳过 |
+| `smoke` | 生产冒烟（Railway 端点可达性） | 本地/部署后 | 跳过 |
+
+### 测试文件结构
+
+```
+backend/tests/
+├── benchmark_enterprise.py    # 统一基准测试（benchmark/quality/smoke 三层）
+├── benchmark_config.yaml      # QA 数据集 + 阈值 + 端点配置
+├── deepeval_eval.py           # DeepEval 评判逻辑（build_test_cases + run_deepeval_metrics）
+├── test_data_golden.py        # 黄金数据集
+├── conftest.py                # 全局 fixture（_bypass_rbac autouse）
+└── test_*.py                  # 单元测试
+```
+
+### 运行命令
+
+```bash
+# CI 默认（仅单元测试，跳过所有 marker）
+cd backend && python -m pytest tests/ -v
+
+# 本地：仅检索性能基准
+cd backend && python -m pytest tests/benchmark_enterprise.py -m benchmark -v
+
+# 本地：仅 DeepEval 质量门禁
+cd backend && python -m pytest tests/benchmark_enterprise.py -m quality -v
+
+# 本地：仅生产冒烟
+cd backend && python -m pytest tests/benchmark_enterprise.py -m smoke -v
+
+# 本地：全量基准测试（性能 + 质量 + 冒烟）
+cd backend && python -m pytest tests/benchmark_enterprise.py -m "benchmark or quality or smoke" -v
+
+# 本地：所有测试（含集成）
+cd backend && python -m pytest tests/ -m "" -v
+
+# Lint 检查
+cd backend && python -m ruff check tests/
+```
+
+### benchmark_config.yaml 结构
+
+```yaml
+qa_dataset:          # QA 数据集（1000+ 文档时扩展到 100+ 条）
+  - question: "..."
+    expected_answer: "..."
+    source_article: "slug"
+    is_negative: false
+
+thresholds:          # 性能阈值（调参只改 YAML，不改代码）
+  retrieval:         # 检索：P50≤200ms, P99≤1000ms, Recall@5≥0.95
+  generation:        # 生成：P50≤2s, P99≤5s
+  quality:           # 质量：Faithfulness≥0.7, AnswerRelevancy≥0.75
+  cache:             # 缓存：命中率≥0.6
+  smoke:             # 冒烟：health≤10s, rag_query≤30s
+
+endpoints:           # 端点配置
+  production: "https://aureon-production-1247.up.railway.app"
+  local: "http://localhost:8000"
+
+concurrency:         # 并发测试参数
+  levels: [1, 5, 10]
+```
+
+### 质量门禁关键设计
+
+- **走完整 rag_query() pipeline**：HyDE → 检索 → CRAG 自纠正 → 压缩 → 负例检测 → 生成
+- **超时保护**：单次查询 60s + 整体评估 300s
+- **并发数据准备**：`asyncio.gather` + `Semaphore(10)` 并发构建 test cases
+- **DeepEval 配置**：`AsyncConfig(max_concurrent=15)` + `CacheConfig(use_cache=True)`
+
 ## 构建
 
 ```bash
