@@ -215,7 +215,7 @@ async def _stream_rag_response(
     from app.agent.llm import create_llm
 
     # Create LLM instance
-    llm = create_llm(model="deepseek", temperature=0.0, streaming=True)
+    llm = create_llm(temperature=0.0, streaming=True)
 
     # Track full response for conversation history
     full_response = ""
@@ -257,7 +257,7 @@ async def _stream_rag_response(
         conv_manager.add_assistant_turn(
             conversation_id,
             full_response,
-            metadata={"sources": sources, "model": "deepseek"},
+            metadata={"sources": sources, "model": "qwen3.6-flash"},
         )
 
         # Send completion signal

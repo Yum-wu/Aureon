@@ -30,14 +30,14 @@ class ConcurrencyConfig:
             mode = settings.benchmark_mode.lower()
             if mode == "railway":
                 self.semaphores = {
-                    "deepseek-chat": int(os.getenv("LLM_SEMAPHORE_DEEPSEEK", "80")),
+                    "qwen3.6-flash": int(os.getenv("LLM_SEMAPHORE_QWEN", "80")),
                     "dashscope-embedding": int(os.getenv("LLM_SEMAPHORE_EMBEDDING", "80")),
                     "rag_pipeline": int(os.getenv("RAG_SEMAPHORE", "80")),
                     "rerank": int(os.getenv("RERANK_SEMAPHORE", "40")),
                 }
             else:
                 self.semaphores = {
-                    "deepseek-chat": 30,
+                    "qwen3.6-flash": 30,
                     "dashscope-embedding": 50,
                     "rag_pipeline": 40,
                     "rerank": 20,
@@ -48,7 +48,7 @@ class ConcurrencyConfig:
 PRICING = {
     "dashscope_embedding": 0.00007,   # $0.07/1M tokens
     "dashscope_rerank": 0.0001,       # $0.1/1M tokens
-    "deepseek_chat": 0.00028,         # $0.28/1M input
+    "qwen_flash": 0.00028,            # 通义千问 Flash 定价
 }
 
 

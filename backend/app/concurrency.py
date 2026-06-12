@@ -22,7 +22,7 @@ QUEUE_TIMEOUT_SECONDS = settings.queue_timeout_seconds
 
 # LLM API semaphores (per model)
 _LLM_SEMAPHORES: Dict[str, asyncio.Semaphore] = {
-    "deepseek-chat": asyncio.Semaphore(settings.llm_semaphore_deepseek),
+    "qwen3.6-flash": asyncio.Semaphore(settings.llm_semaphore_qwen),
     "deepseek-reasoner": asyncio.Semaphore(settings.llm_semaphore_reasoner),
     "dashscope-embedding": asyncio.Semaphore(settings.llm_semaphore_embedding),
 }
@@ -39,7 +39,7 @@ async def llm_call_with_semaphore(model: str):
     """Rate-limit LLM API calls by model.
 
     Usage:
-        async with llm_call_with_semaphore("deepseek-chat"):
+        async with llm_call_with_semaphore("qwen3.6-flash"):
             result = await llm.ainvoke(prompt)
     """
     sem = _LLM_SEMAPHORES.get(model, _DEFAULT_LLM_SEMAPHORE)

@@ -359,7 +359,7 @@ def get_cache_metrics() -> Dict[str, Any]:
 
 async def get_cached_with_semantic(
     query: str,
-    model: str = "deepseek",
+    model: str = "qwen3.6-flash",
     temperature: float = 0.0,
     max_tokens: int = 500,
 ) -> Optional[str]:
@@ -436,7 +436,7 @@ async def get_cached_with_semantic(
 async def set_cached_with_semantic(
     query: str,
     response: str,
-    model: str = "deepseek",
+    model: str = "qwen3.6-flash",
     temperature: float = 0.0,
     max_tokens: int = 500,
     ttl: int = 3600,

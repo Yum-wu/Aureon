@@ -44,7 +44,7 @@ class TestRecordTokens:
     def test_record_tokens_maps_to_llm_field(self):
         """input + output tokens are stored in the llm and total fields."""
         tracker = CostTracker()
-        tracker.record_tokens(input_tokens=300, output_tokens=120, model="deepseek-chat")
+        tracker.record_tokens(input_tokens=300, output_tokens=120, model="qwen3.6-flash")
         assert len(tracker.usages) == 1
         usage = tracker.usages[0]
         assert usage.embedding == 0
@@ -56,9 +56,9 @@ class TestRecordTokens:
         """The model kwarg is currently accepted-but-ignored; ensure no error."""
         tracker = CostTracker()
         # The signature accepts a model parameter; we accept any string and
-        # simply use the deepseek_chat pricing row. This guards against a
+        # simply use the qwen_flash pricing row. This guards against a
         # future change that would break callers passing the default.
-        tracker.record_tokens(input_tokens=10, output_tokens=0, model="deepseek-chat")
+        tracker.record_tokens(input_tokens=10, output_tokens=0, model="qwen3.6-flash")
         assert tracker.usages[0].llm == 10
 
     def test_record_tokens_zero_values(self):
@@ -80,17 +80,17 @@ class TestRecordTokens:
 
 
 # ── summary() LLM cost (added in commit 7c48098) ──
-# The bug-fix commit added llm_cost = total.llm * PRICING["deepseek_chat"] / 1000
+# The bug-fix commit added llm_cost = total.llm * PRICING["qwen_flash"] / 1000
 # to the summary. Existing tests only asserted cost > 0; this asserts the
 # exact arithmetic so a future pricing-table change cannot silently break it.
 
 
 class TestSummaryLLMCost:
     def test_llm_cost_arithmetic_matches_pricing_table(self):
-        """llm_cost must equal (llm_tokens * deepseek_chat_price) / 1000."""
+        """llm_cost must equal (llm_tokens * qwen_flash_price) / 1000."""
         tracker = CostTracker()
         tracker.record_tokens(input_tokens=1000, output_tokens=1000)  # 2000 llm tokens
-        expected = 2000 * PRICING["deepseek_chat"] / 1000
+        expected = 2000 * PRICING["qwen_flash"] / 1000
         summary = tracker.summary()
         assert summary["estimated_cost_usd"] == pytest.approx(round(expected, 4))
 
@@ -115,7 +115,7 @@ class TestSummaryLLMCost:
         tracker.record(TokenUsage(embedding=0, rerank=0, llm=1000, total=1000))
         tracker.record(TokenUsage(embedding=0, rerank=0, llm=1000, total=1000))
         # Total cost is computed in summary() as llm * PRICING / 1000 = 0.00056
-        raw_total_cost = 2000 * PRICING["deepseek_chat"] / 1000
+        raw_total_cost = 2000 * PRICING["qwen_flash"] / 1000
         summary = tracker.summary()
         assert summary["cost_per_query_usd"] == pytest.approx(round(raw_total_cost / 2, 6))
 
@@ -127,7 +127,7 @@ class TestSummaryLLMCost:
         expected_total = (
             1000 * PRICING["dashscope_embedding"] / 1000
             + 1000 * PRICING["dashscope_rerank"] / 1000
-            + 1000 * PRICING["deepseek_chat"] / 1000
+            + 1000 * PRICING["qwen_flash"] / 1000
         )
         assert summary["estimated_cost_usd"] == pytest.approx(round(expected_total, 4))
 
