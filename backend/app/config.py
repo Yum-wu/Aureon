@@ -269,8 +269,8 @@ def get_settings() -> Settings:
 
 
 MODEL_REGISTRY = {
-    "deepseek-chat": {
-        "provider": "deepseek",
+    "qwen3.6-flash": {
+        "provider": "dashscope",
         "model": settings.llm.llm_model,
         "base_url": settings.llm.llm_base_url,
         "api_key": settings.llm.llm_api_key,

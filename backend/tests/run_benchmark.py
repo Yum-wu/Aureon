@@ -342,7 +342,7 @@ async def run_railway_benchmark(args):
                 cost_tracker.record_tokens(
                     input_tokens=query_tokens + source_tokens,
                     output_tokens=answer_tokens,
-                    model="deepseek-chat",
+                    model="qwen3.6-flash",
                 )
 
                 # Check retrieval quality

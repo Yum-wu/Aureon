@@ -57,7 +57,7 @@ async def get_usage_analytics(
             "perHour": per_hour,
             "byIntent": by_intent,
             "trend": {
-                "change": 0,  # TODO: 对比前一天
+                "change": 0,  # 待实现：对比前一天数据
                 "period": "vs previous period",
             },
         }
@@ -220,7 +220,7 @@ async def get_token_analytics(
             "costPerQuery": cost_per_query,
             "model": "gpt-4o-mini",
             "trend": {
-                "input_change": 0,  # TODO: 对比前一时间段
+                "input_change": 0,  # 待实现：对比前一时间段数据
                 "output_change": 0,
                 "period": "vs previous period",
             },

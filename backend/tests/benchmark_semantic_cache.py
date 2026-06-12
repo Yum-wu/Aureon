@@ -34,7 +34,7 @@ WARMUP_QUERIES: List[Tuple[str, str]] = [
     ("BM25算法原理", "BM25是一种基于概率的信息检索算法，通过词频、逆文档频率和文档长度来计算相关性分数。"),
 ]
 
-MODEL = "deepseek"
+MODEL = "qwen3.6-flash"
 TEMPERATURE = 0.0
 MAX_TOKENS = 500
 TTL = 3600

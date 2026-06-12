@@ -98,7 +98,7 @@ def test_cache_singleton():
 def test_exact_cache_key_deterministic(cache):
     """Test that same inputs produce same key."""
     query = "What is RAG?"
-    model = "deepseek"
+    model = "qwen3.6-flash"
     temperature = 0.0
     max_tokens = 500
 
@@ -216,7 +216,7 @@ async def test_exact_cache_set_and_get(cache):
     """Test setting and getting from exact cache."""
     query = "test query"
     response = "test response"
-    model = "deepseek"
+    model = "qwen3.6-flash"
     temperature = 0.0
     max_tokens = 500
 

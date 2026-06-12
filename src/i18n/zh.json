@@ -378,7 +378,10 @@
     "google": "使用 Google 登录",
     "github": "使用 GitHub 登录",
     "no_account": "还没有账号？",
-    "signup": "申请试用"
+    "signup": "申请试用",
+    "success": "登录成功",
+    "invalid_credentials": "邮箱或密码错误",
+    "network_error": "网络错误，请检查网络连接"
   }
 ,
   "chat": {
@@ -394,6 +397,13 @@
     "copied": "已复制！",
     "regenerate": "重新生成",
     "attach": "添加附件",
+    "upload": "上传",
+    "uploading": "上传中...",
+    "upload_success": "{{filename}} 上传成功，已创建 {{chunks}} 个片段",
+    "upload_failed": "上传失败",
+    "unsupported_format": "不支持的格式: {{ext}}",
+    "file_too_large": "文件大小超过 10MB 限制",
+    "remove_file": "移除文件",
     "quickStart": [
       "帮我搜索最新的技术文档",
       "分析当前系统的性能指标",

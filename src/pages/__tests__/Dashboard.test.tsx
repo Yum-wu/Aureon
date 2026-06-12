@@ -1,10 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 
 // Mock useDashboardStats hook
 const mockUseDashboardStats = vi.fn();
 vi.mock('../../hooks/useDashboardStats', () => ({
   useDashboardStats: () => mockUseDashboardStats(),
+}));
+
+// Mock useSystemHealth hook (async fetch causes act() warnings)
+vi.mock('../../hooks/useSystemHealth', () => ({
+  useSystemHealth: () => ({ health: null, loading: true, error: null }),
+}));
+
+// Mock useBenchmark hook (async fetch causes act() warnings)
+vi.mock('../../hooks/useBenchmark', () => ({
+  useBenchmark: () => ({ data: null, loading: true, error: null }),
 }));
 
 // Default mock: return i18n key as-is
@@ -40,7 +50,9 @@ describe('Dashboard', () => {
       refetch: vi.fn(),
     });
 
-    render(<Dashboard />);
+    act(() => {
+      render(<Dashboard />);
+    });
 
     expect(screen.getByTestId('dashboard-loading')).toBeInTheDocument();
     expect(screen.queryByText('dashboard.total_queries')).not.toBeInTheDocument();
@@ -55,7 +67,9 @@ describe('Dashboard', () => {
       refetch: vi.fn(),
     });
 
-    render(<Dashboard />);
+    act(() => {
+      render(<Dashboard />);
+    });
 
     expect(screen.getByText('dashboard.error_loading')).toBeInTheDocument();
     expect(screen.getByText('Network error')).toBeInTheDocument();
@@ -80,7 +94,9 @@ describe('Dashboard', () => {
       refetch: vi.fn(),
     });
 
-    render(<Dashboard />);
+    act(() => {
+      render(<Dashboard />);
+    });
 
     // Metrics rendered via i18n keys (mock returns key as-is)
     expect(screen.getByText('dashboard.total_queries')).toBeInTheDocument();
@@ -133,7 +149,9 @@ describe('Dashboard', () => {
       refetch: vi.fn(),
     });
 
-    render(<Dashboard />);
+    act(() => {
+      render(<Dashboard />);
+    });
 
     expect(screen.getByText('系统总览')).toBeInTheDocument();
     expect(screen.getByText('实时指标与系统健康监控')).toBeInTheDocument();
@@ -185,7 +203,9 @@ describe('Dashboard', () => {
       refetch: vi.fn(),
     });
 
-    render(<Dashboard />);
+    act(() => {
+      render(<Dashboard />);
+    });
 
     expect(screen.getByText('System Dashboard')).toBeInTheDocument();
     expect(screen.getByText('Real-time metrics and system health monitoring')).toBeInTheDocument();

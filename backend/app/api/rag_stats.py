@@ -496,7 +496,7 @@ async def get_blog_config():
     return BlogConfig(
         url=settings.blog_url,
         sync_enabled=settings.blog_sync_enabled,
-        last_synced=None,  # TODO: track last sync time
+        last_synced=None,  # 待实现：追踪最后同步时间
     )
 
 
@@ -512,7 +512,7 @@ async def sync_blog_documents():
             detail="Blog sync is not enabled. Set BLOG_URL and BLOG_SYNC_ENABLED=true in .env",
         )
 
-    # TODO: Implement actual blog sync logic
+    # 待实现：Blog 同步逻辑
     # This would fetch articles from the blog and index them into the vector store
     return {
         "status": "success",

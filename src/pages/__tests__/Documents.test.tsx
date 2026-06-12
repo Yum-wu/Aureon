@@ -1,11 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 // Mock useDocuments hook
 const mockUseDocuments = vi.fn();
 vi.mock('../../hooks/useDocuments', () => ({
   useDocuments: () => mockUseDocuments(),
+}));
+
+// Mock useBlogConfig hook (async fetch causes act() warnings)
+vi.mock('../../hooks/useBlogConfig', () => ({
+  useBlogConfig: () => ({ config: null, loading: true }),
 }));
 
 // Mock DocumentUpload component
@@ -47,7 +52,9 @@ describe('Documents', () => {
       refetch: vi.fn(),
     });
 
-    render(<Documents />);
+    act(() => {
+      render(<Documents />);
+    });
     expect(screen.getByText('documents.title')).toBeInTheDocument();
     // Loading spinner has no text, but empty state should not show
     expect(screen.queryByText('documents.empty')).not.toBeInTheDocument();
@@ -64,7 +71,9 @@ describe('Documents', () => {
       refetch: mockRefetch,
     });
 
-    render(<Documents />);
+    act(() => {
+      render(<Documents />);
+    });
     expect(screen.getByText('documents.error_loading')).toBeInTheDocument();
     expect(screen.getByText('Network error')).toBeInTheDocument();
 
@@ -83,7 +92,9 @@ describe('Documents', () => {
       refetch: vi.fn(),
     });
 
-    render(<Documents />);
+    act(() => {
+      render(<Documents />);
+    });
     expect(screen.getByText('documents.empty')).toBeInTheDocument();
   });
 
@@ -97,7 +108,9 @@ describe('Documents', () => {
       refetch: vi.fn(),
     });
 
-    render(<Documents />);
+    act(() => {
+      render(<Documents />);
+    });
     expect(screen.getByText('documents.title')).toBeInTheDocument();
     // totalDocs and totalChunks are rendered as numbers
     // Use getAllByText since "3" may appear in doc list too
@@ -161,7 +174,9 @@ describe('Documents', () => {
       refetch: vi.fn(),
     });
 
-    render(<Documents />);
+    act(() => {
+      render(<Documents />);
+    });
     // Table headers
     expect(screen.getByText('documents.table.name')).toBeInTheDocument();
     expect(screen.getByText('documents.table.source')).toBeInTheDocument();

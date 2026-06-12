@@ -1,23 +1,41 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { LanguageSwitcher } from '../i18n/LanguageSwitcher';
+import { useAuth } from '../hooks/AuthContext';
 
 const Login = () => {
   const { t } = useTranslation();
+  const { loginWithJWT } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     setIsLoading(true);
-    // TODO: actual auth logic
-    setTimeout(() => {
+
+    try {
+      const success = await loginWithJWT(email, password);
+      if (success) {
+        toast.success(t('login.success'));
+        navigate('/dashboard');
+      } else {
+        const msg = t('login.invalid_credentials');
+        setError(msg);
+        toast.error(msg);
+      }
+    } catch {
+      const msg = t('login.network_error');
+      setError(msg);
+      toast.error(msg);
+    } finally {
       setIsLoading(false);
-      navigate('/dashboard');
-    }, 1500);
+    }
   };
 
   return (
@@ -51,6 +69,13 @@ const Login = () => {
           </p>
         </div>
 
+        {/* Error message */}
+        {error && (
+          <div className="mb-5 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+            {error}
+          </div>
+        )}
+
         {/* Form */}
         <form onSubmit={handleLogin} className="space-y-5">
           {/* Email */}
@@ -62,7 +87,7 @@ const Login = () => {
               id="email"
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); setError(''); }}
               className="w-full px-4 py-3 bg-[var(--bg-tertiary)] border border-[var(--border)] rounded-lg text-white  focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)] transition-all duration-200"
               placeholder="your@email.com"
               required
@@ -82,10 +107,11 @@ const Login = () => {
               id="password"
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); setError(''); }}
               className="w-full px-4 py-3 bg-[var(--bg-tertiary)] border border-[var(--border)] rounded-lg text-white  focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)] transition-all duration-200"
               placeholder="••••••••"
               required
+              minLength={8}
               aria-describedby="password-hint"
             />
             <p id="password-hint" className="mt-1 text-xs text-[var(--text-tertiary)]">

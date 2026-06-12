@@ -54,7 +54,7 @@ class CostAlert(BaseModel):
 TOKEN_PRICING = {
     "gpt-4o": {"input": 0.0025, "output": 0.01},
     "gpt-4o-mini": {"input": 0.00015, "output": 0.0006},
-    "deepseek-v4-flash": {"input": 0.0001, "output": 0.0002},
+    "qwen3.6-flash": {"input": 0.00007, "output": 0.00028},
     "glm-4-flash": {"input": 0.0001, "output": 0.0001},
     "default": {"input": 0.0001, "output": 0.0002},
 }

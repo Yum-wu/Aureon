@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
@@ -88,7 +88,9 @@ describe('useDocuments', () => {
     });
 
     mockFetch.mockClear();
-    result.current.refetch();
+    await act(async () => {
+      result.current.refetch();
+    });
 
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalled();

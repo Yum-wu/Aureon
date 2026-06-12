@@ -23,7 +23,6 @@ QUEUE_TIMEOUT_SECONDS = settings.queue_timeout_seconds
 # LLM API semaphores (per model)
 _LLM_SEMAPHORES: Dict[str, asyncio.Semaphore] = {
     "qwen3.6-flash": asyncio.Semaphore(settings.llm_semaphore_qwen),
-    "deepseek-reasoner": asyncio.Semaphore(settings.llm_semaphore_reasoner),
     "dashscope-embedding": asyncio.Semaphore(settings.llm_semaphore_embedding),
 }
 
