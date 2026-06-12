@@ -1312,6 +1312,14 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
                 vector=vector_data,
                 payload={"metadata": chunks[i].get("metadata", {}), "text": chunks[i]["text"]},
             ))
+        # 在第一个 point 的 payload 中记录索引配置
+        if start == 0 and points:
+            points[0].payload["_index_config"] = {
+                "embedding_dim": dim,
+                "embedding_model": settings.dashscope_model if _skip_local_embed else _LOCAL_MODEL_NAME,
+                "sparse_enabled": settings.sparse_enabled,
+                "created_at": time.time(),
+            }
         client.upsert(collection_name=collection_name, points=points)
 
     logger.info("Qdrant: indexed %d chunks into '%s'", len(chunks), collection_name)
