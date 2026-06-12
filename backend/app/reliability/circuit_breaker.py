@@ -60,13 +60,13 @@ class CircuitBreaker:
         self.recovery_timeout = recovery_timeout
         self.name = name
         self.expected_exceptions = expected_exceptions
-        
+
         # State
         self._state = CircuitState.CLOSED
         self._failure_count = 0
         self._last_failure_time: Optional[float] = None
         self._lock = asyncio.Lock()
-        
+
         # Metrics
         self._total_calls = 0
         self._total_failures = 0
@@ -109,7 +109,7 @@ class CircuitBreaker:
         self._failure_count = 0
         self._state = CircuitState.CLOSED
         self._total_successes += 1
-        
+
         logger.debug(
             "circuit_breaker_success",
             breaker=self.name,
@@ -121,7 +121,7 @@ class CircuitBreaker:
         self._failure_count += 1
         self._total_failures += 1
         self._last_failure_time = time.monotonic()
-        
+
         if self._failure_count >= self.failure_threshold:
             self._state = CircuitState.OPEN
             logger.warning(
@@ -143,7 +143,7 @@ class CircuitBreaker:
     async def _handle_rejection(self):
         """Handle rejected call (circuit open)"""
         self._total_rejected += 1
-        
+
         logger.warning(
             "circuit_breaker_rejected",
             breaker=self.name,
@@ -156,7 +156,7 @@ class CircuitBreaker:
         """Context manager for circuit breaker protected calls"""
         async with self._lock:
             current_state = self.state
-            
+
             if current_state == CircuitState.OPEN:
                 await self._handle_rejection()
                 raise CircuitBreakerError(
@@ -164,9 +164,9 @@ class CircuitBreaker:
                     f"Failures: {self._failure_count}/{self.failure_threshold}. "
                     f"Retry after {self.recovery_timeout}s."
                 )
-            
+
             self._total_calls += 1
-            
+
             if current_state == CircuitState.HALF_OPEN:
                 logger.info(
                     "circuit_breaker_half_open_attempt",
@@ -217,16 +217,16 @@ def circuit_breaker(
             name=breaker_name,
             expected_exceptions=expected_exceptions,
         )
-        
+
         @functools.wraps(func)
         async def wrapper(*args, **kwargs) -> T:
             async with breaker.context():
                 return await func(*args, **kwargs)
-        
+
         # Attach breaker to wrapper for inspection
         wrapper._circuit_breaker = breaker
         return wrapper
-    
+
     return decorator
 
 
@@ -300,6 +300,6 @@ async def wrap_llm_call(
     """
     breaker_name = name or "llm_call"
     breaker = get_circuit_breaker(breaker_name, **kwargs)
-    
+
     async with breaker.context():
         return await func()

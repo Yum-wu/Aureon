@@ -10,7 +10,6 @@ Optimizations:
 - low_cpu_mem_usage for faster model loading
 - CUDA warmup to eliminate first-inference latency
 """
-import os
 import time
 from typing import List, Dict, Any, Optional
 import numpy as np

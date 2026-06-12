@@ -292,24 +292,24 @@ def run_ragas_evaluation(
     """Run RAGAS evaluation on QA pairs."""
     if not RAGAS_AVAILABLE:
         return {"metric": "RAGAS", "error": "ragas not installed"}
-    
+
     pairs = qa_pairs or TEST_QA_PAIRS
     metrics = metrics or ["faithfulness", "answer_relevancy", "context_precision"]
-    
+
     all_results = {metric: [] for metric in metrics}
     details = []
-    
+
     for qa in pairs:
         q = qa["question"]
         expected = qa["answer"]
-        
+
         result: RAGQueryResponse = rag_query_fn(q)
         if not result.sources:
             continue
-        
+
         contexts = [s.chunk for s in result.sources]
         answer = result.answer
-        
+
         # Evaluate each metric
         for metric in metrics:
             if metric == "faithfulness":
@@ -320,16 +320,16 @@ def run_ragas_evaluation(
                 eval_result = evaluate_context_precision_ragas(q, contexts, expected)
             else:
                 continue
-            
+
             if eval_result.get("score") is not None:
                 all_results[metric].append(eval_result["score"])
-        
+
         details.append({
             "question": q[:60],
             "answer": answer[:200],
             "num_sources": len(contexts),
         })
-    
+
     # Calculate averages
     avg_results = {}
     for metric, scores in all_results.items():
@@ -338,7 +338,7 @@ def run_ragas_evaluation(
             "average_score": round(avg, 4),
             "num_samples": len(scores),
         }
-    
+
     return {
         "metric": "RAGAS",
         "metrics": avg_results,

@@ -253,7 +253,7 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
         output_tokens = 0
         # Generate request_id for tracing
         request_id = str(uuid.uuid4())[:8]
-        
+
         # 1. Try Redis cache hit (JSON format with sources)
         cached = await get_cached(req.query)
         if cached is not None:
@@ -291,10 +291,10 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
         # 2. Stream with buffering, auto-cache full answer on completion
         full_text = ""
         sources_data = []
-        
+
         # Emit request_id event for tracing
         yield sse_event({'type': 'request_id', 'request_id': request_id})
-        
+
         try:
             raw_gen = rag_query_astream(
                 req.query, llm, top_k=req.top_k, use_mmr=req.use_mmr,
