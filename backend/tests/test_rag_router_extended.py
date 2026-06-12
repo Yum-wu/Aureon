@@ -1,8 +1,7 @@
 """Tests for RAG router endpoints — health, benchmark, upload, query validation."""
 
-import os
 import pytest
-from unittest.mock import patch, AsyncMock, MagicMock
+from unittest.mock import patch
 from httpx import AsyncClient, ASGITransport
 
 try:

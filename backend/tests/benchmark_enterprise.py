@@ -23,7 +23,6 @@ Scale:  cd backend && python -m tests.benchmark_enterprise --scale
 """
 
 import time
-import os
 import sys
 import json
 import math
@@ -31,7 +30,7 @@ import statistics
 import asyncio
 from pathlib import Path
 from collections import defaultdict
-from typing import List, Dict, Any, Callable, Optional, Tuple
+from typing import List, Dict, Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -424,7 +423,7 @@ class EnterpriseBenchmark:
             async with semaphore:
                 from app.rag.qa_chain import hybrid_retrieve_async
                 t0 = time.perf_counter()
-                chunks = await hybrid_retrieve_async(qa["question"], top_k=3)
+                await hybrid_retrieve_async(qa["question"], top_k=3)
                 latency = (time.perf_counter() - t0) * 1000
                 return latency
 

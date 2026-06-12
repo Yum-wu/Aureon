@@ -1,5 +1,4 @@
 """Tests for CRAG threshold auto-tuning via grid search."""
-import pytest
 from app.rag.threshold_tuner import (
     ThresholdConfig,
     evaluate_thresholds,

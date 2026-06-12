@@ -6,7 +6,6 @@ class TestNoChromaDependency:
 
     def test_import_succeeds_without_chroma(self):
         """Importing vector_store should not require chromadb."""
-        import importlib
         import sys
         # Ensure chromadb is not in sys.modules
         saved = sys.modules.pop("chromadb", None)

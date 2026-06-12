@@ -323,7 +323,7 @@ def _get_system_prompt(mode: str = "general") -> str:
 - 企业 AI 知识库平台（FastAPI + React 19）
 - 核心能力：95% Recall@3 混合搜索、92% Context Precision、97% Faithfulness
 - 部署方式：Docker + Railway 一键部署，24 小时内完成
-- 支持模型：DeepSeek / GPT-4o / Claude
+- 支持模型：Qwen / GPT-4o / Claude
 - 特色功能：Semantic Cache、Adaptive Re-ranking、WebSocket 实时流式
 
 回答规则：

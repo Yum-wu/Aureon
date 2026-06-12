@@ -15,7 +15,7 @@ Usage:
 import asyncio
 import time
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 # ── Test Data ─────────────────────────────────────────────────────────────────
 
@@ -287,8 +287,8 @@ async def benchmark_memory() -> BenchmarkResult:
 
     # Baseline
     stats_before = await cache.get_stats()
-    entries_before = stats_before.get("in_memory_exact_size", 0)
-    semantic_before = stats_before.get("in_memory_semantic_size", 0)
+    stats_before.get("in_memory_exact_size", 0)
+    stats_before.get("in_memory_semantic_size", 0)
 
     # Seed entries
     for i, (query, response) in enumerate(WARMUP_QUERIES):

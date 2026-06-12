@@ -13,7 +13,7 @@ import sys
 import statistics
 import concurrent.futures
 import tracemalloc
-from typing import List, Dict, Any
+from typing import List, Dict
 
 # Ensure we can import app modules
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))

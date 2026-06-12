@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Circuit breaker pattern tests"""
 
-import asyncio
 import pytest
 from app.reliability.circuit_breaker import (
     CircuitState,

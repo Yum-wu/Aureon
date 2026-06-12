@@ -1,7 +1,6 @@
 """Tests for benchmark configuration."""
 
 import os
-import pytest
 from unittest.mock import patch
 
 

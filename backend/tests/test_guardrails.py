@@ -1,6 +1,5 @@
 """Tests for app.rag.guardrails — hallucination check, citation extraction/verification."""
 
-import pytest
 from unittest.mock import MagicMock
 
 from app.rag.guardrails import (

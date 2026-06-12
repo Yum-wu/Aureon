@@ -1,7 +1,6 @@
 """Tests for Qdrant vector store backend."""
-import pytest
 import numpy as np
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 
 
 class TestQdrantStore:

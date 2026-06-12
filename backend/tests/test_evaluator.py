@@ -149,7 +149,6 @@ class TestRunFullEvaluation:
         resp.content = '{"score": 8, "reason": "ok"}'
         llm.invoke.return_value = resp
 
-        qa = [{"question": "Q", "answer": "A"}]
         result = run_full_evaluation(retrieve_fn, rag_fn, llm, recall_k=3, latency_runs=1)
         assert "recall" in result
         assert "faithfulness" in result

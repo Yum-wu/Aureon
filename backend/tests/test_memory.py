@@ -1,8 +1,8 @@
 import pytest
-from app.memory.db import init_db, get_db
-from app.memory.l0_conversation import record_message, get_conversation, cleanup_oldest
+from app.memory.db import init_db
+from app.memory.l0_conversation import record_message, get_conversation
 from app.memory.l1_atom import save_atom, search_atoms
-from app.memory.offload import offload_if_needed, read_ref
+from app.memory.offload import offload_if_needed
 from app.memory.l2_scenario import finalize_scenario
 from app.memory.l3_persona import update_persona, get_persona
 

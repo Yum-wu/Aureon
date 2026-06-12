@@ -2,7 +2,6 @@
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from types import SimpleNamespace
 
 from app.rag.qa_chain import (
     generate_answer,

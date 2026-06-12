@@ -3,15 +3,13 @@
 import pytest
 import asyncio
 import numpy as np
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch, MagicMock
 
 from app.rag.ensemble_reranker import (
     EnsembleReranker,
     RerankerConfig,
-    EnsembleRerankerStats,
     create_default_ensemble,
 )
-from app.config import settings
 
 
 class TestRerankerConfig:
@@ -444,4 +442,3 @@ class TestEnsembleIntegration:
 
 
 # Import os for environment variable tests
-import os

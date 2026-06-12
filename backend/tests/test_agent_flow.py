@@ -14,8 +14,6 @@ from unittest.mock import MagicMock, AsyncMock, patch
 
 from app.agent.agent import (
     create_chat_agent,
-    DEFAULT_SYSTEM_PROMPT,
-    DEFAULT_SYSTEM_PROMPT_EN,
 )
 from app.agent.executor import (
     stream_agent,

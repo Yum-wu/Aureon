@@ -1,5 +1,4 @@
 """Knowledge Intelligence API Tests"""
-import pytest
 import uuid
 import hashlib
 from fastapi.testclient import TestClient

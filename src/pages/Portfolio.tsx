@@ -16,7 +16,7 @@ const METRICS = [
 const TECH_STACK = [
   { category: 'Frontend', items: ['React 19', 'TypeScript', 'Tailwind CSS', 'Vite'] },
   { category: 'Backend', items: ['Python 3.12', 'FastAPI', 'LangChain', 'LangGraph'] },
-  { category: 'AI/ML', items: ['DeepSeek', 'OpenAI', 'Claude', 'BGE Embeddings'] },
+  { category: 'AI/ML', items: ['Qwen', 'OpenAI', 'Claude', 'BGE Embeddings'] },
   { category: 'Infrastructure', items: ['Docker', 'Redis', 'ChromaDB', 'Qdrant'] },
 ];
 

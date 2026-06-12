@@ -10,7 +10,7 @@ matching the pattern used by test_memory.py and test_integration.py.
 import json
 import uuid
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -284,8 +284,7 @@ class TestAuditServiceE2E:
             await record_audit(log)
 
     def test_get_audit_stats_aggregates_correctly(self):
-        from app.audit.models import AuditLog
-        from app.audit.service import get_audit_stats, _insert_audit
+        from app.audit.service import get_audit_stats
         from app.memory.db import get_db
 
         tenant = self._tenant()
@@ -316,8 +315,7 @@ class TestAuditServiceE2E:
         assert stats.recent_count_24h == 3
 
     def test_get_audit_logs_pagination(self):
-        from app.audit.service import _insert_audit, get_audit_logs
-        from app.audit.models import AuditLog
+        from app.audit.service import get_audit_logs
         from app.memory.db import get_db
 
         tenant = self._tenant()
@@ -344,7 +342,7 @@ class TestAuditServiceE2E:
 
     def test_get_audit_logs_tenant_isolation(self):
         """Logs from one tenant must never appear in another tenant's results."""
-        from app.audit.service import _insert_audit, get_audit_logs
+        from app.audit.service import get_audit_logs
         from app.memory.db import get_db
 
         tenant_a = self._tenant()

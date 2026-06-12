@@ -1,8 +1,7 @@
 """Observability API Tests"""
-import pytest
 from fastapi.testclient import TestClient
 from app.main import app
-from app.observability import init_query_traces_table, QueryTrace, save_query_trace
+from app.observability import init_query_traces_table
 
 
 # 初始化数据库表

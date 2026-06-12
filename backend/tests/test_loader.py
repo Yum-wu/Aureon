@@ -1,9 +1,6 @@
 """Tests for app.rag.loader — parse_frontmatter, load_single_document, load_markdown_files."""
 
-import os
 import pytest
-import tempfile
-from pathlib import Path
 
 from app.rag.loader import parse_frontmatter, load_single_document, load_markdown_files
 

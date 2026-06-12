@@ -3,18 +3,15 @@ Agent 评估脚本：测试工具调用准确率、响应质量、延迟
 依赖 llm-evaluation skill 方法 + LangSmith 官方评估模式
 """
 import asyncio
-import json
 import time
 import statistics
 from datetime import datetime
-from typing import Any
 from dataclasses import dataclass, field
 
 from langchain_core.messages import HumanMessage
 
 from app.agent.llm import create_llm
 from app.agent.agent import create_chat_agent
-from app.agent.executor import stream_agent
 
 # ── 测试用例 ──────────────────────────────────────────────
 
@@ -135,8 +132,8 @@ def generate_report(results: list[EvalResult]) -> str:
         "",
         "## 总体指标",
         "",
-        f"| 指标 | 值 |",
-        f"|------|-----|",
+        "| 指标 | 值 |",
+        "|------|-----|",
         f"| 测试用例总数 | {total} |",
         f"| 工具调用测试 | {len(tool_tests)} |",
         f"| 普通对话测试 | {len(chat_tests)} |",
@@ -215,7 +212,7 @@ async def main():
     llm = create_llm()
     agent = create_chat_agent(llm)
     print(f"    模型: {llm.model_name}")
-    print(f"    工具: calculator, read_ref", end="")
+    print("    工具: calculator, read_ref", end="")
     from app.tools import ALL_TOOLS
     if any(t.name == "web_search" for t in ALL_TOOLS):
         print(", web_search", end="")
@@ -232,7 +229,7 @@ async def main():
         print(f"    {status}")
 
     # 生成报告
-    print(f"\n[3/3] 生成评估报告...")
+    print("\n[3/3] 生成评估报告...")
     report = generate_report(results)
     report_path = "tests/eval_report.md"
     with open(report_path, "w", encoding="utf-8") as f:
@@ -240,7 +237,7 @@ async def main():
     print(f"    报告已保存: {report_path}")
 
     # 用纯文本方式输出文件路径
-    print(f"\n报告路径: tests/eval_report.md")
+    print("\n报告路径: tests/eval_report.md")
 
 
 if __name__ == "__main__":

@@ -2,7 +2,6 @@
 
 import json
 import pytest
-from pathlib import Path
 
 from app.benchmark.report_generator import (
     COLORS,

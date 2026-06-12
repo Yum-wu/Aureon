@@ -338,7 +338,7 @@ async def run_railway_benchmark(args):
                 query_tokens = len(query) // 2  # ~2 chars per token for CJK
                 answer_tokens = len(answer) // 2
                 source_tokens = sum(len(s.get("chunk", "")) // 2 for s in sources)
-                total_tokens = query_tokens + answer_tokens + source_tokens
+                query_tokens + answer_tokens + source_tokens
                 cost_tracker.record_tokens(
                     input_tokens=query_tokens + source_tokens,
                     output_tokens=answer_tokens,
@@ -457,7 +457,7 @@ async def run_railway_benchmark(args):
         "negative_total": negative_total,
     }
 
-    print(f"\n  Hybrid Retrieval:")
+    print("\n  Hybrid Retrieval:")
     print(f"    Recall@3:     {recall_3*100:.1f}% ({positive_hits[3]}/{positive_total})")
     print(f"    Recall@5:     {recall_5*100:.1f}% ({positive_hits[5]}/{positive_total})")
     print(f"    Recall@10:    {recall_10*100:.1f}% ({positive_hits[10]}/{positive_total})")
@@ -467,13 +467,13 @@ async def run_railway_benchmark(args):
     print(f"    Neg Detection: {neg_rate*100:.1f}% ({negative_correct}/{negative_total})")
 
     if positive_misses:
-        print(f"\n  Top misses:")
+        print("\n  Top misses:")
         for m in positive_misses[:5]:
             print(f"    [{m['id']}] {m['question']}")
             print(f"      expected: {m['expected']}, got: {m['retrieved']}")
 
     if negative_wrong:
-        print(f"\n  Negative detection failures:")
+        print("\n  Negative detection failures:")
         for m in negative_wrong[:5]:
             print(f"    [{m['id']}] {m['question']}")
             print(f"      returned {m['sources_count']} sources: {m['sources']}")
@@ -491,7 +491,7 @@ async def run_railway_benchmark(args):
             "max_ms": round(lat_sorted[-1], 1),
             "num_samples": n,
         }
-        print(f"\n> Phase 2: Latency Distribution (from quality evaluation)")
+        print("\n> Phase 2: Latency Distribution (from quality evaluation)")
         print(f"  Samples:  {n}")
         print(f"  Mean:     {latency_results['mean_ms']}ms")
         print(f"  P50:      {latency_results['p50_ms']}ms")
@@ -596,11 +596,11 @@ def main():
 
     # Separate positive and negative queries for targeted testing
     positive_pairs = [qa for qa in qa_pairs if qa["source_article"] != "none"]
-    negative_pairs = [qa for qa in qa_pairs if qa["source_article"] == "none"]
+    [qa for qa in qa_pairs if qa["source_article"] == "none"]
 
     # Hybrid retrieval
     hybrid_results = test_recall(hybrid_retrieve, qa_pairs, k=3)
-    print(f"\n  Hybrid Retrieval:")
+    print("\n  Hybrid Retrieval:")
     print(f"    Recall@3:     {hybrid_results['recall']*100:.1f}% ({hybrid_results['recall_hits']}/{hybrid_results['recall_total']})")
     print(f"    Recall@10:    {hybrid_results['recall_10']*100:.1f}% ({hybrid_results['recall_10_hits']}/{hybrid_results['recall_total']})")
     print(f"    Precision@3:  {hybrid_results['precision']*100:.1f}%")
@@ -609,27 +609,27 @@ def main():
     print(f"    Negative Detection: {hybrid_results['negative_detection_rate']*100:.1f}% ({hybrid_results['negative_correct']}/{hybrid_results['negative_total']})")
 
     if hybrid_results["misses"]:
-        print(f"\n  Top misses:")
+        print("\n  Top misses:")
         for m in hybrid_results["misses"][:5]:
             print(f"    [{m['id']}] {m['question']}")
             print(f"      expected: {m['expected']}, got: {m['retrieved'][:3]}")
 
     if hybrid_results["negative_wrong"]:
-        print(f"\n  Negative detection failures (hallucinated answers):")
+        print("\n  Negative detection failures (hallucinated answers):")
         for m in hybrid_results["negative_wrong"][:5]:
             print(f"    [{m['id']}] {m['question']}")
             print(f"      returned {m['retrieved_count']} results from: {m['retrieved_sources'][:3]}")
 
     # BM25-only
     bm25_results = test_recall(retrieve_keyword, qa_pairs, k=3)
-    print(f"\n  BM25 Retrieval:")
+    print("\n  BM25 Retrieval:")
     print(f"    Recall@3:     {bm25_results['recall']*100:.1f}% ({bm25_results['recall_hits']}/{bm25_results['recall_total']})")
     print(f"    Precision@3:  {bm25_results['precision']*100:.1f}%")
     print(f"    MRR:          {bm25_results['mrr']:.3f}")
 
     # Dense vector-only
     dense_results = test_recall(retrieve, qa_pairs, k=3)
-    print(f"\n  Dense Vector Retrieval:")
+    print("\n  Dense Vector Retrieval:")
     print(f"    Recall@3:     {dense_results['recall']*100:.1f}% ({dense_results['recall_hits']}/{dense_results['recall_total']})")
     print(f"    Precision@3:  {dense_results['precision']*100:.1f}%")
     print(f"    MRR:          {dense_results['mrr']:.3f}")
@@ -689,14 +689,14 @@ def main():
         for bs_key, lat in sorted(adaptive_latencies.items()):
             print(f"    {bs_key}: {lat}ms")
 
-        print(f"\n  Dispatch Stats:")
+        print("\n  Dispatch Stats:")
         print(f"    GPU calls: {dispatch_stats['gpu_calls']}")
         print(f"    CPU calls: {dispatch_stats['cpu_calls']}")
         print(f"    GPU ratio: {dispatch_stats['gpu_ratio']:.1%}")
 
         # Compare with pure GPU (if available)
         if torch.cuda.is_available():
-            print(f"\n  Comparison (batch=1):")
+            print("\n  Comparison (batch=1):")
             cpu_embedder = GPUEmbedder(device="cpu", use_fp16=False)
             gpu_embedder = GPUEmbedder(device="cuda")
 
@@ -727,7 +727,7 @@ def main():
     print(f"  Negative Detection (Pipeline): {crag_results['negative_detection_rate']*100:.1f}% "
           f"({crag_results['negative_correct']}/{crag_results['negative_total']})")
     if crag_results["negative_wrong"]:
-        print(f"  Pipeline negative detection failures:")
+        print("  Pipeline negative detection failures:")
         for m in crag_results["negative_wrong"][:5]:
             print(f"    [{m['id']}] {m['question'][:50]}... (sources: {m['sources']})")
 
@@ -777,7 +777,7 @@ def main():
 
     # ── Step 6: Adaptive Dispatch Summary ──
     if dispatch_stats:
-        print(f"\n[6/6] Adaptive Device Dispatch Summary")
+        print("\n[6/6] Adaptive Device Dispatch Summary")
         print("-" * 70)
         print(f"  Threshold:      {dispatch_stats.get('threshold', 'N/A')} texts")
         print(f"  GPU available:  {dispatch_stats.get('gpu_available', 'N/A')}")
@@ -786,7 +786,7 @@ def main():
         print(f"  Total texts:    {dispatch_stats.get('total_texts', 0)}")
         print(f"  GPU ratio:      {dispatch_stats.get('gpu_ratio', 0):.1%}")
         print()
-        print(f"  Batch Latency Breakdown:")
+        print("  Batch Latency Breakdown:")
         for bs_key, lat in sorted(adaptive_latencies.items()):
             bs_num = int(bs_key.split('_')[1])
             device = "GPU" if bs_num >= dispatch_stats.get('threshold', 4) else "CPU"

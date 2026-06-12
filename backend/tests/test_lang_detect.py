@@ -70,7 +70,7 @@ def test_lang_instruction_not_empty():
 
 def test_agent_prompt_imports():
     """Verify agent module imports without hardcoded language."""
-    from app.agent.agent import create_chat_agent, DEFAULT_SYSTEM_PROMPT
+    from app.agent.agent import DEFAULT_SYSTEM_PROMPT
     assert "始终以中文回复" not in DEFAULT_SYSTEM_PROMPT, (
         "DEFAULT_SYSTEM_PROMPT should not have hardcoded language"
     )
@@ -81,7 +81,7 @@ def test_agent_prompt_imports():
 
 def test_qa_prompt_imports():
     """Verify qa_chain module imports without hardcoded language."""
-    from app.rag.qa_chain import QA_SYSTEM_PROMPT, rag_query
+    from app.rag.qa_chain import QA_SYSTEM_PROMPT
     assert "使用中文" not in QA_SYSTEM_PROMPT, (
         "QA_SYSTEM_PROMPT should not have hardcoded '使用中文'"
     )
@@ -100,7 +100,7 @@ def test_prompt_experiment_imports():
 
 def test_generate_node_imports():
     """Verify langgraph generate node imports."""
-    from app.langgraph.nodes.generate import GENERATE_PROMPT, run_generate_node
+    from app.langgraph.nodes.generate import GENERATE_PROMPT
     assert "{lang_instruction}" in GENERATE_PROMPT
 
 

@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.langgraph.state import AgentState, initial_state
+from app.langgraph.state import initial_state
 
 
 # ── state.py ──

@@ -148,7 +148,7 @@ def test_health():
 
     # /api/health
     status, body, ms = http_get("/api/health")
-    print(f"\n  GET /api/health")
+    print("\n  GET /api/health")
     print(f"    Status: {status} | Latency: {ms:.0f}ms")
     print(f"    Model: {body.get('model', 'N/A')}")
     print(f"    Index ready: {body.get('index_ready', 'N/A')}")
@@ -156,14 +156,14 @@ def test_health():
 
     # /api/rag/health
     status, body, ms = http_get("/api/rag/health")
-    print(f"\n  GET /api/rag/health")
+    print("\n  GET /api/rag/health")
     print(f"    Status: {status} | Latency: {ms:.0f}ms")
     if status == 200:
         print(f"    Body: {json.dumps(body, ensure_ascii=False, indent=6)}")
 
     # /metrics (prometheus)
     status, _, ms = http_get("/metrics", timeout=10)
-    print(f"\n  GET /metrics (Prometheus)")
+    print("\n  GET /metrics (Prometheus)")
     print(f"    Status: {status} | Latency: {ms:.0f}ms")
     print(f"    Available: {'Yes' if status == 200 else 'No'}")
 
@@ -239,7 +239,7 @@ def test_rag_sync():
         print(f"  [{i+1:2d}/{len(TEST_QUERIES)}] {ms:7.0f}ms | sources={len(sources)} | answer={'Y' if has_answer else 'N'}{hit_tag} | {q[:40]}")
 
     if latencies:
-        print(f"\n  --- Sync Query Summary ---")
+        print("\n  --- Sync Query Summary ---")
         print(f"  Total queries: {len(latencies)}")
         print(f"  Mean:   {statistics.mean(latencies):7.0f}ms")
         print(f"  Median: {statistics.median(latencies):7.0f}ms")
@@ -276,7 +276,6 @@ def test_rag_stream():
 
         # Parse SSE events
         text_content = ""
-        sources_count = 0
         for ev in events:
             raw = ev.get("data", "")
             try:
@@ -284,7 +283,7 @@ def test_rag_stream():
                 if parsed.get("type") == "text":
                     text_content += parsed.get("content", "")
                 elif parsed.get("type") == "sources":
-                    sources_count = len(parsed.get("sources", []))
+                    len(parsed.get("sources", []))
                 elif parsed.get("type") == "done":
                     pass
             except json.JSONDecodeError:
@@ -297,7 +296,7 @@ def test_rag_stream():
         print(f"  [{i+1}/{len(stream_queries)}] TTFT={ttft_ms:6.0f}ms | Total={total_ms:7.0f}ms | chars={len(text_content):4d} | {q[:40]}")
 
     if stream_latencies:
-        print(f"\n  --- Streaming Summary ---")
+        print("\n  --- Streaming Summary ---")
         print(f"  TTFT Mean:  {statistics.mean(ttfts):7.0f}ms")
         print(f"  TTFT P50:   {percentile(ttfts, 50):7.0f}ms")
         print(f"  TTFT P90:   {percentile(ttfts, 90):7.0f}ms")
@@ -323,7 +322,7 @@ def test_network_overhead():
         _, _, ms = http_get("/api/health")
         overheads.append(ms)
 
-    print(f"  /api/health x10:")
+    print("  /api/health x10:")
     print(f"    Mean: {statistics.mean(overheads):.0f}ms | P50: {percentile(overheads, 50):.0f}ms | P99: {percentile(overheads, 99):.0f}ms")
     print(f"    Min: {min(overheads):.0f}ms | Max: {max(overheads):.0f}ms")
 
@@ -333,7 +332,7 @@ def test_network_overhead():
         _, _, ms = http_post_json("/api/rag/query", {"query": "test", "top_k": 1}, timeout=30)
         post_overheads.append(ms)
 
-    print(f"  /api/rag/query 'test' x5:")
+    print("  /api/rag/query 'test' x5:")
     print(f"    Mean: {statistics.mean(post_overheads):.0f}ms | P50: {percentile(post_overheads, 50):.0f}ms")
 
     print(f"\n  Estimated network RTT (GET overhead): ~{statistics.mean(overheads):.0f}ms")
