@@ -189,7 +189,7 @@ async def get_token_analytics(
             "total": input_tokens + output_tokens,
             "cost": round(input_tokens * 0.000001 + output_tokens * 0.000002, 4),
             "costPerQuery": 0.001,
-            "model": "deepseek-v4-flash",
+            "model": "qwen3.6-flash",
             "trend": {"input_change": 0, "output_change": 0, "period": "vs previous period"},
         }
 

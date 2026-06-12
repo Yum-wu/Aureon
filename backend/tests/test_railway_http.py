@@ -2,15 +2,13 @@
 """HTTP-based RAG test against Railway deployment.
 
 Tests the live API endpoints to measure real-world performance.
+注意：不对生产环境进行并发负载测试，并发测试仅在本地进行。
 """
-import asyncio
 import json
 import statistics
 import time
-from collections import defaultdict
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
-from urllib.parse import urlencode
 
 RAILWAY_URL = "https://aureon-production-1247.up.railway.app"
 
@@ -312,84 +310,7 @@ def test_rag_stream():
 
 
 # ============================================================
-# Phase 5: Concurrent Load Test
-# ============================================================
-async def single_query_async(query, idx):
-    """Single async query for concurrency test."""
-    import concurrent.futures
-    loop = asyncio.get_event_loop()
-    with concurrent.futures.ThreadPoolExecutor() as pool:
-        start = time.perf_counter()
-        status, body, ms = await loop.run_in_executor(
-            pool, lambda: http_post_json("/api/rag/query", {"query": query, "top_k": 3}, timeout=60)
-        )
-        return {
-            "idx": idx,
-            "status": status,
-            "latency_ms": ms,
-            "has_answer": bool(body.get("answer")),
-            "cache_hit": body.get("cache_hit", False),
-        }
-
-
-async def run_concurrent_batch(queries, concurrency):
-    """Run queries at given concurrency level."""
-    tasks = [single_query_async(q, i) for i, q in enumerate(queries)]
-    batch_start = time.perf_counter()
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-    batch_time = (time.perf_counter() - batch_start) * 1000
-
-    valid = [r for r in results if isinstance(r, dict)]
-    latencies = [r["latency_ms"] for r in valid]
-    qps = len(valid) / (batch_time / 1000) if batch_time > 0 else 0
-
-    return {
-        "concurrency": concurrency,
-        "total": len(queries),
-        "success": len(valid),
-        "batch_time_ms": round(batch_time, 1),
-        "qps": round(qps, 2),
-        "mean_ms": round(statistics.mean(latencies), 1) if latencies else 0,
-        "p50_ms": round(percentile(latencies, 50), 1) if latencies else 0,
-        "p90_ms": round(percentile(latencies, 90), 1) if latencies else 0,
-        "p99_ms": round(percentile(latencies, 99), 1) if latencies else 0,
-        "min_ms": round(min(latencies), 1) if latencies else 0,
-        "max_ms": round(max(latencies), 1) if latencies else 0,
-    }
-
-
-def test_concurrent():
-    print("\n" + "=" * 60)
-    print("PHASE 5: Concurrent Load Test")
-    print("=" * 60)
-
-    # Round-robin queries for each concurrency level
-    concurrency_levels = [1, 3, 5, 10]
-    concurrent_results = []
-
-    for conc in concurrency_levels:
-        # Prepare queries: repeat TEST_QUERIES to fill concurrency
-        batch = []
-        while len(batch) < conc * 3:  # 3 rounds per concurrency level
-            batch.extend(TEST_QUERIES)
-        batch = batch[:conc * 3]
-
-        print(f"\n  Concurrency={conc} | Batch={len(batch)} queries...", end="", flush=True)
-        result = asyncio.run(run_concurrent_batch(batch, conc))
-        concurrent_results.append(result)
-        print(f" QPS={result['qps']} P50={result['p50_ms']}ms P99={result['p99_ms']}ms")
-
-    print(f"\n  --- Concurrent Summary ---")
-    print(f"  {'Conc':>5} | {'QPS':>6} | {'P50 ms':>8} | {'P90 ms':>8} | {'P99 ms':>8} | {'Max ms':>8}")
-    print(f"  {'-'*5}-+-{'-'*6}-+-{'-'*8}-+-{'-'*8}-+-{'-'*8}-+-{'-'*8}")
-    for r in concurrent_results:
-        print(f"  {r['concurrency']:5d} | {r['qps']:6.1f} | {r['p50_ms']:8.0f} | {r['p90_ms']:8.0f} | {r['p99_ms']:8.0f} | {r['max_ms']:8.0f}")
-
-    return concurrent_results
-
-
-# ============================================================
-# Phase 6: Network Overhead Analysis
+# Phase 5: Network Overhead Analysis
 # ============================================================
 def test_network_overhead():
     print("\n" + "=" * 60)
@@ -451,11 +372,7 @@ def main():
         "ttfts": ttfts,
     }
 
-    # Phase 5: Concurrent
-    concurrent = test_concurrent()
-    all_results["concurrent"] = concurrent
-
-    # Phase 6: Network overhead
+    # Phase 5: Network overhead
     test_network_overhead()
 
     # Save full results

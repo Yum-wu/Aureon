@@ -37,4 +37,4 @@ def test_concurrency_config_defaults():
     config = ConcurrencyConfig()
     assert config.http_pool_limit == 100
     assert config.timeout_seconds == 120
-    assert "deepseek-chat" in config.semaphores
+    assert "qwen3.6-flash" in config.semaphores

@@ -215,7 +215,7 @@ def run_deepeval_metrics(
             base_url = settings.llm_base_url.rstrip("/") + "/v1"
             os.environ["OPENAI_API_BASE"] = base_url
             os.environ["OPENAI_BASE_URL"] = base_url
-            model = "deepseek-chat"
+            model = settings.llm_model
 
     metrics = [
         ContextualPrecisionMetric(threshold=METRIC_THRESHOLDS["context_precision"], model=model),

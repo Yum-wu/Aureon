@@ -15,7 +15,7 @@ class LLMSettings(BaseModel):
     fallback_base_url: str = "https://open.bigmodel.cn/api/paas/v4/"
     langchain_api_key: str = ""
     langchain_project: str = "chatbot-rag"
-    llm_semaphore_deepseek: int = 30
+    llm_semaphore_qwen: int = 30
     llm_semaphore_reasoner: int = 10
     llm_semaphore_default: int = 20
 

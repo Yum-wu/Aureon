@@ -1054,7 +1054,7 @@ async def rag_query_with_cache(
     # Layer 1+2: Two-layer cache lookup (exact → semantic)
     cached = await get_cached_with_semantic(
         query=query,
-        model=model or "deepseek",
+        model=model or settings.llm_model,
         temperature=0.0,
         max_tokens=500,
     )
@@ -1089,7 +1089,7 @@ async def rag_query_with_cache(
     await set_cached_with_semantic(
         query=query,
         response=cache_data,
-        model=model or "deepseek",
+        model=model or settings.llm_model,
         temperature=0.0,
         max_tokens=500,
         ttl=3600,
