@@ -225,7 +225,6 @@ def _build_kw_index(force: bool = False):
     global _kw_docs, _kw_idf, _kw_avgdl
     import math
     from collections import Counter
-    from app.config import settings
 
     with _kw_lock:
         if _kw_docs and not force:
@@ -758,7 +757,6 @@ def retrieve(query: str, top_k: int = 3, use_mmr: bool = True, lang_filter: str 
         lang_filter: 语言过滤（"zh" 或 "en"），None 表示不过滤
         tenant_id: 租户 ID（默认从上下文获取）
     """
-    from app.config import settings
     return retrieve_qdrant(query, top_k=top_k, tenant_id=tenant_id, lang_filter=lang_filter)
 
 
@@ -1009,7 +1007,6 @@ def get_collection_stats() -> tuple[int, int]:
     Results are cached for STATS_CACHE_TTL seconds (default 60s).
     """
     import time as _time
-    from app.config import settings
     now = _time.time()
     if (now - _stats_cache["updated_at"]) < _STATS_CACHE_TTL:
         return _stats_cache["doc_count"], _stats_cache["chunk_count"]

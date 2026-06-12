@@ -1591,7 +1591,7 @@ async def rag_query_async(
     import asyncio
     from app.observability import QueryTracer
     from app.observability.tracing import create_span
-    
+
     # Initialize tracer if request_id provided
     tracer = QueryTracer(request_id=request_id or '', query=query) if request_id else None
 
