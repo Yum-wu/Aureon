@@ -19,7 +19,7 @@ Aureon 全栈 AI 应用开发指南。
 
 - **RAG**：检索增强生成，基于文档的知识问答
 - **Agent**：LangChain Agent，具备 Tool Calling 能力的对话代理
-- **Memory**：四层记忆（L0 对话 / L1 原子记忆 / L2 场景记忆 / L3 人格）
+- **Memory**：四层记忆（L0 对话 / L1 原子记忆 / L2 场景总结 / L3 人格）
 - **LangGraph**：状态图编排，支持流式输出的 Agent 工作流
 - **Semantic Cache**：两层缓存架构（Exact + Semantic），延迟降低 97%
 - **Adaptive Re-ranking**：Query-aware 策略选择，精度提升 22%
@@ -54,8 +54,8 @@ docker-compose down
 
 ## 测试策略
 
-- 前端：`npm test`，关注组件渲染和 hooks 行为（57+ tests）
-- 后端：`pytest`，600+ 测试覆盖各模块
+- 前端：`npm test`，关注组件渲染和 hooks 行为（74 tests）
+- 后端：`pytest`，750+ 测试覆盖各模块
 - **修改代码后必须跑对应测试**，推送前全量通过
 - CI 用 GitHub Actions，部署用 Railway
 
@@ -68,28 +68,26 @@ docker-compose down
 - `POST /api/rag/index` — 重建索引
 - `GET /api/rag/analytics/cache` — 缓存分析（Semantic Cache 命中率、延迟）
 - `WS /ws/chat/{client_id}` — WebSocket 实时聊天（多轮对话、Tool Calling）
+- `GET /api/health` — 健康检查
+- `GET /health/ready` — 就绪探针（Redis/Qdrant/索引状态）
+- `GET /metrics` — Prometheus 指标
+- `POST /api/langgraph/run` — LangGraph 工作流
 
 ## 项目结构
 
 ```
 Aureon/
-├── src/components/  hooks/  services/  utils/
-├── backend/app/{agent,tools,memory,rag,features,observability,security,evaluation,cost,reliability,knowledge,ai_platform,integration,langgraph,api,cache}/
-├── backend/tests/   (600+ tests)
-├── crew/            CrewAI 文章生成
-├── dist/            构建输出
-├── docs/            文档
+├── src/components/  hooks/  services/  i18n/  types/
+├── backend/app/{agent,tools,memory,rag,features,observability,security,evaluation,cost,reliability,knowledge,ai_platform,integration,langgraph,api,cache,multi_tenant,audit}/
+├── backend/tests/   (753 tests)
 └── docker-compose.yml
 ```
 
 ## 代码探索规则
 
-- **优先用 code-review-graph 图谱工具**探索代码结构和依赖关系
-- query_graph_tool：查调用者、被调用者、测试覆盖
-- get_impact_radius_tool：评估改动影响范围
-- semantic_search_nodes_tool：按名称/语义搜索代码实体
-- get_architecture_overview_tool：架构概览
-- 仅在图谱未覆盖时 fallback 到 Grep/Glob/Read
+- **优先用 SearchCodebase + memories/knowledge** 探索代码结构和依赖关系
+- LSP：查定义、引用、调用链
+- Grep/Glob：兜底搜索
 
 ## 代码规范
 
@@ -103,6 +101,8 @@ Aureon/
 - GitHub Pages：`main` 分支 GitHub Actions 自动构建部署前端
 - Railway：一键部署后端（`railway.json`）
 - Docker：容器化部署（`Dockerfile` + `docker-compose.yml`）
-- Redis Stack：向量搜索支持（`redis/redis-stack-server:latest`）
+- Redis：缓存层（`redis:7-alpine`）
+- Qdrant：向量搜索（Qdrant Cloud / 本地 `qdrant/qdrant`）
+- nginx：反向代理（SPA + API + WebSocket + Health）
 
 MIT License

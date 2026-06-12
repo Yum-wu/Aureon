@@ -1,3 +1,4 @@
+import hmac
 import logging
 import os
 import sys
@@ -31,7 +32,7 @@ if _rerank_disabled:
     except ImportError:
         pass  # sentence-transformers not installed, nothing to patch
 
-from fastapi import FastAPI, Request, APIRouter
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -203,7 +204,11 @@ async def lifespan(app: FastAPI):
     await close_redis()
 
 
-app = FastAPI(title="Aureon API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(
+    title="Aureon API",
+    version=os.environ.get("BUILD_VERSION", "0.1.0"),
+    lifespan=lifespan,
+)
 
 # ── Custom ThreadPoolExecutor for async routes ──
 # Configure max_workers to handle concurrent requests across multiple Uvicorn workers
@@ -269,7 +274,7 @@ async def logging_middleware(request: Request, call_next):
                     status_code=401,
                     content={"error": "unauthorized", "detail": "Missing API key. Provide X-API-Key header."},
                 )
-            if api_key != settings.api_auth_key:
+            if not hmac.compare_digest(api_key, settings.api_auth_key):
                 return JSONResponse(
                     status_code=403,
                     content={"error": "forbidden", "detail": "Invalid API key."},
@@ -369,17 +374,6 @@ app.include_router(ai_platform_router)  # already has prefix=/api/ai-platform
 app.include_router(integration_router)  # already has prefix=/api/integration
 app.include_router(audit_router, prefix="/api/audit")  # routes use relative paths
 app.include_router(websocket_chat_router, tags=["websocket"])
-
-# ── API Versioning: v1_router with /api/v1 prefix ──
-v1_router = APIRouter(prefix="/api/v1")
-v1_router.include_router(chat_router.router, prefix="/chat", tags=["chat"])
-v1_router.include_router(rag_router.router, prefix="/rag", tags=["rag"])
-v1_router.include_router(crew_router.router, prefix="/crew", tags=["crew"])
-v1_router.include_router(security_router, prefix="/security", tags=["security"])
-v1_router.include_router(audit_router, prefix="/audit", tags=["audit"])
-v1_router.include_router(observability_router, prefix="/observability", tags=["observability"])
-v1_router.include_router(knowledge_router, prefix="/knowledge", tags=["knowledge"])
-app.include_router(v1_router)
 
 # ── SPA 静态文件（必须在 API 路由之后） ──
 static_dir = os.path.join(os.path.dirname(__file__), "..", "static")

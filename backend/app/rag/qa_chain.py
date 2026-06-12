@@ -198,12 +198,16 @@ def compress_context(query: str, chunks: List[Dict[str, Any]], threshold: float 
 _HIGH_SCORE_SKIP_THRESHOLD = settings.high_score_skip_threshold
 
 # LLM Classifier cache: avoid redundant API calls for the same query.
-# Keyed by normalized query hash, TTL-based expiry.
+# Keyed by normalized query hash, TTL-based expiry, thread-safe with LRU eviction.
 import hashlib as _hashlib
+import threading as _threading
+from collections import OrderedDict as _OrderedDict
 
-_CLASSIFIER_CACHE: Dict[str, bool] = {}
+_CLASSIFIER_CACHE: _OrderedDict[str, bool] = _OrderedDict()
 _CLASSIFIER_CACHE_TIMESTAMPS: Dict[str, float] = {}
 _CLASSIFIER_CACHE_TTL = settings.classifier_cache_ttl  # seconds
+_CLASSIFIER_CACHE_MAXSIZE = 1000
+_CLASSIFIER_CACHE_LOCK = _threading.Lock()
 
 
 def _classifier_cache_key(query: str) -> str:
@@ -212,23 +216,33 @@ def _classifier_cache_key(query: str) -> str:
 
 
 def _classifier_cache_get(query: str) -> bool | None:
-    """Return cached result or None if miss/expired."""
+    """Return cached result or None if miss/expired. Thread-safe with LRU promotion."""
     if _CLASSIFIER_CACHE_TTL <= 0:
         return None
     key = _classifier_cache_key(query)
-    ts = _CLASSIFIER_CACHE_TIMESTAMPS.get(key)
-    if ts is not None and (time.time() - ts) < _CLASSIFIER_CACHE_TTL:
-        return _CLASSIFIER_CACHE.get(key)
+    with _CLASSIFIER_CACHE_LOCK:
+        ts = _CLASSIFIER_CACHE_TIMESTAMPS.get(key)
+        if ts is not None and (time.time() - ts) < _CLASSIFIER_CACHE_TTL:
+            value = _CLASSIFIER_CACHE.get(key)
+            if value is not None:
+                _CLASSIFIER_CACHE.move_to_end(key)  # LRU promotion
+            return value
     return None
 
 
 def _classifier_cache_set(query: str, answerable: bool) -> None:
-    """Store classifier result in memory cache."""
+    """Store classifier result in memory cache. Thread-safe with LRU eviction."""
     if _CLASSIFIER_CACHE_TTL <= 0:
         return
     key = _classifier_cache_key(query)
-    _CLASSIFIER_CACHE[key] = answerable
-    _CLASSIFIER_CACHE_TIMESTAMPS[key] = time.time()
+    with _CLASSIFIER_CACHE_LOCK:
+        if key in _CLASSIFIER_CACHE:
+            _CLASSIFIER_CACHE.move_to_end(key)
+        else:
+            if len(_CLASSIFIER_CACHE) >= _CLASSIFIER_CACHE_MAXSIZE:
+                _CLASSIFIER_CACHE.popitem(last=False)  # evict oldest
+            _CLASSIFIER_CACHE[key] = answerable
+        _CLASSIFIER_CACHE_TIMESTAMPS[key] = time.time()
 
 
 async def classify_query_answerable(query: str, model: str = None) -> bool:
@@ -266,8 +280,8 @@ async def classify_query_answerable(query: str, model: str = None) -> bool:
         _classifier_cache_set(query, answerable)
         return answerable
     except Exception as e:
-        logger.warning("LLM classifier failed: %s, defaulting to answerable", e)
-        return True
+        logger.warning("LLM classifier failed: %s, defaulting to not answerable", e)
+        return False
 
 
 # ── Negative detection: keyword fast-path ──

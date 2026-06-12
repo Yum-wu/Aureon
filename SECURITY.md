@@ -27,10 +27,10 @@ We take security vulnerabilities seriously. If you discover a security issue, pl
 
 ### What to Expect
 
-1. **Acknowledgment** ！ We confirm receipt within 48 hours.
-2. **Triage** ！ We assess severity (Critical / High / Medium / Low) within 5 business days.
-3. **Resolution** ！ We develop and deploy a fix, coordinating disclosure with you.
-4. **Credit** ！ We acknowledge your contribution in our release notes (unless you prefer to remain anonymous).
+1. **Acknowledgment** ? We confirm receipt within 48 hours.
+2. **Triage** ? We assess severity (Critical / High / Medium / Low) within 5 business days.
+3. **Resolution** ? We develop and deploy a fix, coordinating disclosure with you.
+4. **Credit** ? We acknowledge your contribution in our release notes (unless you prefer to remain anonymous).
 
 ## Security Best Practices
 
@@ -39,12 +39,20 @@ We take security vulnerabilities seriously. If you discover a security issue, pl
 - **Never** commit API keys to the repository. Use `.env` files (excluded via `.gitignore`) or your deployment platform's secret management.
 - Rotate API keys immediately if you suspect they have been exposed.
 - Use the `API_AUTH_KEY` environment variable to enable authentication on all `/api/` endpoints in production.
+- Use the `JWT_SECRET` environment variable for JWT token signing (SSO/RBAC). Never use default or weak secrets.
+- Use the `ENCRYPTION_KEY` environment variable for Fernet encryption of SSO secrets.
 
 ### Network Isolation
 
 - In production, restrict Redis and Elasticsearch access to the application network only.
 - The `QDRANT_API_KEY` environment variable should be set for Qdrant instances exposed beyond localhost.
 - Use TLS/HTTPS for all production traffic (handled by Railway's edge proxy or your own reverse proxy).
+
+### WebSocket Security
+
+- WebSocket connections (`/ws/chat/{client_id}`) require the same authentication as REST endpoints.
+- WebSocket heartbeat and timeout limits prevent resource exhaustion (`WEBSOCKET_HEARTBEAT_INTERVAL=30`, `WEBSOCKET_HEARTBEAT_TIMEOUT=300`).
+- Maximum concurrent connections configurable via `WEBSOCKET_MAX_CONNECTIONS`.
 
 ### Container Security
 

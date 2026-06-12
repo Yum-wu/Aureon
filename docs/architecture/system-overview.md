@@ -29,7 +29,7 @@ User → React Frontend → FastAPI Backend → LangGraph Orchestrator
 - RAG Pipeline: Hybrid retrieval + Context Compression + CRAG self-correction
 - Security: Prompt Injection detection (guardrails.py), Fernet encryption
 - Cache: Redis + Semantic Cache (Exact + Semantic)
-- Storage: Qdrant cloud vector store (primary) / ChromaDB (fallback)
+- Storage: Qdrant cloud vector store (primary)
 - Embedding: DashScope text-embedding-v4 (Singapore, compatible-mode API)
 - Reranker: DashScope qwen3-rerank (compatible-api, separate endpoint)
 
@@ -53,13 +53,15 @@ User → React Frontend → FastAPI Backend → LangGraph Orchestrator
 |-------|------------|
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS |
 | Backend | Python 3.12, FastAPI, LangGraph |
-| Vector DB | Qdrant (cloud) — primary / ChromaDB — fallback |
+| Vector DB | Qdrant (cloud) — primary |
 | Embedding | DashScope text-embedding-v4 (compatible-mode API) |
 | Reranker | DashScope qwen3-rerank (compatible-api) |
 | Cache | Redis + Semantic Cache (Exact + Semantic) |
 | LLM | DeepSeek / GPT-4o / Claude |
 | Security | API Key Auth, Prompt Injection Guard, Fernet Encryption |
 | Deployment | Docker (non-root), Railway, CI/CD |
+| Health | `/api/health` (Railway) + `/health/ready` (K8s probe) |
+| Observability | Prometheus `/metrics` + structlog |
 
 ## DashScope API Configuration (Singapore)
 

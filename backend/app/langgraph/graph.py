@@ -34,9 +34,6 @@ def route_intent(state: AgentState) -> str:
     intent = state.get("intent") or "chat"  # Handle empty string and None
     logger.info(f"[LangGraph] Intent: {intent} (confidence: {state.get('intent_confidence', 0):.2f})")
 
-    if state.get("human_approval_needed") and state.get("human_approved") is False:
-        return "end"
-
     return intent  # "rag" | "agent" | "chat" | "mixed"
 
 
@@ -71,9 +68,6 @@ async def run_workflow(query: str, session_id: str = "") -> dict:
 
         # ── Routing ──
         next_node = route_intent(state)
-        if next_node == "end":
-            state["final_answer"] = "操作已取消。"
-            return _build_result(state, start_total)
 
         # ── Node 2: Execute based on intent ──
         if next_node in ("rag", "mixed"):

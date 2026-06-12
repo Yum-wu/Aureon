@@ -1,10 +1,18 @@
 """Tests for RAG router (POST /api/rag/query, POST /api/rag/query/stream,
 GET /api/rag/health, GET /api/rag/benchmark)."""
 
+import os
+os.environ.setdefault("JWT_SECRET", "test-secret-for-unit-tests-only")
+
 import pytest
 from unittest.mock import patch, AsyncMock, MagicMock
 from httpx import AsyncClient, ASGITransport
 from app.main import app
+from app.config import settings
+
+# Enable dev-mode RBAC bypass for tests
+settings.auth.environment = "dev"
+settings.auth.api_auth_key = ""
 
 
 @pytest.mark.asyncio

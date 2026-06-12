@@ -44,11 +44,13 @@ LLM_MODEL=deepseek-v4-flash
 # Embedding: DashScope (Singapore)
 DASHSCOPE_API_KEY=your_dashscope_api_key
 DASHSCOPE_BASE_URL=https://dashscope-intl.aliyuncs.com/compatible-mode/v1
-DASHSCOPE_MODEL=text-embedding-v4
+DASHSCOPE_DIMENSIONS=768
+EMBEDDING_DIM=768
 SKIP_LOCAL_EMBED=true
 
 # Reranker: DashScope qwen3-rerank (different endpoint than embedding!)
 DASHSCOPE_RERANK_URL=https://dashscope-intl.aliyuncs.com/compatible-api/v1
+RERANK_ENABLED=true
 RERANK_BACKEND=api
 RERANK_PROVIDER=dashscope
 
@@ -59,6 +61,8 @@ QDRANT_API_KEY=your_qdrant_api_key
 
 # Authentication (production)
 API_AUTH_KEY=your_secure_api_key_here
+JWT_SECRET=your_jwt_secret_here
+ENCRYPTION_KEY=your_fernet_key_here
 
 # Redis auth
 REDIS_PASSWORD=your_redis_password
@@ -81,6 +85,7 @@ ES_PASSWORD=your_es_password
 ## Production Checklist
 
 - [ ] Set API_AUTH_KEY for endpoint protection
+- [ ] Set JWT_SECRET for JWT token signing
 - [ ] Set ENCRYPTION_KEY for SSO secret encryption
 - [ ] Configure Redis/ES passwords
 - [ ] Set strong SECRET_KEY

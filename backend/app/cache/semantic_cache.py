@@ -342,29 +342,40 @@ class SemanticLLMCache:
         if embedding is None:
             return None
 
-        # Search in-memory semantic cache
+        # Search in-memory semantic cache — pre-filter then batch cosine
         best_match = None
         best_score = 0.0
 
-        for key, entry in self._mem_semantic_cache.items():
-            # Check if same model/params and not expired
-            if (
-                entry.get("model") != model
-                or entry.get("temperature") != temperature
-                or entry.get("max_tokens") != max_tokens
-            ):
-                continue
+        now = time.monotonic()
+        # Pre-compute query magnitude once
+        query_mag = sum(a * a for a in embedding) ** 0.5
+        if query_mag == 0:
+            return None
 
-            if time.monotonic() > entry.get("expires_at", 0):
-                continue
+        # Filter valid candidates (model/params/expiry) before computing similarity
+        candidates = [
+            entry for entry in self._mem_semantic_cache.values()
+            if entry.get("model") == model
+            and entry.get("temperature") == temperature
+            and entry.get("max_tokens") == max_tokens
+            and now <= entry.get("expires_at", 0)
+            and entry.get("embedding")
+        ]
 
-            # Compute similarity
-            cached_embedding = entry.get("embedding")
-            if cached_embedding:
-                score = self._cosine_similarity(embedding, cached_embedding)
-                if score > best_score and score >= self.similarity_threshold:
-                    best_score = score
-                    best_match = entry
+        for entry in candidates:
+            cached_emb = entry["embedding"]
+            # Inline cosine: avoid method call overhead
+            dot = sum(a * b for a, b in zip(embedding, cached_emb))
+            cached_mag = entry.get("_magnitude")
+            if cached_mag is None:
+                cached_mag = sum(b * b for b in cached_emb) ** 0.5
+                entry["_magnitude"] = cached_mag  # cache for future lookups
+            if cached_mag == 0:
+                continue
+            score = dot / (query_mag * cached_mag)
+            if score > best_score and score >= self.similarity_threshold:
+                best_score = score
+                best_match = entry
 
         if best_match:
             self._stats["semantic_hits"] += 1
@@ -373,33 +384,42 @@ class SemanticLLMCache:
             )
             return best_match["response"], best_score
 
-        # Search Redis (simplified: iterate by pattern)
+        # Search Redis — batch SCAN + mget to avoid N+1 round-trips
         r = self._get_redis()
         if r:
             try:
                 pattern = f"semantic:{self._cache_version}:semantic:{model}:{temperature}:{max_tokens}:*"
+                # Phase 1: collect all matching keys via SCAN
+                all_keys = []
                 cursor = 0
                 while True:
                     cursor, keys = await r.scan(
                         cursor=cursor, match=pattern, count=100
                     )
-                    for key in keys:
-                        try:
-                            cached_data = await r.get(key)
-                            if cached_data:
-                                data = json.loads(cached_data)
-                                cached_embedding = data.get("embedding")
-                                if cached_embedding:
-                                    score = self._cosine_similarity(
-                                        embedding, cached_embedding
-                                    )
-                                    if score > best_score and score >= self.similarity_threshold:
-                                        best_score = score
-                                        best_match = data
-                        except Exception as e:
-                            logger.debug("Redis semantic lookup error for key %s: %s", key, e)
+                    all_keys.extend(keys)
                     if cursor == 0:
                         break
+
+                # Phase 2: batch fetch all values with mget
+                if all_keys:
+                    values = await r.mget(all_keys)
+                    for cached_data in values:
+                        if not cached_data:
+                            continue
+                        try:
+                            data = json.loads(cached_data)
+                            cached_embedding = data.get("embedding")
+                            if cached_embedding:
+                                dot = sum(a * b for a, b in zip(embedding, cached_embedding))
+                                cached_mag = sum(b * b for b in cached_embedding) ** 0.5
+                                if cached_mag == 0:
+                                    continue
+                                score = dot / (query_mag * cached_mag)
+                                if score > best_score and score >= self.similarity_threshold:
+                                    best_score = score
+                                    best_match = data
+                        except Exception as e:
+                            logger.debug("Redis semantic lookup parse error: %s", e)
             except Exception as e:
                 logger.debug("Redis semantic scan error: %s", e)
 

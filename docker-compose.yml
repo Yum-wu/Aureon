@@ -49,7 +49,7 @@ services:
         condition: service_healthy
     volumes:
       - ./offloads:/app/offloads
-      - ./data:/app/data
+      - ./backend/data:/app/data
     restart: unless-stopped
     deploy:
       resources:

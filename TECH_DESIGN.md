@@ -9,8 +9,9 @@
 | 框架 | FastAPI + uvicorn | REST + SSE 流式端点 |
 | Agent 框架 | LangChain >=0.3 | Tool Calling Agent |
 | LLM 接口 | langchain-openai (ChatOpenAI) | OpenAI 兼容接口，适配智谱/DeepSeek |
-| 默认模型 | deepseek-v4-flash | DeepSeek，改 .env 可切换 |
+| 默认模型 | qwen3.6-flash | DashScope（新加坡节点），可切换 DeepSeek/智谱 |
 | 数据库 | SQLite | offloads/memory.db |
+| 向量库 | Qdrant Cloud | `VECTOR_BACKEND=qdrant` |
 | 安全 | Auth Middleware + Fernet | X-API-Key 认证 + SSO 加密 |
 
 ### 前端（保留）
@@ -27,7 +28,7 @@
 React 前端 (src/)            Python FastAPI 后端 (backend/)
 ┌──────────────┐            ┌──────────────────────────────────┐
 │ ChatWindow   │◄──SSE──────┤ POST /api/chat/stream           │
-│ MessageList  │            │                                  │
+│ MessageList  │◄──WS───────┤ WS /ws/chat/{client_id}         │
 │ InputArea    │──POST─────►│ LangChain Agent                  │
 │              │            │  ├─ ChatModel (智谱/DeepSeek/混元)│
 │ useChat.ts   │            │  ├─ Tools (calculator/搜索/read_ref)│
@@ -96,6 +97,9 @@ data: {"type": "error",     "content": {"message": "错误描述"}}
 | GET | /api/sessions | 活跃会话列表 |
 | DELETE | /api/sessions/{session_id} | 清除会话（触发 L2 + L3） |
 | GET | /api/health | 健康检查 |
+| GET | /health/ready | 就绪探针 |
+| WS | /ws/chat/{client_id} | WebSocket 实时聊天 |
+| GET | /metrics | Prometheus 指标 |
 
 ## 安全
 

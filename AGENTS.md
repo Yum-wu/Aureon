@@ -34,14 +34,14 @@ Aureon/
 │   ├── langgraph/    # 工作流引擎 + MCP
 │   ├── api/          # 模型 + Analytics
 │   ├── common.py     # SSE_HEADERS, sse_event(), mask_secret
-│   ├── config.py     # pydantic_settings
-│   └── main.py       # FastAPI 入口 + Auth Middleware
-├── backend/tests/     # 600+ tests
+│   ├── config.py     # pydantic_settings（所有环境变量统一在此）
+│   ├── exceptions.py # AureonException 层级异常体系
+│   └── main.py       # FastAPI 入口 + Auth Middleware + TenantMiddleware
+├── backend/tests/     # 753 passed, 18 skipped
 ├── src/               # React 前端
 │   ├── components/ hooks/ pages/ services/ i18n/ types/
 │   ├── hooks/AuthContext.ts    # Auth 状态定义
 │   └── hooks/AuthProvider.tsx  # Auth Provider
-├── crew/              # CrewAI 文章生成
 └── docker-compose.yml
 ```
 
@@ -49,7 +49,7 @@ Aureon/
 
 ### 运行时环境
 - **Python**: 3.12（已固化，见 `.python-version`）
-- **Node.js**: 20 LTS
+- **Node.js**: 20+（Docker 使用 node:22-alpine）
 - **Docker**: 所有 Dockerfile 统一 `python:3.12-slim`
 - **CI**: GitHub Actions 使用 `python-version: '3.12'`
 
@@ -58,8 +58,9 @@ Aureon/
 - Agent：`create_agent(model, tools, prompt)` → `CompiledStateGraph`
 - 输入：`{"messages": [HumanMessage(content=...)]}`
 - 流式：`graph.astream_events(..., version="v2")`
-- 测试：`tests/` + pytest + pytest-asyncio
+- 测试：`tests/` + pytest + pytest-asyncio（753 passed, 18 skipped）
 - API Key 仅存 `.env`，生产环境通过 `API_AUTH_KEY` 启用认证
+- SSO/RBAC：JWT + Fernet 加密，`require_role(min_role)` FastAPI 依赖
 - 敏感字段（SSO secret/LLM key）通过 `security/__init__.py` Fernet 加密存储
 - Docker 非 root 运行（gosu appuser）
 - **Rerank 优化参数**（qa_chain.py）：
@@ -133,10 +134,23 @@ npx vite preview --port 5174 --host 127.0.0.1
 | POST | /api/crew/generate[/stream] | CrewAI |
 | GET | /api/crew/health | Crew 健康检查 |
 | GET | /api/health | 健康检查 |
+| GET | /health/ready | 就绪探针（Redis/Qdrant/索引） |
+| WS | /ws/chat/{client_id} | WebSocket 实时聊天 |
+| GET | /metrics | Prometheus 指标 |
+| * | /api/feature-flags/* | Feature Flags |
+| * | /api/observability/* | 查询追踪 |
+| * | /api/security/* | SSO/PKI 管理 |
+| * | /api/evaluation/* | 评估指标 |
+| * | /api/cost/* | 成本追踪 |
+| * | /api/reliability/* | SLO/熔断器 |
+| * | /api/knowledge/* | 文档版本 |
+| * | /api/ai-platform/* | LLM Router |
+| * | /api/integration/* | 企业连接器 |
+| * | /api/audit/* | 审计日志 |
 
-**认证**：配置 `API_AUTH_KEY` 后，所有 `/api/` 端点需 `X-API-Key` header（白名单：`/api/health`、`/api/crew/health`、`/metrics`）
+**认证**：配置 `API_AUTH_KEY` 后，所有 `/api/` 端点需 `X-API-Key` header（白名单：`/api/health`、`/api/crew/health`、`/metrics`）。SSO/RBAC 端点需 `Authorization: Bearer <JWT>` header，JWT 签名密钥由 `JWT_SECRET` 环境变量提供。
 
-语言规则：所有回复必须使用中文
+语言规则：所有回复必须使用简体中文回答
 
 ## CI/CD 部署流程
 
@@ -156,9 +170,9 @@ npx vite preview --port 5174 --host 127.0.0.1
 - 部署后必须验证生产端点，不能假设 push = 已部署
 - Railway 健康检查超时 120s，部署通常 2-5 分钟
 
-**耗时参考**（2026-06-04 实测）：
-- CI 前端：~1m19s（49 tests + lint + build）
-- CI 后端：~2m1s（426 tests）
+**耗时参考**（2026-06-11 实测）：
+- CI 前端：~1m19s（74 tests + lint + build）
+- CI 后端：~2m1s（753 tests + lint）
 - Railway 构建：~3m（Dockerfile Docker build）
 - Railway 部署：~4m（健康检查 + 流量切换）
 - 全流程（push → 生产就绪）：~8-10 分钟

@@ -8,7 +8,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class LLMSettings(BaseModel):
     llm_api_key: str = ""
-    llm_model: str = "qwen3.5-flash"
+    llm_model: str = "qwen3.6-flash"
     llm_base_url: str = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
     fallback_api_key: str = ""
     fallback_model: str = "GLM-4-Flash-250414"
@@ -85,6 +85,7 @@ class RerankSettings(BaseModel):
 
 class AuthSettings(BaseModel):
     api_auth_key: str = ""
+    environment: str = "production"  # "dev" or "production"
 
 
 class CacheSettings(BaseModel):
@@ -273,20 +274,6 @@ MODEL_REGISTRY = {
         "model": settings.llm.llm_model,
         "base_url": settings.llm.llm_base_url,
         "api_key": settings.llm.llm_api_key,
-        "max_tokens": 8192,
-    },
-    "gpt-4o": {
-        "provider": "openai",
-        "model": "gpt-4o",
-        "base_url": "https://api.openai.com/v1",
-        "api_key": "",
-        "max_tokens": 16384,
-    },
-    "claude-sonnet-4-20250514": {
-        "provider": "anthropic",
-        "model": "claude-sonnet-4-20250514",
-        "base_url": "https://api.anthropic.com",
-        "api_key": "",
         "max_tokens": 8192,
     },
 }

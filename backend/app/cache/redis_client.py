@@ -369,6 +369,9 @@ async def get_cached_with_semantic(
     Layer 2: Semantic similarity search via embedding (medium, ~10ms)
     Returns None on miss.
 
+    Metrics: Layer 1 hits/misses tracked in _cache_metrics.
+    Layer 2 hits/misses tracked in semantic_cache._stats (no double-counting).
+
     Args:
         query: User query text
         model: LLM model name
@@ -382,7 +385,7 @@ async def get_cached_with_semantic(
 
     start_time = time.monotonic()
 
-    # Layer 1: Exact cache (fastest)
+    # Layer 1: Exact cache (fastest) — tracked in _cache_metrics
     exact_result = await get_cached(query)
     if exact_result is not None:
         latency_ms = (time.monotonic() - start_time) * 1000
@@ -390,7 +393,7 @@ async def get_cached_with_semantic(
         logger.debug("Two-layer cache: exact HIT for query")
         return exact_result
 
-    # Layer 2: Semantic cache (medium)
+    # Layer 2: Semantic cache — tracked internally by semantic_cache._stats
     sem_cache = get_semantic_cache_instance()
     if sem_cache:
         try:
@@ -401,8 +404,6 @@ async def get_cached_with_semantic(
                 max_tokens=max_tokens,
             )
             if result is not None:
-                latency_ms = (time.monotonic() - start_time) * 1000
-                _record_cache_hit("semantic", latency_ms)
                 logger.debug("Two-layer cache: semantic EXACT HIT")
                 return result
 
@@ -415,8 +416,6 @@ async def get_cached_with_semantic(
             )
             if sem_result is not None:
                 response, score = sem_result
-                latency_ms = (time.monotonic() - start_time) * 1000
-                _record_cache_hit("semantic", latency_ms)
                 logger.debug(
                     "Two-layer cache: semantic SIMILAR HIT (score=%.3f)", score
                 )
@@ -425,11 +424,10 @@ async def get_cached_with_semantic(
                 return response
         except Exception as e:
             latency_ms = (time.monotonic() - start_time) * 1000
-            _record_cache_miss(latency_ms)
             _cache_metrics["errors"] += 1
             logger.debug("Semantic cache lookup error: %s (falling back to miss)", e)
 
-    # Cache miss
+    # Cache miss — record once in _cache_metrics
     latency_ms = (time.monotonic() - start_time) * 1000
     _record_cache_miss(latency_ms)
     return None

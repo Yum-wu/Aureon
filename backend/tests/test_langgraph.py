@@ -24,8 +24,6 @@ class TestAgentState:
         assert state["error"] is None
         assert state["node_times"] == {}
         assert state["mcp_calls"] == []
-        assert state["human_approval_needed"] is False
-        assert state["human_approved"] is None
 
     def test_initial_state_query_preserved(self):
         state = initial_state("  test query  ")
