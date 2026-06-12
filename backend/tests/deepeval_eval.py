@@ -110,11 +110,14 @@ def _load_article_texts() -> Dict[str, str]:
 
 async def _retrieve_and_generate(
     qa: Dict,
-    retrieve_fn: Callable,
     rag_query_fn: Callable,
     semaphore: asyncio.Semaphore,
 ) -> Dict[str, Any]:
-    """并发执行单个 QA 的 retrieve + rag_query，受信号量控制。"""
+    """并发执行单个 QA 的 rag_query，受信号量控制。
+
+    走完整 rag_query() pipeline（HyDE/CRAG/压缩/负例检测），
+    从返回值中提取 retrieval_context 和 actual_output。
+    """
     query = qa["question"]
     is_negative = qa.get("is_negative", False)
 
@@ -125,36 +128,41 @@ async def _retrieve_and_generate(
         }
 
     async with semaphore:
-        # 并发执行 retrieve 和 rag_query
-        retrieve_task = asyncio.create_task(
-            asyncio.to_thread(retrieve_fn, query, 5)
-        )
-        generate_task = asyncio.create_task(
-            asyncio.to_thread(rag_query_fn, query)
-        )
-        results = await asyncio.gather(
-            retrieve_task, generate_task, return_exceptions=True
-        )
-
-    # 处理 retrieve 结果
-    retrieval_context = []
-    if isinstance(results[0], Exception):
-        logger.warning("Retrieval failed for '%s': %s", query[:40], results[0])
-    else:
-        chunks = results[0]
-        retrieval_context = [c.get("text", "") for c in chunks if c.get("text")]
-        retrieval_context = _dedup_retrieval_context(retrieval_context)
-        retrieval_context = [_strip_contextual_prefix(t) for t in retrieval_context]
+        result = await asyncio.to_thread(rag_query_fn, query)
 
     # 处理 rag_query 结果
-    actual_output = "Error: failed to generate answer"
-    if isinstance(results[1], Exception):
-        logger.warning("Generation failed for '%s': %s", query[:40], results[1])
-    elif results[1] is None:
-        actual_output = "Error: query timed out"
-    else:
-        result = results[1]
-        actual_output = result.answer if hasattr(result, "answer") else str(result)
+    if isinstance(result, Exception):
+        logger.warning("rag_query failed for '%s': %s", query[:40], result)
+        return {
+            "retrieval_context": [],
+            "actual_output": "Error: failed to process query",
+        }
+
+    if result is None:
+        return {
+            "retrieval_context": [],
+            "actual_output": "Error: query timed out",
+        }
+
+    # 从 RAGQueryResponse 提取 retrieval_context 和 actual_output
+    actual_output = result.answer if hasattr(result, "answer") else str(result)
+
+    retrieval_context = []
+    if hasattr(result, "sources") and result.sources:
+        for src in result.sources:
+            chunk_text = getattr(src, "chunk", "") or getattr(src, "chunk_text_snippet", "")
+            if chunk_text:
+                retrieval_context.append(chunk_text)
+
+    # 如果没有 sources，尝试从 rag_query 的 chunks 获取
+    if not retrieval_context and hasattr(result, "chunks"):
+        for c in result.chunks:
+            text = c.get("text", "") if isinstance(c, dict) else getattr(c, "text", "")
+            if text:
+                retrieval_context.append(text)
+
+    retrieval_context = _dedup_retrieval_context(retrieval_context)
+    retrieval_context = [_strip_contextual_prefix(t) for t in retrieval_context]
 
     return {
         "retrieval_context": retrieval_context,
@@ -164,19 +172,17 @@ async def _retrieve_and_generate(
 
 async def build_test_cases_async(
     qa_pairs: List[Dict],
-    retrieve_fn: Callable,
     rag_query_fn: Callable,
     article_texts: Dict[str, str] = None,
     max_concurrent: int = 10,
 ) -> tuple:
     """异步并发构建 DeepEval LLMTestCase。
 
-    使用 asyncio.gather 并发执行所有 QA 的 retrieve + rag_query，
-    单个 QA 内部也并发执行 retrieve 和 rag_query。
+    使用 asyncio.gather 并发执行所有 QA 的 rag_query，
+    走完整 pipeline（HyDE/CRAG/压缩/负例检测）。
 
     Args:
         qa_pairs: List of {"question", "answer", "source_article", ...}
-        retrieve_fn: Function(query, top_k) -> List[Dict] with "text" field
         rag_query_fn: Function(query) -> RAGQueryResponse with .answer and .sources
         article_texts: Slug -> full article text mapping (auto-loaded if None)
         max_concurrent: 最大并发 QA 数（默认 10，避免 API 限流）
@@ -193,9 +199,9 @@ async def build_test_cases_async(
     # 信号量控制并发数
     semaphore = asyncio.Semaphore(max_concurrent)
 
-    # 并发执行所有 QA 的 retrieve + generate
+    # 并发执行所有 QA 的 rag_query
     tasks = [
-        _retrieve_and_generate(qa, retrieve_fn, rag_query_fn, semaphore)
+        _retrieve_and_generate(qa, rag_query_fn, semaphore)
         for _, qa in valid_items
     ]
     results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -227,7 +233,6 @@ async def build_test_cases_async(
 
 def build_test_cases(
     qa_pairs: List[Dict],
-    retrieve_fn: Callable,
     rag_query_fn: Callable,
     article_texts: Dict[str, str] = None,
     max_concurrent: int = 10,
@@ -238,7 +243,7 @@ def build_test_cases(
     max_concurrent 控制最大并发 QA 数（默认 10）。
     """
     return asyncio.run(
-        build_test_cases_async(qa_pairs, retrieve_fn, rag_query_fn, article_texts, max_concurrent)
+        build_test_cases_async(qa_pairs, rag_query_fn, article_texts, max_concurrent)
     )
 
 
@@ -465,7 +470,7 @@ if __name__ == "__main__":
 
     print(f"Running DeepEval on {dataset_name} ({info['total']} QA pairs)...")
 
-    from app.rag.qa_chain import hybrid_retrieve, rag_query
+    from app.rag.qa_chain import rag_query
     from app.agent.llm import create_llm
 
     llm = create_llm()
@@ -477,7 +482,7 @@ if __name__ == "__main__":
     article_texts = _load_article_texts()
     print(f"Loaded {len(article_texts)} article texts for context")
 
-    test_cases, used_qa_indices = build_test_cases(qa_pairs, hybrid_retrieve, rag_query_fn, article_texts, max_concurrent=10)
+    test_cases, used_qa_indices = build_test_cases(qa_pairs, rag_query_fn, article_texts, max_concurrent=10)
     print(f"Built {len(test_cases)} test cases (concurrent data preparation)")
 
     scores = run_deepeval_metrics(test_cases, qa_pairs=qa_pairs, used_qa_indices=used_qa_indices)
