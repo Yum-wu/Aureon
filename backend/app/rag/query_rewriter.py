@@ -193,27 +193,26 @@ def hyde_retrieve(
     Returns:
         List of retrieved document chunks
     """
-    from app.rag.vector_store import retrieve
-
     # 1. Generate hypothetical answer
     hypothetical = generate_hypothetical_answer(query, llm_call_fn, lang=lang)
     if not hypothetical:
         logger.info("HyDE: empty hypothetical answer, falling back to direct retrieval")
-        return retrieve(query, top_k=top_k, lang_filter=lang_filter)
+        from app.rag.qa_chain import hybrid_retrieve
+        return hybrid_retrieve(query, top_k=top_k, lang_filter=lang_filter)
 
     logger.info(
         "HyDE: generated hypothetical answer (%d chars), retrieving with it",
         len(hypothetical),
     )
 
-    # 2. Retrieve using hypothetical answer instead of original query
-    #    The hypothetical answer is semantically closer to actual documents
-    results = retrieve(hypothetical, top_k=top_k, lang_filter=lang_filter)
+    # 2. 使用混合检索（BM25 + 向量），而非纯向量检索
+    from app.rag.qa_chain import hybrid_retrieve
+    results = hybrid_retrieve(hypothetical, top_k=top_k, lang_filter=lang_filter)
 
     # 3. If HyDE returns no results, fallback to direct query retrieval
     if not results:
         logger.info("HyDE: no results with hypothetical answer, falling back to direct retrieval")
-        results = retrieve(query, top_k=top_k, lang_filter=lang_filter)
+        results = hybrid_retrieve(query, top_k=top_k, lang_filter=lang_filter)
 
     return results
 
@@ -237,8 +236,7 @@ async def hyde_retrieve_async(
     Returns:
         List of retrieved document chunks
     """
-    import asyncio
-    from app.rag.vector_store import retrieve
+    from app.rag.qa_chain import hybrid_retrieve_async
 
     # 1. Generate hypothetical answer (async)
     prompt = _HYDE_PROMPT_EN if lang == "en" else _HYDE_PROMPT_ZH
@@ -256,19 +254,19 @@ async def hyde_retrieve_async(
 
     if not hypothetical:
         logger.info("HyDE async: empty hypothetical answer, falling back to direct retrieval")
-        return await asyncio.to_thread(retrieve, query, top_k, False, lang_filter)
+        return await hybrid_retrieve_async(query, top_k=top_k, lang_filter=lang_filter)
 
     logger.info(
         "HyDE async: generated hypothetical answer (%d chars), retrieving with it",
         len(hypothetical),
     )
 
-    # 2. Retrieve using hypothetical answer (run in thread to avoid blocking)
-    results = await asyncio.to_thread(retrieve, hypothetical, top_k, False, lang_filter)
+    # 2. 使用混合检索（BM25 + 向量），而非纯向量检索
+    results = await hybrid_retrieve_async(hypothetical, top_k=top_k, lang_filter=lang_filter)
 
     # 3. Fallback to direct query if no results
     if not results:
         logger.info("HyDE async: no results with hypothetical answer, falling back to direct retrieval")
-        results = await asyncio.to_thread(retrieve, query, top_k, False, lang_filter)
+        results = await hybrid_retrieve_async(query, top_k=top_k, lang_filter=lang_filter)
 
     return results

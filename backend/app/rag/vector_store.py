@@ -51,7 +51,7 @@ VECTOR_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file
 
 # ── Embedding cache (FIFO eviction, keyed by text hash) ──
 _embed_cache: Dict[str, np.ndarray] = {}
-_EMBED_CACHE_MAX = 500
+_EMBED_CACHE_MAX = 5000
 _embed_cache_lock = threading.Lock()  # Thread-safe access to _embed_cache
 
 # ── Query embedding reuse (module-level) ──
