@@ -54,7 +54,7 @@ jobs:
       - name: Lint backend code
         run: |
           cd backend
-          ruff check app/ --select E,F,W --ignore E501
+          ruff check app/
 
       # TODO: fix test_audit.py and test_rag_router_extended.py, then remove --ignore flags
       - name: Run tests
