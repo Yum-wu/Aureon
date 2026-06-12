@@ -1,0 +1,108 @@
+# benchmark_config.yaml — 企业级 RAG 基准测试配置
+# QA 数据集、性能阈值、端点配置
+
+qa_dataset:
+  - question: "Hermes Agent 的分层记忆系统有几层？每层叫什么？"
+    expected_answer: "4 层：L0 Conversation、L1 Atoms、L2 Scenarios、L3 Persona"
+    expected_sources: ["hermes-agent-practical-guide"]
+    source_article: "hermes-agent-practical-guide"
+    category: "factual"
+    difficulty: "easy"
+    is_negative: false
+  - question: "React SPA 部署到 GitHub Pages 时，路由系统会遇到什么典型问题？如何解决？"
+    expected_answer: "刷新页面会出现 404，因为 GitHub Pages 找不到对应的 HTML 文件。解决方案是复制 index.html 为 404.html"
+    expected_sources: ["spa-github-pages"]
+    source_article: "spa-github-pages"
+    category: "factual"
+    difficulty: "easy"
+    is_negative: false
+  - question: "如何配置不存在的功能 XYZ？"
+    expected_answer: ""
+    expected_sources: []
+    source_article: "none"
+    category: "negative"
+    difficulty: "easy"
+    is_negative: true
+  - question: "什么是 RAG？"
+    expected_answer: "RAG（Retrieval-Augmented Generation）是一种结合检索和生成的AI技术"
+    expected_sources: ["rag-overview"]
+    source_article: "rag-overview"
+    category: "factual"
+    difficulty: "easy"
+    is_negative: false
+  - question: "BM25 和向量检索有什么区别？"
+    expected_answer: "BM25 基于关键词匹配，向量检索基于语义相似度"
+    expected_sources: ["rag-overview"]
+    source_article: "rag-overview"
+    category: "reasoning"
+    difficulty: "medium"
+    is_negative: false
+  - question: "请详细解释量子计算在 Aureon 中的应用"
+    expected_answer: ""
+    expected_sources: []
+    source_article: "none"
+    category: "negative"
+    difficulty: "hard"
+    is_negative: true
+  - question: "Aureon 的核心功能是什么？"
+    expected_answer: "Aureon 是一个 AI 聊天助手平台，支持 RAG 检索增强生成"
+    expected_sources: ["aureon-intro"]
+    source_article: "aureon-intro"
+    category: "factual"
+    difficulty: "easy"
+    is_negative: false
+  - question: "如何优化检索性能？"
+    expected_answer: "可以通过调整 BM25 参数、使用向量索引、优化分块策略来提升检索性能"
+    expected_sources: ["rag-overview"]
+    source_article: "rag-overview"
+    category: "reasoning"
+    difficulty: "medium"
+    is_negative: false
+  - question: "HyDE 和 Multi-Query 检索策略分别适用于什么场景？"
+    expected_answer: "HyDE 适用于查询模糊需要假设性答案的场景，Multi-Query 适用于查询需要多角度理解的场景"
+    expected_sources: ["rag-overview"]
+    source_article: "rag-overview"
+    category: "synthesis"
+    difficulty: "hard"
+    is_negative: false
+  - question: "CRAG 自纠正机制如何工作？"
+    expected_answer: "CRAG 在检索质量低时重写查询并重新检索，通过规则扩展生成变体查询"
+    expected_sources: ["rag-overview"]
+    source_article: "rag-overview"
+    category: "reasoning"
+    difficulty: "medium"
+    is_negative: false
+
+thresholds:
+  retrieval:
+    p50_ms: 200
+    p99_ms: 1000
+    recall_at_3: 0.90
+    recall_at_5: 0.95
+    recall_at_10: 0.97
+    mrr: 0.80
+    ndcg_at_10: 0.80
+    qps_min: 5
+  generation:
+    p50_ms: 2000
+    p99_ms: 5000
+  quality:
+    faithfulness: 0.70
+    answer_relevancy: 0.75
+    context_precision: 0.70
+    context_recall: 0.75
+    hallucination_max: 0.20
+  cache:
+    hit_rate_min: 0.6
+    latency_ratio_max: 0.5
+  smoke:
+    health_timeout_s: 10
+    rag_query_timeout_s: 30
+
+endpoints:
+  production: "https://aureon-production-1247.up.railway.app"
+  local: "http://localhost:8000"
+
+concurrency:
+  levels: [1, 5, 10]
+  queries_per_level: 20
