@@ -1,29 +1,51 @@
 """Security API Tests
 
-Patches settings.auth to enable dev-mode RBAC bypass in tests.
+Uses FastAPI dependency_overrides to bypass RBAC in tests.
 """
 import os
 import pytest
 import uuid
-from unittest.mock import PropertyMock, patch, MagicMock
 
 os.environ.setdefault("JWT_SECRET", "test-secret-for-unit-tests-only")
 
 from fastapi.testclient import TestClient
 from app.main import app
-from app.config import settings
-from app.security import init_pii_detection_table, init_sso_providers_table
+from app.security import (
+    init_pii_detection_table,
+    init_sso_providers_table,
+    UserRole,
+)
 
 
 # 初始化数据库表
 init_pii_detection_table()
 init_sso_providers_table()
 
-# Patch settings.auth to enable dev bypass
-# require_role checks: settings.auth.environment == "dev" and not settings.api_auth_key
-settings.auth.environment = "dev"
-settings.auth.api_auth_key = ""
-settings._api_auth_key = ""  # backward compat flat field
+
+@pytest.fixture(autouse=True)
+def _bypass_rbac():
+    """Bypass all require_role RBAC checks during tests."""
+    mock_user = {"sub": "test-user", "role": "ADMIN", "_role": UserRole.ADMIN}
+
+    overrides = {}
+    for route in app.routes:
+        if not hasattr(route, "dependant"):
+            continue
+        for dep in route.dependant.dependencies:
+            call = dep.call
+            if getattr(call, "__name__", "") == "_role_checker":
+                async def _mock_admin(_original_call=call):
+                    return mock_user
+                overrides[call] = _mock_admin
+
+    for dep_func, mock_func in overrides.items():
+        app.dependency_overrides[dep_func] = mock_func
+
+    yield
+
+    for dep_func in overrides:
+        app.dependency_overrides.pop(dep_func, None)
+
 
 client = TestClient(app)
 
