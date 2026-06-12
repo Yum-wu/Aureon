@@ -94,8 +94,9 @@ class TestRagQuery:
 
 class TestRagQueryAstream:
     @pytest.mark.asyncio
+    @patch("app.rag.query_classifier.route_retrieval", return_value="medium")
     @patch("app.rag.qa_chain.hybrid_retrieve", return_value=[])
-    async def test_no_chunks(self, mock_hybrid):
+    async def test_no_chunks(self, mock_hybrid, mock_route):
         events = []
         async for event in rag_query_astream("test", AsyncMock(), lang="en"):
             events.append(event)
@@ -106,9 +107,10 @@ class TestRagQueryAstream:
         assert "No relevant content" in next(e["content"] for e in events if e["type"] == "text")
 
     @pytest.mark.asyncio
+    @patch("app.rag.query_classifier.route_retrieval", return_value="medium")
     @patch("app.rag.qa_chain.classify_query_answerable", new_callable=AsyncMock, return_value=True)
     @patch("app.rag.qa_chain.hybrid_retrieve")
-    async def test_with_chunks(self, mock_hybrid, mock_classify):
+    async def test_with_chunks(self, mock_hybrid, mock_classify, mock_route):
         mock_hybrid.return_value = [
             {"text": "RAG content", "metadata": {"title": "Guide", "slug": "g"}, "score": 0.9}
         ]
@@ -133,8 +135,9 @@ class TestRagQueryAstream:
         assert "text" in types
 
     @pytest.mark.asyncio
+    @patch("app.rag.query_classifier.route_retrieval", return_value="medium")
     @patch("app.rag.qa_chain.hybrid_retrieve", return_value=[])
-    async def test_zh_no_results(self, mock_hybrid):
+    async def test_zh_no_results(self, mock_hybrid, mock_route):
         events = []
         async for event in rag_query_astream("test", AsyncMock(), lang="zh"):
             events.append(event)

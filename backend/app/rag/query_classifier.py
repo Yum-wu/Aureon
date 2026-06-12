@@ -218,3 +218,20 @@ def get_reranking_strategy(query: str) -> Dict[str, Any]:
     )
 
     return strategy
+
+
+def route_retrieval(query: str) -> str:
+    """根据查询复杂度决定检索策略。
+
+    Returns:
+        "simple" — 纯 sparse/keyword 检索（<10ms）
+        "medium" — hybrid retrieve（100-200ms）
+        "complex" — multi_query + rerank（300-500ms）
+    """
+    from app.config import settings
+
+    if not settings.query_routing_enabled:
+        return "complex"  # 默认走完整 pipeline
+
+    strategy = get_reranking_strategy(query)
+    return strategy["complexity"]  # "simple", "medium", or "complex"
