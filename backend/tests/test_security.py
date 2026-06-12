@@ -1,14 +1,29 @@
-"""Security API Tests"""
+"""Security API Tests
+
+Patches settings.auth to enable dev-mode RBAC bypass in tests.
+"""
+import os
 import pytest
 import uuid
+from unittest.mock import PropertyMock, patch, MagicMock
+
+os.environ.setdefault("JWT_SECRET", "test-secret-for-unit-tests-only")
+
 from fastapi.testclient import TestClient
 from app.main import app
+from app.config import settings
 from app.security import init_pii_detection_table, init_sso_providers_table
 
 
 # 初始化数据库表
 init_pii_detection_table()
 init_sso_providers_table()
+
+# Patch settings.auth to enable dev bypass
+# require_role checks: settings.auth.environment == "dev" and not settings.api_auth_key
+settings.auth.environment = "dev"
+settings.auth.api_auth_key = ""
+settings._api_auth_key = ""  # backward compat flat field
 
 client = TestClient(app)
 

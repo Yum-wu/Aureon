@@ -17,9 +17,22 @@ from app.config import settings
 
 logger = structlog.get_logger()
 
-# ── LLM instance pool (reuse connections across requests) ──
-_llm_pool: dict[str, ChatOpenAI] = {}
+# ── LLM instance pool (reuse connections across requests, LRU eviction) ──
+from collections import OrderedDict
+
+_LLM_POOL_MAXSIZE = 10
+_llm_pool: OrderedDict[str, ChatOpenAI] = OrderedDict()
 _llm_pool_lock = threading.Lock()
+
+
+def _pool_put(key: str, llm: ChatOpenAI) -> None:
+    """Insert into pool with LRU eviction. Must be called with _llm_pool_lock held."""
+    if key in _llm_pool:
+        _llm_pool.move_to_end(key)
+    else:
+        if len(_llm_pool) >= _LLM_POOL_MAXSIZE:
+            _llm_pool.popitem(last=False)  # evict least recently used
+        _llm_pool[key] = llm
 
 # Default parameters per LangChain best practices
 _DEFAULT_MAX_TOKENS = 2048
@@ -41,6 +54,7 @@ def create_llm(model: str = None, **kwargs):
     # Return cached instance if available
     with _llm_pool_lock:
         if pool_key in _llm_pool:
+            _llm_pool.move_to_end(pool_key)  # LRU promotion
             return _llm_pool[pool_key]
 
     if model:
@@ -61,7 +75,7 @@ def create_llm(model: str = None, **kwargs):
                 max_retries=_DEFAULT_MAX_RETRIES,
             )
             with _llm_pool_lock:
-                _llm_pool[pool_key] = llm
+                _pool_put(pool_key, llm)
             return llm
 
     # Default: DashScope Qwen
@@ -76,7 +90,7 @@ def create_llm(model: str = None, **kwargs):
         max_retries=_DEFAULT_MAX_RETRIES,
     )
     with _llm_pool_lock:
-        _llm_pool[pool_key] = llm
+        _pool_put(pool_key, llm)
     return llm
 
 

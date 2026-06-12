@@ -22,14 +22,21 @@ pii_detector = PIIDetector()
 # ── PII Detection Endpoints ──
 
 @router.post("/pii/detect")
-async def detect_pii(text: str):
+async def detect_pii(
+    text: str,
+    user: dict = Depends(require_role(UserRole.VIEWER)),
+):
     """检测文本中的 PII"""
     results = pii_detector.detect(text)
     return {"pii_found": len(results) > 0, "results": results}
 
 
 @router.post("/pii/mask")
-async def mask_pii(text: str, pii_type: Optional[str] = None):
+async def mask_pii(
+    text: str,
+    pii_type: Optional[str] = None,
+    user: dict = Depends(require_role(UserRole.VIEWER)),
+):
     """脱敏文本中的 PII"""
     masked_text = pii_detector.mask(text, pii_type)
     return {"original": text, "masked": masked_text}
@@ -40,6 +47,7 @@ async def scan_document(
     document_id: str,
     content: str,
     action: str = "mask",
+    user: dict = Depends(require_role(UserRole.VIEWER)),
 ):
     """扫描文档中的 PII 并记录"""
     detections = pii_detector.detect(content)
@@ -95,7 +103,9 @@ async def delete_sso_provider_endpoint(
 # ── Rate Limiting Config ──
 
 @router.get("/rate-limits/config")
-async def get_rate_limit_config():
+async def get_rate_limit_config(
+    user: dict = Depends(require_role(UserRole.ADMIN)),
+):
     """获取速率限制配置"""
     return {
         "enabled": True,

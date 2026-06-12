@@ -34,7 +34,7 @@
 - **系统仪表盘** — 实时指标、健康监控、使用分析
 - **数据分析** — 延迟、Token 使用、缓存性能、查询分布
 - **企业后台** — 工作区管理、RBAC、审计日志
-- **600+ 后端测试** — 全面测试覆盖
+- **750+ 后端测试** — 全面测试覆盖
 
 ## 架构
 
@@ -47,6 +47,7 @@
                                           ├── LLM (DeepSeek / GPT-4o / Claude)
                                           ├── 缓存 (Redis + 语义缓存)
                                           ├── Prompt Injection 防护
+                                          ├── WebSocket 流式
                                           └── SSE 流式响应
 ```
 
@@ -66,9 +67,9 @@ docker-compose up
 
 ## 截图
 
-| Landing | Search | Dashboard |
-|---------|--------|-----------|
-| ![Landing](screenshots/landing.png) | ![Search](screenshots/search.png) | ![Dashboard](screenshots/dashboard.png) |
+| Landing | Search |
+|---------|--------|
+| ![Landing](landing-preview.png) | ![Search](search-page.png) |
 
 ## 文档
 

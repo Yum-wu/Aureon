@@ -161,9 +161,9 @@ def require_role(min_role: UserRole):
     from app.exceptions import AuthenticationError, AuthorizationError
 
     async def _role_checker(request: Request) -> dict:
-        # Skip RBAC when API_AUTH_KEY is not configured (dev mode)
+        # Skip RBAC only in explicit dev mode with no API key configured
         from app.config import settings
-        if not settings.api_auth_key:
+        if settings.auth.environment == "dev" and not settings.api_auth_key:
             return {"sub": "dev-user", "role": "ADMIN", "_role": UserRole.ADMIN}
 
         # Extract token directly from Authorization header
@@ -196,7 +196,7 @@ _fernet = None
 
 
 def _get_fernet():
-    """Lazy-init Fernet cipher. Key from ENCRYPTION_KEY env or auto-generate."""
+    """Lazy-init Fernet cipher. Key from ENCRYPTION_KEY env or auto-generate in dev only."""
     global _fernet
     if _fernet is not None:
         return _fernet
@@ -204,8 +204,14 @@ def _get_fernet():
         from cryptography.fernet import Fernet
         key = os.environ.get("ENCRYPTION_KEY")
         if not key:
+            from app.config import settings
+            if settings.auth.environment != "dev":
+                raise RuntimeError(
+                    "ENCRYPTION_KEY must be set in production. "
+                    "Generate one with: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
+                )
             key = Fernet.generate_key()
-            logger.warning("ENCRYPTION_KEY not set, generated ephemeral key (lost on restart)")
+            logger.warning("ENCRYPTION_KEY not set, generated ephemeral key (lost on restart) — dev mode only")
         _fernet = Fernet(key.encode() if isinstance(key, str) else key)
     except ImportError:
         logger.warning("cryptography not installed, secret encryption disabled")

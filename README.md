@@ -41,7 +41,7 @@
 - **Knowledge Intelligence** — Document version control, export
 - **AI Platform** — Multi-LLM router, confidence scoring, session memory
 - **Integration** — Enterprise connectors (Google Drive/SharePoint), IM bots
-- **600+ Backend Tests** — Comprehensive test coverage
+- **750+ Backend Tests** — Comprehensive test coverage
 
 ## Architecture
 
@@ -54,6 +54,7 @@ User → Web UI (React + Vite) → FastAPI → LangGraph Orchestrator
                                            ├── Cache (Redis + Semantic Cache)
                                            ├── Adaptive Re-ranking (DashScope qwen3-rerank)
                                            ├── Prompt Injection Guard
+                                           ├── WebSocket Streaming
                                            └── SSE Streaming Response
 ```
 
@@ -73,9 +74,9 @@ docker-compose up
 
 ## Screenshots
 
-| Landing | Search | Dashboard |
-|---------|--------|-----------|
-| ![Landing](screenshots/landing.png) | ![Search](screenshots/search.png) | ![Dashboard](screenshots/dashboard.png) |
+| Landing | Search |
+|---------|--------|
+| ![Landing](landing-preview.png) | ![Search](search-page.png) |
 
 ## Documentation
 

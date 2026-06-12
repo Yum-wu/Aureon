@@ -64,4 +64,4 @@ Production-grade hybrid retrieval platform with streaming answers, citations, an
 | TTFT | ~310ms |
 | Retrieval Latency | ~5.8ms |
 | Cost/Query | ~$0.001 |
-| Backend Tests | 426 |
+| Backend Tests | 750+ |

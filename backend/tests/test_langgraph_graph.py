@@ -20,20 +20,6 @@ class TestRouteIntent:
         state = initial_state("test")
         assert route_intent(state) == "chat"
 
-    def test_human_rejected_ends(self):
-        state = initial_state("test")
-        state["intent"] = "agent"
-        state["human_approval_needed"] = True
-        state["human_approved"] = False
-        assert route_intent(state) == "end"
-
-    def test_human_approved_continues(self):
-        state = initial_state("test")
-        state["intent"] = "agent"
-        state["human_approval_needed"] = True
-        state["human_approved"] = True
-        assert route_intent(state) == "agent"
-
     def test_mixed_intent(self):
         state = initial_state("test")
         state["intent"] = "mixed"

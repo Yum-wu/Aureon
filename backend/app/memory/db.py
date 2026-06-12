@@ -123,6 +123,7 @@ def init_db():
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
                 CREATE INDEX IF NOT EXISTS idx_conv_session ON conversations(session_id);
+                CREATE INDEX IF NOT EXISTS idx_conv_session_created ON conversations(session_id, created_at DESC);
                 CREATE INDEX IF NOT EXISTS idx_atom_session ON atoms(session_id);
             """)
             break

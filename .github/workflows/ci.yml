@@ -42,6 +42,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: 'backend/requirements.txt'
 
       - name: Install dependencies
         run: |
@@ -50,11 +52,11 @@ jobs:
           pip install pytest ruff
 
       - name: Lint backend code
-        continue-on-error: true
         run: |
           cd backend
           ruff check app/ --select E,F,W --ignore E501
 
+      # TODO: fix test_audit.py and test_rag_router_extended.py, then remove --ignore flags
       - name: Run tests
         run: |
           cd backend

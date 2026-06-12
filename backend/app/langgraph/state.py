@@ -22,9 +22,6 @@ class AgentState(TypedDict):
     node_times: dict                     # 各节点耗时（ms）
     mcp_calls: List[dict]                # MCP 调用记录
 
-    human_approval_needed: bool          # 是否需要人工审批
-    human_approved: Optional[bool]       # 审批结果
-
 
 def initial_state(query: str) -> AgentState:
     """创建初始状态"""
@@ -41,6 +38,4 @@ def initial_state(query: str) -> AgentState:
         "error": None,
         "node_times": {},
         "mcp_calls": [],
-        "human_approval_needed": False,
-        "human_approved": None,
     }
