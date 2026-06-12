@@ -1104,8 +1104,9 @@ async def rag_query_with_cache(
                 pass
             return RAGQueryResponse(answer=answer, sources=sources)
 
-    # Cache miss: run RAG pipeline
-    result = rag_query(query, llm_call_fn, top_k, use_mmr, lang, filter_lang)
+    # Cache miss: run RAG pipeline（避免阻塞事件循环）
+    import asyncio
+    result = await asyncio.to_thread(rag_query, query, llm_call_fn, top_k, use_mmr, lang, filter_lang)
 
     # Cache the result in both exact and semantic caches
     cache_data = json.dumps({"answer": result.answer, "sources": [s.model_dump() for s in result.sources]})
@@ -1183,8 +1184,13 @@ def run_incremental_index(filepath: str) -> dict:
                 },
             })
 
-    # 3. Add to existing index (incremental)
-    from app.rag.vector_store import add_to_index
+    # 3. 删除该文件的旧块，避免重复索引
+    from app.rag.vector_store import add_to_index, delete_from_index
+    filename = os.path.basename(filepath)
+    delete_from_index(filename)
+    logger.info("Deleted old chunks for '%s' before re-indexing", filename)
+
+    # 4. Add to existing index (incremental)
     add_to_index(chunks)
 
     elapsed = time.time() - start

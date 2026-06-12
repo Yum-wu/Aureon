@@ -52,13 +52,13 @@ def test_hyde_retrieve():
     mock_response.content = "RAG is a technique combining retrieval and generation"
     mock_llm.return_value = mock_response
 
-    # Mock vector store retrieve
+    # Mock hybrid_retrieve（HyDE 现在使用混合检索而非纯向量检索）
     mock_chunks = [
         {"text": "RAG Introduction", "metadata": {"title": "RAG Guide"}, "score": 0.8},
         {"text": "Vector Search", "metadata": {"title": "Vector Search"}, "score": 0.7},
     ]
 
-    with patch("app.rag.vector_store.retrieve", return_value=mock_chunks) as mock_retrieve:
+    with patch("app.rag.qa_chain.hybrid_retrieve", return_value=mock_chunks) as mock_hybrid:
         result = hyde_retrieve(
             "What is RAG?",
             mock_llm,
@@ -68,9 +68,9 @@ def test_hyde_retrieve():
 
         assert len(result) == 2
         assert result[0]["text"] == "RAG Introduction"
-        # Verify retrieve was called with hypothetical answer, not original query
-        mock_retrieve.assert_called_once()
-        call_args = mock_retrieve.call_args
+        # Verify hybrid_retrieve was called with hypothetical answer, not original query
+        mock_hybrid.assert_called_once()
+        call_args = mock_hybrid.call_args
         assert call_args[0][0] == "RAG is a technique combining retrieval and generation"
 
 
@@ -86,7 +86,7 @@ def test_hyde_retrieve_fallback():
     # First call returns empty, second call returns results
     mock_chunks = [{"text": "Result", "metadata": {}, "score": 0.5}]
 
-    with patch("app.rag.vector_store.retrieve", side_effect=[[], mock_chunks]) as mock_retrieve:
+    with patch("app.rag.qa_chain.hybrid_retrieve", side_effect=[[], mock_chunks]) as mock_hybrid:
         result = hyde_retrieve(
             "Test query",
             mock_llm,
@@ -96,7 +96,7 @@ def test_hyde_retrieve_fallback():
 
         assert len(result) == 1
         # Should be called twice: once with hypothetical, once with original query
-        assert mock_retrieve.call_count == 2
+        assert mock_hybrid.call_count == 2
 
 
 def test_hyde_retrieve_empty_hypothetical():
@@ -108,7 +108,7 @@ def test_hyde_retrieve_empty_hypothetical():
 
     mock_chunks = [{"text": "Result", "metadata": {}, "score": 0.5}]
 
-    with patch("app.rag.vector_store.retrieve", return_value=mock_chunks) as mock_retrieve:
+    with patch("app.rag.qa_chain.hybrid_retrieve", return_value=mock_chunks) as mock_hybrid:
         result = hyde_retrieve(
             "Test query",
             mock_llm,
@@ -118,7 +118,7 @@ def test_hyde_retrieve_empty_hypothetical():
 
         assert len(result) == 1
         # Should fallback to direct query retrieval
-        mock_retrieve.assert_called_once_with("Test query", top_k=3, lang_filter=None)
+        mock_hybrid.assert_called_once_with("Test query", top_k=3, lang_filter=None)
 
 
 if __name__ == "__main__":
