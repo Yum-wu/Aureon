@@ -351,6 +351,11 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
         top_k: 返回结果数量
         lang_filter: 语言过滤（"zh" 或 "en"）
     """
+    # 当 sparse 向量启用时，优先使用 Qdrant 原生混合搜索
+    if settings.sparse_enabled:
+        from app.rag.vector_store import hybrid_search_qdrant
+        return hybrid_search_qdrant(query, top_k=top_k, lang_filter=lang_filter)
+
     bm25_results = retrieve_keyword(query, top_k=top_k * _RETRIEVAL_MULTIPLIER, lang_filter=lang_filter)
     vector_results = retrieve(query, top_k=top_k * _RETRIEVAL_MULTIPLIER, use_mmr=False, lang_filter=lang_filter)
 
