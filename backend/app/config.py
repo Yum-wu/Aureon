@@ -67,6 +67,7 @@ class VectorStoreSettings(BaseModel):
     hnsw_m: int = 32
     hnsw_ef_construct: int = 200
     hnsw_ef_search: int = 128
+    query_routing_enabled: bool = True
     quantization_enabled: bool = True
     vectors_on_disk: bool = True
 
@@ -141,6 +142,17 @@ class AppSettings(BaseModel):
     benchmark_mode: str = "local"
 
 
+class ObservabilitySettings(BaseModel):
+    """可观测性配置。"""
+    langsmith_enabled: bool = False
+    langsmith_api_key: str = ""
+    langsmith_project: str = "aureon-rag"
+    langfuse_enabled: bool = False
+    langfuse_public_key: str = ""
+    langfuse_secret_key: str = ""
+    langfuse_host: str = "https://cloud.langfuse.com"
+
+
 class Settings(BaseSettings):
     """Application configuration loaded from .env file.
 
@@ -157,6 +169,7 @@ class Settings(BaseSettings):
     cache: CacheSettings = Field(default_factory=CacheSettings)
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
     app: AppSettings = Field(default_factory=AppSettings)
+    observability: ObservabilitySettings = ObservabilitySettings()
 
     model_config = SettingsConfigDict(
         env_file=".env",

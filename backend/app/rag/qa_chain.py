@@ -6,6 +6,7 @@ Retrieves relevant context and generates answers using LLM.
 import json
 import time
 import os
+import asyncio
 import numpy as np
 from typing import List, Dict, Any
 
@@ -936,11 +937,31 @@ async def rag_query_astream(
     if lang is None:
         lang = detect_language(query)
 
-    # 1. Hybrid retrieval: BM25 keyword + vector search, RRF fusion
+    # 1. 根据查询复杂度路由检索策略
     #    Wrapped in asyncio.to_thread to avoid blocking the event loop
-    #    (multi_query_retrieve calls sync embedding APIs internally)
     import asyncio
-    chunks = await asyncio.to_thread(multi_query_retrieve, query, top_k=top_k, lang_filter=filter_lang)
+    from app.rag.query_classifier import route_retrieval
+
+    route = route_retrieval(query)
+    if route == "simple":
+        # 简单查询：只走 sparse/keyword 检索
+        if settings.sparse_enabled:
+            from app.rag.vector_store import hybrid_search_qdrant
+            chunks = await asyncio.to_thread(
+                hybrid_search_qdrant, query, top_k=top_k, lang_filter=filter_lang
+            )
+        else:
+            chunks = await asyncio.to_thread(
+                retrieve_keyword, query, top_k=top_k, lang_filter=filter_lang
+            )
+    elif route == "medium":
+        # 中等查询：hybrid retrieve（不含 multi_query）
+        chunks = await asyncio.to_thread(
+            hybrid_retrieve, query, top_k=top_k, lang_filter=filter_lang
+        )
+    else:
+        # 复杂查询：完整 pipeline
+        chunks = await asyncio.to_thread(multi_query_retrieve, query, top_k=top_k, lang_filter=filter_lang)
 
     # 2. 轻量 CRAG 评估（基于检索分数，无需 LLM 调用）
     if settings.crag_enabled and chunks:
@@ -1227,6 +1248,27 @@ Text chunk:
 Context prefix:"""
 
 
+async def _generate_context_prefixes_async(chunks_with_docs, llm_call_fn, max_concurrent=10):
+    """并发生成 contextual prefixes。"""
+    semaphore = asyncio.Semaphore(max_concurrent)
+
+    async def _process_one(chunk_text, doc_text):
+        async with semaphore:
+            prompt = f"""<document>
+{doc_text}
+</document>
+Here is the chunk we want to situate within the whole document
+<chunk>
+{chunk_text}
+</chunk>
+Please give a short succinct context to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk. Answer only with the succinct context and nothing else."""
+            result = await asyncio.to_thread(llm_call_fn, [{"role": "user", "content": prompt}])
+            return result if isinstance(result, str) else str(result)
+
+    tasks = [_process_one(c, d) for c, d in chunks_with_docs]
+    return await asyncio.gather(*tasks)
+
+
 def _add_contextual_prefixes(
     chunks: List[Dict[str, Any]],
     docs: List[Dict[str, Any]],
@@ -1238,6 +1280,9 @@ def _add_contextual_prefixes(
     For each chunk, generates a brief prefix explaining its source document
     and position within the document. The prefix is prepended to the chunk text
     for embedding, and stored in metadata for display.
+
+    Uses concurrent LLM calls via _generate_context_prefixes_async
+    for improved throughput compared to serial processing.
 
     Args:
         chunks: List of chunk dicts with "text" and "metadata" fields
@@ -1251,50 +1296,32 @@ def _add_contextual_prefixes(
     # Build doc lookup by slug
     doc_map = {doc["metadata"]["slug"]: doc for doc in docs}
 
-    # Group chunks by source document for batch processing
-    doc_chunks: Dict[str, List[int]] = {}
+    # Build (chunk_text, doc_text) pairs for concurrent processing
+    chunks_with_docs = []
+    valid_indices = []  # Track which chunks have a matching document
     for i, chunk in enumerate(chunks):
         slug = chunk["metadata"].get("slug", "")
-        if slug not in doc_chunks:
-            doc_chunks[slug] = []
-        doc_chunks[slug].append(i)
+        doc = doc_map.get(slug)
+        if doc:
+            doc_text = doc["content"][:2000]  # truncate for prompt
+            chunk_text = chunk["text"][:300]  # truncate for prompt
+            chunks_with_docs.append((chunk_text, doc_text))
+            valid_indices.append(i)
+
+    if not chunks_with_docs:
+        return chunks
+
+    # 并发生成 contextual prefixes
+    prefixes = asyncio.run(_generate_context_prefixes_async(chunks_with_docs, llm_call_fn, max_concurrent=10))
 
     total_prefixes = 0
-    for slug, chunk_indices in doc_chunks.items():
-        doc = doc_map.get(slug)
-        if not doc:
-            continue
-
-        doc_title = doc["metadata"].get("title", slug)
-        doc_content = doc["content"][:2000]  # truncate for prompt
-
-        # Process chunks in batches
-        for batch_start in range(0, len(chunk_indices), batch_size):
-            batch_indices = chunk_indices[batch_start:batch_start + batch_size]
-
-            for idx in batch_indices:
-                chunk_text = chunks[idx]["text"][:300]  # truncate for prompt
-
-                prompt = _CONTEXTUAL_PROMPT_TEMPLATE.format(
-                    title=doc_title,
-                    document=doc_content,
-                    chunk=chunk_text,
-                )
-
-                try:
-                    response = llm_call_fn([{"role": "user", "content": prompt}])
-                    prefix = str(response).strip()
-                    if prefix and len(prefix) < 200:  # sanity check
-                        chunks[idx]["metadata"]["contextual_prefix"] = prefix
-                        # Prepend prefix to text for embedding
-                        chunks[idx]["text"] = f"{prefix}\n\n{chunks[idx]['text']}"
-                        total_prefixes += 1
-                except Exception as e:
-                    logger.warning("Contextual prefix generation failed for chunk %d: %s", idx, e)
-
-            logger.info("Contextual prefixes: %d/%d chunks processed for %s",
-                       min(batch_start + batch_size, len(chunk_indices)),
-                       len(chunk_indices), doc_title)
+    for idx, prefix in zip(valid_indices, prefixes):
+        prefix = prefix.strip()
+        if prefix and len(prefix) < 200:  # sanity check
+            chunks[idx]["metadata"]["contextual_prefix"] = prefix
+            # Prepend prefix to text for embedding
+            chunks[idx]["text"] = f"{prefix}\n\n{chunks[idx]['text']}"
+            total_prefixes += 1
 
     logger.info("Contextual Retrieval: added %d prefixes to %d chunks", total_prefixes, len(chunks))
     return chunks

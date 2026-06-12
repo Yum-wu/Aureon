@@ -23,10 +23,22 @@ from contextlib import contextmanager
 
 import structlog
 
+from app.config import settings
+
 logger = structlog.get_logger()
 
 _tracer = None
 _tracer_provider = None
+
+
+def setup_langsmith():
+    """初始化 LangSmith tracing。"""
+    if not settings.observability.langsmith_enabled:
+        return
+    os.environ["LANGCHAIN_API_KEY"] = settings.observability.langsmith_api_key
+    os.environ["LANGCHAIN_PROJECT"] = settings.observability.langsmith_project
+    os.environ["LANGCHAIN_TRACING_V2"] = "true"
+    logger.info("LangSmith tracing enabled, project=%s", settings.observability.langsmith_project)
 
 
 def init_tracing(app, service_name: str = "aureon-api") -> None:
