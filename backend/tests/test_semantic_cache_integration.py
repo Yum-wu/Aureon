@@ -88,7 +88,7 @@ async def test_exact_cache_hit(semantic_cache):
     """
     query = "What is retrieval augmented generation?"
     response = "RAG is a technique that combines retrieval and generation."
-    model = "deepseek"
+    model = "qwen3.6-flash"
     temperature = 0.0
     max_tokens = 500
 
@@ -124,7 +124,7 @@ async def test_exact_cache_hit_with_whitespace_variation(semantic_cache):
     query1 = "What is RAG?"
     query2 = "  What is RAG?  "  # Leading/trailing whitespace
     response = "RAG combines retrieval and generation."
-    model = "deepseek"
+    model = "qwen3.6-flash"
     temperature = 0.0
     max_tokens = 500
 
@@ -184,7 +184,7 @@ async def test_exact_cache_hit_redis_fallback(semantic_cache):
     """
     query = "Explain vector embeddings"
     response = "Embeddings are numerical representations of text."
-    model = "deepseek"
+    model = "qwen3.6-flash"
     temperature = 0.0
     max_tokens = 500
 
@@ -773,7 +773,7 @@ async def test_redis_set_and_get(semantic_cache):
     """
     query = "Redis integration test"
     response = "Redis works!"
-    model = "deepseek"
+    model = "qwen3.6-flash"
     temperature = 0.0
     max_tokens = 500
 

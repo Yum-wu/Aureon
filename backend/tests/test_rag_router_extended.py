@@ -11,11 +11,6 @@ except Exception:
     pytest.skip("FastAPI app initialization failed — skipping RAG router tests", allow_module_level=True)
 
 
-@pytest.fixture(autouse=True)
-def _clear_overrides():
-    yield
-    app.dependency_overrides.clear()
-
 
 # ── /api/rag/health ──
 

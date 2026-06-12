@@ -1,6 +1,7 @@
 """Security API Router"""
 from typing import Optional
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel, Field, EmailStr
 from app.security import (
     PIIDetector,
     SSOProvider,
@@ -10,13 +11,59 @@ from app.security import (
     delete_sso_provider,
     log_pii_detection,
     require_role,
+    create_access_token,
 )
-from app.exceptions import NotFoundError
+from app.exceptions import NotFoundError, AuthenticationError
 
 router = APIRouter(tags=["Security"])
 
 # PII 检测器实例
 pii_detector = PIIDetector()
+
+
+# ── SSO Login ──
+
+class LoginRequest(BaseModel):
+    """登录请求"""
+    email: str = Field(..., description="邮箱地址")
+    password: str = Field(..., min_length=8, description="密码（至少 8 位）")
+
+
+class LoginResponse(BaseModel):
+    """登录响应"""
+    access_token: str
+    token_type: str = "bearer"
+    email: str
+    role: str
+
+
+@router.post("/sso/login", response_model=LoginResponse)
+async def sso_login(req: LoginRequest):
+    """SSO 登录：验证邮箱密码，签发 JWT。
+
+    开发模式（AUTH__ENVIRONMENT=dev 且未配置 API_AUTH_KEY）下，
+    任意合法邮箱 + 8 位以上密码均可登录，默认 ADMIN 角色。
+    生产模式下需配置用户数据库或对接外部 IdP。
+    """
+    from app.config import settings
+
+    # 开发模式：接受任意合法邮箱 + 密码
+    if settings.auth.environment == "dev" and not settings.api_auth_key:
+        token = create_access_token({"sub": req.email, "role": "ADMIN"})
+        return LoginResponse(
+            access_token=token,
+            token_type="bearer",
+            email=req.email,
+            role="ADMIN",
+        )
+
+    # 生产模式：需要配置用户验证逻辑
+    # TODO: 对接企业 IdP 或用户数据库
+    # 目前仅支持 API Key 认证，邮箱密码登录不可用
+    raise AuthenticationError(
+        "Email/password login is not configured. "
+        "Use API Key authentication or configure an identity provider."
+    )
 
 
 # ── PII Detection Endpoints ──

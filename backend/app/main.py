@@ -266,7 +266,7 @@ async def logging_middleware(request: Request, call_next):
     # API Key authentication (skip when API_AUTH_KEY is not configured)
     if settings.api_auth_key and request.url.path.startswith("/api/"):
         # Public endpoints that don't require auth
-        public_paths = {"/api/health", "/api/crew/health", "/metrics"}
+        public_paths = {"/api/health", "/api/crew/health", "/metrics", "/api/security/sso/login"}
         if request.url.path not in public_paths:
             api_key = request.headers.get("X-API-Key")
             if not api_key:

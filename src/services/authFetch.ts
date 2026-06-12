@@ -1,14 +1,16 @@
 /**
  * Auth-aware fetch wrapper.
  *
- * Automatically injects X-API-Key header when the user is logged in
- * (key stored in sessionStorage by AuthProvider).
+ * Automatically injects auth headers when the user is logged in.
+ * Supports two auth modes:
+ * 1. JWT Bearer token (Authorization: Bearer <jwt>) — SSO login
+ * 2. API Key (X-API-Key header) — legacy mode
  *
- * Usage: `import { authFetch } from '../services/authFetch';`
- * Then replace all `fetch(...)` calls with `authFetch(...)`.
+ * JWT token takes priority over API key when both are present.
  */
 
 const API_KEY_STORAGE = "aureon_api_key";
+const JWT_TOKEN_STORAGE = "aureon_jwt_token";
 
 function getApiKey(): string {
   try {
@@ -18,19 +20,33 @@ function getApiKey(): string {
   }
 }
 
+function getJwtToken(): string {
+  try {
+    return sessionStorage.getItem(JWT_TOKEN_STORAGE) || "";
+  } catch {
+    return "";
+  }
+}
+
 /**
- * Drop-in replacement for `fetch` that adds X-API-Key header.
- * Merges with any existing headers the caller provides.
+ * Drop-in replacement for `fetch` that adds auth headers.
+ * JWT Bearer token takes priority; falls back to X-API-Key.
  */
 export function authFetch(
   input: RequestInfo | URL,
   init?: RequestInit,
 ): Promise<Response> {
+  const jwt = getJwtToken();
   const apiKey = getApiKey();
 
-  if (apiKey) {
+  if (jwt || apiKey) {
     const headers = new Headers(init?.headers);
-    headers.set("X-API-Key", apiKey);
+    if (jwt) {
+      headers.set("Authorization", `Bearer ${jwt}`);
+    }
+    if (apiKey) {
+      headers.set("X-API-Key", apiKey);
+    }
     return fetch(input, { ...init, headers });
   }
 

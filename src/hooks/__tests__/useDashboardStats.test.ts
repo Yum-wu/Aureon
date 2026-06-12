@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
@@ -97,7 +97,9 @@ describe('useDashboardStats', () => {
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ cache_hit_rate: 0.9, query_count_24h: 50, avg_retrieval_latency_ms: 100, total_indexed_docs: 5, total_chunks: 200 }) })
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ queries: [] }) });
 
-    result.current.refetch();
+    await act(async () => {
+      result.current.refetch();
+    });
 
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalled();

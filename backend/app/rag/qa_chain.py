@@ -38,7 +38,7 @@ _TITLE_KEYWORDS_ZH = {
     "langgraph": "langgraph", "hermes": "hermes", "crewai": "crewai",
     "rag": "rag", "bm25": "bm25", "lcel": "lcel", "llamaindex": "llamaindex",
     "bge": "bge", "cross-encoder": "cross-encoder", "hyde": "hyde",
-    "react": "react", "deepseek": "deepseek", "dashscope": "dashscope",
+    "react": "react", "qwen": "qwen", "dashscope": "dashscope",
     "chromadb": "chromadb", "langchain": "langchain",
 }
 

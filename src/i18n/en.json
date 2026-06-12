@@ -378,7 +378,10 @@
     "google": "Sign in with Google",
     "github": "Sign in with GitHub",
     "no_account": "Don't have an account?",
-    "signup": "Request trial"
+    "signup": "Request trial",
+    "success": "Login successful",
+    "invalid_credentials": "Invalid email or password",
+    "network_error": "Network error, please check your connection"
   }
 ,
   "chat": {
@@ -394,6 +397,13 @@
     "copied": "Copied!",
     "regenerate": "Regenerate",
     "attach": "Attach file",
+    "upload": "Upload",
+    "uploading": "Uploading...",
+    "upload_success": "{{filename}} uploaded successfully, {{chunks}} chunks created",
+    "upload_failed": "Upload failed",
+    "unsupported_format": "Unsupported format: {{ext}}",
+    "file_too_large": "File size exceeds 10MB limit",
+    "remove_file": "Remove file",
     "quickStart": [
       "Search latest technical docs",
       "Analyze system performance metrics",

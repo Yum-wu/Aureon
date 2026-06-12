@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import { useSpeechRecognition } from '../useSpeechRecognition';
 
 const mockStart = vi.fn();
@@ -47,7 +47,9 @@ describe('useSpeechRecognition', () => {
 
   it('should start listening with correct language', async () => {
     const { result } = renderHook(() => useSpeechRecognition());
-    result.current.startListening('nl-NL');
+    await act(async () => {
+      result.current.startListening('nl-NL');
+    });
     await waitFor(() => {
       expect(result.current.isListening).toBe(true);
     });
@@ -56,8 +58,12 @@ describe('useSpeechRecognition', () => {
 
   it('should stop listening', async () => {
     const { result } = renderHook(() => useSpeechRecognition());
-    result.current.startListening();
-    result.current.stopListening();
+    await act(async () => {
+      result.current.startListening();
+    });
+    await act(async () => {
+      result.current.stopListening();
+    });
     await waitFor(() => {
       expect(result.current.isListening).toBe(false);
     });
@@ -74,7 +80,9 @@ describe('useSpeechRecognition', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (window as any).SpeechRecognition;
     const { result } = renderHook(() => useSpeechRecognition());
-    result.current.startListening();
+    await act(async () => {
+      result.current.startListening();
+    });
     await waitFor(() => {
       expect(result.current.error).toBe('Speech recognition is not supported in this browser');
     });

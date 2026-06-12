@@ -1,11 +1,34 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 // Mock rag service
 const mockStreamRAGQuery = vi.fn();
 vi.mock('../../services/rag', () => ({
   streamRAGQuery: (...args: unknown[]) => mockStreamRAGQuery(...args),
+}));
+
+// Mock authFetch (used by Search useEffect for suggestions)
+vi.mock('../../services/authFetch', () => ({
+  authFetch: () => Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve({ suggestions: [] }),
+  }),
+}));
+
+// Mock react-i18next
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, opts?: Record<string, unknown>) => {
+      if (opts && typeof opts === 'object') {
+        return Object.entries(opts).reduce(
+          (str, [k, v]) => str.replace(`{{${k}}}`, String(v)),
+          key
+        );
+      }
+      return key;
+    },
+  }),
 }));
 
 // Mock child components
@@ -47,22 +70,27 @@ describe('Search', () => {
     mockStreamRAGQuery.mockResolvedValue(undefined);
   });
 
-  it('renders initial state with title and empty search', () => {
-    render(<Search />);
-    // i18n not initialized in tests, so translation keys are shown
+  it('renders initial state with title and empty search', async () => {
+    await act(async () => {
+      render(<Search />);
+    });
     expect(screen.getByText('search.title')).toBeInTheDocument();
     expect(screen.getByText('search.subtitle')).toBeInTheDocument();
     expect(screen.getByTestId('search-bar')).toBeInTheDocument();
   });
 
-  it('does not show answer area initially', () => {
-    render(<Search />);
+  it('does not show answer area initially', async () => {
+    await act(async () => {
+      render(<Search />);
+    });
     expect(screen.queryByTestId('streaming-answer')).not.toBeInTheDocument();
   });
 
   it('shows error when query exceeds max length', async () => {
     const user = userEvent.setup();
-    render(<Search />);
+    await act(async () => {
+      render(<Search />);
+    });
 
     const input = screen.getByTestId('search-input');
     // Type a short query then simulate the length check
@@ -73,7 +101,9 @@ describe('Search', () => {
       window.HTMLInputElement.prototype, 'value'
     )!.set!;
     nativeInputValueSetter.call(input, 'a'.repeat(1001));
-    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await act(async () => {
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
     await user.click(screen.getByTestId('search-btn'));
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
@@ -86,7 +116,9 @@ describe('Search', () => {
     });
 
     const user = userEvent.setup();
-    render(<Search />);
+    await act(async () => {
+      render(<Search />);
+    });
 
     const input = screen.getByTestId('search-input');
     await user.type(input, 'test query');
@@ -101,7 +133,9 @@ describe('Search', () => {
     });
 
     const user = userEvent.setup();
-    render(<Search />);
+    await act(async () => {
+      render(<Search />);
+    });
 
     const input = screen.getByTestId('search-input');
     await user.type(input, 'bad query');
@@ -119,7 +153,9 @@ describe('Search', () => {
     });
 
     const user = userEvent.setup();
-    render(<Search />);
+    await act(async () => {
+      render(<Search />);
+    });
 
     const input = screen.getByTestId('search-input');
     await user.type(input, 'test query');
@@ -129,8 +165,10 @@ describe('Search', () => {
     expect(screen.getByText(/Hello world/)).toBeInTheDocument();
   });
 
-  it('displays character count', () => {
-    render(<Search />);
+  it('displays character count', async () => {
+    await act(async () => {
+      render(<Search />);
+    });
     expect(screen.getByText('0/1000')).toBeInTheDocument();
   });
 });

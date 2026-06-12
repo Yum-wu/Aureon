@@ -77,7 +77,7 @@ def run_e2e_benchmark():
     print("\n> Phase 2: LLM Setup")
     from app.agent.llm import create_llm
     llm = create_llm()
-    print(f"  Model: {llm.model_name if hasattr(llm, 'model_name') else 'deepseek'}")
+    print(f"  Model: {llm.model_name if hasattr(llm, 'model_name') else 'qwen3.6-flash'}")
 
     # ── Test categories ──
     positive_qa = [qa for qa in TEST_QA_PAIRS if "知识库中没有" not in qa["answer"]]
