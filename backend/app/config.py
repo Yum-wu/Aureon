@@ -24,7 +24,7 @@ class EmbeddingSettings(BaseModel):
     embedding_api_key: str = ""
     embedding_base_url: str = "https://open.bigmodel.cn/api/paas/v4/"
     embedding_model: str = "embedding-2"
-    embedding_dim: int = 768
+    embedding_dim: int = 1024
     embedding_batch_size: int = 64
     gpu_enabled: bool = False
     embed_gpu_threshold: int = 4
@@ -32,7 +32,7 @@ class EmbeddingSettings(BaseModel):
     dashscope_api_key: str = ""
     dashscope_base_url: str = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
     dashscope_model: str = "text-embedding-v4"
-    dashscope_dimensions: int = 768
+    dashscope_dimensions: int = 1024
     siliconflow_api_key: str = ""
     siliconflow_base_url: str = "https://api.siliconflow.cn/v1"
     siliconflow_model: str = "BAAI/bge-large-zh-v1.5"

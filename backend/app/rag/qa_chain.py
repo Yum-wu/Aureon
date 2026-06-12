@@ -942,8 +942,24 @@ async def rag_query_astream(
     import asyncio
     chunks = await asyncio.to_thread(multi_query_retrieve, query, top_k=top_k, lang_filter=filter_lang)
 
-    # 2. CRAG assessment disabled — too many false positives on production.
-    #    TODO: calibrate after collecting data.
+    # 2. 轻量 CRAG 评估（基于检索分数，无需 LLM 调用）
+    if settings.crag_enabled and chunks:
+        from app.rag.retrieval_confidence import lightweight_crag_assess
+        assessment = lightweight_crag_assess(
+            chunks,
+            high_threshold=settings.crag_high_confidence,
+            low_threshold=settings.crag_low_confidence,
+        )
+        if assessment == "incorrect":
+            no_result_msg = (
+                "No relevant content found in the knowledge base. Please try a different question."
+                if lang == "en"
+                else "知识库中暂无相关内容，请尝试其他问题。"
+            )
+            yield {"type": "sources", "sources": []}
+            yield {"type": "text", "content": no_result_msg}
+            return
+        # "correct" 和 "ambiguous" 都继续执行
 
     if not chunks:
         no_result_msg = (
