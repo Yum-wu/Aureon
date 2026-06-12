@@ -36,6 +36,9 @@ class EmbeddingSettings(BaseModel):
     siliconflow_api_key: str = ""
     siliconflow_base_url: str = "https://api.siliconflow.cn/v1"
     siliconflow_model: str = "BAAI/bge-large-zh-v1.5"
+    sparse_enabled: bool = True
+    sparse_provider: str = "siliconflow"
+    sparse_model: str = "BAAI/bge-m3"
 
 
 class VectorStoreSettings(BaseModel):

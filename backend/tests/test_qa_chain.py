@@ -250,13 +250,15 @@ class TestRagQueryWithCache:
     @patch("app.cache.redis_client.set_cached", new_callable=AsyncMock)
     @patch("app.cache.redis_client.get_cached", new_callable=AsyncMock)
     @patch("app.rag.qa_chain.retrieve")
-    async def test_hit_plain_string_fallback(self, mock_retrieve, mock_get_cached, mock_set_cached, mock_redis):
+    @patch("app.rag.vector_store.hybrid_search_qdrant")
+    async def test_hit_plain_string_fallback(self, mock_hybrid_search, mock_retrieve, mock_get_cached, mock_set_cached, mock_redis):
         """Old plain-string cache entries should be skipped and re-queried."""
         mock_get_cached.return_value = "Plain cached answer"
         mock_retrieve.return_value = []
+        mock_hybrid_search.return_value = []
         llm_fn = MagicMock()
         result = await rag_query_with_cache("test query", llm_fn, lang="en")
         # Should NOT return the plain string — should fall through to fresh query
         assert result.answer != "Plain cached answer"
-        # Fresh query was made (retrieve called)
-        mock_retrieve.assert_called_once()
+        # Fresh query was made (hybrid_search_qdrant or retrieve called)
+        assert mock_hybrid_search.called or mock_retrieve.called

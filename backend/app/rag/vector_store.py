@@ -644,22 +644,31 @@ def _add_to_index_qdrant(chunks: List[Dict[str, Any]]):
         except Exception:
             embeddings = embed_texts_llm(texts)
 
+    # 生成 sparse 向量
+    from app.rag.sparse_embed import embed_sparse
+    sparse_vectors = embed_sparse(texts) if settings.sparse_enabled else [{}] * len(texts)
+
     # Upsert in batches
     batch_size = 100
     for start in range(0, len(chunks), batch_size):
         end = min(start + batch_size, len(chunks))
-        points = [
-            PointStruct(
-                id=existing_count + start + i,
-                vector=embeddings[start + i].tolist(),
-                payload={"metadata": chunks[start + i].get("metadata", {}), "text": chunks[start + i]["text"]},
-            )
-            for i in range(end - start)
-        ]
+        points = []
+        for i in range(end - start):
+            idx = start + i
+            if settings.sparse_enabled and sparse_vectors[idx]:
+                vector_data = {"dense": embeddings[idx].tolist(), "sparse": sparse_vectors[idx]}
+            else:
+                vector_data = embeddings[idx].tolist()
+            points.append(PointStruct(
+                id=existing_count + idx,
+                vector=vector_data,
+                payload={"metadata": chunks[idx].get("metadata", {}), "text": chunks[idx]["text"]},
+            ))
         client.upsert(collection_name=collection_name, points=points)
 
     logger.info("Added %d chunks to Qdrant ('%s')", len(chunks), collection_name)
-    _build_kw_index(force=True)
+    if not settings.sparse_enabled:
+        _build_kw_index(force=True)
     _invalidate_stats_cache()
 
 
@@ -1218,9 +1227,24 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
     except Exception:
         pass
 
-    client.create_collection(
-        collection_name=collection_name,
-        vectors_config=qmodels.VectorParams(
+    # 根据是否启用 sparse 向量选择 vectors_config
+    if settings.sparse_enabled:
+        vectors_config = {
+            "dense": qmodels.VectorParams(
+                size=dim,
+                distance=qmodels.Distance.COSINE,
+                on_disk=settings.vectors_on_disk,
+                hnsw_config=qmodels.HnswConfigDiff(
+                    m=settings.hnsw_m,
+                    ef_construct=settings.hnsw_ef_construct,
+                ),
+            ),
+            "sparse": qmodels.SparseVectorParams(
+                index=qmodels.SparseIndexParams(on_disk=False),
+            ),
+        }
+    else:
+        vectors_config = qmodels.VectorParams(
             size=dim,
             distance=qmodels.Distance.COSINE,
             on_disk=settings.vectors_on_disk,
@@ -1228,7 +1252,11 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
                 m=settings.hnsw_m,
                 ef_construct=settings.hnsw_ef_construct,
             ),
-        ),
+        )
+
+    client.create_collection(
+        collection_name=collection_name,
+        vectors_config=vectors_config,
         hnsw_config=qmodels.HnswConfigDiff(
             ef_search=settings.hnsw_ef_search,
         ),
@@ -1265,21 +1293,121 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
             logger.warning("Adaptive embedding failed: %s, falling back to API", e)
             embeddings = embed_texts_llm(texts)
 
+    # 生成 sparse 向量
+    from app.rag.sparse_embed import embed_sparse
+    sparse_vectors = embed_sparse(texts) if settings.sparse_enabled else [{}] * len(texts)
+
     # Upsert in batches
     batch_size = 100
     for start in range(0, len(chunks), batch_size):
         end = min(start + batch_size, len(chunks))
-        points = [
-            PointStruct(
+        points = []
+        for i in range(start, end):
+            if settings.sparse_enabled and sparse_vectors[i]:
+                vector_data = {"dense": embeddings[i].tolist(), "sparse": sparse_vectors[i]}
+            else:
+                vector_data = embeddings[i].tolist()
+            points.append(PointStruct(
                 id=i,
-                vector=embeddings[i].tolist(),
+                vector=vector_data,
                 payload={"metadata": chunks[i].get("metadata", {}), "text": chunks[i]["text"]},
-            )
-            for i in range(start, end)
-        ]
+            ))
         client.upsert(collection_name=collection_name, points=points)
 
     logger.info("Qdrant: indexed %d chunks into '%s'", len(chunks), collection_name)
+
+
+def hybrid_search_qdrant(
+    query: str,
+    top_k: int = 5,
+    collection_name: str = "aureon",
+    tenant_id: str = None,
+    lang_filter: str = None,
+) -> List[Dict]:
+    """Qdrant 原生混合搜索：dense + sparse，RRF 融合。
+
+    使用 Qdrant Query API (v1.10+) prefetch + Fusion.RRF。
+    当 sparse 不可用时回退到 hybrid_retrieve。
+    """
+    if not settings.sparse_enabled:
+        from app.rag.qa_chain import hybrid_retrieve
+        return hybrid_retrieve(query, top_k=top_k, lang_filter=lang_filter)
+
+    from qdrant_client import models as qmodels
+    client = _get_qdrant()
+    if tenant_id is None:
+        tenant_id = get_current_tenant_id()
+
+    # 1. 生成 query 的 dense + sparse 向量（失败时回退到 BM25）
+    try:
+        if _skip_local_embed:
+            query_emb = embed_texts_llm([query])
+        else:
+            from app.rag.embed_gpu import get_adaptive_embedder
+            embedder = get_adaptive_embedder()
+            query_emb = embedder.encode([query])
+        dense_vector = query_emb[0].tolist()
+
+        from app.rag.sparse_embed import embed_sparse
+        sparse_result = embed_sparse([query])
+        sparse_vector = sparse_result[0] if sparse_result else {}
+    except Exception as e:
+        logger.warning("hybrid_search_qdrant embedding failed, falling back to BM25-only: %s", e)
+        return retrieve_keyword(query, top_k=top_k, lang_filter=lang_filter)
+
+    # 2. 构建 filter
+    conditions = []
+    if lang_filter:
+        conditions.append(qmodels.FieldCondition(
+            key="metadata.language",
+            match=qmodels.MatchValue(value=lang_filter),
+        ))
+    if tenant_id:
+        conditions.append(qmodels.FieldCondition(
+            key="metadata.tenant_id",
+            match=qmodels.MatchValue(value=tenant_id),
+        ))
+    query_filter = qmodels.Filter(must=conditions) if conditions else None
+
+    # 3. Qdrant Query API: prefetch dense + sparse, RRF fusion
+    prefetch = [
+        qmodels.Prefetch(
+            query=dense_vector,
+            using="dense",
+            limit=top_k * 3,
+            filter=query_filter,
+        ),
+    ]
+    if sparse_vector:
+        prefetch.append(qmodels.Prefetch(
+            query=sparse_vector,
+            using="sparse",
+            limit=top_k * 3,
+            filter=query_filter,
+        ))
+
+    results = client.query_points(
+        collection_name=collection_name,
+        prefetch=prefetch,
+        query=qmodels.FusionQuery(fusion=qmodels.Fusion.RRF),
+        limit=top_k,
+        search_params=qmodels.SearchParams(
+            hnsw_ef=settings.hnsw_ef_search,
+            quantization=qmodels.QuantizationSearchParams(rescore=True),
+        ),
+    )
+
+    # 4. 格式化结果
+    formatted = []
+    for point in results.points:
+        payload = point.payload or {}
+        formatted.append({
+            "id": str(point.id),
+            "text": payload.get("text", ""),
+            "metadata": payload.get("metadata", {}),
+            "score": point.score,
+        })
+    return formatted
 
 
 def retrieve_qdrant(query: str, top_k: int = 3, collection_name: str = "aureon", tenant_id: str = None, lang_filter: str = None) -> List[Dict]:
