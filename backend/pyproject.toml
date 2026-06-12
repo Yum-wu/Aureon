@@ -1,9 +1,12 @@
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
-addopts = "-v --tb=short -m 'not integration'"
+addopts = "-v --tb=short -m 'not integration and not benchmark and not quality and not smoke'"
 markers = [
     "integration: 集成测试，需外部服务（Qdrant/LLM API），默认跳过",
+    "benchmark: 检索性能基准测试",
+    "quality: DeepEval 质量门禁测试",
+    "smoke: 生产环境冒烟测试",
 ]
 # Parallel execution: use -n auto flag
 # Example: pytest -n auto tests/
