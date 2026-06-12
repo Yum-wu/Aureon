@@ -61,6 +61,11 @@ class VectorStoreSettings(BaseModel):
     hyde_fallback_threshold: float = 0.01
     high_score_skip_threshold: float = 0.01
     classifier_cache_ttl: float = 3600.0
+    hnsw_m: int = 32
+    hnsw_ef_construct: int = 200
+    hnsw_ef_search: int = 128
+    quantization_enabled: bool = True
+    vectors_on_disk: bool = True
 
 
 class RerankSettings(BaseModel):
