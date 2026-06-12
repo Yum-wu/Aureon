@@ -1,7 +1,7 @@
 """Tests for RAG router endpoints — health, benchmark, upload, query validation."""
 
 import pytest
-from unittest.mock import patch
+from unittest.mock import patch, AsyncMock
 from httpx import AsyncClient, ASGITransport
 
 try:
@@ -151,9 +151,13 @@ async def test_query_too_long():
 
 @pytest.mark.asyncio
 async def test_rag_index_endpoint():
-    with patch("app.routers.rag.run_index_pipeline", return_value={
+    mock_llm = object()
+    with patch("app.agent.llm.create_llm", return_value=mock_llm), \
+         patch("app.routers.rag.run_index_pipeline", return_value={
         "status": "ok", "documents_indexed": 5, "chunks_created": 30, "elapsed_seconds": 1.2
-    }):
+    }), \
+         patch("app.cache.redis_client.clear_cache_by_prefix", new_callable=AsyncMock), \
+         patch("app.rag.vector_store._build_kw_index"):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             resp = await ac.post("/api/rag/index")
