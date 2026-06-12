@@ -10,41 +10,6 @@ from httpx import AsyncClient, ASGITransport
 from app.main import app
 
 
-@pytest.fixture(autouse=True)
-def _bypass_rbac():
-    """Bypass all require_role RBAC checks during tests.
-
-    Iterates over every router on the FastAPI app, finds Depends() that
-    reference require_role(...) closures, and replaces them with a mock
-    that always returns an ADMIN user.
-    """
-    from app.security import UserRole
-    mock_user = {"sub": "test-user", "role": "ADMIN", "_role": UserRole.ADMIN}
-
-    # Collect all dependency overrides needed
-    overrides = {}
-    for route in app.routes:
-        if not hasattr(route, "dependant"):
-            continue
-        for dep in route.dependant.dependencies:
-            call = dep.call
-            # require_role returns a _role_checker closure
-            if getattr(call, "__name__", "") == "_role_checker":
-                async def _mock_admin(_original_call=call):
-                    return mock_user
-                overrides[call] = _mock_admin
-
-    # Apply overrides
-    for dep_func, mock_func in overrides.items():
-        app.dependency_overrides[dep_func] = mock_func
-
-    yield
-
-    # Clean up
-    for dep_func in overrides:
-        app.dependency_overrides.pop(dep_func, None)
-
-
 @pytest.mark.asyncio
 async def test_rag_query_returns_response():
     """POST /api/rag/query returns RAG query response with answer and sources."""
