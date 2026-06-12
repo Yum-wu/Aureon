@@ -1447,7 +1447,7 @@ def retrieve_qdrant(query: str, top_k: int = 3, collection_name: str = "aureon",
 
     query_vector = query_emb[0].tolist()
 
-    # Store query embedding in thread-local for compress_context reuse
+    # deprecated: 全局变量传递，存在并发竞态，优先使用 _query_embedding 字段
     _set_thread_query_embedding(query_emb[0])
 
     # Check if stored data actually has tenant_id — skip filter if not
@@ -1538,6 +1538,8 @@ def retrieve_qdrant(query: str, top_k: int = 3, collection_name: str = "aureon",
                     item["_embedding"] = emb
         except Exception:
             pass
+        # 附加 query embedding，供 compress_context 复用（避免并发竞态）
+        item["_query_embedding"] = query_emb[0]
         items.append(item)
     return items
 

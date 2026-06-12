@@ -104,6 +104,15 @@ def compress_context(query: str, chunks: List[Dict[str, Any]], threshold: float 
     if threshold is None:
         threshold = _CONTEXT_COMPRESSION_THRESHOLD
 
+    # 优先级：参数 > chunks 中携带 > 全局变量
+    emb = query_embedding
+    if emb is None and chunks:
+        emb = chunks[0].get("_query_embedding")
+    if emb is None:
+        emb = get_thread_query_embedding()
+    if emb is None:
+        return chunks  # 无 embedding 可用，不过滤
+
     try:
         # Check which chunks have pre-computed embeddings from retrieval phase
         cached_indices = {i for i, c in enumerate(chunks) if "_embedding" in c}
@@ -119,15 +128,8 @@ def compress_context(query: str, chunks: List[Dict[str, Any]], threshold: float 
             else:
                 new_embeddings = np.empty((0, 0), dtype=np.float32)
 
-            # Get query embedding: explicit param > thread-local > API fallback
-            query_emb = query_embedding
-            if query_emb is None:
-                query_emb = get_thread_query_embedding()
-            if query_emb is None:
-                # Fallback: compute query embedding (should rarely happen)
-                logger.debug("Context compression: no query embedding available, computing via API")
-                fallback = embed_texts_llm([query])
-                query_emb = fallback[0]
+            # 使用函数入口处解析的 query embedding（优先级：参数 > chunks 携带 > 全局变量）
+            query_emb = emb
 
             chunk_embs = []
             uncached_iter = iter(new_embeddings) if len(new_embeddings) > 0 else iter([])
@@ -143,8 +145,8 @@ def compress_context(query: str, chunks: List[Dict[str, Any]], threshold: float 
                 len(cached_indices), len(chunks),
             )
         else:
-            # No cached embeddings: compute all (API-only when SKIP_LOCAL_EMBED=true)
-            texts = [query] + [c["text"] for c in chunks]
+            # No cached embeddings: compute chunk embeddings only (query_emb already resolved)
+            chunk_texts = [c["text"] for c in chunks]
 
             embeddings = None
             from app.rag.vector_store import _skip_local_embed
@@ -153,15 +155,15 @@ def compress_context(query: str, chunks: List[Dict[str, Any]], threshold: float 
                     from app.rag.vector_store import _get_gpu_embedder
                     gpu_embedder = _get_gpu_embedder()
                     if gpu_embedder is not None:
-                        embeddings = gpu_embedder.encode(texts, batch_size=len(texts))
+                        embeddings = gpu_embedder.encode(chunk_texts, batch_size=len(chunk_texts))
                 except Exception:
                     pass
 
             if embeddings is None:
-                embeddings = embed_texts_llm(texts)
+                embeddings = embed_texts_llm(chunk_texts)
 
-            query_emb = embeddings[0]
-            chunk_embs = embeddings[1:]
+            query_emb = emb
+            chunk_embs = embeddings
 
         # Normalize embeddings before computing cosine similarity
         # API embeddings (DashScope/SiliconFlow/Zhipu) are NOT pre-normalized
