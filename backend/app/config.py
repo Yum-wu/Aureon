@@ -259,7 +259,7 @@ except Exception as _init_err:
     import warnings
 
     warnings.warn(
-        f"Settings init failed ({type(_init_err).__name__}), "
+        f"Settings init failed ({type(_init_err).__name__}: {_init_err}), "
         "removing all sub-model env vars and retrying with defaults",
         stacklevel=2,
     )
