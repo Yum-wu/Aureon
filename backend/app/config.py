@@ -228,11 +228,12 @@ def _sanitize_submodel_env() -> list[tuple[str, str]]:
     import json as _json
 
     removed: list[tuple[str, str]] = []
-    for _sub_field in Settings.model_fields:
-        _env_name = _sub_field.upper()
-        if _env_name not in os.environ:
+    # 收集所有需要检查的环境变量名（大小写不敏感匹配）
+    _sub_field_names = {f.upper() for f in Settings.model_fields}
+    for _key in list(os.environ.keys()):
+        if _key.upper() not in _sub_field_names:
             continue
-        _val = os.environ[_env_name]
+        _val = os.environ[_key]
         _keep = False
         if _val:
             try:
@@ -241,8 +242,8 @@ def _sanitize_submodel_env() -> list[tuple[str, str]]:
             except (_json.JSONDecodeError, ValueError):
                 pass
         if not _keep:
-            removed.append((_env_name, _val))
-            os.environ.pop(_env_name)
+            removed.append((_key, _val))
+            os.environ.pop(_key)
     return removed
 
 
