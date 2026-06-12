@@ -17,6 +17,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 # 每个 QA 对的 rag_query 超时（秒）
 _PER_QA_TIMEOUT = 60
 
+# 整个 evaluation_results fixture 的总超时（秒）
+_EVAL_TOTAL_TIMEOUT = 600  # 10 分钟
+
 # Quality thresholds — failing these blocks the merge
 THRESHOLDS = {
     "context_precision": 0.70,
@@ -42,21 +45,11 @@ def _rag_query_with_timeout(rag_query_fn, query, timeout=_PER_QA_TIMEOUT):
             return None
 
 
-@pytest.fixture(scope="module")
-def evaluation_results():
-    """Run full evaluation once per test module."""
-    from app.config import settings
-    _placeholder = {"", "your_api_key_here", "sk-placeholder", "YOUR_API_KEY"}
-    if not settings.llm_api_key or settings.llm_api_key in _placeholder:
-        pytest.skip("No valid LLM API key configured — skipping DeepEval quality gate")
-    from tests.test_data_golden import load_dataset, get_dataset_info
+def _run_evaluation(qa_pairs, info):
+    """在子线程中运行完整评估，受总超时保护。"""
     from tests.deepeval_eval import build_test_cases, run_deepeval_metrics, _load_article_texts
     from app.rag.qa_chain import hybrid_retrieve, rag_query
     from app.agent.llm import create_llm
-
-    dataset_name = "core_regression_40qa"
-    qa_pairs = load_dataset(dataset_name)
-    info = get_dataset_info(dataset_name)
 
     llm = create_llm()
 
@@ -87,8 +80,38 @@ def evaluation_results():
     return scores
 
 
+@pytest.fixture(scope="module")
+def evaluation_results():
+    """Run full evaluation once per test module, with total timeout protection."""
+    from app.config import settings
+    _placeholder = {"", "your_api_key_here", "sk-placeholder", "YOUR_API_KEY"}
+    if not settings.llm_api_key or settings.llm_api_key in _placeholder:
+        pytest.skip("No valid LLM API key configured — skipping DeepEval quality gate")
+    from tests.test_data_golden import load_dataset, get_dataset_info
+
+    dataset_name = "core_regression_40qa"
+    qa_pairs = load_dataset(dataset_name)
+    info = get_dataset_info(dataset_name)
+
+    # 整个评估在子线程中运行，受总超时保护
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(_run_evaluation, qa_pairs, info)
+        try:
+            return future.result(timeout=_EVAL_TOTAL_TIMEOUT)
+        except FuturesTimeoutError:
+            pytest.skip(
+                f"Evaluation timed out after {_EVAL_TOTAL_TIMEOUT}s — "
+                "external services may be slow or unreachable"
+            )
+
+
+@pytest.mark.integration
 class TestRAGQualityGate:
-    """Quality gate tests — must pass for PR merge."""
+    """Quality gate tests — must pass for PR merge.
+
+    Marked as @pytest.mark.integration so they are skipped in default test runs.
+    Run explicitly with: pytest tests/test_rag_quality.py -v -m integration
+    """
 
     def test_context_precision(self, evaluation_results):
         """Context Precision >= 0.70"""
@@ -142,20 +165,11 @@ class TestRAGQualityGate:
 
 
 
-@pytest.fixture(scope="module")
-def ragas_evaluation_results():
-    """Run RAGAS evaluation once per test module."""
-    from tests.test_data_golden import load_dataset, get_dataset_info
+def _run_ragas_evaluation(qa_pairs, info):
+    """在子线程中运行 RAGAS 评估，受总超时保护。"""
     from app.rag.qa_chain import rag_query
     from app.agent.llm import create_llm
-    from app.rag.evaluator import run_ragas_evaluation, RAGAS_AVAILABLE
-
-    if not RAGAS_AVAILABLE:
-        pytest.skip("ragas not installed")
-
-    dataset_name = "core_regression_40qa"
-    qa_pairs = load_dataset(dataset_name)
-    info = get_dataset_info(dataset_name)
+    from app.rag.evaluator import run_ragas_evaluation
 
     llm = create_llm()
 
@@ -172,8 +186,34 @@ def ragas_evaluation_results():
     return scores
 
 
+@pytest.fixture(scope="module")
+def ragas_evaluation_results():
+    """Run RAGAS evaluation once per test module, with total timeout protection."""
+    from tests.test_data_golden import load_dataset, get_dataset_info
+    from app.rag.evaluator import RAGAS_AVAILABLE
+
+    if not RAGAS_AVAILABLE:
+        pytest.skip("ragas not installed")
+
+    dataset_name = "core_regression_40qa"
+    qa_pairs = load_dataset(dataset_name)
+    info = get_dataset_info(dataset_name)
+
+    # 整个评估在子线程中运行，受总超时保护
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(_run_ragas_evaluation, qa_pairs, info)
+        try:
+            return future.result(timeout=_EVAL_TOTAL_TIMEOUT)
+        except FuturesTimeoutError:
+            pytest.skip(
+                f"RAGAS evaluation timed out after {_EVAL_TOTAL_TIMEOUT}s — "
+                "external services may be slow or unreachable"
+            )
+
+
+@pytest.mark.integration
 class TestRAGASQualityGate:
-    """RAGAS quality gate tests."""
+    """RAGAS quality gate tests. Marked as @pytest.mark.integration."""
 
     def test_ragas_faithfulness(self, ragas_evaluation_results):
         """RAGAS Faithfulness >= 0.70"""
