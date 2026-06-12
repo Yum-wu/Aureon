@@ -17,15 +17,12 @@
 """
 
 import asyncio
-import math
-import os
 import statistics
 import sys
 import time
-from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Dict, List
 
 import httpx
 import pytest
@@ -230,8 +227,7 @@ class TestRetrievalPerformance:
 
             t0 = time.perf_counter()
             latencies = asyncio.run(asyncio.gather(*[_single(qa) for qa in positive_pairs]))
-            total_time = time.perf_counter() - t0
-            qps = len(positive_pairs) / total_time if total_time > 0 else 0
+            _total_time = time.perf_counter() - t0  # noqa: F841
 
             pctls = _calc_latency_percentiles(list(latencies))
             # 并发下 P99 不应超过阈值的 2 倍
@@ -351,7 +347,7 @@ class TestProductionSmoke:
         )
         assert resp.status_code == 200, f"RAG query 端点返回 {resp.status_code}"
         data = resp.json()
-        assert "answer" in data, f"RAG query 响应缺少 answer 字段"
+        assert "answer" in data, "RAG query 响应缺少 answer 字段"
 
     def test_chat_stream_endpoint(self, thresholds):
         """生产 /api/chat/stream 应返回 SSE。"""
