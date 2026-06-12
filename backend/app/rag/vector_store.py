@@ -607,12 +607,6 @@ def embed_texts_llm(texts: List[str], batch_size: int = 10) -> np.ndarray:
     return np.array(result, dtype=np.float32)
 
 
-# ── Embedding functions (ChromaDB wrapper removed — Qdrant is sole backend) ──
-
-    def default_space(self):
-        return "cosine"
-
-
 # ── Public API ──
 
 def _invalidate_stats_cache():
@@ -1213,11 +1207,12 @@ def _get_qdrant():
 
 def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
     """Save chunks to Qdrant vector store."""
-    from qdrant_client.models import VectorParams, Distance, PointStruct
+    from qdrant_client import models as qmodels
+    from qdrant_client.models import PointStruct
     client = _get_qdrant()
     dim = _get_embedding_dim()
 
-    # Delete and recreate collection
+    # 删除并重建 collection
     try:
         client.delete_collection(collection_name)
     except Exception:
@@ -1225,8 +1220,37 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
 
     client.create_collection(
         collection_name=collection_name,
-        vectors_config=VectorParams(size=dim, distance=Distance.COSINE),
+        vectors_config=qmodels.VectorParams(
+            size=dim,
+            distance=qmodels.Distance.COSINE,
+            on_disk=settings.vectors_on_disk,
+            hnsw_config=qmodels.HnswConfigDiff(
+                m=settings.hnsw_m,
+                ef_construct=settings.hnsw_ef_construct,
+            ),
+        ),
+        hnsw_config=qmodels.HnswConfigDiff(
+            ef_search=settings.hnsw_ef_search,
+        ),
+        quantization_config=qmodels.ScalarQuantization(
+            scalar=qmodels.ScalarQuantizationConfig(
+                type=qmodels.ScalarType.INT8,
+                quantile=0.99,
+                always_ram=True,
+            ),
+        ) if settings.quantization_enabled else None,
     )
+
+    # 创建 Payload 索引
+    for field_name in ["metadata.slug", "metadata.language", "metadata.source", "metadata.tenant_id"]:
+        try:
+            client.create_payload_index(
+                collection_name=collection_name,
+                field_name=field_name,
+                field_schema=qmodels.PayloadSchemaType.KEYWORD,
+            )
+        except Exception:
+            pass  # 索引可能已存在
 
     # Embed all texts (skip local model when SKIP_LOCAL_EMBED=true)
     texts = [c["text"] for c in chunks]
@@ -1234,7 +1258,6 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
         embeddings = embed_texts_llm(texts)
     else:
         try:
-            from app.config import settings
             from app.rag.embed_gpu import get_adaptive_embedder
             embedder = get_adaptive_embedder()
             embeddings = embedder.encode(texts, batch_size=settings.embedding_batch_size)
@@ -1332,6 +1355,11 @@ def retrieve_qdrant(query: str, top_k: int = 3, collection_name: str = "aureon",
     query_filter = Filter(must=must_conditions) if must_conditions else None
 
     # Try new API first (qdrant_client >= 1.12), fall back to old
+    from qdrant_client import models as qmodels
+    _search_params = qmodels.SearchParams(
+        hnsw_ef=settings.hnsw_ef_search,
+        quantization=qmodels.QuantizationSearchParams(rescore=True),
+    )
     try:
         search_kwargs = dict(
             collection_name=collection_name,
@@ -1339,6 +1367,7 @@ def retrieve_qdrant(query: str, top_k: int = 3, collection_name: str = "aureon",
             limit=top_k,
             with_payload=True,
             with_vectors=True,
+            search_params=_search_params,
         )
         if query_filter is not None:
             search_kwargs["query_filter"] = query_filter
@@ -1351,6 +1380,7 @@ def retrieve_qdrant(query: str, top_k: int = 3, collection_name: str = "aureon",
             query_vector=query_vector,
             limit=top_k,
             with_vectors=True,
+            search_params=_search_params,
         )
         if query_filter is not None:
             search_kwargs["filter"] = query_filter
