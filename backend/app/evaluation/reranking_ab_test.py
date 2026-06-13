@@ -15,6 +15,7 @@ Measures:
 
 import time
 import asyncio
+import inspect
 import numpy as np
 from typing import List, Dict, Any, Callable, Optional
 from dataclasses import dataclass
@@ -111,7 +112,7 @@ class RerankingABTest:
 
                 try:
                     # Check if strategy is async
-                    if asyncio.iscoroutinefunction(strategy_fn):
+                    if inspect.iscoroutinefunction(strategy_fn):
                         query_results = await strategy_fn(query, top_k=top_k)
                     else:
                         query_results = await asyncio.to_thread(

@@ -9,7 +9,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class LLMSettings(BaseModel):
     llm_api_key: str = ""
     llm_model: str = "qwen3.6-flash"
-    llm_base_url: str = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+    llm_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
     fallback_api_key: str = ""
     fallback_model: str = "GLM-4-Flash-250414"
     fallback_base_url: str = "https://open.bigmodel.cn/api/paas/v4/"
@@ -30,7 +30,7 @@ class EmbeddingSettings(BaseModel):
     embed_gpu_threshold: int = 4
     skip_local_embed: bool = False
     dashscope_api_key: str = ""
-    dashscope_base_url: str = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+    dashscope_base_url: str = "https://dashscope.aliyuncs.com/api/v1"
     dashscope_model: str = "text-embedding-v4"
     dashscope_dimensions: int = 1024
     siliconflow_api_key: str = ""
@@ -87,7 +87,7 @@ class RerankSettings(BaseModel):
     cohere_api_key: Optional[str] = None
     cohere_rerank_model: str = "rerank-multilingual-v3.0"
     jina_api_key: Optional[str] = None
-    dashscope_rerank_url: str = "https://dashscope-intl.aliyuncs.com/compatible-api/v1"
+    dashscope_rerank_url: str = "https://dashscope.aliyuncs.com/compatible-api/v1"
     dashscope_rerank_model: str = "qwen3-rerank"
     rerank_semaphore: int = 40
 
