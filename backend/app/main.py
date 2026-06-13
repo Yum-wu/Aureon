@@ -106,9 +106,7 @@ def _warmup_bm25():
     """
     global _bm25_warmup_done, _index_ready
     try:
-        from app.rag.vector_store import _build_kw_index, check_index_stale, get_collection_stats
-        _build_kw_index()
-        logger.info("BM25 index warmup complete")
+        from app.rag.vector_store import check_index_stale, get_collection_stats
 
         # 确保 Qdrant Payload 索引存在（生产环境兼容）
         try:
@@ -171,10 +169,7 @@ async def lifespan(app: FastAPI):
     # ── Startup ──
     if not settings.llm_api_key and not settings.fallback_api_key:
         logger.warning("LLM_API_KEY 未配置，Agent 调用将失败")
-    if settings.langchain_api_key:
-        os.environ.setdefault("LANGCHAIN_API_KEY", settings.langchain_api_key)
-        os.environ.setdefault("LANGCHAIN_PROJECT", settings.langchain_project)
-        os.environ.setdefault("LANGCHAIN_ENDPOINT", "https://api.smith.langchain.com")
+    # LangSmith 已停用，使用 LangFuse 追踪
     init_db()
     from app.features import init_feature_flags_table
     from app.observability import init_query_traces_table
