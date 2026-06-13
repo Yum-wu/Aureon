@@ -6,6 +6,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 import structlog
 
 from app.common import sse_event
+from app.observability.langfuse_integration import get_langfuse_handler
 
 logger = structlog.get_logger()
 
@@ -35,10 +36,15 @@ async def stream_agent(
 
     messages.append(HumanMessage(content=user_message))
 
+    # 获取 Langfuse callback handler
+    langfuse_handler = get_langfuse_handler()
+    stream_config = {"callbacks": [langfuse_handler]} if langfuse_handler else None
+
     try:
         async for event in agent_graph.astream_events(
             {"messages": messages},
             version="v2",
+            config=stream_config,
         ):
             kind = event["event"]
 

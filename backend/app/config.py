@@ -151,6 +151,8 @@ class ObservabilitySettings(BaseModel):
     langfuse_public_key: str = ""
     langfuse_secret_key: str = ""
     langfuse_host: str = "https://cloud.langfuse.com"
+    langfuse_release: str = ""
+    langfuse_session_id: str = ""
 
 
 class Settings(BaseSettings):
