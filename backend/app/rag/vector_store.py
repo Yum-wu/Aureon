@@ -677,8 +677,8 @@ def _add_to_index_qdrant(chunks: List[Dict[str, Any]]):
         points = []
         for i in range(end - start):
             idx = start + i
-            if settings.sparse_enabled and sparse_vectors[idx]:
-                vector_data = {"dense": embeddings[idx].tolist(), "sparse": sparse_vectors[idx]}
+            if settings.sparse_enabled:
+                vector_data = {"dense": embeddings[idx].tolist(), "sparse": sparse_vectors[idx] or {}}
             else:
                 vector_data = embeddings[idx].tolist()
             points.append(PointStruct(
@@ -1601,8 +1601,10 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
 
         # 构建 points
         for j, idx in enumerate(range(batch_start, batch_end)):
-            if settings.sparse_enabled and batch_sparse[j]:
-                vector_data = {"dense": batch_embeddings[j].tolist(), "sparse": batch_sparse[j]}
+            if settings.sparse_enabled:
+                # 集合使用命名向量，必须用 {"dense": ..., "sparse": ...} 格式
+                # 即使 sparse 为空也必须传 sparse 键，否则 Qdrant 报 "Not existing vector name"
+                vector_data = {"dense": batch_embeddings[j].tolist(), "sparse": batch_sparse[j] or {}}
             else:
                 vector_data = batch_embeddings[j].tolist()
             point_payload = {"metadata": chunks[idx].get("metadata", {}), "text": chunks[idx]["text"]}
