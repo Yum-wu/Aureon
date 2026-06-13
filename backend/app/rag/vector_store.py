@@ -1312,6 +1312,8 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
                     ef_construct=settings.hnsw_ef_construct,
                 ),
             ),
+        }
+        sparse_vectors_config = {
             "sparse": qmodels.SparseVectorParams(
                 index=qmodels.SparseIndexParams(on_disk=False),
             ),
@@ -1326,14 +1328,12 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
                 ef_construct=settings.hnsw_ef_construct,
             ),
         )
+        sparse_vectors_config = None
 
-    try:
-        client.create_collection(
+    def _call_create(hnsw_ef_search: bool = True):
+        kwargs = dict(
             collection_name=collection_name,
             vectors_config=vectors_config,
-            hnsw_config=qmodels.HnswConfigDiff(
-                ef_search=settings.hnsw_ef_search,
-            ),
             quantization_config=qmodels.ScalarQuantization(
                 scalar=qmodels.ScalarQuantizationConfig(
                     type=qmodels.ScalarType.INT8,
@@ -1342,22 +1342,22 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
                 ),
             ) if settings.quantization_enabled else None,
         )
+        if sparse_vectors_config is not None:
+            kwargs["sparse_vectors_config"] = sparse_vectors_config
+        if hnsw_ef_search:
+            kwargs["hnsw_config"] = qmodels.HnswConfigDiff(
+                ef_search=settings.hnsw_ef_search,
+            )
+        client.create_collection(**kwargs)
+
+    try:
+        _call_create(hnsw_ef_search=True)
     except Exception as e:
         err_str = str(e).lower()
         if "ef_search" in err_str or "extra_forbidden" in err_str:
             # qdrant-client 版本不兼容 ef_search，回退到无 ef_search 参数
             logger.warning("HnswConfigDiff.ef_search not supported, retrying without: %s", e)
-            client.create_collection(
-                collection_name=collection_name,
-                vectors_config=vectors_config,
-                quantization_config=qmodels.ScalarQuantization(
-                    scalar=qmodels.ScalarQuantizationConfig(
-                        type=qmodels.ScalarType.INT8,
-                        quantile=0.99,
-                        always_ram=True,
-                    ),
-                ) if settings.quantization_enabled else None,
-            )
+            _call_create(hnsw_ef_search=False)
         else:
             raise
 
