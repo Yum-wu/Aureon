@@ -812,21 +812,30 @@ def _add_to_index_qdrant(chunks: List[Dict[str, Any]]):
     except Exception:
         existing_count = 0
 
-    # Embed texts using API (skip local model when SKIP_LOCAL_EMBED=true)
+    # Embed texts — 优先使用 DashScope combined API（dense+sparse 一次调用）
     texts = [c["text"] for c in chunks]
-    if _skip_local_embed:
-        embeddings = embed_texts_llm(texts)
+
+    use_combined = (
+        settings.sparse_enabled
+        and settings.dashscope_api_key
+        and "dashscope" in settings.dashscope_base_url.lower()
+    )
+
+    if use_combined:
+        dense_emb, sparse_vecs = _embed_dense_sparse_dashscope(texts)
+    elif _skip_local_embed:
+        dense_emb = embed_texts_llm(texts)
+        from app.rag.sparse_embed import embed_sparse
+        sparse_vecs = embed_sparse(texts) if settings.sparse_enabled else [None] * len(texts)
     else:
         try:
             from app.rag.embed_gpu import get_adaptive_embedder
             embedder = get_adaptive_embedder()
-            embeddings = embedder.encode(texts, batch_size=64)
+            dense_emb = embedder.encode(texts, batch_size=64)
         except Exception:
-            embeddings = embed_texts_llm(texts)
-
-    # 生成 sparse 向量
-    from app.rag.sparse_embed import embed_sparse
-    sparse_vectors = embed_sparse(texts) if settings.sparse_enabled else [{}] * len(texts)
+            dense_emb = embed_texts_llm(texts)
+        from app.rag.sparse_embed import embed_sparse
+        sparse_vecs = embed_sparse(texts) if settings.sparse_enabled else [None] * len(texts)
 
     # Upsert in batches
     batch_size = 100
@@ -835,12 +844,11 @@ def _add_to_index_qdrant(chunks: List[Dict[str, Any]]):
         points = []
         for i in range(end - start):
             idx = start + i
-            if settings.sparse_enabled:
-                sv = sparse_vectors[idx]
-                sv = _to_sparse_vector(sv)
-                vector_data = {"dense": embeddings[idx].tolist(), "sparse": sv}
+            if settings.sparse_enabled and sparse_vecs[idx] is not None:
+                sv = _to_sparse_vector(sparse_vecs[idx])
+                vector_data = {"dense": dense_emb[idx].tolist(), "sparse": sv}
             else:
-                vector_data = embeddings[idx].tolist()
+                vector_data = dense_emb[idx].tolist()
             points.append(PointStruct(
                 id=existing_count + idx,
                 vector=vector_data,
@@ -1554,8 +1562,9 @@ def check_index_upgrade_strategy(collection_name: str = "aureon", articles_dir: 
             return {"action": "skip", "reason": "articles dir missing but index has data", "files_to_add": [], "files_to_del": []}
         return {"action": "rebuild", "reason": "no articles dir and empty index", "files_to_add": [], "files_to_del": []}
 
-    # 收集磁盘上的 .md 文件（相对路径）
-    fs_files = set(str(p.relative_to(articles_path)) for p in articles_path.rglob("*.md"))
+    # 收集磁盘上的 .md 文件（使用文件名，与 metadata.source 格式一致）
+    # metadata.source 存的是 fpath.name（纯文件名），所以这里也用纯文件名
+    fs_files = set(p.name for p in articles_path.rglob("*.md"))
 
     # 计算差异
     files_to_add = sorted(fs_files - indexed_sources)
