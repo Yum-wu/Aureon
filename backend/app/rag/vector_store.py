@@ -514,6 +514,126 @@ def _embed_api(texts: List[str], provider: str, batch_size: int = 10) -> np.ndar
     return result
 
 
+def _embed_dense_sparse_dashscope(texts: List[str], batch_size: int = 10,
+                                   max_workers: int = 5) -> tuple[np.ndarray, list]:
+    """DashScope text-embedding-v4 output_type=dense&sparse 一次调用同时获取 dense + sparse。
+
+    Returns:
+        (dense_embeddings, sparse_vectors) — dense 为 (N, dim) ndarray，
+        sparse 为 List[Dict[int, float]]。
+    """
+    from app.config import settings
+    import requests
+
+    api_key = settings.dashscope_api_key
+    model = settings.dashscope_model
+    dim = settings.dashscope_dimensions
+
+    if not api_key:
+        raise RuntimeError("dashscope: API key not configured")
+
+    def _call_batch(batch: List[str]) -> tuple[list, list]:
+        """单批 API 调用，返回 (dense_list, sparse_list)。"""
+        # DashScope v4 支持 output_type 参数（通过 DashScope 原生 API）
+        # OpenAI 兼容模式不支持，需要用 DashScope 原生 endpoint
+        dashscope_url = "https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding"
+        ds_payload = {
+            "model": model,
+            "input": {"texts": batch},
+            "parameters": {
+                "dimension": dim,
+                "output_type": "dense&sparse",
+            },
+        }
+        ds_headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+
+        last_err = None
+        for attempt in range(3):
+            try:
+                resp = requests.post(dashscope_url, headers=ds_headers, json=ds_payload, timeout=90)
+                if not resp.ok:
+                    logger.warning("DashScope dense&sparse API error %d: %s", resp.status_code, resp.text[:300])
+                resp.raise_for_status()
+                break
+            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout,
+                    requests.exceptions.SSLError) as e:
+                last_err = e
+                wait = 2 ** attempt * 5
+                logger.warning("DashScope dense&sparse attempt %d failed: %s, retry in %ds", attempt + 1, e, wait)
+                time.sleep(wait)
+        else:
+            raise last_err
+
+        data = resp.json()
+        output = data.get("output", {})
+        embeddings_data = output.get("embeddings", [])
+
+        # 按 text_index 排序
+        embeddings_data.sort(key=lambda x: x.get("text_index", 0))
+
+        batch_dense = []
+        batch_sparse = []
+        for item in embeddings_data:
+            batch_dense.append(item.get("embedding", []))
+            sparse_raw = item.get("sparse_embedding", [])
+            # sparse_embedding 格式: [{"index": int, "value": float, "token": str}, ...]
+            sparse_dict = {}
+            for entry in sparse_raw:
+                idx = entry.get("index")
+                val = entry.get("value", 0.0)
+                if idx is not None and val != 0:
+                    sparse_dict[idx] = val
+            batch_sparse.append(sparse_dict)
+
+        return batch_dense, batch_sparse
+
+    # 并发调用多批
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    all_dense = [None] * len(texts)
+    all_sparse = [None] * len(texts)
+    batches = []
+    for start in range(0, len(texts), batch_size):
+        batch = texts[start:start + batch_size]
+        batches.append((start, batch))
+
+    if len(batches) <= 1 or max_workers <= 1:
+        # 单批或不需要并发
+        for start, batch in batches:
+            bd, bs = _call_batch(batch)
+            for j, (d, s) in enumerate(zip(bd, bs)):
+                all_dense[start + j] = d
+                all_sparse[start + j] = s
+    else:
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            future_map = {}
+            for start, batch in batches:
+                f = pool.submit(_call_batch, batch)
+                future_map[f] = start
+            for f in as_completed(future_map):
+                start = future_map[f]
+                bd, bs = f.result()
+                for j, (d, s) in enumerate(zip(bd, bs)):
+                    all_dense[start + j] = d
+                    all_sparse[start + j] = s
+
+    dense_result = np.array(all_dense, dtype=np.float32)
+
+    # 验证
+    norms = np.linalg.norm(dense_result, axis=1)
+    zero_ratio = np.sum(norms < 1e-6) / len(norms)
+    if zero_ratio > 0.5:
+        raise RuntimeError(f"dashscope dense&sparse: {zero_ratio:.0%} zero vectors")
+
+    sparse_count = sum(1 for s in all_sparse if s)
+    logger.info("Embedding via dashscope dense&sparse: %d texts, dim=%d, sparse=%d",
+                len(texts), dense_result.shape[1], sparse_count)
+    return dense_result, all_sparse
+
+
 def embed_texts_as_list(texts: List[str]) -> List[np.ndarray]:
     """Embed texts and return as list of vectors (for SemanticTextSplitter).
 
@@ -1575,39 +1695,67 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
             except Exception:
                 pass  # 索引可能已存在
 
-    # 边嵌入边 upsert：分批 embed + 分批 sparse + 分批 upsert
-    # 这样即使中断，已 upsert 的批次数据保留在 Qdrant 中
-    from app.rag.sparse_embed import embed_sparse
-    embed_batch_size = 10  # 每次 embed 的文本数
+    # 边嵌入边 upsert：优先使用 DashScope dense&sparse 合并接口（一次 API 调用同时获取）
+    # 如果不可用则回退到分开的 dense + sparse embed
+    embed_batch_size = 10  # 每次 embed 的文本数（DashScope v4 硬限制 10 条/请求）
+    embed_max_workers = 5  # 并发 embed 请求数
     upsert_batch_size = 100  # 每次 upsert 的 point 数
     pending_points: list = []
     total_upserted = 0
 
+    # 判断是否可以使用 DashScope dense&sparse 合并接口
+    use_combined = (
+        settings.sparse_enabled
+        and _skip_local_embed
+        and settings.dashscope_api_key
+        and settings.dashscope_model in ("text-embedding-v3", "text-embedding-v4")
+    )
+
+    if use_combined:
+        # 路径 A：DashScope dense&sparse 合并接口 + 并发
+        logger.info("Using DashScope dense&sparse combined API (max_workers=%d)", embed_max_workers)
+        all_texts = [c["text"] for c in chunks]
+
+        try:
+            all_embeddings, all_sparse = _embed_dense_sparse_dashscope(
+                all_texts, batch_size=embed_batch_size, max_workers=embed_max_workers
+            )
+        except Exception as e:
+            logger.warning("DashScope dense&sparse failed: %s, falling back to separate embed", e)
+            use_combined = False
+
+    if not use_combined:
+        # 路径 B：分开的 dense + sparse embed（逐批流式）
+        from app.rag.sparse_embed import embed_sparse
+
     for batch_start in range(0, len(chunks), embed_batch_size):
         batch_end = min(batch_start + embed_batch_size, len(chunks))
-        batch_texts = [c["text"] for c in chunks[batch_start:batch_end]]
-        logger.info("Embedding batch %d-%d/%d ...", batch_start, batch_end, len(chunks))
 
-        # 嵌入 dense 向量
-        if _skip_local_embed:
-            batch_embeddings = embed_texts_llm(batch_texts)
+        if use_combined:
+            # 路径 A：直接从已 embed 的结果中取
+            batch_embeddings = all_embeddings[batch_start:batch_end]
+            batch_sparse = all_sparse[batch_start:batch_end]
         else:
-            try:
-                from app.rag.embed_gpu import get_adaptive_embedder
-                embedder = get_adaptive_embedder()
-                batch_embeddings = embedder.encode(batch_texts, batch_size=settings.embedding_batch_size)
-            except Exception as e:
-                logger.warning("Adaptive embedding failed: %s, falling back to API", e)
-                batch_embeddings = embed_texts_llm(batch_texts)
+            # 路径 B：逐批 embed
+            batch_texts = [c["text"] for c in chunks[batch_start:batch_end]]
+            logger.info("Embedding batch %d-%d/%d ...", batch_start, batch_end, len(chunks))
 
-        # 生成 sparse 向量
-        batch_sparse = embed_sparse(batch_texts) if settings.sparse_enabled else [{}] * len(batch_texts)
+            if _skip_local_embed:
+                batch_embeddings = embed_texts_llm(batch_texts)
+            else:
+                try:
+                    from app.rag.embed_gpu import get_adaptive_embedder
+                    embedder = get_adaptive_embedder()
+                    batch_embeddings = embedder.encode(batch_texts, batch_size=settings.embedding_batch_size)
+                except Exception as e:
+                    logger.warning("Adaptive embedding failed: %s, falling back to API", e)
+                    batch_embeddings = embed_texts_llm(batch_texts)
+
+            batch_sparse = embed_sparse(batch_texts) if settings.sparse_enabled else [{}] * len(batch_texts)
 
         # 构建 points
         for j, idx in enumerate(range(batch_start, batch_end)):
             if settings.sparse_enabled:
-                # 集合使用命名向量，必须用 {"dense": ..., "sparse": ...} 格式
-                # sparse 为空时传 SparseVector(indices=[], values=[])，空字典 {} 会导致 PointStruct 验证失败
                 sv = batch_sparse[j]
                 if not sv:
                     sv = qmodels.SparseVector(indices=[], values=[])
