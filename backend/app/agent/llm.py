@@ -49,7 +49,8 @@ def create_llm(model: str = None, **kwargs):
     """
     model_name = model or settings.llm_model
     streaming = kwargs.get("streaming", True)
-    pool_key = f"{model_name}:{streaming}"
+    enable_thinking = kwargs.get("extra_body", {}).get("enable_thinking", False)
+    pool_key = f"{model_name}:{streaming}:thinking={enable_thinking}"
 
     # Return cached instance if available
     with _llm_pool_lock:
@@ -79,6 +80,10 @@ def create_llm(model: str = None, **kwargs):
             return llm
 
     # Default: DashScope Qwen
+    extra_body = kwargs.get("extra_body", {})
+    # 关闭思考模式以加速生成（RAG 场景不需要深度推理）
+    if "enable_thinking" not in extra_body:
+        extra_body["enable_thinking"] = False
     llm = ChatOpenAI(
         model=settings.llm_model,
         api_key=settings.llm_api_key,
@@ -88,6 +93,7 @@ def create_llm(model: str = None, **kwargs):
         max_tokens=kwargs.get("max_tokens", _DEFAULT_MAX_TOKENS),
         timeout=_DEFAULT_TIMEOUT,
         max_retries=_DEFAULT_MAX_RETRIES,
+        extra_body=extra_body,
     )
     with _llm_pool_lock:
         _pool_put(pool_key, llm)
