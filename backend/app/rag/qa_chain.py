@@ -1331,6 +1331,7 @@ def run_index_pipeline(
     articles_dir: str,
     llm_call_fn = None,
     enable_contextual: bool = True,
+    enable_semantic_chunking: bool = False,
 ) -> dict:
     """Full index pipeline: load → split → [contextual prefix] → embed → store.
 
@@ -1338,6 +1339,9 @@ def run_index_pipeline(
     an LLM-generated context prefix explaining its source document and position.
     This is Anthropic's Contextual Retrieval technique — reduces retrieval errors
     by up to 49% (https://www.anthropic.com/news/contextual-retrieval).
+
+    enable_semantic_chunking defaults to False because it requires embedding API
+    calls during the splitting phase, which is very slow and prone to stalling.
     """
     start = time.time()
 
@@ -1357,7 +1361,7 @@ def run_index_pipeline(
             "elapsed_seconds": 0,
             "message": "没有找到 Markdown 文件",
         }
-    logger.info("run_index_pipeline: loaded %d docs, starting chunking (semantic=%s)", len(docs), SEMANTIC_CHUNKING_ENABLED)
+    logger.info("run_index_pipeline: loaded %d docs, starting chunking (semantic=%s)", len(docs), enable_semantic_chunking)
 
     # 2. Split into parent-child structure
     # Parent: 1500 chars (rich context for LLM)
@@ -1378,7 +1382,7 @@ def run_index_pipeline(
         parents = parent_splitter.split_text(doc["content"])
         for parent_idx, parent_text in enumerate(parents):
             # Use semantic chunking if enabled, otherwise fixed-size splitting
-            if SEMANTIC_CHUNKING_ENABLED:
+            if enable_semantic_chunking:
                 try:
                     from app.rag.semantic_splitter import SemanticTextSplitter
                     from app.rag.vector_store import embed_texts_as_list
