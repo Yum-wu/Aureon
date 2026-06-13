@@ -1229,9 +1229,10 @@ def ensure_payload_indexes(collection_name: str = "aureon") -> None:
 def check_vector_config_mismatch(collection_name: str = "aureon") -> bool:
     """检查现有 collection 的向量配置是否与当前设置匹配。
 
-    当 sparse_enabled=True 时，代码使用命名向量 ("dense"/"sparse")，
-    但旧版集合使用未命名向量，导致 "Not existing vector name error"。
-    返回 True 表示需要重建。
+    检查维度：
+    1. 向量命名格式（命名 "dense"/"sparse" vs 未命名）
+    2. Dense 向量维度是否与 settings.embedding_dim 一致
+    3. 距离度量是否为 COSINE
 
     Returns:
         True if config mismatch detected (needs rebuild), False if match.
@@ -1240,30 +1241,168 @@ def check_vector_config_mismatch(collection_name: str = "aureon") -> bool:
         client = _get_qdrant()
         info = client.get_collection(collection_name)
         vectors_config = info.config.params.vectors
+        dim = _get_embedding_dim()
 
         if settings.sparse_enabled:
             # 期望命名向量 "dense" + "sparse"
-            if isinstance(vectors_config, dict) and "dense" in vectors_config:
-                return False
-            logger.warning(
-                "Vector config mismatch: sparse_enabled=True but collection '%s' "
-                "has unnamed vectors (expected named 'dense'/'sparse'). Rebuild needed.",
-                collection_name,
-            )
-            return True
+            if not isinstance(vectors_config, dict) or "dense" not in vectors_config:
+                logger.warning(
+                    "Vector config mismatch: sparse_enabled=True but collection '%s' "
+                    "has unnamed vectors (expected named 'dense'/'sparse'). Rebuild needed.",
+                    collection_name,
+                )
+                return True
+            # 检查 dense 向量维度
+            dense_cfg = vectors_config.get("dense")
+            if hasattr(dense_cfg, "size") and dense_cfg.size != dim:
+                logger.warning(
+                    "Vector dim mismatch: collection has %dd but settings require %dd. Rebuild needed.",
+                    dense_cfg.size, dim,
+                )
+                return True
+            # 检查距离度量
+            from qdrant_client.models import Distance
+            if hasattr(dense_cfg, "distance") and dense_cfg.distance != Distance.COSINE:
+                logger.warning(
+                    "Distance metric mismatch: collection has %s but COSINE required. Rebuild needed.",
+                    dense_cfg.distance,
+                )
+                return True
+            return False
         else:
             # 期望未命名向量（单个 VectorParams）
-            if not isinstance(vectors_config, dict):
-                return False
-            logger.warning(
-                "Vector config mismatch: sparse_enabled=False but collection '%s' "
-                "has named vectors. Rebuild needed.",
-                collection_name,
-            )
-            return True
+            if isinstance(vectors_config, dict):
+                logger.warning(
+                    "Vector config mismatch: sparse_enabled=False but collection '%s' "
+                    "has named vectors. Rebuild needed.",
+                    collection_name,
+                )
+                return True
+            # 检查维度和距离
+            if hasattr(vectors_config, "size") and vectors_config.size != dim:
+                logger.warning(
+                    "Vector dim mismatch: collection has %dd but settings require %dd. Rebuild needed.",
+                    vectors_config.size, dim,
+                )
+                return True
+            from qdrant_client.models import Distance
+            if hasattr(vectors_config, "distance") and vectors_config.distance != Distance.COSINE:
+                logger.warning(
+                    "Distance metric mismatch: collection has %s but COSINE required. Rebuild needed.",
+                    vectors_config.distance,
+                )
+                return True
+            return False
     except Exception as e:
         logger.warning("check_vector_config_mismatch failed: %s", e)
         return False  # 无法判断时保守处理
+
+
+def get_index_config(collection_name: str = "aureon") -> dict | None:
+    """从 Qdrant 集合的第一个 point 中读取 _index_config 元数据。
+
+    Returns:
+        索引配置字典，包含 embedding_dim, embedding_model, sparse_enabled, created_at。
+        如果集合为空或没有 _index_config，返回 None。
+    """
+    try:
+        client = _get_qdrant()
+        points, _ = client.scroll(
+            collection_name=collection_name,
+            limit=1,
+            with_payload=True,
+            with_vectors=False,
+        )
+        if points:
+            return points[0].payload.get("_index_config")
+    except Exception as e:
+        logger.debug("get_index_config failed: %s", e)
+    return None
+
+
+def check_index_upgrade_strategy(collection_name: str = "aureon", articles_dir: str = "") -> dict:
+    """分析索引是否需要更新，以及需要全量重建还是增量更新。
+
+    策略：
+    1. 向量结构不兼容（命名格式/维度/距离变了）→ 必须全量重建
+    2. 向量结构兼容但文件内容变了 → 增量更新（只处理新增/删除的文件）
+    3. 向量结构兼容且文件没变 → 跳过
+
+    Returns:
+        {
+            "action": "skip" | "rebuild" | "incremental",
+            "reason": str,
+            "files_to_add": list[str],   # incremental 时需要新增的文件
+            "files_to_del": list[str],   # incremental 时需要删除的文件
+        }
+    """
+    import pathlib
+
+    # 1. 检查向量结构兼容性
+    if check_vector_config_mismatch(collection_name):
+        return {
+            "action": "rebuild",
+            "reason": "vector config mismatch (structure/dim/distance incompatible)",
+            "files_to_add": [],
+            "files_to_del": [],
+        }
+
+    # 2. 检查 _index_config 中的 embedding 模型是否变化
+    idx_cfg = get_index_config(collection_name)
+    if idx_cfg:
+        current_model = settings.dashscope_model if _skip_local_embed else _LOCAL_MODEL_NAME
+        stored_model = idx_cfg.get("embedding_model", "")
+        if stored_model and stored_model != current_model:
+            return {
+                "action": "rebuild",
+                "reason": f"embedding model changed: {stored_model} -> {current_model}",
+                "files_to_add": [],
+                "files_to_del": [],
+            }
+
+    # 3. 对比文件系统与索引中的 source 列表
+    indexed_sources = get_indexed_sources()
+    doc_count, _ = get_collection_stats()
+
+    if not articles_dir:
+        # 没有 articles_dir 信息，只能做简单判断
+        if doc_count > 0:
+            return {"action": "skip", "reason": "index has data, no articles_dir to compare", "files_to_add": [], "files_to_del": []}
+        return {"action": "rebuild", "reason": "empty index", "files_to_add": [], "files_to_del": []}
+
+    articles_path = pathlib.Path(articles_dir)
+    if not articles_path.is_dir():
+        if doc_count > 0:
+            return {"action": "skip", "reason": "articles dir missing but index has data", "files_to_add": [], "files_to_del": []}
+        return {"action": "rebuild", "reason": "no articles dir and empty index", "files_to_add": [], "files_to_del": []}
+
+    # 收集磁盘上的 .md 文件（相对路径）
+    fs_files = set(str(p.relative_to(articles_path)) for p in articles_path.rglob("*.md"))
+
+    # 计算差异
+    files_to_add = sorted(fs_files - indexed_sources)
+    files_to_del = sorted(indexed_sources - fs_files)
+
+    if not files_to_add and not files_to_del:
+        return {"action": "skip", "reason": "index up-to-date", "files_to_add": [], "files_to_del": []}
+
+    # 如果差异超过 50%，全量重建更高效
+    total = max(len(fs_files), len(indexed_sources), 1)
+    diff_ratio = (len(files_to_add) + len(files_to_del)) / total
+    if diff_ratio > 0.5:
+        return {
+            "action": "rebuild",
+            "reason": f"too many changes ({len(files_to_add)} add, {len(files_to_del)} del, {diff_ratio:.0%} diff)",
+            "files_to_add": files_to_add,
+            "files_to_del": files_to_del,
+        }
+
+    return {
+        "action": "incremental",
+        "reason": f"{len(files_to_add)} new, {len(files_to_del)} removed files",
+        "files_to_add": files_to_add,
+        "files_to_del": files_to_del,
+    }
 
 
 def _get_qdrant():
