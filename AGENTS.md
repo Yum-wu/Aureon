@@ -15,11 +15,12 @@ Aureon/
 │   ├── tools/        # @tool 装饰器，__init__.py 统一注册 ALL_TOOLS
 │   ├── memory/       # L0-L3 四层记忆 + 上下文卸载
 │   ├── rag/          # Qdrant + Hybrid Search + Context Compression + Adaptive Re-ranking
-│   │   ├── vector_store.py  # 向量库 + BM25 检索
-│   │   ├── qa_chain.py      # RAG pipeline（检索→CRAG→压缩→生成→来源）
+│   │   ├── vector_store.py  # 向量库（Qdrant 原生稀疏向量 + HNSW 量化，替代 jieba BM25）
+│   │   ├── qa_chain.py      # RAG pipeline（HyDE→检索→轻量 CRAG→压缩→路由→生成→来源）
 │   │   ├── guardrails.py    # Prompt Injection 检测
 │   │   ├── evaluator.py     # Recall + Faithfulness + 延迟
-│   │   └── models.py        # Pydantic 请求/响应
+│   │   ├── models.py        # Pydantic 请求/响应
+│   │   └── query_router.py  # Adaptive-RAG 查询路由（按复杂度分配检索策略）
 │   ├── cache/        # Redis + 内存缓存、语义缓存去重
 │   ├── routers/      # API 路由（chat.py, rag.py, crew.py）
 │   ├── features/     # Feature Flag（灰度发布）
@@ -37,7 +38,7 @@ Aureon/
 │   ├── config.py     # pydantic_settings（所有环境变量统一在此）
 │   ├── exceptions.py # AureonException 层级异常体系
 │   └── main.py       # FastAPI 入口 + Auth Middleware + TenantMiddleware
-├── backend/tests/     # 753 passed, 18 skipped
+├── backend/tests/     # 793 passed, 5 skipped
 ├── src/               # React 前端
 │   ├── components/ hooks/ pages/ services/ i18n/ types/
 │   ├── hooks/AuthContext.ts    # Auth 状态定义
@@ -58,7 +59,7 @@ Aureon/
 - Agent：`create_agent(model, tools, prompt)` → `CompiledStateGraph`
 - 输入：`{"messages": [HumanMessage(content=...)]}`
 - 流式：`graph.astream_events(..., version="v2")`
-- 测试：`tests/` + pytest + pytest-asyncio（753 passed, 18 skipped）
+- 测试：`tests/` + pytest + pytest-asyncio（793 passed, 5 skipped）
 - API Key 仅存 `.env`，生产环境通过 `API_AUTH_KEY` 启用认证
 - SSO/RBAC：JWT + Fernet 加密，`require_role(min_role)` FastAPI 依赖
 - 敏感字段（SSO secret/LLM key）通过 `security/__init__.py` Fernet 加密存储
@@ -71,6 +72,15 @@ Aureon/
   - Embedding: `dashscope-intl.aliyuncs.com/compatible-mode/v1`
   - Rerank: `dashscope-intl.aliyuncs.com/compatible-api/v1`（注意：`compatible-api` 不是 `compatible-mode`）
   - 向量后端: Qdrant Cloud（`VECTOR_BACKEND=qdrant`）
+- **稀疏向量配置**：
+  - `SPARSE_VECTOR_ENABLED=true` — 启用 Qdrant 原生稀疏向量
+  - 使用 BGE-M3 模型生成 dense + sparse 联合向量
+- **查询路由配置**（qa_chain.py）：
+  - `QUERY_ROUTER_ENABLED=true` — 启用 Adaptive-RAG 查询路由
+  - `SIMPLE_THRESHOLD` / `COMPLEX_THRESHOLD` — 路由决策阈值
+- **Observability 配置**：
+  - `LANGFUSE_ENABLED=true` — 启用 LangFuse 全链路追踪
+  - `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_HOST`
 
 ### 前端
 - TypeScript + Tailwind CSS 4 + tailwindcss-animate
@@ -101,6 +111,47 @@ Aureon/
 | L3 | offloads/persona.md | 用户画像 (≤2KB) |
 | 卸载 | offloads/refs/*.md | 长工具输出外存 |
 
+## 企业级 RAG 优化
+
+### Qdrant 配置
+- **HNSW 参数**: m=32, ef_construct=200, ef_search=128
+- **标量量化**: INT8 量化向量常驻内存（always_ram=True），原始向量存磁盘
+- **Payload 索引**: metadata.slug / metadata.language / metadata.source / metadata.tenant_id
+- **稀疏向量**: BGE-M3 dense(1024d) + sparse，Qdrant 原生 hybrid search（RRF fusion）
+
+### 检索 Pipeline
+```
+Query → Query Router（简单/中等/复杂）→
+   ├── 简单 → 纯稀疏向量（<10ms）
+   ├── 中等 → Hybrid（dense+sparse）→ 自适应重排序
+   └── 复杂 → HyDE → Multi-Query → Hybrid → Ensemble Rerank → 轻量 CRAG
+```
+
+### 轻量 CRAG（替代 LLM CRAG）
+- 基于 embedding 相似度的快速检索质量评估
+- 三路动作：correct（直接输出）/ ambiguous（重写查询重试）/ incorrect（返回无结果）
+- 评估延迟：~50ms（vs LLM CRAG 的 ~1s）
+- 已在流式路径中启用
+
+### 查询路由（Adaptive-RAG）
+- **简单查询**（事实型，关键词匹配即可）→ 纯稀疏向量检索
+- **中等查询**（分析型，需语义理解）→ hybrid retrieve + 自适应重排序
+- **复杂查询**（推理型，需多角度）→ HyDE + multi_query + ensemble rerank + CRAG
+
+### Embedding 统一
+- 本地 BGE-large-zh-v1.5 和 API 统一输出 1024 维
+- Embedding Fallback Chain: local BGE → DashScope → SiliconFlow → Zhipu
+- 语义缓存复用 API fallback 链，支持 API-only 模式
+
+### 可观测性
+- **LangFuse**: 全链路追踪（每步延迟、token 使用、检索质量）
+- structlog 结构化日志
+- Prometheus /metrics 端点
+
+### Contextual Retrieval 并发化
+- `asyncio.gather` + `Semaphore(5)` 并发生成 chunk 上下文前缀
+- 1000 文档索引构建时间从 ~1h 降至 ~10min
+
 ## 测试体系
 
 ### 测试金字塔
@@ -117,7 +168,7 @@ Aureon/
                   │  (延迟/QPS/并发) │  本地手动跑
                  ┌┴─────────────────┴┐
                  │  单元测试          │  无 marker（CI 默认跑）
-                 │  (753 tests)      │  每次 push 自动跑
+                 │  (793 tests)      │  每次 push 自动跑
                  └───────────────────┘
 ```
 
@@ -270,7 +321,7 @@ npx vite preview --port 5174 --host 127.0.0.1
 
 **耗时参考**（2026-06-11 实测）：
 - CI 前端：~1m19s（74 tests + lint + build）
-- CI 后端：~2m1s（753 tests + lint）
+- CI 后端：~2m1s（793 tests + lint）
 - Railway 构建：~3m（Dockerfile Docker build）
 - Railway 部署：~4m（健康检查 + 流量切换）
 - 全流程（push → 生产就绪）：~8-10 分钟

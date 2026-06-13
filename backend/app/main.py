@@ -110,6 +110,13 @@ def _warmup_bm25():
         _build_kw_index()
         logger.info("BM25 index warmup complete")
 
+        # 确保 Qdrant Payload 索引存在（生产环境兼容）
+        try:
+            from app.rag.vector_store import ensure_payload_indexes
+            ensure_payload_indexes()
+        except Exception as e:
+            logger.warning("Payload index check failed (non-fatal): %s", e)
+
         # Check if vector index needs rebuild
         base_dir = os.path.dirname(os.path.dirname(__file__))
         articles_dir = os.path.join(base_dir, "data", "articles")

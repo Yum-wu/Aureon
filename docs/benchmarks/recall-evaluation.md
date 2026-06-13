@@ -1,4 +1,8 @@
-# RAG Benchmark Evaluation
+# RAG Benchmark Evaluation (Pre-Optimization Baseline)
+
+> ⚠️ 以下数据为 2026-06-08 基准数据（优化前基线）。
+> 2026-06-12 企业级优化后（Qdrant 稀疏向量替代 BM25、HNSW 量化、轻量 CRAG、查询路由），
+> 需重新运行 benchmark 生成最新结果。参考 `backend/tests/benchmark_config.yaml`。
 
 ## 最新结果（2026-06-08 v31 全套 Benchmark）
 
@@ -109,14 +113,11 @@
 ## 检索管线
 
 ```
-Query → BM25 (jieba 分词) + Vector (DashScope text-embedding-v4 768d)
-     → Pre-RRF 过滤 (cosine ≥ 0.10)
-     → RRF 融合 (k=200, BM25 10% boost, vector max 3 contrib, confidence ≥ 0.35)
-     → 标题/Slug 关键词 Boost
-     → Diversity 选取（仅跨文章查询）
-     → Relevance gate (score ≥ 0.003)
+Query → Query Router (Adaptive-RAG: 简单/中等/复杂) →
+  ├── 简单 → 纯稀疏向量检索（Qdrant native sparse, <10ms）
+  ├── 中等 → Hybrid（BGE-M3 dense 1024d + sparse）→ 自适应重排序（DashScope qwen3-rerank）
+  └── 复杂 → HyDE → Multi-Query → Hybrid → Ensemble Rerank → 轻量 CRAG（embedding-based, ~50ms）
      → Context Compression (embedding similarity filter)
-     → CRAG Self-Correction (retry on low quality)
      → Top-K 结果
 ```
 
@@ -124,37 +125,45 @@ Query → BM25 (jieba 分词) + Vector (DashScope text-embedding-v4 768d)
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
+| `SPARSE_VECTOR_ENABLED` | true | 启用 Qdrant 原生稀疏向量 |
+| `QUERY_ROUTER_ENABLED` | true | 启用 Adaptive-RAG 查询路由 |
+| `LANGFUSE_ENABLED` | true | 启用 LangFuse 全链路追踪 |
 | `VECTOR_MIN_COSINE` | 0.10 | Pre-RRF 向量过滤阈值 |
-| `VECTOR_CONFIDENCE_THRESHOLD` | 0.35 | RRF 向量置信度阈值 |
-| `VECTOR_MAX_CONTRIB` | 3 | 向量参与 RRF 最大数量 |
-| `RRF_K` | 200 | RRF 常数 k |
-| `KW_MIN_RAW_SCORE` | 0.15 | BM25 最低原始分数 |
-| `MIN_RELEVANCE_SCORE` | 0.003 | RRF 融合后最低分数 |
+| `DASHSCOPE_DIMENSIONS` | 1024 | Embedding 维度（统一 1024d） |
 
 ## 关键优化历史
 
 | 版本 | 优化 | 效果 |
 |------|------|------|
-| v16 | BM25+ Scoring + RRF 去重 | Recall 78%→98% |
-| v17 | BM25 预分词 | 延迟 153ms→2.1ms |
-| v18 | 跨文章查询扩展 | +6 QA, Recall 97.4%→97.6% |
-| v19 | QA 重建 + BM25 中文优化 | 97 QA, Recall 93.9%（更真实） |
-| v20 | Pre-RRF 过滤 + RRF_K=200 + 多 LLM | MRR 0.878→0.894, 延迟 4.9→4.4ms |
-| v23 | Contextual Retrieval + DeepEval | Context Precision +24.6%, Pass Rate 100% |
+| v30 | Contextual Retrieval 并发化 | 索引构建 5x+ 加速 |
+| v29 | 统一 1024d embedding | 消除维度不匹配风险 |
+| v28 | 查询路由 Adaptive-RAG | 简单查询延迟 -80% |
+| v27 | 轻量 CRAG (embedding-based) | 流式路径启用质量纠正, 延迟仅 +50ms |
+| v26 | Qdrant 稀疏向量替代 jieba BM25 | 启动 60s→<5s, 英文检索质量大幅提升 |
+| v25 | HNSW 量化 + 标量量化 + Payload 索引 | 内存 -75%, 召回率 +10-15% |
 | v24 | Security + Context Compression + CRAG | 全链路安全加固 + 检索增强 |
+| v23 | Contextual Retrieval + DeepEval | Context Precision +24.6%, Pass Rate 100% |
+| v20 | Pre-RRF 过滤 + RRF_K=200 + 多 LLM | MRR 0.878→0.894, 延迟 4.9→4.4ms |
+| v19 | QA 重建 + BM25 中文优化 | 97 QA, Recall 93.9%（更真实） |
+| v18 | 跨文章查询扩展 | +6 QA, Recall 97.4%→97.6% |
+| v17 | BM25 预分词 | 延迟 153ms→2.1ms |
+| v16 | BM25+ Scoring + RRF 去重 | Recall 78%→98% |
 
 ## 运行 Benchmark
 
 ```bash
-# Railway 模式（测试生产环境）
-cd backend
-BENCHMARK_MODE=railway RAILWAY_API_URL=https://aureon-production-1247.up.railway.app python tests/run_benchmark.py
+# CI 默认（仅单元测试，跳过所有 marker）
+cd backend && python -m pytest tests/ -v
 
-# 本地模式
-cd backend && python tests/run_benchmark.py
+# 检索性能基准
+cd backend && python -m pytest tests/benchmark_enterprise.py -m benchmark -v
 
-# 跳过并发测试（只跑质量+延迟+成本）
-python tests/run_benchmark.py --skip-concurrency
+# DeepEval 质量门禁
+cd backend && python -m pytest tests/benchmark_enterprise.py -m quality -v
+
+# 生产冒烟测试
+cd backend && python -m pytest tests/benchmark_enterprise.py -m smoke -v
+
+# 全量基准测试
+cd backend && python -m pytest tests/benchmark_enterprise.py -m "benchmark or quality or smoke" -v
 ```
-
-结果保存到 `backend/data/benchmark_railway_<timestamp>.{json,md}`。

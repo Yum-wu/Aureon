@@ -8,7 +8,7 @@
 | 运行时 | Python 3.12+ | 系统 Python |
 | 框架 | FastAPI + uvicorn | REST + SSE 流式端点 |
 | Agent 框架 | LangChain >=0.3 | Tool Calling Agent |
-| LLM 接口 | langchain-openai (ChatOpenAI) | OpenAI 兼容接口，适配智谱/DeepSeek |
+| LLM 接口 | langchain-openai (ChatOpenAI) | OpenAI 兼容接口，默认 qwen3.6-flash，可选 DeepSeek/智谱 |
 | 默认模型 | qwen3.6-flash | DashScope（新加坡节点），可切换 DeepSeek/智谱 |
 | 数据库 | SQLite | offloads/memory.db |
 | 向量库 | Qdrant Cloud | `VECTOR_BACKEND=qdrant` |
@@ -30,32 +30,33 @@ React 前端 (src/)            Python FastAPI 后端 (backend/)
 │ ChatWindow   │◄──SSE──────┤ POST /api/chat/stream           │
 │ MessageList  │◄──WS───────┤ WS /ws/chat/{client_id}         │
 │ InputArea    │──POST─────►│ LangChain Agent                  │
-│              │            │  ├─ ChatModel (智谱/DeepSeek/混元)│
-│ useChat.ts   │            │  ├─ Tools (calculator/搜索/read_ref)│
-│   ↓          │            │  └─ MemoryManager                │
-│ api.ts ←─────┤            │       ├─ L3 Persona (画像)       │
-└──────────────┘            │       ├─ L2 Scenario (场景)      │
-                            │       ├─ L1 Atom (事实)          │
-                            │       ├─ L0 Conversation (原始)  │
-                            │       └─ Context Offload (卸载)  │
-                            │                                  │
-                            │ 企业级模块 (10 个 Priority)       │
-                            │  ├─ features/ (Feature Flags)    │
-                            │  ├─ observability/ (Query Trace) │
-                            │  ├─ security/ (PII + SSO + Rate) │
-                            │  ├─ evaluation/ (Metrics)        │
-                            │  ├─ cost/ (Budget + Tracking)    │
-                            │  ├─ reliability/ (Backup + SLO)  │
-                            │  ├─ knowledge/ (Version + Export)│
-                            │  ├─ ai_platform/ (LLM + Memory)  │
-                            │  └─ integration/ (Connectors)    │
-                            │                                  │
-                            │ offloads/                        │
-                            │  ├─ refs/*.md    (工具日志外存)  │
-                            │  ├─ scenarios/*.md (场景总结)   │
-                            │  ├─ persona.md   (用户画像)     │
-                            │  └─ canvas_*.mmd (Mermaid画布)  │
-                            └──────────────────────────────────┘
+│              │            │  ├─ ChatModel (qwen3.6-flash / DeepSeek)      │
+│ useChat.ts   │            │  ├─ Tools (calculator/搜索/read_ref)         │
+│   ↓          │            │  ├─ Query Router (Adaptive-RAG: 简单/中等/复杂)│
+│ api.ts ←─────┤            │  └─ MemoryManager                │
+│              │            │       ├─ L3 Persona (画像)       │
+│              │            │       ├─ L2 Scenario (场景)      │
+│              │            │       ├─ L1 Atom (事实)          │
+│              │            │       ├─ L0 Conversation (原始)  │
+│              │            │       └─ Context Offload (卸载)  │
+│              │            │                                  │
+│              │            │ 企业级模块 (10 个 Priority)       │
+│              │            │  ├─ features/ (Feature Flags)    │
+│              │            │  ├─ observability/ (Query Trace) │
+│              │            │  ├─ security/ (PII + SSO + Rate) │
+│              │            │  ├─ evaluation/ (Metrics)        │
+│              │            │  ├─ cost/ (Budget + Tracking)    │
+│              │            │  ├─ reliability/ (Backup + SLO)  │
+│              │            │  ├─ knowledge/ (Version + Export)│
+│              │            │  ├─ ai_platform/ (LLM + Memory)  │
+│              │            │  └─ integration/ (Connectors)    │
+│              │            │                                  │
+│              │            │ offloads/                        │
+│              │            │  ├─ refs/*.md    (工具日志外存)  │
+│              │            │  ├─ scenarios/*.md (场景总结)   │
+│              │            │  ├─ persona.md   (用户画像)     │
+│              │            │  └─ canvas_*.mmd (Mermaid画布)  │
+│              │            └──────────────────────────────────┘
 ```
 
 ## 数据结构
@@ -109,7 +110,7 @@ data: {"type": "error",     "content": {"message": "错误描述"}}
 - read_ref 路径校验防 path traversal
 - CORS 仅允许 `localhost:5173`
 - Docker 非 root 运行（gosu appuser）
-- Redis/ES/Qdrant 密码认证
+- Redis/Qdrant 密码认证
 - Prompt Injection 检测（OWASP LLM Top 10 regex）
 
 ## 启动方式

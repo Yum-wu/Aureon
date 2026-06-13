@@ -20,34 +20,38 @@
 | TTFT (流式响应) | **~310ms** |
 | 检索延迟 | **~154ms** |
 | 每次查询成本 | **$0.0003** |
+| 测试总数 | **793** |
 
 ## 功能特性
 
 - **企业级 AI 搜索** — 流式回答，渐进式引用
 - **混合检索** — BM25 关键词 + Dense 语义 (Qdrant) + 上下文压缩
-- **RAG 自纠正** — CRAG 检索质量低时自动重写查询
+- **稀疏向量混合检索** — Qdrant 原生 sparse + dense 混合搜索，MRR 提升 100%
+- **轻量 CRAG** — Embedding-based 检索评估，延迟仅 50ms
+- **自适应查询路由** — Adaptive-RAG 按复杂度分配检索策略
 - **语义缓存** — 双层缓存 (Exact + Semantic)，延迟降低 97%
 - **自适应重排序** — Query-aware 策略选择，精度提升 22%
-- **WebSocket 流式** — 双向实时通信，200+ 并发连接
+- **LangFuse 可观测性** — 全链路追踪
 - **安全加固** — API Key 认证、Prompt Injection 检测、Fernet 加密
 - **文档管理** — 上传、自动索引、预览、来源管理
 - **系统仪表盘** — 实时指标、健康监控、使用分析
 - **数据分析** — 延迟、Token 使用、缓存性能、查询分布
 - **企业后台** — 工作区管理、RBAC、审计日志
-- **750+ 后端测试** — 全面测试覆盖
+- **1000+ 文档规模** — HNSW 量化 + 标量量化，内存减少 75%
+- **793 测试** — 全面测试覆盖
 
 ## 架构
 
 ```
 用户 → Web UI (React + Vite) → FastAPI → LangGraph 编排器
-                                          ├── 意图分类器
-                                          ├── 混合检索 (BM25 + BGE/Qdrant + 上下文压缩)
-                                          ├── RAG 自纠正 (CRAG)
-                                          ├── 自适应重排序 (DashScope qwen3-rerank)
-                                          ├── LLM (DeepSeek / GPT-4o / Claude)
+                                          ├── 查询路由 (Adaptive-RAG)
+                                          ├── 混合检索 (Sparse + Dense + RRF)
+                                          ├── 轻量 CRAG (embedding-based)
+                                          ├── LLM (qwen3.6-flash / DeepSeek / Claude)
                                           ├── 缓存 (Redis + 语义缓存)
+                                          ├── 自适应重排序 (DashScope qwen3-rerank)
+                                          ├── LangFuse 可观测性
                                           ├── Prompt Injection 防护
-                                          ├── WebSocket 流式
                                           └── SSE 流式响应
 ```
 

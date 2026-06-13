@@ -1188,6 +1188,39 @@ def _check_qdrant_available() -> bool:
         return False
 
 
+def ensure_payload_indexes(collection_name: str = "aureon") -> None:
+    """确保 Qdrant collection 上存在必需的 Payload 索引。
+
+    生产环境中 collection 可能在 Payload 索引代码添加之前就已创建，
+    此函数检查并为缺失的字段补建 KEYWORD 索引，无需重建 collection。
+    """
+    from qdrant_client import models as qmodels
+    try:
+        client = _get_qdrant()
+        # 检查 collection 是否存在
+        try:
+            client.get_collection(collection_name)
+        except Exception:
+            logger.debug("Collection %s does not exist, skipping payload index check", collection_name)
+            return
+
+        required_fields = ["metadata.slug", "metadata.language", "metadata.source", "metadata.tenant_id"]
+        for field_name in required_fields:
+            # Qdrant create_payload_index 是幂等的 — 索引已存在时返回 400，
+            # 通过捕获异常来跳过已存在的索引
+            try:
+                client.create_payload_index(
+                    collection_name=collection_name,
+                    field_name=field_name,
+                    field_schema=qmodels.PayloadSchemaType.KEYWORD,
+                )
+                logger.info("Created payload index for '%s' on collection '%s'", field_name, collection_name)
+            except Exception as e:
+                logger.debug("Payload index for '%s' already exists: %s", field_name, e)
+    except Exception as e:
+        logger.warning("Failed to ensure payload indexes: %s", e)
+
+
 def _get_qdrant():
     """Get or create Qdrant client singleton.
 

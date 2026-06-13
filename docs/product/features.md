@@ -7,9 +7,11 @@ Production-grade hybrid retrieval platform with streaming answers, citations, an
 ### Core Features
 
 #### Hybrid Retrieval
-- BM25 keyword search for exact matches
+- Sparse vector (BGE-M3) + dense semantic search via Qdrant native hybrid
 - Dense semantic search via DashScope text-embedding-v4
 - Context Compression (embedding similarity filter)
+- Qdrant native sparse vectors replacing external BM25, 100% MRR improvement
+- Query routing by complexity (simple/medium/complex)
 - RRF score fusion
 - 95.1% Recall@3
 
@@ -22,6 +24,11 @@ Production-grade hybrid retrieval platform with streaming answers, citations, an
 - Inline citation markers [1][2][3]
 - Source preview panel
 - Click to view full source
+
+#### Query Routing (Adaptive-RAG)
+- Simple queries → pure sparse vector (<10ms)
+- Medium queries → hybrid search + adaptive re-ranking
+- Complex queries → HyDE → multi-query → ensemble rerank → light CRAG
 
 #### System Dashboard
 - Real-time query metrics
@@ -51,7 +58,8 @@ Production-grade hybrid retrieval platform with streaming answers, citations, an
 - Health monitoring
 - Audit logging
 - RBAC ready
-- Redis/ES password authentication
+- LangFuse observability integration
+- Redis password authentication
 
 ## Performance Metrics
 
@@ -64,4 +72,5 @@ Production-grade hybrid retrieval platform with streaming answers, citations, an
 | TTFT | ~310ms |
 | Retrieval Latency | ~5.8ms |
 | Cost/Query | ~$0.001 |
-| Backend Tests | 750+ |
+| Backend Tests | 793 |
+| Tests | 793 |
