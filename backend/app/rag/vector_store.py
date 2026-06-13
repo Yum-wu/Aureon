@@ -1466,18 +1466,20 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
     try:
         info = client.get_collection(collection_name)
         collection_exists = True
-        # 检查向量配置是否匹配
+        from qdrant_client.models import Distance
         vectors_config = info.config.params.vectors
+        sparse_config = info.config.params.sparse_vectors
         if settings.sparse_enabled:
-            if isinstance(vectors_config, dict) and "dense" in vectors_config:
+            # 需要同时有 dense 和 sparse 命名向量
+            if (isinstance(vectors_config, dict) and "dense" in vectors_config
+                    and isinstance(sparse_config, dict) and "sparse" in sparse_config):
                 dense_cfg = vectors_config["dense"]
-                from qdrant_client.models import Distance
                 if (hasattr(dense_cfg, "size") and dense_cfg.size == dim and
                     hasattr(dense_cfg, "distance") and dense_cfg.distance == Distance.COSINE):
                     config_matches = True
         else:
+            # 不启用 sparse 时，向量应为单一（非命名）配置
             if not isinstance(vectors_config, dict):
-                from qdrant_client.models import Distance
                 if (hasattr(vectors_config, "size") and vectors_config.size == dim and
                     hasattr(vectors_config, "distance") and vectors_config.distance == Distance.COSINE):
                     config_matches = True
@@ -1569,49 +1571,62 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
             except Exception:
                 pass  # 索引可能已存在
 
-    # Embed all texts (skip local model when SKIP_LOCAL_EMBED=true)
-    texts = [c["text"] for c in chunks]
-    if _skip_local_embed:
-        embeddings = embed_texts_llm(texts)
-    else:
-        try:
-            from app.rag.embed_gpu import get_adaptive_embedder
-            embedder = get_adaptive_embedder()
-            embeddings = embedder.encode(texts, batch_size=settings.embedding_batch_size)
-        except Exception as e:
-            logger.warning("Adaptive embedding failed: %s, falling back to API", e)
-            embeddings = embed_texts_llm(texts)
-
-    # 生成 sparse 向量
+    # 边嵌入边 upsert：分批 embed + 分批 sparse + 分批 upsert
+    # 这样即使中断，已 upsert 的批次数据保留在 Qdrant 中
     from app.rag.sparse_embed import embed_sparse
-    sparse_vectors = embed_sparse(texts) if settings.sparse_enabled else [{}] * len(texts)
+    embed_batch_size = 10  # 每次 embed 的文本数
+    upsert_batch_size = 100  # 每次 upsert 的 point 数
+    pending_points: list = []
+    total_upserted = 0
 
-    # Upsert in batches
-    batch_size = 100
-    for start in range(0, len(chunks), batch_size):
-        end = min(start + batch_size, len(chunks))
-        points = []
-        for i in range(start, end):
-            if settings.sparse_enabled and sparse_vectors[i]:
-                vector_data = {"dense": embeddings[i].tolist(), "sparse": sparse_vectors[i]}
+    for batch_start in range(0, len(chunks), embed_batch_size):
+        batch_end = min(batch_start + embed_batch_size, len(chunks))
+        batch_texts = [c["text"] for c in chunks[batch_start:batch_end]]
+
+        # 嵌入 dense 向量
+        if _skip_local_embed:
+            batch_embeddings = embed_texts_llm(batch_texts)
+        else:
+            try:
+                from app.rag.embed_gpu import get_adaptive_embedder
+                embedder = get_adaptive_embedder()
+                batch_embeddings = embedder.encode(batch_texts, batch_size=settings.embedding_batch_size)
+            except Exception as e:
+                logger.warning("Adaptive embedding failed: %s, falling back to API", e)
+                batch_embeddings = embed_texts_llm(batch_texts)
+
+        # 生成 sparse 向量
+        batch_sparse = embed_sparse(batch_texts) if settings.sparse_enabled else [{}] * len(batch_texts)
+
+        # 构建 points
+        for j, idx in enumerate(range(batch_start, batch_end)):
+            if settings.sparse_enabled and batch_sparse[j]:
+                vector_data = {"dense": batch_embeddings[j].tolist(), "sparse": batch_sparse[j]}
             else:
-                vector_data = embeddings[i].tolist()
-            points.append(PointStruct(
-                id=i,
+                vector_data = batch_embeddings[j].tolist()
+            point_payload = {"metadata": chunks[idx].get("metadata", {}), "text": chunks[idx]["text"]}
+            # 在第一个 point 的 payload 中记录索引配置
+            if idx == 0:
+                point_payload["_index_config"] = {
+                    "embedding_dim": dim,
+                    "embedding_model": settings.dashscope_model if _skip_local_embed else _LOCAL_MODEL_NAME,
+                    "sparse_enabled": settings.sparse_enabled,
+                    "created_at": time.time(),
+                }
+            pending_points.append(PointStruct(
+                id=idx,
                 vector=vector_data,
-                payload={"metadata": chunks[i].get("metadata", {}), "text": chunks[i]["text"]},
+                payload=point_payload,
             ))
-        # 在第一个 point 的 payload 中记录索引配置
-        if start == 0 and points:
-            points[0].payload["_index_config"] = {
-                "embedding_dim": dim,
-                "embedding_model": settings.dashscope_model if _skip_local_embed else _LOCAL_MODEL_NAME,
-                "sparse_enabled": settings.sparse_enabled,
-                "created_at": time.time(),
-            }
-        client.upsert(collection_name=collection_name, points=points)
 
-    logger.info("Qdrant: indexed %d chunks into '%s'", len(chunks), collection_name)
+        # 积攒到 upsert_batch_size 或最后一批时写入
+        if len(pending_points) >= upsert_batch_size or batch_end == len(chunks):
+            client.upsert(collection_name=collection_name, points=pending_points)
+            total_upserted += len(pending_points)
+            logger.info("Qdrant: upserted %d/%d chunks into '%s'", total_upserted, len(chunks), collection_name)
+            pending_points = []
+
+    logger.info("Qdrant: indexed %d chunks into '%s' (complete)", len(chunks), collection_name)
 
 
 def hybrid_search_qdrant(
