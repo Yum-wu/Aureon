@@ -25,6 +25,7 @@ Aureon/
 │   ├── routers/      # API 路由（chat.py, rag.py, crew.py）
 │   ├── features/     # Feature Flag（灰度发布）
 │   ├── observability/ # Query Trace、统计
+│   │   ├── langfuse_integration.py  # LangFuse CallbackHandler 初始化/注入/关闭
 │   ├── security/     # PII、SSO（Fernet 加密）、Rate Limiting
 │   ├── evaluation/   # 评估指标、基准测试
 │   ├── cost/         # 成本追踪、Budget
@@ -78,9 +79,21 @@ Aureon/
 - **查询路由配置**（qa_chain.py）：
   - `QUERY_ROUTER_ENABLED=true` — 启用 Adaptive-RAG 查询路由
   - `SIMPLE_THRESHOLD` / `COMPLEX_THRESHOLD` — 路由决策阈值
-- **Observability 配置**：
+- **Observability 配置**（[langfuse_integration.py](file:///c:/Users/Yum/Desktop/Aureon-test/backend/app/observability/langfuse_integration.py)）：
   - `LANGFUSE_ENABLED=true` — 启用 LangFuse 全链路追踪
-  - `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_HOST`
+  - `LANGFUSE_PUBLIC_KEY` — LangFuse 公钥（必填）
+  - `LANGFUSE_SECRET_KEY` — LangFuse 密钥（必填）
+  - `LANGFUSE_HOST` — LangFuse 端点（默认 `https://cloud.langfuse.com`，新加坡近端推荐用东京区域）
+  - `LANGFUSE_RELEASE` — 部署版本标记（可选，用于 release 追踪）
+- **LangFuse 集成架构**：
+  - `init_langfuse()` — FastAPI lifespan startup 中调用，异步 check_connection 验证凭据
+  - `get_langfuse_handler()` — 返回 `CallbackHandler` 单例，注入到 `astream_events` 的 `config={"callbacks": [...]}`
+  - `shutdown_langfuse()` — lifespan shutdown 中调用，flush 所有待发送事件
+  - `get_trace_url(trace_id)` — 生成 trace 链接，可直接跳转到 LangFuse 控制台
+  - LangChain CallbackHandler 自动嵌套追踪：LLM 调用 → tool 调用 → chain 步骤 → RAG 查询
+- **LangGraph 集成点**（[executor.py](file:///c:/Users/Yum/Desktop/Aureon-test/backend/app/agent/executor.py)）：
+  - `stream_agent()` 中的 `astream_events` 通过 `config={"callbacks": [handler]}` 注入
+  - session_id 自动映射到 LangFuse trace 的 session 标签
 
 ### 前端
 - TypeScript + Tailwind CSS 4 + tailwindcss-animate
