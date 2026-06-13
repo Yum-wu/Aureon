@@ -31,7 +31,7 @@ class RAGQueryRequest(BaseModel):
 class SourceItem(BaseModel):
     title: str
     slug: str
-    chunk: str
+    chunk: str = ""
     score: Optional[float] = None
     chunk_id: str = ""
     chunk_text_snippet: str = ""
