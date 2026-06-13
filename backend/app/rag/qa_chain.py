@@ -1357,6 +1357,7 @@ def run_index_pipeline(
             "elapsed_seconds": 0,
             "message": "没有找到 Markdown 文件",
         }
+    logger.info("run_index_pipeline: loaded %d docs, starting chunking (semantic=%s)", len(docs), SEMANTIC_CHUNKING_ENABLED)
 
     # 2. Split into parent-child structure
     # Parent: 1500 chars (rich context for LLM)
@@ -1410,6 +1411,7 @@ def run_index_pipeline(
         contextual_count = sum(1 for c in chunks if c.get("metadata", {}).get("contextual_prefix"))
 
     # 4. Store (save_index_qdrant handles embedding internally via stream embed-upsert)
+    logger.info("run_index_pipeline: %d chunks created, starting embed+upsert", len(chunks))
     save_index(chunks)
 
     elapsed = time.time() - start

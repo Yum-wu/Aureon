@@ -1582,6 +1582,7 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
     for batch_start in range(0, len(chunks), embed_batch_size):
         batch_end = min(batch_start + embed_batch_size, len(chunks))
         batch_texts = [c["text"] for c in chunks[batch_start:batch_end]]
+        logger.info("Embedding batch %d-%d/%d ...", batch_start, batch_end, len(chunks))
 
         # 嵌入 dense 向量
         if _skip_local_embed:
