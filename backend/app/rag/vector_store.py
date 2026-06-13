@@ -1221,6 +1221,46 @@ def ensure_payload_indexes(collection_name: str = "aureon") -> None:
         logger.warning("Failed to ensure payload indexes: %s", e)
 
 
+def check_vector_config_mismatch(collection_name: str = "aureon") -> bool:
+    """检查现有 collection 的向量配置是否与当前设置匹配。
+
+    当 sparse_enabled=True 时，代码使用命名向量 ("dense"/"sparse")，
+    但旧版集合使用未命名向量，导致 "Not existing vector name error"。
+    返回 True 表示需要重建。
+
+    Returns:
+        True if config mismatch detected (needs rebuild), False if match.
+    """
+    try:
+        client = _get_qdrant()
+        info = client.get_collection(collection_name)
+        vectors_config = info.config.params.vectors
+
+        if settings.sparse_enabled:
+            # 期望命名向量 "dense" + "sparse"
+            if isinstance(vectors_config, dict) and "dense" in vectors_config:
+                return False
+            logger.warning(
+                "Vector config mismatch: sparse_enabled=True but collection '%s' "
+                "has unnamed vectors (expected named 'dense'/'sparse'). Rebuild needed.",
+                collection_name,
+            )
+            return True
+        else:
+            # 期望未命名向量（单个 VectorParams）
+            if not isinstance(vectors_config, dict):
+                return False
+            logger.warning(
+                "Vector config mismatch: sparse_enabled=False but collection '%s' "
+                "has named vectors. Rebuild needed.",
+                collection_name,
+            )
+            return True
+    except Exception as e:
+        logger.warning("check_vector_config_mismatch failed: %s", e)
+        return False  # 无法判断时保守处理
+
+
 def _get_qdrant():
     """Get or create Qdrant client singleton.
 

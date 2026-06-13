@@ -97,7 +97,7 @@ _index_ready = False  # True once index check completes
 
 
 def _warmup_bm25():
-    """Build BM25 index and auto-rebuild vector index if empty.
+    """Build BM25 index and auto-rebuild vector index if empty or config mismatch.
 
     Runs in background thread at startup. Non-blocking.
     When index is empty (e.g. after Railway restart), automatically
@@ -117,15 +117,25 @@ def _warmup_bm25():
         except Exception as e:
             logger.warning("Payload index check failed (non-fatal): %s", e)
 
+        # 检查向量配置是否匹配（旧版集合使用未命名向量而新版需要命名向量）
+        need_rebuild = False
+        try:
+            from app.rag.vector_store import check_vector_config_mismatch
+            if check_vector_config_mismatch():
+                logger.warning("Vector config mismatch detected, forcing index rebuild...")
+                need_rebuild = True
+        except Exception as e:
+            logger.warning("Vector config check failed (non-fatal): %s", e)
+
         # Check if vector index needs rebuild
         base_dir = os.path.dirname(os.path.dirname(__file__))
         articles_dir = os.path.join(base_dir, "data", "articles")
         status = check_index_stale(articles_dir)
         doc_count, chunk_count = get_collection_stats()
 
-        if status["stale"] and doc_count == 0:
-            # Index empty — auto-rebuild via API embedding (no local model, no OOM)
-            logger.info("Index empty, auto-rebuilding via API embedding...")
+        if need_rebuild or (status["stale"] and doc_count == 0):
+            reason = "vector config mismatch" if need_rebuild else "empty index"
+            logger.info("Index rebuild triggered (%s), auto-rebuilding via API embedding...", reason)
             try:
                 from app.rag.qa_chain import run_index_pipeline
                 result = run_index_pipeline(articles_dir)
