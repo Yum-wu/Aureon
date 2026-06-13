@@ -1409,12 +1409,8 @@ def run_index_pipeline(
         chunks = _add_contextual_prefixes(chunks, docs, llm_call_fn)
         contextual_count = sum(1 for c in chunks if c.get("metadata", {}).get("contextual_prefix"))
 
-    # 4. Embed (text includes contextual prefix if enabled)
-    texts_to_embed = [c["text"] for c in chunks]
-    embeddings = embed_texts_llm(texts_to_embed)
-
-    # 5. Store
-    save_index(chunks, embeddings)
+    # 4. Store (save_index_qdrant handles embedding internally via stream embed-upsert)
+    save_index(chunks)
 
     elapsed = time.time() - start
     logger.info("rag.index_complete", docs=len(docs), chunks=len(chunks), contextual=contextual_count, elapsed_s=round(elapsed, 1))
