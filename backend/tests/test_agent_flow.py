@@ -28,7 +28,7 @@ def _make_mock_agent_graph(events=None):
     """Create a mock agent graph with astream_events."""
     graph = MagicMock()
 
-    async def _fake_astream(input_data, version="v2"):
+    async def _fake_astream(input_data, version="v2", **kwargs):
         for evt in (events or []):
             yield evt
 
@@ -247,7 +247,7 @@ class TestStreamAgent:
         """Exceptions produce error event."""
         graph = MagicMock()
 
-        async def _boom(input_data, version="v2"):
+        async def _boom(input_data, version="v2", **kwargs):
             raise RuntimeError("Graph exploded")
             yield  # make it a generator
 
@@ -268,7 +268,7 @@ class TestStreamAgent:
 
         collected_input = {}
 
-        async def _capture(input_data, version="v2"):
+        async def _capture(input_data, version="v2", **kwargs):
             collected_input.update(input_data)
             return
             yield
@@ -290,7 +290,7 @@ class TestStreamAgent:
         graph = _make_mock_agent_graph(events=[])
         collected_input = {}
 
-        async def _capture(input_data, version="v2"):
+        async def _capture(input_data, version="v2", **kwargs):
             collected_input.update(input_data)
             return
             yield
