@@ -30,7 +30,7 @@ class ConcurrencyConfig:
             mode = settings.benchmark_mode.lower()
             if mode == "railway":
                 self.semaphores = {
-                    "qwen3.6-flash": int(os.getenv("LLM_SEMAPHORE_QWEN", "80")),
+                    "qwen3.5-flash": int(os.getenv("LLM_SEMAPHORE_QWEN", "80")),
                     "dashscope-embedding": int(os.getenv("LLM_SEMAPHORE_EMBEDDING", "80")),
                     "rag_pipeline": int(os.getenv("RAG_SEMAPHORE", "80")),
                     "rerank": int(os.getenv("RERANK_SEMAPHORE", "40")),
@@ -48,7 +48,32 @@ class ConcurrencyConfig:
 PRICING = {
     "dashscope_embedding": 0.00007,   # $0.07/1M tokens
     "dashscope_rerank": 0.0001,       # $0.1/1M tokens
-    "qwen_flash": 0.00028,            # 通义千问 Flash 定价
+    "qwen3.5-flash": 0.000073,        # $0.073/1M tokens (新加坡节点)
+    "qwen3.6-flash": 0.00028,         # $0.28/1M tokens
+    "qwen_flash": 0.00028,            # 默认（向后兼容）
+}
+
+
+# 生成质量阈值（RAGAS 标准）
+QUALITY_THRESHOLDS = {
+    "faithfulness": 0.70,
+    "answer_relevancy": 0.75,
+    "context_precision": 0.70,
+    "context_recall": 0.75,
+    "hallucination_max": 0.20,
+    "negative_detection": 0.80,
+}
+
+# 流式延迟阈值
+STREAMING_THRESHOLDS = {
+    "ttft_p50_ms": 2000,    # 首 token ≤2s
+    "ttft_p99_ms": 5000,    # 首 token P99 ≤5s
+    "tpot_mean_ms": 100,    # 每 token ≤100ms
+}
+
+# 缓存阈值
+CACHE_THRESHOLDS = {
+    "hit_rate_min": 0.30,
 }
 
 

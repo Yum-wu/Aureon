@@ -311,6 +311,10 @@ async def run_railway_benchmark(args):
     positive_misses = []
     negative_wrong = []
     cost_tracker = CostTracker()
+    ttft_list = []
+    tpot_list = []
+    answer_has_content = 0
+    answer_total = 0
 
     for i, qa in enumerate(TEST_QA_PAIRS):
         query = qa["question"]
@@ -342,8 +346,41 @@ async def run_railway_benchmark(args):
                 cost_tracker.record_tokens(
                     input_tokens=query_tokens + source_tokens,
                     output_tokens=answer_tokens,
-                    model="qwen3.6-flash",
+                    model="qwen3.5-flash",
                 )
+
+                # Track answer quality (Answer Completeness proxy)
+                answer_total += 1
+                if answer and len(answer) > 20:
+                    answer_has_content += 1
+
+                # TTFT + TPOT: measure streaming latency for a sample of queries
+                if not is_negative and i % 5 == 0:  # 每 5 个查询测一次流式延迟
+                    try:
+                        stream_start = time.perf_counter()
+                        first_token_time = None
+                        last_token_time = None
+                        token_count = 0
+                        async with client._client.stream(
+                            "POST",
+                            f"{client.base_url}/api/rag/query/stream",
+                            json={"query": query, "top_k": 3},
+                            headers=client.headers,
+                            timeout=60,
+                        ) as stream_resp:
+                            async for line in stream_resp.aiter_lines():
+                                if line.startswith("data: "):
+                                    if first_token_time is None:
+                                        first_token_time = time.perf_counter()
+                                        ttft_ms = (first_token_time - stream_start) * 1000
+                                        ttft_list.append(ttft_ms)
+                                    last_token_time = time.perf_counter()
+                                    token_count += 1
+                        if first_token_time and last_token_time and token_count > 1:
+                            tpot_ms = ((last_token_time - first_token_time) / token_count) * 1000
+                            tpot_list.append(tpot_ms)
+                    except Exception:
+                        pass  # 流式测量失败不影响主流程
 
                 # Check retrieval quality
                 source_texts = []
@@ -455,6 +492,8 @@ async def run_railway_benchmark(args):
         "negative_detection_rate": neg_rate,
         "negative_correct": negative_correct,
         "negative_total": negative_total,
+        "answer_completeness": answer_has_content / answer_total if answer_total > 0 else 0,
+        "answer_completeness_detail": f"{answer_has_content}/{answer_total}",
     }
 
     print("\n  Hybrid Retrieval:")
@@ -501,6 +540,39 @@ async def run_railway_benchmark(args):
         print(f"  Max:      {latency_results['max_ms']}ms")
     else:
         latency_results = {}
+
+    # TTFT + TPOT 流式延迟
+    if ttft_list:
+        ttft_sorted = sorted(ttft_list)
+        latency_results["ttft"] = {
+            "mean_ms": round(statistics.mean(ttft_sorted), 1),
+            "p50_ms": round(ttft_sorted[len(ttft_sorted) // 2], 1),
+            "p90_ms": round(ttft_sorted[int(len(ttft_sorted) * 0.9)], 1),
+            "p99_ms": round(ttft_sorted[min(int(len(ttft_sorted) * 0.99), len(ttft_sorted) - 1)], 1),
+            "samples": len(ttft_sorted),
+        }
+        print(f"\n> Streaming Latency (TTFT)")
+        print(f"  Samples:  {len(ttft_sorted)}")
+        print(f"  Mean:     {latency_results['ttft']['mean_ms']}ms")
+        print(f"  P50:      {latency_results['ttft']['p50_ms']}ms")
+        print(f"  P90:      {latency_results['ttft']['p90_ms']}ms")
+        print(f"  P99:      {latency_results['ttft']['p99_ms']}ms")
+
+    if tpot_list:
+        tpot_sorted = sorted(tpot_list)
+        latency_results["tpot"] = {
+            "mean_ms": round(statistics.mean(tpot_sorted), 1),
+            "p50_ms": round(tpot_sorted[len(tpot_sorted) // 2], 1),
+            "samples": len(tpot_sorted),
+        }
+        print(f"\n> Token Generation Speed (TPOT)")
+        print(f"  Samples:  {len(tpot_sorted)}")
+        print(f"  Mean:     {latency_results['tpot']['mean_ms']}ms/token")
+        print(f"  P50:      {latency_results['tpot']['p50_ms']}ms/token")
+
+    # Answer Completeness
+    answer_completeness = answer_has_content / answer_total if answer_total > 0 else 0
+    print(f"\n> Answer Completeness: {answer_completeness*100:.1f}% ({answer_has_content}/{answer_total})")
 
     # ── Phase 3: Concurrency Tests ──
     concurrency_results = []
