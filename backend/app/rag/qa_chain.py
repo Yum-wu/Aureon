@@ -310,6 +310,16 @@ _NEGATIVE_KEYWORDS_ZH = [
     "下一步计划", "未来规划", "路线图",
     # Stars / popularity
     "GitHub Stars", "star 数", "有多少 star",
+    # Performance metrics
+    "QPS", "TPS", "并发量", "吞吐量", "响应时间是多少",
+    # Architecture details
+    "微服务架构", "微服务拆分", "服务间通信",
+    # Specific model comparisons
+    "对比数据", "性能对比", "benchmark 数据",
+    # Performance (English)
+    "throughput", "concurrent", "latency benchmark",
+    # Architecture (English)
+    "microservice", "service mesh", "communication between services",
     # Pricing (English)
     "pricing", "price", "cost", "how much",
     "team size", "how many people",
