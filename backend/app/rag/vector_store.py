@@ -1836,19 +1836,27 @@ def hybrid_search_qdrant(
     if tenant_id is None:
         tenant_id = get_current_tenant_id()
 
-    # 1. 生成 query 的 dense + sparse 向量（失败时回退到 BM25）
+    # 1. 生成 query 的 dense + sparse 向量（优先用 DashScope combined API）
     try:
-        if _skip_local_embed:
-            query_emb = embed_texts_llm([query])
+        if _skip_local_embed and settings.dashscope_model in ("text-embedding-v3", "text-embedding-v4"):
+            # 用 DashScope dense&sparse combined API 一次获取
+            query_emb, sparse_results = _embed_dense_sparse_dashscope([query], batch_size=1, max_workers=1)
+            dense_vector = query_emb[0].tolist()
+            sparse_vector = sparse_results[0] if sparse_results else _to_sparse_vector(None)
+            if not isinstance(sparse_vector, type(None)):
+                sparse_vector = _to_sparse_vector(sparse_vector)
         else:
-            from app.rag.embed_gpu import get_adaptive_embedder
-            embedder = get_adaptive_embedder()
-            query_emb = embedder.encode([query])
-        dense_vector = query_emb[0].tolist()
+            if _skip_local_embed:
+                query_emb = embed_texts_llm([query])
+            else:
+                from app.rag.embed_gpu import get_adaptive_embedder
+                embedder = get_adaptive_embedder()
+                query_emb = embedder.encode([query])
+            dense_vector = query_emb[0].tolist()
 
-        from app.rag.sparse_embed import embed_sparse
-        sparse_result = embed_sparse([query])
-        sparse_vector = sparse_result[0] if sparse_result else {}
+            from app.rag.sparse_embed import embed_sparse
+            sparse_result = embed_sparse([query])
+            sparse_vector = _to_sparse_vector(sparse_result[0]) if sparse_result else _to_sparse_vector(None)
     except Exception as e:
         logger.warning("hybrid_search_qdrant embedding failed, falling back to BM25-only: %s", e)
         return retrieve_keyword(query, top_k=top_k, lang_filter=lang_filter)
