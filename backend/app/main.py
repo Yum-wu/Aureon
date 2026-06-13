@@ -169,7 +169,8 @@ async def lifespan(app: FastAPI):
     # ── Startup ──
     if not settings.llm_api_key and not settings.fallback_api_key:
         logger.warning("LLM_API_KEY 未配置，Agent 调用将失败")
-    # LangSmith 已停用，使用 LangFuse 追踪
+    # 显式禁用 LangSmith（防止 Railway 平台环境变量自动激活导致 403）
+    os.environ["LANGCHAIN_TRACING_V2"] = "false"
     init_db()
     from app.features import init_feature_flags_table
     from app.observability import init_query_traces_table
