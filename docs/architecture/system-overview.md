@@ -4,14 +4,15 @@
 
 ```
 User → React Frontend → FastAPI Backend → LangGraph Orchestrator
-                                            ├── Intent Classifier
-                                            ├── Hybrid Retrieval (BM25 + DashScope embedding/Qdrant + Context Compression)
-                                            ├── RAG Self-Correction (CRAG)
-                                            ├── Adaptive Re-ranking (DashScope qwen3-rerank)
-                                            ├── LLM Generation
-                                            ├── Cache (Redis + Semantic Cache)
-                                            ├── Prompt Injection Guard
-                                            └── SSE Streaming
+                                           ├── Query Router (Adaptive-RAG)
+                                           ├── Hybrid Search (Sparse + Dense + RRF)
+                                           ├── Lightweight CRAG (embedding-based, ~50ms)
+                                           ├── Adaptive Re-ranking (DashScope qwen3-rerank)
+                                           ├── LLM Generation (qwen3.6-flash / DeepSeek / Claude)
+                                           ├── Cache (Redis + Semantic Cache)
+                                           ├── LangFuse Observability
+                                           ├── Prompt Injection Guard
+                                           └── SSE Streaming
 ```
 
 ## Components
@@ -26,26 +27,30 @@ User → React Frontend → FastAPI Backend → LangGraph Orchestrator
 
 ### Backend (FastAPI + LangGraph)
 - API Layer: RESTful endpoints + Auth Middleware (X-API-Key)
-- RAG Pipeline: Hybrid retrieval + Context Compression + CRAG self-correction
+- RAG Pipeline: Hybrid retrieval + Sparse vectors (BGE-M3) + RRF fusion + Lightweight CRAG
 - Security: Prompt Injection detection (guardrails.py), Fernet encryption
 - Cache: Redis + Semantic Cache (Exact + Semantic)
-- Storage: Qdrant cloud vector store (primary)
-- Embedding: DashScope text-embedding-v4 (Singapore, compatible-mode API)
+- Storage: Qdrant cloud vector store (primary, native sparse + dense)
+- Embedding: DashScope text-embedding-v4 / BGE-M3 (Singapore), unified 1024d
 - Reranker: DashScope qwen3-rerank (compatible-api, separate endpoint)
+- Query Router: Adaptive-RAG by query complexity (simple/medium/complex)
+- Observability: LangFuse trace + structlog + Prometheus /metrics
 
 ## Data Flow
 
 1. User submits query
-2. Intent classifier routes request
-3. Hybrid retrieval (BM25 keyword + DashScope text-embedding-v4 semantic via Qdrant)
+2. Query router classifies complexity (simple/medium/complex)
+3. Route selection:
+   - Simple → pure sparse vector search
+   - Medium → hybrid search (sparse + dense) + adaptive re-ranking
+   - Complex → HyDE → multi-query → hybrid search → ensemble rerank → light CRAG
 4. Context compression (embedding similarity filter)
-5. Adaptive Re-ranking (query complexity → strategy selection)
-6. CRAG self-correction (retry on low quality)
-7. Prompt assembly with context
-8. Prompt injection guard check
-9. LLM generates streaming response
-10. Citation injection from sources
-11. SSE delivers tokens to frontend
+5. Prompt assembly with context
+6. Prompt injection guard check
+7. LLM generates streaming response (qwen3.6-flash / DeepSeek / Claude)
+8. Citation injection from sources
+9. LangFuse trace collection
+10. SSE delivers tokens to frontend
 
 ## Technology Stack
 
@@ -54,14 +59,16 @@ User → React Frontend → FastAPI Backend → LangGraph Orchestrator
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS |
 | Backend | Python 3.12, FastAPI, LangGraph |
 | Vector DB | Qdrant (cloud) — primary |
-| Embedding | DashScope text-embedding-v4 (compatible-mode API) |
+| Sparse Vector | BGE-M3 (Qdrant native) | Built-in, replaces external BM25 |
+| Embedding | DashScope text-embedding-v4 / BGE-M3 (compatible-mode API), 1024d unified |
 | Reranker | DashScope qwen3-rerank (compatible-api) |
+| Query Router | Adaptive-RAG | Simple/Medium/Complex routing |
 | Cache | Redis + Semantic Cache (Exact + Semantic) |
-| LLM | DeepSeek / GPT-4o / Claude |
+| LLM | qwen3.6-flash / DeepSeek / Claude |
 | Security | API Key Auth, Prompt Injection Guard, Fernet Encryption |
 | Deployment | Docker (non-root), Railway, CI/CD |
-| Health | `/api/health` (Railway) + `/health/ready` (K8s probe) |
-| Observability | Prometheus `/metrics` + structlog |
+| Health | `/health/ready` (Railway) | Qdrant/Redis/index probes |
+| Observability | LangFuse + structlog + Prometheus `/metrics` | Full pipeline tracing |
 
 ## DashScope API Configuration (Singapore)
 
@@ -69,5 +76,6 @@ User → React Frontend → FastAPI Backend → LangGraph Orchestrator
 |-----|----------|-------|
 | Embedding | `dashscope-intl.aliyuncs.com/compatible-mode/v1/embeddings` | `compatible-mode` path |
 | Rerank | `dashscope-intl.aliyuncs.com/compatible-api/v1/reranks` | `compatible-api` path, `reranks` (plural) |
+| Dimension | `DASHSCOPE_DIMENSIONS=1024` | Unified 1024d embedding dimension |
 
 > ⚠️ Embedding and Rerank use different base URLs (`compatible-mode` vs `compatible-api`). Do not mix.

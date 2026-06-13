@@ -32,7 +32,6 @@ docker-compose up -d
 | frontend | 3000 | React app via Nginx |
 | backend | 8000 | FastAPI server (non-root via gosu) |
 | redis | 6379 | Cache layer (password auth) |
-| elasticsearch | 9200 | BM25 search (password auth) |
 
 ## Environment Variables
 
@@ -44,8 +43,8 @@ LLM_MODEL=deepseek-v4-flash
 # Embedding: DashScope (Singapore)
 DASHSCOPE_API_KEY=your_dashscope_api_key
 DASHSCOPE_BASE_URL=https://dashscope-intl.aliyuncs.com/compatible-mode/v1
-DASHSCOPE_DIMENSIONS=768
-EMBEDDING_DIM=768
+DASHSCOPE_DIMENSIONS=1024
+EMBEDDING_DIM=1024
 SKIP_LOCAL_EMBED=true
 
 # Reranker: DashScope qwen3-rerank (different endpoint than embedding!)
@@ -53,6 +52,15 @@ DASHSCOPE_RERANK_URL=https://dashscope-intl.aliyuncs.com/compatible-api/v1
 RERANK_ENABLED=true
 RERANK_BACKEND=api
 RERANK_PROVIDER=dashscope
+
+# Observability: LangFuse
+LANGFUSE_ENABLED=true
+LANGFUSE_PUBLIC_KEY=your_langfuse_public_key
+LANGFUSE_SECRET_KEY=your_langfuse_secret_key
+LANGFUSE_HOST=https://cloud.langfuse.com
+
+# Query Routing (Adaptive-RAG)
+QUERY_ROUTER_ENABLED=true
 
 # Vector store: Qdrant Cloud
 VECTOR_BACKEND=qdrant
@@ -67,8 +75,6 @@ ENCRYPTION_KEY=your_fernet_key_here
 # Redis auth
 REDIS_PASSWORD=your_redis_password
 
-# Elasticsearch auth
-ES_PASSWORD=your_es_password
 ```
 
 > ?? **Important**: DashScope Embedding and Rerank use different base URLs:
@@ -87,7 +93,7 @@ ES_PASSWORD=your_es_password
 - [ ] Set API_AUTH_KEY for endpoint protection
 - [ ] Set JWT_SECRET for JWT token signing
 - [ ] Set ENCRYPTION_KEY for SSO secret encryption
-- [ ] Configure Redis/ES passwords
+- [ ] Configure Redis password
 - [ ] Set strong SECRET_KEY
 - [ ] Configure CORS allowed origins
 - [ ] Enable HTTPS

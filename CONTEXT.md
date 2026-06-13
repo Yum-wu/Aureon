@@ -7,6 +7,7 @@
 | **Hybrid Retrieve** | BM25 关键词检索 + 向量语义检索 + RRF 融合的混合检索策略 |
 | **RRF** | Reciprocal Rank Fusion，倒数排名融合，将多个检索结果按排名加权合并 |
 | **CRAG** | Corrective RAG，检索质量评估→三路动作（correct/ambiguous/incorrect）的纠正机制 |
+| **Lightweight CRAG** | 基于 embedding 相似度的检索质量评估器，替代 LLM 调用，延迟 ~50ms |
 | **HyDE** | Hypothetical Document Embedding，用 LLM 生成假设答案再检索的技术 |
 | **Contextual Retrieval** | Anthropic 提出的上下文检索技术，为每个 chunk 预置文档级上下文前缀 |
 | **Sparse Vector** | 稀疏向量，大部分维度为零的向量表示，Qdrant 原生支持，可替代 BM25 |
@@ -31,3 +32,5 @@
 1. 云端 500MB 内存 → 无法运行本地 embedding 模型，所有 embedding 走 API
 2. 多语言需求 → 不只是中文，需支持英文及其他语言
 3. API 成本敏感 → 减少 LLM 调用次数，优先用轻量级方案
+4. 查询路由优化：简单查询走纯稀疏向量（<10ms），复杂查询走完整 pipeline
+5. Qdrant 原生稀疏向量替代外部 BM25，消除 jieba 依赖
