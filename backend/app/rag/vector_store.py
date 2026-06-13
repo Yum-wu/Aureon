@@ -82,6 +82,26 @@ def _get_embedding_dim() -> int:
         return _LOCAL_MODEL_DIM
 
 
+def _to_sparse_vector(sv):
+    """将 sparse 向量转换为 Qdrant SparseVector 格式。
+
+    支持输入：
+    - None / {} / [] → 空 SparseVector
+    - {int: float} 字典（SiliconFlow 返回格式）→ SparseVector
+    - SparseVector 对象（DashScope combined API 返回）→ 直接返回
+    """
+    from qdrant_client import models as qmodels
+    if sv is None or sv == {} or sv == []:
+        return qmodels.SparseVector(indices=[], values=[])
+    if isinstance(sv, qmodels.SparseVector):
+        return sv
+    if isinstance(sv, dict):
+        indices = sorted(sv.keys())
+        values = [float(sv[k]) for k in indices]
+        return qmodels.SparseVector(indices=indices, values=values)
+    return qmodels.SparseVector(indices=[], values=[])
+
+
 def _redis_sync_get(key: str) -> bytes | None:
     """同步调用 Redis GET（异步客户端在同步上下文中的桥接）。
 
@@ -585,13 +605,20 @@ def _embed_dense_sparse_dashscope(texts: List[str], batch_size: int = 10,
             batch_dense.append(item.get("embedding", []))
             sparse_raw = item.get("sparse_embedding", [])
             # sparse_embedding 格式: [{"index": int, "value": float, "token": str}, ...]
-            sparse_dict = {}
-            for entry in sparse_raw:
-                idx = entry.get("index")
-                val = entry.get("value", 0.0)
-                if idx is not None and val != 0:
-                    sparse_dict[idx] = val
-            batch_sparse.append(sparse_dict)
+            # 转换为 Qdrant SparseVector(indices, values) 格式
+            from qdrant_client import models as qmodels
+            if sparse_raw:
+                indices = []
+                values = []
+                for entry in sparse_raw:
+                    idx = entry.get("index")
+                    val = entry.get("value", 0.0)
+                    if idx is not None and val != 0:
+                        indices.append(idx)
+                        values.append(float(val))
+                batch_sparse.append(qmodels.SparseVector(indices=indices, values=values) if indices else None)
+            else:
+                batch_sparse.append(None)
 
         return batch_dense, batch_sparse
 
@@ -768,7 +795,6 @@ def add_to_index(chunks: List[Dict[str, Any]], path: str = None):
 
 def _add_to_index_qdrant(chunks: List[Dict[str, Any]]):
     """Qdrant: add chunks incrementally."""
-    from qdrant_client import models as qmodels
     from qdrant_client.models import PointStruct
     client = _get_qdrant()
     collection_name = _get_qdrant_collection_name()
@@ -805,8 +831,7 @@ def _add_to_index_qdrant(chunks: List[Dict[str, Any]]):
             idx = start + i
             if settings.sparse_enabled:
                 sv = sparse_vectors[idx]
-                if not sv:
-                    sv = qmodels.SparseVector(indices=[], values=[])
+                sv = _to_sparse_vector(sv)
                 vector_data = {"dense": embeddings[idx].tolist(), "sparse": sv}
             else:
                 vector_data = embeddings[idx].tolist()
@@ -1761,9 +1786,7 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
         # 构建 points
         for j, idx in enumerate(range(batch_start, batch_end)):
             if settings.sparse_enabled:
-                sv = batch_sparse[j]
-                if not sv:
-                    sv = qmodels.SparseVector(indices=[], values=[])
+                sv = _to_sparse_vector(batch_sparse[j])
                 vector_data = {"dense": batch_embeddings[j].tolist(), "sparse": sv}
             else:
                 vector_data = batch_embeddings[j].tolist()
