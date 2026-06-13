@@ -141,7 +141,8 @@ def percentile(data, p):
 # ============================================================
 # Phase 1: Health & System Status
 # ============================================================
-def test_health():
+def _run_health():
+    """Run health checks, return result dict."""
     print("=" * 60)
     print("PHASE 1: Health & System Status")
     print("=" * 60)
@@ -170,10 +171,15 @@ def test_health():
     return body if status == 200 else {}
 
 
+def test_health():
+    _run_health()
+
+
 # ============================================================
 # Phase 2: Analytics Endpoints
 # ============================================================
-def test_analytics():
+def _run_analytics():
+    """Run analytics checks, return result dict."""
     print("\n" + "=" * 60)
     print("PHASE 2: Analytics Endpoints")
     print("=" * 60)
@@ -192,7 +198,6 @@ def test_analytics():
         print(f"\n  GET {ep}")
         print(f"    Status: {status} | Latency: {ms:.0f}ms")
         if status == 200 and body:
-            # Show key metrics compactly
             for k, v in body.items():
                 if isinstance(v, (int, float, str, bool)):
                     print(f"    {k}: {v}")
@@ -205,10 +210,15 @@ def test_analytics():
     return results
 
 
+def test_analytics():
+    _run_analytics()
+
+
 # ============================================================
 # Phase 3: RAG Query Latency (sync)
 # ============================================================
-def test_rag_sync():
+def _run_rag_sync():
+    """Run sync RAG queries, return (latencies, results_detail)."""
     print("\n" + "=" * 60)
     print("PHASE 3: RAG Sync Query Latency")
     print("=" * 60)
@@ -255,10 +265,15 @@ def test_rag_sync():
     return latencies, results_detail
 
 
+def test_rag_sync():
+    _run_rag_sync()
+
+
 # ============================================================
 # Phase 4: RAG Streaming Latency (SSE)
 # ============================================================
-def test_rag_stream():
+def _run_rag_stream():
+    """Run streaming RAG queries, return (stream_latencies, ttfts)."""
     print("\n" + "=" * 60)
     print("PHASE 4: RAG Streaming (SSE) Latency")
     print("=" * 60)
@@ -308,6 +323,10 @@ def test_rag_stream():
     return stream_latencies, ttfts
 
 
+def test_rag_stream():
+    _run_rag_stream()
+
+
 # ============================================================
 # Phase 5: Network Overhead Analysis
 # ============================================================
@@ -350,22 +369,22 @@ def main():
     all_results = {}
 
     # Phase 1: Health
-    health = test_health()
+    health = _run_health()
     all_results["health"] = health
 
     # Phase 2: Analytics
-    analytics = test_analytics()
+    analytics = _run_analytics()
     all_results["analytics"] = analytics
 
     # Phase 3: Sync queries
-    sync_latencies, sync_details = test_rag_sync()
+    sync_latencies, sync_details = _run_rag_sync()
     all_results["sync"] = {
         "latencies": sync_latencies,
         "details": sync_details,
     }
 
     # Phase 4: Streaming
-    stream_latencies, ttfts = test_rag_stream()
+    stream_latencies, ttfts = _run_rag_stream()
     all_results["stream"] = {
         "latencies": stream_latencies,
         "ttfts": ttfts,

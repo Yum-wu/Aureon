@@ -44,12 +44,15 @@ async def test_record_query_no_redis():
 
 @pytest.mark.asyncio
 async def test_record_query_with_redis():
-    mock_pipe = AsyncMock()
+    # Pipeline 方法（incr/lpush/ltrim 等）在真实 Redis 中是同步链式调用，
+    # 返回 pipeline 自身。Mock 为同步方法避免 "coroutine was never awaited" 警告。
+    mock_pipe = MagicMock()
     mock_pipe.__aenter__ = AsyncMock(return_value=mock_pipe)
     mock_pipe.__aexit__ = AsyncMock(return_value=False)
     mock_pipe.execute = AsyncMock()
 
     mock_redis = AsyncMock()
+    mock_redis.ping = AsyncMock()
     mock_redis.pipeline = MagicMock(return_value=mock_pipe)
 
     with patch("app.api.rag_stats.get_redis_or_none", return_value=mock_redis):
@@ -61,11 +64,12 @@ async def test_record_query_with_redis():
 
 @pytest.mark.asyncio
 async def test_record_query_pipeline_error():
-    mock_pipe = AsyncMock()
+    mock_pipe = MagicMock()
     mock_pipe.__aenter__ = AsyncMock(side_effect=ConnectionError("down"))
     mock_pipe.__aexit__ = AsyncMock(return_value=False)
 
     mock_redis = AsyncMock()
+    mock_redis.ping = AsyncMock()
     mock_redis.pipeline = MagicMock(return_value=mock_pipe)
 
     with patch("app.api.rag_stats.get_redis_or_none", return_value=mock_redis):
