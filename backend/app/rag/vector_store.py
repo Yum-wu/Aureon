@@ -643,6 +643,7 @@ def add_to_index(chunks: List[Dict[str, Any]], path: str = None):
 
 def _add_to_index_qdrant(chunks: List[Dict[str, Any]]):
     """Qdrant: add chunks incrementally."""
+    from qdrant_client import models as qmodels
     from qdrant_client.models import PointStruct
     client = _get_qdrant()
     collection_name = _get_qdrant_collection_name()
@@ -678,7 +679,10 @@ def _add_to_index_qdrant(chunks: List[Dict[str, Any]]):
         for i in range(end - start):
             idx = start + i
             if settings.sparse_enabled:
-                vector_data = {"dense": embeddings[idx].tolist(), "sparse": sparse_vectors[idx] or {}}
+                sv = sparse_vectors[idx]
+                if not sv:
+                    sv = qmodels.SparseVector(indices=[], values=[])
+                vector_data = {"dense": embeddings[idx].tolist(), "sparse": sv}
             else:
                 vector_data = embeddings[idx].tolist()
             points.append(PointStruct(
@@ -1603,8 +1607,11 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
         for j, idx in enumerate(range(batch_start, batch_end)):
             if settings.sparse_enabled:
                 # 集合使用命名向量，必须用 {"dense": ..., "sparse": ...} 格式
-                # 即使 sparse 为空也必须传 sparse 键，否则 Qdrant 报 "Not existing vector name"
-                vector_data = {"dense": batch_embeddings[j].tolist(), "sparse": batch_sparse[j] or {}}
+                # sparse 为空时传 SparseVector(indices=[], values=[])，空字典 {} 会导致 PointStruct 验证失败
+                sv = batch_sparse[j]
+                if not sv:
+                    sv = qmodels.SparseVector(indices=[], values=[])
+                vector_data = {"dense": batch_embeddings[j].tolist(), "sparse": sv}
             else:
                 vector_data = batch_embeddings[j].tolist()
             point_payload = {"metadata": chunks[idx].get("metadata", {}), "text": chunks[idx]["text"]}
