@@ -1450,17 +1450,50 @@ def _get_qdrant():
 
 
 def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
-    """Save chunks to Qdrant vector store."""
+    """Save chunks to Qdrant vector store.
+
+    如果集合已存在且配置匹配，直接 upsert 覆盖（避免 delete_collection 导致
+    重建中断时数据丢失）。只在配置不匹配时才删除重建。
+    """
     from qdrant_client import models as qmodels
     from qdrant_client.models import PointStruct
     client = _get_qdrant()
     dim = _get_embedding_dim()
 
-    # 删除并重建 collection
+    # 检查集合是否已存在且配置匹配
+    collection_exists = False
+    config_matches = False
     try:
-        client.delete_collection(collection_name)
+        info = client.get_collection(collection_name)
+        collection_exists = True
+        # 检查向量配置是否匹配
+        vectors_config = info.config.params.vectors
+        if settings.sparse_enabled:
+            if isinstance(vectors_config, dict) and "dense" in vectors_config:
+                dense_cfg = vectors_config["dense"]
+                from qdrant_client.models import Distance
+                if (hasattr(dense_cfg, "size") and dense_cfg.size == dim and
+                    hasattr(dense_cfg, "distance") and dense_cfg.distance == Distance.COSINE):
+                    config_matches = True
+        else:
+            if not isinstance(vectors_config, dict):
+                from qdrant_client.models import Distance
+                if (hasattr(vectors_config, "size") and vectors_config.size == dim and
+                    hasattr(vectors_config, "distance") and vectors_config.distance == Distance.COSINE):
+                    config_matches = True
     except Exception:
         pass
+
+    # 只在配置不匹配时删除重建；配置匹配时直接 upsert 覆盖
+    if collection_exists and config_matches:
+        logger.info("Collection '%s' exists with matching config, upserting %d chunks", collection_name, len(chunks))
+    else:
+        if collection_exists:
+            logger.info("Collection '%s' config mismatch, deleting and recreating", collection_name)
+        try:
+            client.delete_collection(collection_name)
+        except Exception:
+            pass
 
     # 根据是否启用 sparse 向量选择 vectors_config
     if settings.sparse_enabled:
@@ -1512,27 +1545,29 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
             )
         client.create_collection(**kwargs)
 
-    try:
-        _call_create(hnsw_ef_search=True)
-    except Exception as e:
-        err_str = str(e).lower()
-        if "ef_search" in err_str or "extra_forbidden" in err_str:
-            # qdrant-client 版本不兼容 ef_search，回退到无 ef_search 参数
-            logger.warning("HnswConfigDiff.ef_search not supported, retrying without: %s", e)
-            _call_create(hnsw_ef_search=False)
-        else:
-            raise
-
-    # 创建 Payload 索引
-    for field_name in ["metadata.slug", "metadata.language", "metadata.source", "metadata.tenant_id"]:
+    # 只在需要时创建集合（集合不存在或配置不匹配被删除后）
+    if not (collection_exists and config_matches):
         try:
-            client.create_payload_index(
-                collection_name=collection_name,
-                field_name=field_name,
-                field_schema=qmodels.PayloadSchemaType.KEYWORD,
-            )
-        except Exception:
-            pass  # 索引可能已存在
+            _call_create(hnsw_ef_search=True)
+        except Exception as e:
+            err_str = str(e).lower()
+            if "ef_search" in err_str or "extra_forbidden" in err_str:
+                # qdrant-client 版本不兼容 ef_search，回退到无 ef_search 参数
+                logger.warning("HnswConfigDiff.ef_search not supported, retrying without: %s", e)
+                _call_create(hnsw_ef_search=False)
+            else:
+                raise
+
+        # 创建 Payload 索引
+        for field_name in ["metadata.slug", "metadata.language", "metadata.source", "metadata.tenant_id"]:
+            try:
+                client.create_payload_index(
+                    collection_name=collection_name,
+                    field_name=field_name,
+                    field_schema=qmodels.PayloadSchemaType.KEYWORD,
+                )
+            except Exception:
+                pass  # 索引可能已存在
 
     # Embed all texts (skip local model when SKIP_LOCAL_EMBED=true)
     texts = [c["text"] for c in chunks]
