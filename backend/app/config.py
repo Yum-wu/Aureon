@@ -8,7 +8,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class LLMSettings(BaseModel):
     llm_api_key: str = ""
-    llm_model: str = "qwen3.6-flash"
+    llm_model: str = "qwen3.5-flash"
     llm_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
     fallback_api_key: str = ""
     fallback_model: str = "GLM-4-Flash-250414"
