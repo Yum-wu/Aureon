@@ -158,6 +158,15 @@ def _warmup_bm25():
         except Exception as e:
             logger.warning("GPU model eager loading failed (non-fatal): %s", e)
 
+        # 构建 BM25 关键词索引（供 retrieve_keyword 使用）
+        try:
+            from app.rag.vector_store import _build_kw_index
+            _build_kw_index()
+            from app.rag.vector_store import _kw_docs
+            logger.info("BM25 index built: %d docs", len(_kw_docs))
+        except Exception as e:
+            logger.warning("BM25 index build failed (non-fatal): %s", e)
+
     except Exception as e:
         logger.warning("BM25 warmup / index check failed (non-fatal): %s", e)
     finally:
@@ -433,7 +442,7 @@ async def health_ready():
         from app.cache.redis_client import get_redis
         r = get_redis()
         if r:
-            r.ping()
+            await r.ping()
             checks["redis"] = "ok"
         else:
             checks["redis"] = "skipped"

@@ -1868,7 +1868,7 @@ def hybrid_search_qdrant(
             key="metadata.language",
             match=qmodels.MatchValue(value=lang_filter),
         ))
-    if tenant_id:
+    if tenant_id and tenant_id != "default":
         conditions.append(qmodels.FieldCondition(
             key="metadata.tenant_id",
             match=qmodels.MatchValue(value=tenant_id),
