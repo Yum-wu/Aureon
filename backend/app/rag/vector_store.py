@@ -82,6 +82,42 @@ def _get_embedding_dim() -> int:
         return _LOCAL_MODEL_DIM
 
 
+def _redis_sync_get(key: str) -> bytes | None:
+    """同步调用 Redis GET（异步客户端在同步上下文中的桥接）。
+
+    embed_texts_llm 在后台线程中运行，无法直接 await 异步 Redis 方法。
+    使用同步 Redis 客户端（decode_responses=False 以获取 bytes）。
+    """
+    try:
+        import redis as redis_sync
+        from app.config import settings as _cfg
+        sync_redis = redis_sync.Redis.from_url(
+            _cfg.redis_url or "redis://localhost:6379/0",
+            decode_responses=False,
+            socket_connect_timeout=2,
+            socket_timeout=2,
+        )
+        return sync_redis.get(key)
+    except Exception:
+        return None
+
+
+def _redis_sync_setex(key: str, ttl: int, value: bytes) -> None:
+    """同步调用 Redis SETEX（异步客户端在同步上下文中的桥接）。"""
+    try:
+        import redis as redis_sync
+        from app.config import settings as _cfg
+        sync_redis = redis_sync.Redis.from_url(
+            _cfg.redis_url or "redis://localhost:6379/0",
+            decode_responses=False,
+            socket_connect_timeout=2,
+            socket_timeout=2,
+        )
+        sync_redis.setex(key, ttl, value)
+    except Exception:
+        pass
+
+
 def _cache_key(text: str) -> str:
     return hashlib.md5(text.encode()).hexdigest()
 
@@ -514,30 +550,19 @@ def embed_texts_llm(texts: List[str], batch_size: int = 10) -> np.ndarray:
 
     # 2. Check Redis cache for remaining texts
     try:
-        from app.cache.redis_client import get_redis
-        redis = get_redis()
-        if redis:
+        if uncached:
             still_uncached = []
-            with _embed_cache_lock:
-                for idx, t in uncached:
-                    key = _cache_key(t)
-                    if key in _embed_cache:
-                        result[idx] = _embed_cache[key]
-                    else:
-                        still_uncached.append((idx, t))
+            for idx, t in uncached:
+                key = _cache_key(t)
+                cached = _redis_sync_get(f"embed:{key}")
+                if cached:
+                    emb = np.frombuffer(cached, dtype=np.float32)
+                    result[idx] = emb
+                    with _embed_cache_lock:
+                        _embed_cache[key] = emb
+                else:
+                    still_uncached.append((idx, t))
             uncached = still_uncached
-            if uncached:
-                for idx, t in uncached:
-                    key = _cache_key(t)
-                    cached = redis.get(f"embed:{key}")
-                    if cached:
-                        emb = np.frombuffer(cached, dtype=np.float32)
-                        result[idx] = emb
-                        with _embed_cache_lock:
-                            _embed_cache[key] = emb
-                    else:
-                        still_uncached.append((idx, t))
-                uncached = still_uncached
             if not uncached:
                 return np.array(result, dtype=np.float32)
     except Exception:
@@ -591,14 +616,7 @@ def embed_texts_llm(texts: List[str], batch_size: int = 10) -> np.ndarray:
     for (idx, text), emb in zip(uncached, embeddings):
         key = _cache_key(text)
         try:
-            from app.cache.redis_client import get_redis
-            redis = get_redis()
-            if redis:
-                import asyncio
-                try:
-                    asyncio.run(redis.setex(f"embed:{key}", 86400 * 7, emb.astype(np.float32).tobytes()))
-                except RuntimeError:
-                    pass
+            _redis_sync_setex(f"embed:{key}", 86400 * 7, emb.astype(np.float32).tobytes())
         except Exception:
             pass
 
