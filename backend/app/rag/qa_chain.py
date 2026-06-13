@@ -829,6 +829,8 @@ def rag_query(
     else:
         chunks = multi_query_retrieve(query, top_k=top_k, lang_filter=filter_lang)
 
+    logger.info("rag_query: retrieved %d chunks for query='%s'", len(chunks), query[:50])
+
     # 2. Negative detection: LLM classifier for queries the KB can't answer.
     #    Skip when top RRF score is high (confident retrieval) to save LLM calls.
     #    For production, consider adding a score >= 0.1 fast-path to skip
@@ -851,6 +853,7 @@ def rag_query(
     # 1b. Context compression: filter chunks by embedding similarity to query
     if chunks:
         chunks = compress_context(query, chunks)
+        logger.info("rag_query: after compression %d chunks remain (threshold=%.2f)", len(chunks), _CONTEXT_COMPRESSION_THRESHOLD)
 
     # 1c. CRAG self-correction: if compression removed all chunks or top score is low,
     #     rewrite query and re-retrieve once (lightweight corrective RAG).

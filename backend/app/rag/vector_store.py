@@ -1913,6 +1913,10 @@ def hybrid_search_qdrant(
             "metadata": payload.get("metadata", {}),
             "score": point.score,
         })
+    logger.info("hybrid_search_qdrant: query='%s' tenant='%s' filter=%s dense_dim=%d sparse_empty=%s results=%d",
+                query[:50], tenant_id, query_filter, len(dense_vector) if dense_vector else 0,
+                not sparse_vector or (hasattr(sparse_vector, 'indices') and len(sparse_vector.indices) == 0),
+                len(formatted))
     return formatted
 
 
