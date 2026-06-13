@@ -36,7 +36,7 @@ def _pool_put(key: str, llm: ChatOpenAI) -> None:
 
 # Default parameters per LangChain best practices
 _DEFAULT_MAX_TOKENS = 2048
-_DEFAULT_TIMEOUT = 20  # seconds
+_DEFAULT_TIMEOUT = 30  # seconds — Railway proxy 默认 30s，留余量
 _DEFAULT_MAX_RETRIES = 2
 _DEFAULT_TEMPERATURE = 0.3  # RAG: low temperature for accuracy
 
