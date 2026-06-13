@@ -1327,20 +1327,39 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
             ),
         )
 
-    client.create_collection(
-        collection_name=collection_name,
-        vectors_config=vectors_config,
-        hnsw_config=qmodels.HnswConfigDiff(
-            ef_search=settings.hnsw_ef_search,
-        ),
-        quantization_config=qmodels.ScalarQuantization(
-            scalar=qmodels.ScalarQuantizationConfig(
-                type=qmodels.ScalarType.INT8,
-                quantile=0.99,
-                always_ram=True,
+    try:
+        client.create_collection(
+            collection_name=collection_name,
+            vectors_config=vectors_config,
+            hnsw_config=qmodels.HnswConfigDiff(
+                ef_search=settings.hnsw_ef_search,
             ),
-        ) if settings.quantization_enabled else None,
-    )
+            quantization_config=qmodels.ScalarQuantization(
+                scalar=qmodels.ScalarQuantizationConfig(
+                    type=qmodels.ScalarType.INT8,
+                    quantile=0.99,
+                    always_ram=True,
+                ),
+            ) if settings.quantization_enabled else None,
+        )
+    except Exception as e:
+        err_str = str(e).lower()
+        if "ef_search" in err_str or "extra_forbidden" in err_str:
+            # qdrant-client 版本不兼容 ef_search，回退到无 ef_search 参数
+            logger.warning("HnswConfigDiff.ef_search not supported, retrying without: %s", e)
+            client.create_collection(
+                collection_name=collection_name,
+                vectors_config=vectors_config,
+                quantization_config=qmodels.ScalarQuantization(
+                    scalar=qmodels.ScalarQuantizationConfig(
+                        type=qmodels.ScalarType.INT8,
+                        quantile=0.99,
+                        always_ram=True,
+                    ),
+                ) if settings.quantization_enabled else None,
+            )
+        else:
+            raise
 
     # 创建 Payload 索引
     for field_name in ["metadata.slug", "metadata.language", "metadata.source", "metadata.tenant_id"]:
