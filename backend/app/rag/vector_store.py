@@ -594,7 +594,11 @@ def embed_texts_llm(texts: List[str], batch_size: int = 10) -> np.ndarray:
             from app.cache.redis_client import get_redis
             redis = get_redis()
             if redis:
-                redis.setex(f"embed:{key}", 86400 * 7, emb.astype(np.float32).tobytes())
+                import asyncio
+                try:
+                    asyncio.run(redis.setex(f"embed:{key}", 86400 * 7, emb.astype(np.float32).tobytes()))
+                except RuntimeError:
+                    pass
         except Exception:
             pass
 
@@ -720,7 +724,8 @@ def _delete_from_index_qdrant(source_filename: str):
 
     safe_name = source_filename.encode("ascii", errors="replace").decode("ascii")
     logger.info("Deleted %d chunks for '%s' from Qdrant ('%s')", len(ids_to_delete), safe_name, collection_name)
-    _build_kw_index(force=True)
+    if not settings.sparse_enabled:
+        _build_kw_index(force=True)
     _invalidate_stats_cache()
 
 
