@@ -169,7 +169,6 @@ def _incremental_update(strategy: dict, articles_dir: str):
     """执行增量索引更新：删除移除的文件，添加新增的文件。"""
     from app.rag.vector_store import delete_from_index, add_to_index
     from app.rag.loader import load_markdown_files
-    import pathlib
 
     # 1. 删除已移除的文件
     for filename in strategy["files_to_del"]:
