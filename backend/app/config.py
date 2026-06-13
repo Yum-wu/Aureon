@@ -62,7 +62,7 @@ class VectorStoreSettings(BaseModel):
     stats_cache_ttl: float = 60.0
     hyde_enabled: bool = False
     hyde_fallback_threshold: float = 0.01
-    high_score_skip_threshold: float = 0.05
+    high_score_skip_threshold: float = 0.1
     classifier_cache_ttl: float = 3600.0
     hnsw_m: int = 32
     hnsw_ef_construct: int = 200
