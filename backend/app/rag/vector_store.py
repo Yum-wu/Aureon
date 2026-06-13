@@ -535,8 +535,13 @@ def _embed_dense_sparse_dashscope(texts: List[str], batch_size: int = 10,
     def _call_batch(batch: List[str]) -> tuple[list, list]:
         """单批 API 调用，返回 (dense_list, sparse_list)。"""
         # DashScope v4 支持 output_type 参数（通过 DashScope 原生 API）
-        # OpenAI 兼容模式不支持，需要用 DashScope 原生 endpoint
-        dashscope_url = "https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding"
+        # OpenAI 兼容模式不支持 output_type，需要用 DashScope 原生 endpoint
+        # 根据 dashscope_base_url 推导原生 API URL（国际版 vs 国内版）
+        base = settings.dashscope_base_url.rstrip("/")
+        if "intl" in base:
+            dashscope_url = "https://dashscope-intl.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding"
+        else:
+            dashscope_url = "https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding"
         ds_payload = {
             "model": model,
             "input": {"texts": batch},
