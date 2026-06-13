@@ -283,8 +283,8 @@ async def classify_query_answerable(query: str, model: str = None) -> bool:
         _classifier_cache_set(query, answerable)
         return answerable
     except Exception as e:
-        logger.warning("LLM classifier failed: %s, defaulting to not answerable", e)
-        return False
+        logger.warning("LLM classifier failed: %s, defaulting to answerable", e)
+        return True
 
 
 # ── Negative detection: keyword fast-path ──
@@ -304,8 +304,8 @@ _NEGATIVE_KEYWORDS_ZH = [
     "毕业于", "教育背景", "学历",
     # Company info
     "创始人", "CEO", "公司地址",
-    # Competitive / external
-    "更适合", "对比", "哪个更好",
+    # Competitive / external — only block brand/product comparisons
+    "哪个品牌更好", "竞品对比",
     # Future plans
     "下一步计划", "未来规划", "路线图",
     # Stars / popularity
