@@ -207,11 +207,24 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning("OpenTelemetry tracing init failed (non-fatal): %s", e)
 
+    # Langfuse tracing (async check)
+    try:
+        from app.observability.langfuse_integration import init_langfuse
+        await init_langfuse()
+    except Exception as e:
+        logger.warning("Langfuse init failed (non-fatal): %s", e)
+
     logger.info("Startup complete")
 
     yield  # Application runs here
 
     # ── Shutdown ──
+    # Flush Langfuse traces
+    try:
+        from app.observability.langfuse_integration import shutdown_langfuse
+        await shutdown_langfuse()
+    except Exception as e:
+        logger.warning("Langfuse shutdown failed (non-fatal): %s", e)
     memory_manager.flush_all_scenarios()
     close_db()
     await close_redis()
