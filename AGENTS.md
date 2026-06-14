@@ -151,6 +151,12 @@ Query → Query Router（简单/中等/复杂）→
 - **中等查询**（分析型，需语义理解）→ hybrid retrieve + 自适应重排序
 - **复杂查询**（推理型，需多角度）→ HyDE + multi_query + ensemble rerank + CRAG
 
+### 负例检测（Negative Detection）
+- **关键词快速路径**：`_NEGATIVE_KEYWORDS_ZH` 列表包含定价、团队、版本、微服务、QPS 等关键词
+- **LLM 分类器**：关键词未命中时，调用 qwen3.5-flash 判断是否可回答
+- **跳过阈值**：`high_score_skip_threshold=0.1`，高置信度检索结果跳过检测
+- **检测效果**：80% 负例正确拒绝（20 个负例查询中 16 个被正确拒绝）
+
 ### Embedding 统一
 - 本地 BGE-large-zh-v1.5 和 API 统一输出 1024 维
 - Embedding Fallback Chain: local BGE → DashScope → SiliconFlow → Zhipu
@@ -199,7 +205,8 @@ Query → Query Router（简单/中等/复杂）→
 
 ```
 backend/tests/
-├── benchmark_enterprise.py    # 统一基准测试（benchmark/quality/smoke 三层）
+├── run_full_benchmark.py      # 统一 benchmark 测试（3 阶段：采集→评估→报告）
+├── benchmark_enterprise.py    # pytest 基准测试（benchmark/quality/smoke 三层）
 ├── benchmark_config.yaml      # QA 数据集 + 阈值 + 端点配置
 ├── deepeval_eval.py           # DeepEval 评判逻辑（build_test_cases + run_deepeval_metrics）
 ├── test_data_golden.py        # 黄金数据集
@@ -213,6 +220,20 @@ backend/tests/
 # CI 默认（仅单元测试，跳过所有 marker）
 cd backend && python -m pytest tests/ -v
 
+# ── 统一 Benchmark 测试（推荐）──
+# 运行全部 3 阶段（Railway 采集 → 本地 LLM-as-Judge 评估 → 汇总报告）
+cd backend && python tests/run_full_benchmark.py
+
+# 仅 Railway 采集（192 queries + TTFT/TPOT）
+cd backend && python tests/run_full_benchmark.py --phase 1
+
+# 仅 LLM-as-Judge 评估（需先有 raw 数据）
+cd backend && python tests/run_full_benchmark.py --phase 2
+
+# 仅汇总报告
+cd backend && python tests/run_full_benchmark.py --phase 3
+
+# ── pytest 基准测试 ──
 # 本地：仅检索性能基准
 cd backend && python -m pytest tests/benchmark_enterprise.py -m benchmark -v
 
