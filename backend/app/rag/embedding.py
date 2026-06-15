@@ -28,8 +28,6 @@ from typing import List, Dict, Optional
 
 import structlog
 
-from app.config import settings
-
 
 
 logger = structlog.get_logger()

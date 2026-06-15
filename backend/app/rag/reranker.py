@@ -318,19 +318,6 @@ def rerank(query: str, chunks: List[Dict[str, Any]], top_k: int = 3) -> List[Dic
 
 
 
-    # Try GPU reranker first for continuous GPU utilization
-
-    try:
-
-            return gpu_reranker.rerank(query, chunks, top_k=top_k)
-
-    except Exception as e:
-
-        logger.debug("GPU reranker unavailable, falling back to CPU: %s", e)
-
-
-
-    # CPU fallback
 
     model = _get_reranker()
 

@@ -1144,6 +1144,8 @@ def check_index_upgrade_strategy(collection_name: str = "aureon", articles_dir: 
 
     # 2. ��� _index_config �е� embedding ģ���Ƿ�仯
 
+    current_model = settings.dashscope_model
+
     idx_cfg = get_index_config(collection_name)
 
     if idx_cfg:
