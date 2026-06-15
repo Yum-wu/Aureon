@@ -105,7 +105,7 @@ def _decrypt_client_secret(client_secret: Optional[str]) -> str:
     except (ValueError, RuntimeError) as exc:
         logger.warning(
             "sso_provider_decrypt_failed",
-            client_secret_prefix=client_secret[:8] + "***" if client_secret else None,
+            client_secret_prefix=(client_secret or "")[:8] + "***" if client_secret else None,
             error=str(exc),
         )
         return "****[unreadable]****"
