@@ -86,6 +86,6 @@ async def test_delete_session():
     assert data["status"] == "deleted"
     assert data["session_id"] == "sess-to-delete"
     mock_mm.finalize_scenario.assert_called_once_with(
-        "sess-to-delete", summary="用户手动清除会话"
+        "sess-to-delete", "用户手动清除会话"
     )
     mock_mm.clear_session.assert_called_once_with("sess-to-delete")

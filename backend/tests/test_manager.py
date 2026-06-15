@@ -2,7 +2,7 @@
 Tests for Memory Manager: session tracking, background tasks, flush.
 """
 import time
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from app.memory.manager import MemoryManager
 
 
@@ -26,9 +26,11 @@ class TestMemoryManagerInit:
         assert t2 >= t1
 
     def test_record_message_touches_session(self):
-        with patch("app.memory.manager.l0_conversation.record_message"), \
-             patch("app.memory.manager.l0_conversation.cleanup_oldest"):
+        mock_backend = MagicMock()
+        with patch("app.memory.manager.get_backend", return_value=mock_backend):
             self.mgr.record_message("sess_2", "user", "hello")
+        mock_backend.record_message.assert_called_once()
+        mock_backend.cleanup_oldest.assert_called_once()
         assert "sess_2" in self.mgr.get_active_sessions()
 
     def test_clear_session_removes(self):
