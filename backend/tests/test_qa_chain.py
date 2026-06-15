@@ -100,7 +100,7 @@ class TestRagQuery:
 class TestRagQueryAstream:
     @pytest.mark.asyncio
     @patch("app.rag.query_classifier.route_retrieval", return_value="medium")
-    @patch("app.rag.retriever.hybrid_retrieve", return_value=[])
+    @patch("app.rag.generator.hybrid_retrieve", return_value=[])
     async def test_no_chunks(self, mock_hybrid, mock_route):
         events = []
         async for event in rag_query_astream("test", AsyncMock(), lang="en"):
@@ -114,9 +114,9 @@ class TestRagQueryAstream:
     @pytest.mark.asyncio
     @patch("app.rag.query_classifier.route_retrieval", return_value="medium")
     @patch("app.rag.classifier.classify_query_answerable", new_callable=AsyncMock, return_value=True)
-    @patch("app.rag.retriever.hybrid_retrieve")
-    async def test_with_chunks(self, mock_hybrid, mock_classify, mock_route):
-        mock_hybrid.return_value = [
+    @patch("app.rag.generator.hybrid_retrieve")
+    async def test_with_chunks(self, mock_hybrid_retrieve, mock_classify, mock_route):
+        mock_hybrid_retrieve.return_value = [
             {"text": "RAG content", "metadata": {"title": "Guide", "slug": "g"}, "score": 0.9}
         ]
 
@@ -141,7 +141,7 @@ class TestRagQueryAstream:
 
     @pytest.mark.asyncio
     @patch("app.rag.query_classifier.route_retrieval", return_value="medium")
-    @patch("app.rag.retriever.hybrid_retrieve", return_value=[])
+    @patch("app.rag.generator.hybrid_retrieve", return_value=[])
     async def test_zh_no_results(self, mock_hybrid, mock_route):
         events = []
         async for event in rag_query_astream("test", AsyncMock(), lang="zh"):
@@ -180,29 +180,25 @@ class TestRunIncrementalIndex:
 
 
 class TestRunIndexPipeline:
-    @patch("app.rag.qa_chain.save_index")
-    @patch("app.rag.qa_chain.embed_texts_llm", return_value=[[0.1, 0.2]])
+    @pytest.mark.integration
+    @patch("app.rag.indexer.save_index")
     @patch("app.rag.loader.load_markdown_files", return_value=[])
-    def test_no_docs_returns_error(self, mock_load, mock_embed, mock_save):
+    def test_no_docs_returns_error(self, mock_load, mock_save):
         result = run_index_pipeline("/empty/dir")
         assert result["status"] == "error"
         assert "没有找到" in result["message"]
 
-    @patch("app.rag.qa_chain.save_index")
-    @patch("app.rag.qa_chain.embed_texts_llm")
+    @pytest.mark.integration
+    @patch("app.rag.indexer.save_index")
     @patch("app.rag.loader.load_markdown_files")
-    def test_valid_pipeline(self, mock_load, mock_embed, mock_save):
-        import numpy as np
+    def test_valid_pipeline(self, mock_load, mock_save):
         mock_load.return_value = [
             {"content": "Some content to index.", "metadata": {"title": "Test", "source": "test.md"}}
         ]
-        mock_embed.return_value = np.array([[0.1, 0.2]], dtype=np.float32)
         result = run_index_pipeline("/articles")
         assert result["status"] == "ok"
         assert result["documents_indexed"] == 1
         assert result["chunks_created"] >= 1
-        # save_index is called via `from app.rag.vector_store import save_index` inside run_index_pipeline
-        # so we need to check it was called through the vector_store module
         mock_save.assert_called_once()
 
 
