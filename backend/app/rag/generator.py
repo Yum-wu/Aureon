@@ -5,7 +5,6 @@ Contains: generate_answer, rag_query, rag_query_astream, rag_query_with_cache.
 
 import json
 import asyncio
-from typing import List, Dict, Any
 
 from app.rag.vector_store import format_context, retrieve_keyword
 from app.rag.query_rewriter import expand_queries_rules, hyde_retrieve
@@ -345,7 +344,6 @@ async def rag_query_astream(
 
     # 1. 根据查询复杂度路由检索策略
     #    Wrapped in asyncio.to_thread to avoid blocking the event loop
-    import asyncio
     from app.rag.query_classifier import route_retrieval
 
     route = route_retrieval(query)
@@ -532,7 +530,6 @@ async def rag_query_with_cache(
             return RAGQueryResponse(answer=answer, sources=sources)
 
     # Cache miss: run RAG pipeline（避免阻塞事件循环）
-    import asyncio
     result = await asyncio.to_thread(rag_query, query, llm_call_fn, top_k, use_mmr, lang, filter_lang)
 
     # Cache the result in both exact and semantic caches

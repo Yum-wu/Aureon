@@ -5,7 +5,7 @@ Index CRUD, stats, health checks, format helpers, and Elasticsearch BM25 backend
 Extracted from vector_store.py.
 """
 
-import time
+
 import numpy as np
 from typing import List, Dict, Any
 
