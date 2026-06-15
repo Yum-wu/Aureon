@@ -51,7 +51,7 @@ from app.rag.qa_chain import (
 from app.rag.evaluator import run_full_evaluation
 from app.rag.prompt_experiment import run_experiment
 from app.rag.test_data import TEST_QA_PAIRS
-from app.rag.vector_store import retrieve
+from app.rag.vector_store import retrieve, get_bm25_stats
 from app.audit.decorator import audit_action
 from app.multi_tenant.middleware import get_current_tenant_id
 
@@ -570,7 +570,7 @@ async def rag_health():
     bm25 = get_bm25_stats()
 
     # Embedding provider chain status
-    embed_providers = ["local-bge-small-512d"]
+    embed_providers = []
     if settings.dashscope_api_key:
         embed_providers.append("dashscope-512d")
     if settings.siliconflow_api_key:

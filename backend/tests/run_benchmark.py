@@ -733,63 +733,10 @@ def main():
     print(f"  Hybrid: mean={lat_hybrid['mean_ms']}ms  p50={lat_hybrid['p50_ms']}ms  p99={lat_hybrid['p99_ms']}ms")
 
     # ── Step 4b: Adaptive Embedding Latency ──
-    print("\n[4b/6] Adaptive embedding latency (CPU vs GPU by batch size)...")
+    print("\n[4b/6] Adaptive embedding latency (API-only, skipped)...")
+    print("  GPU/local model removed - API-only mode")
     adaptive_latencies = {}
     dispatch_stats = {}
-    try:
-        from app.rag.embed_gpu import get_adaptive_embedder, GPUEmbedder
-        import torch
-
-        adaptive_embedder = get_adaptive_embedder()
-        batch_sizes = [1, 2, 4, 8, 16, 32, 64]
-        adaptive_latencies = {}
-
-        # Test adaptive embedder
-        for bs in batch_sizes:
-            texts = ["测试文本用于延迟测量"] * bs
-            latencies = []
-            for _ in range(3):
-                start = time.perf_counter()
-                adaptive_embedder.encode(texts, batch_size=bs)
-                latencies.append((time.perf_counter() - start) * 1000)
-            adaptive_latencies[f"batch_{bs}"] = round(statistics.mean(latencies), 1)
-
-        # Get dispatch stats
-        dispatch_stats = adaptive_embedder.get_stats()
-
-        print(f"  Adaptive Embedder (threshold={dispatch_stats['threshold']}):")
-        for bs_key, lat in sorted(adaptive_latencies.items()):
-            print(f"    {bs_key}: {lat}ms")
-
-        print("\n  Dispatch Stats:")
-        print(f"    GPU calls: {dispatch_stats['gpu_calls']}")
-        print(f"    CPU calls: {dispatch_stats['cpu_calls']}")
-        print(f"    GPU ratio: {dispatch_stats['gpu_ratio']:.1%}")
-
-        # Compare with pure GPU (if available)
-        if torch.cuda.is_available():
-            print("\n  Comparison (batch=1):")
-            cpu_embedder = None  # GPU removed
-            gpu_embedder = None  # GPU removed
-
-            single_text = ["单条查询测试"]
-
-            # CPU single
-            start = time.perf_counter()
-            cpu_embedder.encode(single_text, batch_size=1)
-            cpu_single = (time.perf_counter() - start) * 1000
-
-            # GPU single
-            start = time.perf_counter()
-            gpu_embedder.encode(single_text, batch_size=1)
-            gpu_single = (time.perf_counter() - start) * 1000
-
-            print(f"      CPU: {cpu_single:.1f}ms")
-            print(f"      GPU: {gpu_single:.1f}ms")
-            print(f"      Ratio: {gpu_single/cpu_single:.1f}x {'slower' if gpu_single > cpu_single else 'faster'}")
-
-    except Exception as e:
-        print(f"  Adaptive embedding test skipped: {e}")
 
     # ── Step 4c: CRAG Pipeline Negative Detection ──
     # Tests full rag_query pipeline with LLM classifier for negative queries.
@@ -846,23 +793,6 @@ def main():
 
     print("-" * 70)
     print(f"  Total: {passed}/{total} passed")
-
-    # ── Step 6: Adaptive Dispatch Summary ──
-    if dispatch_stats:
-        print("\n[6/6] Adaptive Device Dispatch Summary")
-        print("-" * 70)
-        print(f"  Threshold:      {dispatch_stats.get('threshold', 'N/A')} texts")
-        print(f"  GPU available:  {dispatch_stats.get('gpu_available', 'N/A')}")
-        print(f"  GPU calls:      {dispatch_stats.get('gpu_calls', 0)}")
-        print(f"  CPU calls:      {dispatch_stats.get('cpu_calls', 0)}")
-        print(f"  Total texts:    {dispatch_stats.get('total_texts', 0)}")
-        print(f"  GPU ratio:      {dispatch_stats.get('gpu_ratio', 0):.1%}")
-        print()
-        print("  Batch Latency Breakdown:")
-        for bs_key, lat in sorted(adaptive_latencies.items()):
-            bs_num = int(bs_key.split('_')[1])
-            device = "GPU" if bs_num >= dispatch_stats.get('threshold', 4) else "CPU"
-            print(f"    {bs_key:>8}: {lat:>8.1f}ms  ({device})")
 
     # Save results
     output = {
