@@ -456,19 +456,7 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
 
             else:
 
-                try:
-
-                    from app.rag.embed_gpu import get_adaptive_embedder
-
-                    embedder = get_adaptive_embedder()
-
-                    batch_embeddings = embedder.encode(batch_texts, batch_size=settings.embedding_batch_size)
-
-                except Exception as e:
-
-                    logger.warning("Adaptive embedding failed: %s, falling back to API", e)
-
-                    batch_embeddings = embed_texts_llm(batch_texts)
+                batch_embeddings = embed_texts_llm(batch_texts)
 
 
 
@@ -614,17 +602,7 @@ def hybrid_search_qdrant(
 
         else:
 
-            if True:  # API-only
-
-                query_emb = embed_texts_llm([query])
-
-            else:
-
-                from app.rag.embed_gpu import get_adaptive_embedder
-
-                embedder = get_adaptive_embedder()
-
-                query_emb = embedder.encode([query])
+            query_emb = embed_texts_llm([query])
 
             dense_vector = query_emb[0].tolist()
 
@@ -760,12 +738,6 @@ def retrieve_qdrant(query: str, top_k: int = 3, collection_name: str = "aureon",
 
 
 
-    Uses adaptive dispatch: CPU for single queries (lower latency),
-
-    GPU for batch queries (higher throughput).
-
-
-
     Supports both old (search) and new (query_points) qdrant_client APIs.
 
     Supports payload filtering via Qdrant Filter (e.g. lang_filter, tenant_id).
@@ -790,7 +762,7 @@ def retrieve_qdrant(query: str, top_k: int = 3, collection_name: str = "aureon",
 
     from app.rag.embedding import (
 
-        embed_texts_llm, _skip_local_embed, _set_thread_query_embedding,
+        embed_texts_llm, _set_thread_query_embedding,
 
     )
 
@@ -810,19 +782,7 @@ def retrieve_qdrant(query: str, top_k: int = 3, collection_name: str = "aureon",
 
     try:
 
-        # When SKIP_LOCAL_EMBED=true, skip local model entirely �� use API directly
-
-        if True:  # API-only
-
-            query_emb = embed_texts_llm([query])
-
-        else:
-
-            from app.rag.embed_gpu import get_adaptive_embedder
-
-            embedder = get_adaptive_embedder()
-
-            query_emb = embedder.encode([query])
+        query_emb = embed_texts_llm([query])
 
     except Exception as e:
 

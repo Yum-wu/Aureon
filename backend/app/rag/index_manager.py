@@ -37,15 +37,6 @@ _STATS_CACHE_TTL = settings.stats_cache_ttl  # seconds
 
 
 
-# Local model name reference (from embedding module)
-
-
-_skip_local_embed = True  # API-only mode
-
-
-
-
-
 # ���� Public API ����
 
 
@@ -82,7 +73,7 @@ def _add_to_index_qdrant(chunks: List[Dict[str, Any]]):
 
         _to_sparse_vector, _embed_dense_sparse_dashscope,
 
-        embed_texts_llm, _skip_local_embed,
+        embed_texts_llm,
 
     )
 
@@ -132,28 +123,9 @@ def _add_to_index_qdrant(chunks: List[Dict[str, Any]]):
 
         dense_emb, sparse_vecs = _embed_dense_sparse_dashscope(texts)
 
-    elif _skip_local_embed:
-
-        dense_emb = embed_texts_llm(texts)
-
-        from app.rag.sparse_embed import embed_sparse
-
-        sparse_vecs = embed_sparse(texts) if settings.sparse_enabled else [None] * len(texts)
-
     else:
-
-        try:
-
-            raise RuntimeError('GPU embedding removed - use API only')
-
-            dense_emb = embedder.encode(texts, batch_size=64)
-
-        except Exception:
-
-            dense_emb = embed_texts_llm(texts)
-
+        dense_emb = embed_texts_llm(texts)
         from app.rag.sparse_embed import embed_sparse
-
         sparse_vecs = embed_sparse(texts) if settings.sparse_enabled else [None] * len(texts)
 
 

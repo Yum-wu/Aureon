@@ -43,7 +43,7 @@ def get_system_config() -> dict:
     """Get current RAG system configuration."""
     from app.config import settings
     return {
-        "embedding_model": "DashScope text-embedding-v3" if settings.dashscope_api_key else "local-bge",
+        "embedding_model": "DashScope text-embedding-v3",
         "embedding_dim": 1024,
         "llm_model": settings.llm_model,
         "llm_base_url": settings.llm_base_url,

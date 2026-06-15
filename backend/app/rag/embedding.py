@@ -41,7 +41,6 @@ logger = structlog.get_logger()
 
 
 
-
 VECTOR_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "vectors")
 
 
@@ -79,14 +78,13 @@ _last_query_embedding_lock = threading.Lock()
 
 
 
-
 def _get_embedding_dim() -> int:
 
     """Return the active embedding dimension from settings or env var.
 
 
 
-    Priority: EMBEDDING_DIMENSION env -> settings.embedding_dim -> 1024.
+    Priority: EMBEDDING_DIMENSION env -> settings.embedding_dim -> default (1024).
 
     """
 
@@ -256,25 +254,6 @@ def _set_thread_query_embedding(emb: np.ndarray) -> None:
 
 
 
-
-
-
-
-
-
-
-
-    try:
-
-        embeddings = model.encode(texts, normalize_embeddings=True, show_progress_bar=False)
-
-        return np.array(embeddings, dtype=np.float32)
-
-    except Exception as e:
-
-        logger.warning("Local embedding error: %s", e)
-
-        return None
 
 
 
@@ -740,7 +719,7 @@ def embed_texts_llm(texts: List[str], batch_size: int = 10) -> np.ndarray:
 
 
 
-    Priority: local BGE (1024d) �� DashScope (768d) �� SiliconFlow �� Zhipu.
+    Priority: DashScope �� DashScope (768d) �� SiliconFlow �� Zhipu.
 
     
     Raises if ALL providers fail. Never returns zero vectors.
@@ -826,57 +805,57 @@ def embed_texts_llm(texts: List[str], batch_size: int = 10) -> np.ndarray:
 
     # 3. API fallback chain
 
+    providers = []
+
+    if settings.dashscope_api_key:
+
+        providers.append("dashscope")
+
+    if settings.siliconflow_api_key:
+
+        providers.append("siliconflow")
+
+    if settings.embedding_api_key or settings.llm_api_key:
+
+        providers.append("zhipu")
+
+
+
+    if not providers:
+
+        raise RuntimeError(
+
+            "No embedding provider available. "
+
+            "Set DASHSCOPE_API_KEY or EMBEDDING_API_KEY in .env"
+
+        )
+
+
+
+    embeddings = None
+
+    last_error = None
+
+    for p in providers:
+
+        try:
+
+            embeddings = _embed_api(uncached_texts, p, batch_size)
+
+            break
+
+        except Exception as e:
+
+            logger.warning("Embedding provider %s failed: %s", p, e)
+
+            last_error = e
+
+
+
     if embeddings is None:
 
-        providers = []
-
-        if settings.dashscope_api_key:
-
-            providers.append("dashscope")
-
-        if settings.siliconflow_api_key:
-
-            providers.append("siliconflow")
-
-        if settings.embedding_api_key or settings.llm_api_key:
-
-            providers.append("zhipu")
-
-
-
-        if not providers:
-
-            raise RuntimeError(
-
-                "No embedding provider available. "
-
-                "Set DASHSCOPE_API_KEY or EMBEDDING_API_KEY in .env"
-
-            )
-
-
-
-        last_error = None
-
-        for p in providers:
-
-            try:
-
-                embeddings = _embed_api(uncached_texts, p, batch_size)
-
-                break
-
-            except Exception as e:
-
-                logger.warning("Embedding provider %s failed: %s", p, e)
-
-                last_error = e
-
-
-
-        if embeddings is None:
-
-            raise RuntimeError(f"All embedding providers failed. Last error: {last_error}")
+        raise RuntimeError(f"All embedding providers failed. Last error: {last_error}")
 
 
 
