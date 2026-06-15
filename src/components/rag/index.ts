@@ -1,4 +1,4 @@
-export { RagQuery } from "../../RagQuery";
+export { RagQuery } from "../RagQuery";
 export { RagQueryForm } from "./RagQueryForm";
 export { RagQueryResult } from "./RagQueryResult";
 export { RagUploadPanel } from "./RagUploadPanel";

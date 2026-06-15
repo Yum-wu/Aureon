@@ -43,7 +43,7 @@ type ConnectionHandler = (connected: boolean) => void;
 export class AureonWebSocket {
   private ws: WebSocket | null = null;
   private clientId: string;
-  private conversationId: string | null = null;
+  private conversationId: string | undefined = undefined;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
