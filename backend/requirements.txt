@@ -68,6 +68,9 @@ aiosqlite>=0.20,<1.0
 # JWT Authentication (Task 4.2 - RBAC)
 PyJWT>=2.8
 
+# Secret encryption (Fernet — encrypt_secret/decrypt_secret)
+cryptography>=41.0,<50.0
+
 # OpenTelemetry (Task 5.1 - Distributed Tracing)
 opentelemetry-api>=1.20
 opentelemetry-sdk>=1.20
