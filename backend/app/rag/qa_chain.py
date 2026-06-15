@@ -75,6 +75,10 @@ from app.rag.indexer import (
     rag_query_async,
 )
 
+# -- embedding.py + index_manager.py (for test patches) --
+from app.rag.embedding import embed_texts_llm
+from app.rag.index_manager import retrieve, save_index
+
 # Semantic chunking setting (used by run_index_pipeline and external references)
 SEMANTIC_CHUNKING_ENABLED = __import__('app.config', fromlist=['settings']).settings.semantic_chunking_enabled
 
@@ -102,4 +106,6 @@ __all__ = [
     "_generate_context_prefixes_async", "_add_contextual_prefixes",
     "run_index_pipeline", "generate_answer_async", "hybrid_retrieve_async",
     "rag_query_async", "SEMANTIC_CHUNKING_ENABLED",
+    # embedding + index_manager (test patches)
+    "embed_texts_llm", "retrieve", "save_index",
 ]

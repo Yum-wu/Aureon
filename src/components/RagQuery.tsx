@@ -128,7 +128,7 @@ export function RagQuery() {
       </header>
 
       {/* Upload Panel */}
-      <RagUploadPanel open={uploadOpen} onToggle={() => setUploadOpen(!uploadOpen)} />
+      <RagUploadPanel open={uploadOpen} />
 
       {/* Input Form */}
       <RagQueryForm

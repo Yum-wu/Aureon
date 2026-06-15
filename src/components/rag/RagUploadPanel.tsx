@@ -7,10 +7,9 @@ const RAG_UPLOAD_URL =
 
 interface RagUploadPanelProps {
   open: boolean;
-  onToggle: () => void;
 }
 
-export function RagUploadPanel({ open, onToggle }: RagUploadPanelProps) {
+export function RagUploadPanel({ open }: RagUploadPanelProps) {
   const { t } = useTranslation();
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<{
