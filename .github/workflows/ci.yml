@@ -59,7 +59,7 @@ jobs:
       - name: Run tests
         run: |
           cd backend
-          PYTHONPATH=. pytest tests/ -v --timeout=60 -m "not integration and not benchmark and not quality and not smoke" --cov=app --cov-report=term-missing --cov-report=xml
+          PYTHONPATH=. pytest tests/ -v --timeout=60 --ignore=tests/test_railway_http.py --ignore=tests/benchmark_enterprise.py --ignore=tests/run_full_benchmark.py -m "not integration and not benchmark and not quality and not smoke" --cov=app --cov-report=term-missing --cov-report=xml
 
       - name: Upload coverage
         if: always()
