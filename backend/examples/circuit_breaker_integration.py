@@ -1,270 +1,270 @@
-"""¶ÏÂ·Æ÷¼¯³ÉÊ¾Àý
-
-Õ¹Ê¾ÈçºÎ½«¶ÏÂ·Æ÷¼¯³Éµ½ÏÖÓÐµÄ LLM µ÷ÓÃÂ·¾¶ÖÐ¡£
-"""
-
-import asyncio
-from typing import Any
-
-from langchain_core.messages import HumanMessage
-
-from app.reliability.circuit_breaker import (
-    CircuitBreaker,
-    CircuitBreakerError,
-    circuit_breaker,
-    wrap_llm_call,
-    llm_circuit_breaker,
-    embedding_circuit_breaker,
-    reranker_circuit_breaker,
-)
-from app.agent.llm import create_llm
-
-
-# Ê¾Àý 1: Ê¹ÓÃ×°ÊÎÆ÷°ü×° LLM µ÷ÓÃ
-@circuit_breaker(
-    failure_threshold=5,
-    recovery_timeout=60,
-    name="llm_invoke",
-    expected_exceptions=[Exception],
-)
-async def invoke_llm_with_circuit_breaker(
-    llm: Any,
-    messages: list,
-) -> str:
-    """Ê¹ÓÃ¶ÏÂ·Æ÷°ü×°µÄ LLM µ÷ÓÃ"""
-    response = await llm.ainvoke(messages)
-    return response.content
-
-
-# Ê¾Àý 2: Ê¹ÓÃÉÏÏÂÎÄ¹ÜÀíÆ÷
-async def invoke_llm_with_context(
-    llm: Any,
-    messages: list,
-) -> str:
-    """Ê¹ÓÃÉÏÏÂÎÄ¹ÜÀíÆ÷µÄ LLM µ÷ÓÃ"""
-    async with llm_circuit_breaker.context():
-        response = await llm.ainvoke(messages)
-        return response.content
-
-
-# Ê¾Àý 3: Ê¹ÓÃ wrap_llm_call °ü×°ÏÖÓÐº¯Êý
-async def invoke_llm_with_wrap(
-    llm: Any,
-    messages: list,
-) -> str:
-    """Ê¹ÓÃ wrap_llm_call °ü×°"""
-    async def _invoke():
-        response = await llm.ainvoke(messages)
-        return response.content
-    
-    return await wrap_llm_call(_invoke, circuit_breaker=llm_circuit_breaker)
-
-
-# Ê¾Àý 4: ×Ô¶¨Òå¶ÏÂ·Æ÷ÅäÖÃ
-def create_custom_circuit_breaker(
-    name: str,
-    failure_threshold: int = 3,
-    recovery_timeout: int = 30,
-) -> CircuitBreaker:
-    """´´½¨×Ô¶¨Òå¶ÏÂ·Æ÷"""
-    return CircuitBreaker(
-        failure_threshold=failure_threshold,
-        recovery_timeout=recovery_timeout,
-        name=name,
-        expected_exceptions=[Exception],
-    )
-
-
-# Ê¾Àý 5: ¼¯³Éµ½ÏÖÓÐµÄ llm_invoke_with_retry º¯Êý
-async def llm_invoke_with_retry_and_circuit_breaker(
-    llm: Any,
-    messages: list,
-    max_retries: int = 3,
-    circuit_breaker: CircuitBreaker = None,
-) -> str:
-    """´øÖØÊÔºÍ¶ÏÂ·Æ÷µÄ LLM µ÷ÓÃ"""
-    if circuit_breaker is None:
-        circuit_breaker = llm_circuit_breaker
-    
-    for attempt in range(max_retries):
-        try:
-            # Ê¹ÓÃ¶ÏÂ·Æ÷¼ì²éÊÇ·ñ¿ÉÒÔÖ´ÐÐ
-            if not await circuit_breaker.can_execute():
-                raise CircuitBreakerError(
-                    f"Circuit breaker '{circuit_breaker.name}' is {circuit_breaker.state.value}"
-                )
-            
-            # Ö´ÐÐ LLM µ÷ÓÃ
-            response = await llm.ainvoke(messages)
-            
-            # ¼ÇÂ¼³É¹¦
-            await circuit_breaker.record_success()
-            return response.content
-            
-        except CircuitBreakerError:
-            # ¶ÏÂ·Æ÷´ò¿ª£¬Ö±½ÓÅ×³ö
-            raise
-            
-        except Exception as e:
-            # ¼ÇÂ¼Ê§°Ü
-            await circuit_breaker.record_failure(e)
-            
-            # Èç¹ûÊÇ×îºóÒ»´ÎÖØÊÔ£¬Å×³öÒì³£
-            if attempt == max_retries - 1:
-                raise
-            
-            # µÈ´ýÒ»¶ÎÊ±¼äºóÖØÊÔ
-            await asyncio.sleep(2 ** attempt)
-    
-    raise Exception("Max retries exceeded")
-
-
-# Ê¾Àý 6: ÅúÁ¿µ÷ÓÃÊ±µÄ¶ÏÂ·Æ÷±£»¤
-async def batch_invoke_with_circuit_breaker(
-    llm: Any,
-    messages_list: list[list],
-    circuit_breaker: CircuitBreaker = None,
-) -> list[str]:
-    """ÅúÁ¿ LLM µ÷ÓÃ£¬´ø¶ÏÂ·Æ÷±£»¤"""
-    if circuit_breaker is None:
-        circuit_breaker = llm_circuit_breaker
-    
-    results = []
-    
-    for messages in messages_list:
-        try:
-            result = await invoke_llm_with_circuit_breaker(llm, messages)
-            results.append(result)
-        except CircuitBreakerError as e:
-            # ¶ÏÂ·Æ÷´ò¿ª£¬Í£Ö¹ÅúÁ¿µ÷ÓÃ
-            print(f"Circuit breaker opened: {e}")
-            break
-        except Exception as e:
-            # ÆäËûÒì³££¬¼ÇÂ¼µ«¼ÌÐø
-            print(f"LLM call failed: {e}")
-            results.append(None)
-    
-    return results
-
-
-# Ê¾Àý 7: ²»Í¬Ìá¹©ÉÌÊ¹ÓÃ²»Í¬µÄ¶ÏÂ·Æ÷
-async def invoke_with_provider_circuit_breaker(
-    provider: str,
-    messages: list,
-) -> str:
-    """¸ù¾ÝÌá¹©ÉÌÊ¹ÓÃ²»Í¬µÄ¶ÏÂ·Æ÷"""
-    # ´´½¨Ìá¹©ÉÌÌØ¶¨µÄ¶ÏÂ·Æ÷
-    provider_breaker = create_custom_circuit_breaker(
-        name=f"llm_{provider}",
-        failure_threshold=5,
-        recovery_timeout=60,
-    )
-    
-    # ´´½¨ LLM ÊµÀý
-    llm = create_llm(model=provider)
-    
-    # Ê¹ÓÃ¶ÏÂ·Æ÷°ü×°µ÷ÓÃ
-    async def _invoke():
-        response = await llm.ainvoke(messages)
-        return response.content
-    
-    return await wrap_llm_call(_invoke, circuit_breaker=provider_breaker)
-
-
-# Ê¾Àý 8: ¼à¿Ø¶ÏÂ·Æ÷×´Ì¬
-async def monitor_circuit_breakers():
-    """¼à¿ØËùÓÐ¶ÏÂ·Æ÷×´Ì¬"""
-    from app.reliability.circuit_breaker import get_all_circuit_breakers
-    
-    breakers = get_all_circuit_breakers()
-    
-    for name, breaker in breakers.items():
-        stats = breaker.stats
-        print(f"Circuit Breaker: {name}")
-        print(f"  State: {stats['state']}")
-        print(f"  Failure Count: {stats['failure_count']}")
-        print(f"  Total Calls: {stats['total_calls']}")
-        print(f"  Total Failures: {stats['total_failures']}")
-        print(f"  Total Rejected: {stats['total_rejected']}")
-        print()
-
-
-# Ê¾Àý 9: ¶ÏÂ·Æ÷ÊÂ¼þ»Øµ÷
-class CircuitBreakerWithCallback(CircuitBreaker):
-    """´ø»Øµ÷µÄ¶ÏÂ·Æ÷"""
-    
-    def __init__(self, *args, on_open=None, on_close=None, on_half_open=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.on_open = on_open
-        self.on_close = on_close
-        self.on_half_open = on_half_open
-    
-    async def record_failure(self, exception: Exception) -> None:
-        """¼ÇÂ¼Ê§°Ü²¢´¥·¢»Øµ÷"""
-        await super().record_failure(exception)
-        
-        if self._state.value == "open" and self.on_open:
-            self.on_open(self.name, self._failure_count)
-    
-    async def record_success(self) -> None:
-        """¼ÇÂ¼³É¹¦²¢´¥·¢»Øµ÷"""
-        old_state = self._state
-        await super().record_success()
-        
-        if old_state.value == "open" and self._state.value == "closed" and self.on_close:
-            self.on_close(self.name)
-        
-        if old_state.value == "half_open" and self._state.value == "closed" and self.on_close:
-            self.on_close(self.name)
-    
-    async def can_execute(self) -> bool:
-        """¼ì²éÊÇ·ñ¿ÉÒÔÖ´ÐÐ²¢´¥·¢»Øµ÷"""
-        result = await super().can_execute()
-        
-        if self._state.value == "half_open" and self.on_half_open:
-            self.on_half_open(self.name)
-        
-        return result
-
-
-# Ê¾Àý 10: Ê¹ÓÃ»Øµ÷¶ÏÂ·Æ÷
-async def example_with_callback():
-    """Ê¹ÓÃ»Øµ÷¶ÏÂ·Æ÷Ê¾Àý"""
-    def on_open(name, count):
-        print(f"Circuit breaker '{name}' opened after {count} failures")
-    
-    def on_close(name):
-        print(f"Circuit breaker '{name}' closed")
-    
-    def on_half_open(name):
-        print(f"Circuit breaker '{name}' half-open")
-    
-    breaker = CircuitBreakerWithCallback(
-        failure_threshold=3,
-        recovery_timeout=10,
-        name="callback_example",
-        on_open=on_open,
-        on_close=on_close,
-        on_half_open=on_half_open,
-    )
-    
-    # Ä£ÄâÊ§°Ü
-    for i in range(4):
-        try:
-            await breaker.execute(lambda: 1/0)
-        except Exception:
-            pass
-    
-    # µÈ´ý»Ö¸´
-    await asyncio.sleep(11)
-    
-    # ³¢ÊÔÖ´ÐÐ
-    try:
-        await breaker.execute(lambda: "success")
-    except Exception:
-        pass
-
-
-if __name__ == "__main__":
-    # ÔËÐÐÊ¾Àý
-    asyncio.run(example_with_callback())
+"""ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½
+
+Õ¹Ê¾ï¿½ï¿½Î½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½Éµï¿½ï¿½ï¿½ï¿½Ðµï¿½ LLM ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½Ð¡ï¿½
+"""
+
+import asyncio
+from typing import Any
+
+from langchain_core.messages import HumanMessage
+
+from app.reliability.circuit_breaker import (
+    CircuitBreaker,
+    CircuitBreakerError,
+    circuit_breaker,
+    wrap_llm_call,
+    llm_circuit_breaker,
+    embedding_circuit_breaker,
+    reranker_circuit_breaker,
+)
+from app.agent.llm import create_llm
+
+
+# Ê¾ï¿½ï¿½ 1: Ê¹ï¿½ï¿½×°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×° LLM ï¿½ï¿½ï¿½ï¿½
+@circuit_breaker(
+    failure_threshold=5,
+    recovery_timeout=60,
+    name="llm_invoke",
+    expected_exceptions=[Exception],
+)
+async def invoke_llm_with_circuit_breaker(
+    llm: Any,
+    messages: list,
+) -> str:
+    """Ê¹ï¿½Ã¶ï¿½Â·ï¿½ï¿½ï¿½ï¿½×°ï¿½ï¿½ LLM ï¿½ï¿½ï¿½ï¿½"""
+    response = await llm.ainvoke(messages)
+    return response.content
+
+
+# Ê¾ï¿½ï¿½ 2: Ê¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¹ï¿½ï¿½ï¿½ï¿½ï¿½
+async def invoke_llm_with_context(
+    llm: Any,
+    messages: list,
+) -> str:
+    """Ê¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ LLM ï¿½ï¿½ï¿½ï¿½"""
+    async with llm_circuit_breaker.context():
+        response = await llm.ainvoke(messages)
+        return response.content
+
+
+# Ê¾ï¿½ï¿½ 3: Ê¹ï¿½ï¿½ wrap_llm_call ï¿½ï¿½×°ï¿½ï¿½ï¿½Ðºï¿½ï¿½ï¿½
+async def invoke_llm_with_wrap(
+    llm: Any,
+    messages: list,
+) -> str:
+    """Ê¹ï¿½ï¿½ wrap_llm_call ï¿½ï¿½×°"""
+    async def _invoke():
+        response = await llm.ainvoke(messages)
+        return response.content
+    
+    return await wrap_llm_call(_invoke, circuit_breaker=llm_circuit_breaker)
+
+
+# Ê¾ï¿½ï¿½ 4: ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+def create_custom_circuit_breaker(
+    name: str,
+    failure_threshold: int = 3,
+    recovery_timeout: int = 30,
+) -> CircuitBreaker:
+    """ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½"""
+    return CircuitBreaker(
+        failure_threshold=failure_threshold,
+        recovery_timeout=recovery_timeout,
+        name=name,
+        expected_exceptions=[Exception],
+    )
+
+
+# Ê¾ï¿½ï¿½ 5: ï¿½ï¿½ï¿½Éµï¿½ï¿½ï¿½ï¿½Ðµï¿½ llm_invoke_with_retry ï¿½ï¿½ï¿½ï¿½
+async def llm_invoke_with_retry_and_circuit_breaker(
+    llm: Any,
+    messages: list,
+    max_retries: int = 3,
+    circuit_breaker: CircuitBreaker = None,
+) -> str:
+    """ï¿½ï¿½ï¿½ï¿½ï¿½ÔºÍ¶ï¿½Â·ï¿½ï¿½ï¿½ï¿½ LLM ï¿½ï¿½ï¿½ï¿½"""
+    if circuit_breaker is None:
+        circuit_breaker = llm_circuit_breaker
+    
+    for attempt in range(max_retries):
+        try:
+            # Ê¹ï¿½Ã¶ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½Ö´ï¿½ï¿½
+            if not await circuit_breaker.can_execute():
+                raise CircuitBreakerError(
+                    f"Circuit breaker '{circuit_breaker.name}' is {circuit_breaker.state.value}"
+                )
+            
+            # Ö´ï¿½ï¿½ LLM ï¿½ï¿½ï¿½ï¿½
+            response = await llm.ainvoke(messages)
+            
+            # ï¿½ï¿½Â¼ï¿½É¹ï¿½
+            await circuit_breaker.record_success()
+            return response.content
+            
+        except CircuitBreakerError:
+            # ï¿½ï¿½Â·ï¿½ï¿½ï¿½ò¿ª£ï¿½Ö±ï¿½ï¿½ï¿½×³ï¿½
+            raise
+            
+        except Exception as e:
+            # ï¿½ï¿½Â¼Ê§ï¿½ï¿½
+            await circuit_breaker.record_failure(e)
+            
+            # ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½Ô£ï¿½ï¿½×³ï¿½ï¿½ì³£
+            if attempt == max_retries - 1:
+                raise
+            
+            # ï¿½È´ï¿½Ò»ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+            await asyncio.sleep(2 ** attempt)
+    
+    raise Exception("Max retries exceeded")
+
+
+# Ê¾ï¿½ï¿½ 6: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½Ä¶ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+async def batch_invoke_with_circuit_breaker(
+    llm: Any,
+    messages_list: list[list],
+    circuit_breaker: CircuitBreaker = None,
+) -> list[str]:
+    """ï¿½ï¿½ï¿½ï¿½ LLM ï¿½ï¿½ï¿½Ã£ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½"""
+    if circuit_breaker is None:
+        circuit_breaker = llm_circuit_breaker
+    
+    results = []
+    
+    for messages in messages_list:
+        try:
+            result = await invoke_llm_with_circuit_breaker(llm, messages)
+            results.append(result)
+        except CircuitBreakerError as e:
+            # ï¿½ï¿½Â·ï¿½ï¿½ï¿½ò¿ª£ï¿½Í£Ö¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+            print(f"Circuit breaker opened: {e}")
+            break
+        except Exception as e:
+            # ï¿½ï¿½ï¿½ï¿½ï¿½ì³£ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+            print(f"LLM call failed: {e}")
+            results.append(None)
+    
+    return results
+
+
+# Ê¾ï¿½ï¿½ 7: ï¿½ï¿½Í¬ï¿½á¹©ï¿½ï¿½Ê¹ï¿½Ã²ï¿½Í¬ï¿½Ä¶ï¿½Â·ï¿½ï¿½
+async def invoke_with_provider_circuit_breaker(
+    provider: str,
+    messages: list,
+) -> str:
+    """ï¿½ï¿½ï¿½ï¿½ï¿½á¹©ï¿½ï¿½Ê¹ï¿½Ã²ï¿½Í¬ï¿½Ä¶ï¿½Â·ï¿½ï¿½"""
+    # ï¿½ï¿½ï¿½ï¿½ï¿½á¹©ï¿½ï¿½ï¿½Ø¶ï¿½ï¿½Ä¶ï¿½Â·ï¿½ï¿½
+    provider_breaker = create_custom_circuit_breaker(
+        name=f"llm_{provider}",
+        failure_threshold=5,
+        recovery_timeout=60,
+    )
+    
+    # ï¿½ï¿½ï¿½ï¿½ LLM Êµï¿½ï¿½
+    llm = create_llm(model=provider)
+    
+    # Ê¹ï¿½Ã¶ï¿½Â·ï¿½ï¿½ï¿½ï¿½×°ï¿½ï¿½ï¿½ï¿½
+    async def _invoke():
+        response = await llm.ainvoke(messages)
+        return response.content
+    
+    return await wrap_llm_call(_invoke, circuit_breaker=provider_breaker)
+
+
+# Ê¾ï¿½ï¿½ 8: ï¿½ï¿½Ø¶ï¿½Â·ï¿½ï¿½×´Ì¬
+async def monitor_circuit_breakers():
+    """ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¶ï¿½Â·ï¿½ï¿½×´Ì¬"""
+    from app.reliability.circuit_breaker import get_all_circuit_breakers
+    
+    breakers = get_all_circuit_breakers()
+    
+    for name, breaker in breakers.items():
+        stats = breaker.stats
+        print(f"Circuit Breaker: {name}")
+        print(f"  State: {stats['state']}")
+        print(f"  Failure Count: {stats['failure_count']}")
+        print(f"  Total Calls: {stats['total_calls']}")
+        print(f"  Total Failures: {stats['total_failures']}")
+        print(f"  Total Rejected: {stats['total_rejected']}")
+        print()
+
+
+# Ê¾ï¿½ï¿½ 9: ï¿½ï¿½Â·ï¿½ï¿½ï¿½Â¼ï¿½ï¿½Øµï¿½
+class CircuitBreakerWithCallback(CircuitBreaker):
+    """ï¿½ï¿½ï¿½Øµï¿½ï¿½Ä¶ï¿½Â·ï¿½ï¿½"""
+    
+    def __init__(self, *args, on_open=None, on_close=None, on_half_open=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.on_open = on_open
+        self.on_close = on_close
+        self.on_half_open = on_half_open
+    
+    async def record_failure(self, exception: Exception) -> None:
+        """ï¿½ï¿½Â¼Ê§ï¿½Ü²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Øµï¿½"""
+        await super().record_failure(exception)
+        
+        if self._state.value == "open" and self.on_open:
+            self.on_open(self.name, self._failure_count)
+    
+    async def record_success(self) -> None:
+        """ï¿½ï¿½Â¼ï¿½É¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Øµï¿½"""
+        old_state = self._state
+        await super().record_success()
+        
+        if old_state.value == "open" and self._state.value == "closed" and self.on_close:
+            self.on_close(self.name)
+        
+        if old_state.value == "half_open" and self._state.value == "closed" and self.on_close:
+            self.on_close(self.name)
+    
+    async def can_execute(self) -> bool:
+        """ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½Ö´ï¿½Ð²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Øµï¿½"""
+        result = await super().can_execute()
+        
+        if self._state.value == "half_open" and self.on_half_open:
+            self.on_half_open(self.name)
+        
+        return result
+
+
+# Ê¾ï¿½ï¿½ 10: Ê¹ï¿½Ã»Øµï¿½ï¿½ï¿½Â·ï¿½ï¿½
+async def example_with_callback():
+    """Ê¹ï¿½Ã»Øµï¿½ï¿½ï¿½Â·ï¿½ï¿½Ê¾ï¿½ï¿½"""
+    def on_open(name, count):
+        print(f"Circuit breaker '{name}' opened after {count} failures")
+    
+    def on_close(name):
+        print(f"Circuit breaker '{name}' closed")
+    
+    def on_half_open(name):
+        print(f"Circuit breaker '{name}' half-open")
+    
+    breaker = CircuitBreakerWithCallback(
+        failure_threshold=3,
+        recovery_timeout=10,
+        name="callback_example",
+        on_open=on_open,
+        on_close=on_close,
+        on_half_open=on_half_open,
+    )
+    
+    # Ä£ï¿½ï¿½Ê§ï¿½ï¿½
+    for i in range(4):
+        try:
+            await breaker.execute(lambda: 1/0)
+        except Exception:
+            pass
+    
+    # ï¿½È´ï¿½ï¿½Ö¸ï¿½
+    await asyncio.sleep(11)
+    
+    # ï¿½ï¿½ï¿½ï¿½Ö´ï¿½ï¿½
+    try:
+        await breaker.execute(lambda: "success")
+    except Exception:
+        pass
+
+
+if __name__ == "__main__":
+    # ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½
+    asyncio.run(example_with_callback())

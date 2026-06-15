@@ -127,6 +127,6 @@ async def list_sessions():
 
 @router.delete("/sessions/{session_id}", response_model=StatusResponse)
 async def delete_session(session_id: str):
-    memory_manager.finalize_scenario(session_id, summary="用户手动清除会话")
+    await asyncio.to_thread(memory_manager.finalize_scenario, session_id, "用户手动清除会话")
     memory_manager.clear_session(session_id)
     return StatusResponse(status="deleted", session_id=session_id)

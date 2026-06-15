@@ -57,9 +57,8 @@ pypdf>=4.0,<6.0
 python-docx>=1.1,<2.0
 openpyxl>=3.1,<4.0
 
-# Evaluation
-deepeval>=4.0,<5.0
-ragas>=0.1,<0.2
+# Evaluation frameworks moved to requirements-dev.txt
+# deepeval, ragas — install with: pip install -r requirements-dev.txt
 
 # PostgreSQL async (Task 2.1)
 sqlalchemy[asyncio]>=2.0,<3.0

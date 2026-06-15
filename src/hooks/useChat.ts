@@ -7,15 +7,13 @@ import {
   saveMessages,
   clearMessages as clearStorage,
 } from "../services/storage";
+import { useSSEBuffer } from "./useSSEBuffer";
 
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
 const SESSION_KEY = "search_session_id";
-
-/** SSE 文本块累积刷新间隔（ms） */
-const FLUSH_INTERVAL = 60;
 
 export function useChat() {
   const [messages, setMessages] = useState<Message[]>(loadMessages);
@@ -28,42 +26,10 @@ export function useChat() {
   const abortControllerRef = useRef<AbortController | null>(null);
   const sendingRef = useRef(false);
   const messagesRef = useRef(messages);
-
-  /** 文本累积缓冲 — 减少 setMessages 频率 */
-  const textBufferRef = useRef<string>("");
   const assistantIdRef = useRef<string>("");
-  const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const scheduleFlush = useCallback(() => {
-    if (flushTimerRef.current) return;
-    flushTimerRef.current = setTimeout(() => {
-      flushTimerRef.current = null;
-      const buf = textBufferRef.current;
-      if (!buf) return;
-      textBufferRef.current = "";
-      const aid = assistantIdRef.current;
-      setMessages((prev) => {
-        const updated = [...prev];
-        const last = updated[updated.length - 1];
-        if (last && last.role === "assistant" && last.id === aid) {
-          updated[updated.length - 1] = {
-            ...last,
-            content: last.content + buf,
-          };
-        }
-        return updated;
-      });
-    }, FLUSH_INTERVAL);
-  }, []);
-
-  const flushNow = useCallback(() => {
-    if (flushTimerRef.current) {
-      clearTimeout(flushTimerRef.current);
-      flushTimerRef.current = null;
-    }
-    const buf = textBufferRef.current;
-    if (!buf) return;
-    textBufferRef.current = "";
+  /** SSE text buffer — delegates to reusable useSSEBuffer hook */
+  const flushTextToMessages = useCallback((text: string) => {
     const aid = assistantIdRef.current;
     setMessages((prev) => {
       const updated = [...prev];
@@ -71,12 +37,15 @@ export function useChat() {
       if (last && last.role === "assistant" && last.id === aid) {
         updated[updated.length - 1] = {
           ...last,
-          content: last.content + buf,
+          content: last.content + text,
         };
       }
       return updated;
     });
   }, []);
+
+  const { append: appendToBuffer, flushNow, scheduleFlush } =
+    useSSEBuffer(flushTextToMessages);
 
   useEffect(() => {
     messagesRef.current = messages;
@@ -100,10 +69,6 @@ export function useChat() {
         abortControllerRef.current.abort();
         abortControllerRef.current = null;
       }
-      if (flushTimerRef.current) {
-        clearTimeout(flushTimerRef.current);
-        flushTimerRef.current = null;
-      }
     };
   }, []);
 
@@ -120,8 +85,7 @@ export function useChat() {
       }
       case "text": {
         const chunk = event.content as string;
-        textBufferRef.current += chunk;
-        scheduleFlush();
+        appendToBuffer(chunk);
         break;
       }
       case "tool_start":
@@ -187,7 +151,7 @@ export function useChat() {
         break;
       }
     }
-  }, [scheduleFlush, flushNow]);
+  }, [appendToBuffer, flushNow]);
 
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim() || sendingRef.current) return;

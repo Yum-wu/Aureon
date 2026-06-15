@@ -6,6 +6,7 @@ Fallback LLM uses `settings.fallback_*` (Zhipu AI).
 """
 
 import os
+import asyncio
 import threading
 
 from langchain_openai import ChatOpenAI
@@ -149,3 +150,12 @@ def llm_invoke_with_fallback(messages, primary=None, fallback=None, **kwargs):
             logger.info("Falling back to %s", settings.fallback_model)
             return llm_invoke_with_retry(fallback, messages)
         raise
+
+
+async def create_llm_async(model: str = None, **kwargs):
+    """Async wrapper for create_llm — safe to call from async routes.
+
+    Wraps the synchronous ChatOpenAI constructor in asyncio.to_thread()
+    to avoid blocking the event loop (FastAPI best practice).
+    """
+    return await asyncio.to_thread(create_llm, model, **kwargs)

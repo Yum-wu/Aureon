@@ -6,7 +6,7 @@ Implements Exact → Semantic → LLM caching strategy:
 - Semantic: Vector similarity search for semantically similar queries
 - LLM: Fallback to actual LLM call
 
-Uses Redis for persistence with in-memory fallback.
+Uses Qdrant for semantic search (HNSW ANN, O(log n)) with Redis fallback.
 Embedding model: BAAI/bge-large-zh-v1.5 (lazy-loaded).
 """
 
@@ -14,16 +14,18 @@ import hashlib
 import json
 import re
 import time
+import uuid
 from collections import OrderedDict
 from typing import Optional, Dict, Any, Tuple, List
 import structlog
 
 logger = structlog.get_logger()
 
-# Sentinel: None = uninitialized, False = unavailable, valid client = ready
-_redis = None
-_redis_fail_count = 0
-_RECONNECT_AFTER = 5  # Retry after N failures
+# Redis connection delegated to redis_client module (single source of truth)
+from app.cache.redis_client import get_redis as _shared_get_redis
+
+# Qdrant semantic cache collection name
+_QDRANT_CACHE_COLLECTION = "semantic_cache"
 
 
 class SemanticLLMCache:
@@ -83,43 +85,96 @@ class SemanticLLMCache:
         # Cache key version (increment to invalidate all caches)
         self._cache_version = "v1"
 
+        # Initialize Qdrant semantic cache collection (non-blocking, best-effort)
+        self._qdrant_ready = self._ensure_qdrant_collection()
+
     def _get_redis(self):
-        """Return Redis client singleton, or False if unavailable.
+        """Return Redis client via shared redis_client module (DRY)."""
+        return _shared_get_redis()
 
-        Retries connection after _RECONNECT_AFTER failures to handle
-        cases where Redis becomes available after app startup.
-        """
-        global _redis, _redis_fail_count
+    def _get_qdrant_client(self):
+        """Return Qdrant client, or None if unavailable."""
+        try:
+            from app.rag.qdrant_ops import _get_qdrant
+            return _get_qdrant()
+        except Exception:
+            return None
 
-        if _redis is not None:
-            return _redis
-
-        # Retry after enough failures
-        if _redis is False and _redis_fail_count < _RECONNECT_AFTER:
+    def _ensure_qdrant_collection(self):
+        """Create Qdrant collection for semantic cache if it doesn't exist."""
+        client = self._get_qdrant_client()
+        if not client:
+            return False
+        try:
+            from qdrant_client.models import VectorParams, Distance
+            collections = [c.name for c in client.get_collections().collections]
+            if _QDRANT_CACHE_COLLECTION not in collections:
+                client.create_collection(
+                    collection_name=_QDRANT_CACHE_COLLECTION,
+                    vectors_config=VectorParams(
+                        size=self.embedding_dim,
+                        distance=Distance.COSINE,
+                    ),
+                )
+                logger.info("Created Qdrant collection: %s", _QDRANT_CACHE_COLLECTION)
+            return True
+        except Exception as e:
+            logger.warning("Qdrant collection init failed (non-fatal): %s", e)
             return False
 
-        if _redis is False:
-            _redis = None  # Reset to retry
-            _redis_fail_count = 0
-
+    def _qdrant_search(self, embedding: List[float], model: str,
+                       temperature: float, max_tokens: int) -> Optional[Tuple[str, float]]:
+        """Search Qdrant for semantically similar cached response (ANN O(log n))."""
+        client = self._get_qdrant_client()
+        if not client:
+            return None
         try:
-            import redis.asyncio as aioredis
-            from app.config import settings
-
-            _redis = aioredis.from_url(
-                settings.redis_url or "redis://localhost:6379/0",
-                decode_responses=True,
-                socket_connect_timeout=2,
-                socket_timeout=2,
+            from qdrant_client.models import Filter, FieldCondition, MatchValue
+            results = client.search(
+                collection_name=_QDRANT_CACHE_COLLECTION,
+                query_vector=embedding,
+                query_filter=Filter(must=[
+                    FieldCondition(key="model", match=MatchValue(value=model)),
+                    FieldCondition(key="temperature", match=MatchValue(value=temperature)),
+                    FieldCondition(key="max_tokens", match=MatchValue(value=max_tokens)),
+                ]),
+                limit=1,
+                score_threshold=self.similarity_threshold,
             )
-            _redis_fail_count = 0
-            logger.info("Semantic cache: Redis connected")
+            if results:
+                return results[0].payload["response"], results[0].score
         except Exception as e:
-            logger.warning("Semantic cache: Redis unavailable (non-fatal): %s", e)
-            _redis = False
-            _redis_fail_count += 1
+            logger.debug("Qdrant semantic search error: %s", e)
+        return None
 
-        return _redis
+    def _qdrant_upsert(self, embedding: List[float], response: str, model: str,
+                       temperature: float, max_tokens: int, query: str, ttl: int) -> bool:
+        """Upsert a cache entry to Qdrant."""
+        client = self._get_qdrant_client()
+        if not client:
+            return False
+        try:
+            from qdrant_client.models import PointStruct
+            point_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, json.dumps(embedding[:8])))
+            client.upsert(
+                collection_name=_QDRANT_CACHE_COLLECTION,
+                points=[PointStruct(
+                    id=point_id,
+                    vector=embedding,
+                    payload={
+                        "response": response,
+                        "model": model,
+                        "temperature": temperature,
+                        "max_tokens": max_tokens,
+                        "query": query[:100],
+                        "expires_at": time.time() + ttl,
+                    },
+                )],
+            )
+            return True
+        except Exception as e:
+            logger.debug("Qdrant upsert error: %s", e)
+            return False
 
     def _load_embedding_model(self):
         """Lazy-load the BGE embedding model on first use.
@@ -393,7 +448,15 @@ class SemanticLLMCache:
             )
             return best_match["response"], best_score
 
-        # Search Redis — batch SCAN + mget to avoid N+1 round-trips
+        # Layer 2a: Qdrant ANN search (O(log n), primary path)
+        if self._qdrant_ready:
+            qdrant_result = self._qdrant_search(embedding, model, temperature, max_tokens)
+            if qdrant_result:
+                self._stats["semantic_hits"] += 1
+                logger.debug("Semantic cache HIT (Qdrant, score=%.3f)", qdrant_result[1])
+                return qdrant_result
+
+        # Layer 2b: Redis SCAN + cosine (fallback when Qdrant unavailable)
         r = self._get_redis()
         if r:
             try:
@@ -509,8 +572,12 @@ class SemanticLLMCache:
             # In-memory semantic cache
             self._mem_semantic_cache[semantic_key] = semantic_data
 
-            # Redis semantic cache
-            if r:
+            # Qdrant semantic store (primary) / Redis fallback
+            if self._qdrant_ready:
+                self._qdrant_upsert(
+                    embedding, response, model, temperature, max_tokens, query, ttl
+                )
+            elif r:
                 try:
                     # Store without embedding in Redis (too large)
                     redis_data = {
