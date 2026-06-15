@@ -9,27 +9,29 @@ logger = structlog.get_logger()
 _fernet = None
 
 
-def _get_fernet():
-    """Lazy-init Fernet cipher. Key from ENCRYPTION_KEY env or auto-generate in dev only."""
-    global _fernet
-    if _fernet is not None:
-        return _fernet
-    try:
-        from cryptography.fernet import Fernet
-        key = os.environ.get("ENCRYPTION_KEY")
-        if not key:
-            from app.config import settings
-            if settings.auth.environment != "dev":
-                raise RuntimeError(
-                    "ENCRYPTION_KEY must be set in production. "
-                    "Generate one with: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
-                )
-            key = Fernet.generate_key()
-            logger.warning("ENCRYPTION_KEY not set, generated ephemeral key (lost on restart) �� dev mode only")
-        _fernet = Fernet(key.encode() if isinstance(key, str) else key)
-    except ImportError:
-        logger.warning("cryptography not installed, secret encryption disabled")
-        _fernet = False
+def _get_fernet():
+    """Lazy-init Fernet cipher. Key from ENCRYPTION_KEY env or auto-generate in dev only."""
+    global _fernet
+    # Note: _fernet may be `False` (sentinel for "cryptography missing"); the
+    # early-return must skip it so the fallback `None` is returned below.
+    if _fernet is not None and _fernet is not False:
+        return _fernet
+    try:
+        from cryptography.fernet import Fernet
+        key = os.environ.get("ENCRYPTION_KEY")
+        if not key:
+            from app.config import settings
+            if settings.auth.environment != "dev":
+                raise RuntimeError(
+                    "ENCRYPTION_KEY must be set in production. "
+                    "Generate one with: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
+                )
+            key = Fernet.generate_key()
+            logger.warning("ENCRYPTION_KEY not set, generated ephemeral key (lost on restart) — dev mode only")
+        _fernet = Fernet(key.encode() if isinstance(key, str) else key)
+    except ImportError:
+        logger.warning("cryptography not installed, secret encryption disabled")
+        _fernet = False
     return _fernet if _fernet is not False else None
 
 
