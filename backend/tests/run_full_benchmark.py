@@ -172,6 +172,7 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 BASE_URL = "https://aureon-production-1247.up.railway.app"
 SAMPLE_N = 15  # 成本优化：30→15，减少 50% LLM 调用
+_API_AUTH_KEY = os.getenv("API_AUTH_KEY", "")  # 生产环境认证 Key
 
 
 def _progress(current: int, total: int, prefix: str = "", suffix: str = "") -> None:
@@ -318,7 +319,8 @@ async def phase1_collect() -> tuple:
 
     semaphore = asyncio.Semaphore(PHASE1_CONCURRENT)
 
-    async with httpx.AsyncClient(timeout=60) as client:
+    _headers = {"X-API-Key": _API_AUTH_KEY} if _API_AUTH_KEY else {}
+    async with httpx.AsyncClient(timeout=60, headers=_headers) as client:
         # 健康检查（带重试）
         health = {}
         for _attempt in range(3):
