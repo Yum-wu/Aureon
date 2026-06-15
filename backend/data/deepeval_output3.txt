@@ -1,0 +1,4 @@
+Judge model: qwen3.6-flash
+Algorithm: DeepEval native FaithfulnessMetric (claim-level NLI)
+
+Dataset: 40 QA pairs

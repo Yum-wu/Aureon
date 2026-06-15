@@ -13,7 +13,7 @@ Phase 3: 汇总 6 维报告 + 对比历史数据
 
 环境变量:
   BENCHMARK_BASE_URL — Railway 端点（默认 https://aureon-production-1247.up.railway.app）
-  BENCHMARK_SAMPLE_N — LLM-as-Judge 采样数（默认 30）
+  BENCHMARK_SAMPLE_N — LLM-as-Judge 采样数（默认 15，成本优化）
 """
 
 import argparse
@@ -38,8 +38,9 @@ sys.path.insert(0, str(BACKEND_DIR))
 from dotenv import load_dotenv
 load_dotenv(BACKEND_DIR / ".env", override=True)
 
-# -- 配置 DeepEval Judge 模型（qwen3.6-flash via DashScope OpenAI-compatible）--
-JUDGE_MODEL = "qwen3.6-flash"
+# -- 配置 DeepEval Judge 模型（deepseek-v4-flash via DashScope OpenAI-compatible）--
+# 成本优化：flash 模型无 thinking 模式，output_token 成本低
+JUDGE_MODEL = "deepseek-v4-flash"
 _llm_api_key = os.getenv("LLM_API_KEY", "")
 _llm_base_url = os.getenv("LLM_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
 os.environ["OPENAI_API_KEY"] = _llm_api_key
@@ -52,11 +53,10 @@ PHASE1_CONCURRENT = 3  # Railway 采集并发数（避免打爆生产服务）
 
 
 class _QwenDashScopeJudge:
-    """qwen3.6-flash wrapper，解决 thinking 模式 JSON 解析问题。
+    """deepseek-v4-flash wrapper（无 thinking 模式，JSON 解析稳定）。
 
-    DashScope qwen3.6-flash 输出可能包含 <think>...</think> 标签，
-    DeepEval 原生 OpenAI 客户端无法剥离，导致 JSON 解析失败。
-    此 wrapper 通过后处理：剥离 thinking 标签 → 提取 JSON → 重试。
+    通过 DashScope OpenAI-compatible API 调用。
+    flash 模型输出不含 <think> 标签，但仍保留重试 + JSON 提取逻辑以防异常。
     """
 
     def __init__(self):
@@ -171,7 +171,7 @@ DATA_DIR = BACKEND_DIR / "data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 BASE_URL = "https://aureon-production-1247.up.railway.app"
-SAMPLE_N = 30
+SAMPLE_N = 15  # 成本优化：30→15，减少 50% LLM 调用
 
 
 def _progress(current: int, total: int, prefix: str = "", suffix: str = "") -> None:
@@ -235,7 +235,7 @@ async def _fetch_one(client, qa, semaphore, counter, total, results, latencies):
                             {"title": s.get("title", ""), "slug": s.get("slug", ""),
                              "score": s.get("score", 0),
                              "chunk_text": s.get("chunk_text_snippet", s.get("chunk", ""))}
-                            for s in data.get("sources", [])[:5]
+                            for s in data.get("sources", [])[:3]
                         ],
                         "latency_ms": round(latency_ms),
                         "is_negative": is_negative,

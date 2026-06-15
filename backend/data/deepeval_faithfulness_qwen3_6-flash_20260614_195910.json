@@ -1,0 +1,205 @@
+{
+  "judge_model": "qwen3.6-flash",
+  "algorithm": "deepeval_native_claim_level_nli",
+  "faithfulness": 1.0,
+  "passed": 39,
+  "total": 39,
+  "elapsed_s": 157,
+  "details": [
+    {
+      "index": 8,
+      "score": 1.0,
+      "reason": "The score is 1.00 because the actual output perfectly aligns with the retrieval context, demonstrating complete faithfulness and flawless accuracy!"
+    },
+    {
+      "index": 7,
+      "score": 1.0,
+      "reason": "The score is 1.00 because the actual output contains zero contradictions and perfectly aligns with the retrieval context. Excellent work maintaining complete faithfulness!"
+    },
+    {
+      "index": 9,
+      "score": 1.0,
+      "reason": "The score is 1.00 because the contradiction list is empty, confirming that the actual output perfectly aligns with the retrieval context. Excellent work!"
+    },
+    {
+      "index": 3,
+      "score": 1.0,
+      "reason": "The score is 1.00 because the actual output perfectly aligns with the retrieval context, with no contradictions detected. Excellent work maintaining complete faithfulness!"
+    },
+    {
+      "index": 0,
+      "score": 1.0,
+      "reason": "The score is 1.00 because the actual output aligns perfectly with the retrieval context, demonstrating complete faithfulness with zero contradictions. Excellent work!"
+    },
+    {
+      "index": 2,
+      "score": 1.0,
+      "reason": "The score is 1.00 because the actual output contains no contradictions and perfectly aligns with the retrieval context, showcasing excellent faithfulness and accuracy. Keep up the great work!"
+    },
+    {
+      "index": 1,
+      "score": 1.0,
+      "reason": "The score is 1.00 because the contradictions list is empty, confirming that the actual output perfectly aligns with the retrieval context. Excellent work!"
+    },
+    {
+      "index": 6,
+      "score": 1.0,
+      "reason": "The score is 1.00 because the contradictions list is empty, meaning the actual output aligns flawlessly with the retrieval context. Fantastic job producing a completely faithful response!"
+    },
+    {
+      "index": 4,
+      "score": 1.0,
+      "reason": "The score is 1.00 because the contradictions list is entirely empty, meaning the actual output flawlessly aligns with every detail in the retrieval context. Outstanding work maintaining perfect fideli"
+    },
+    {
+      "index": 5,
+      "score": 1.0,
+      "reason": "The score is 1.00 because there are no contradictions present, meaning the actual output aligns perfectly with the retrieval context. Excellent work!"
+    },
+    {
+      "index": 10,
+      "score": 1.0,
+      "reason": "The score is 1.00 because there are no contradictions, meaning the actual output perfectly aligns with the retrieval context. Excellent work!"
+    },
+    {
+      "index": 11,
+      "score": 1.0,
+      "reason": "The score is 1.00 because there are no contradictions, meaning the actual output perfectly and faithfully aligns with the retrieval context. Excellent work!"
+    },
+    {
+      "index": 12,
+      "score": 1.0,
+      "reason": "The score is 1.00 because the actual output perfectly aligns with the retrieval context with absolutely no contradictions, demonstrating complete faithfulness. Excellent work!"
+    },
+    {
+      "index": 13,
+      "score": 1.0,
+      "reason": "The score is 1.00 because the actual output perfectly aligns with the retrieval context without any contradictions, demonstrating complete faithfulness. Excellent work!"
+    },
+    {
+      "index": 14,
+      "score": 1.0,
+      "reason": "The score is 1.00 because the actual output aligns perfectly with the retrieval context, demonstrating complete faithfulness with zero contradictions."
+    },
+    {
+      "index": 16,
+      "score": 1.0,
+      "reason": "The score is 1.00 because the actual output aligns flawlessly with the retrieval context, with zero contradictions detected. Excellent work maintaining complete faithfulness!"
+    },
+    {
+      "index": 18,
+      "score": 1.0,
+      "reason": "The score is 1.00 because there are no contradictions, indicating that the actual output aligns perfectly and faithfully with the retrieval context. Excellent work!"
+    },
+    {
+      "index": 15,
+      "score": 1.0,
+      "reason": "The score is 1.00 because there are no contradictions present, indicating that the actual output aligns perfectly with the retrieval context. The response accurately reflects all provided information "
+    },
+    {
+      "index": 19,
+      "score": 1.0,
+      "reason": "The score is 1.00 because the actual output perfectly aligns with the retrieval context, with absolutely no contradictions found. Excellent work maintaining complete faithfulness!"
+    },
+    {
+      "index": 17,
+      "score": 1.0,
+      "reason": "The score is 1.00 because there are no contradictions, meaning the actual output perfectly aligns with the retrieval context. Excellent work!"
+    },
+    {
+      "index": 20,
+      "score": 1.0,
+      "reason": "The score is 1.00 because there are no contradictions present, indicating the actual output flawlessly aligns with the retrieval context. Fantastic result!"
+    },
+    {
+      "index": 24,
+      "score": 1.0,
+      "reason": "The score is 1.00 because there are no contradictions present, meaning the actual output perfectly and faithfully aligns with every detail in the retrieval context. Excellent work!"
+    },
+    {
+      "index": 26,
+      "score": 1.0,
+      "reason": "The score is 1.00 because there are no contradictions, meaning the actual output flawlessly aligns with the retrieval context. Fantastic job maintaining perfect accuracy and faithfulness!"
+    },
+    {
+      "index": 22,
+      "score": 1.0,
+      "reason": "The score is 1.00 because there are no contradictions between the actual output and the retrieval context, indicating a perfectly faithful and accurate response. Excellent work maintaining complete al"
+    },
+    {
+      "index": 25,
+      "score": 1.0,
+      "reason": "The score is 1.00 because the contradiction list is completely empty, indicating that the actual output perfectly aligns with the retrieval context without any discrepancies. Excellent work!"
+    },
+    {
+      "index": 21,
+      "score": 1.0,
+      "reason": "The score is 1.00 because the contradiction list is completely empty, indicating that the actual output perfectly aligns with the retrieval context without any discrepancies. Excellent work!"
+    },
+    {
+      "index": 23,
+      "score": 1.0,
+      "reason": "The score is 1.00 because there are no contradictions, meaning the actual output flawlessly aligns with and faithfully represents all the information in the retrieval context. Excellent work!"
+    },
+    {
+      "index": 27,
+      "score": 1.0,
+      "reason": "The score is 1.00 because there are no contradictions, meaning the actual output perfectly aligns with and faithfully represents all the information in the retrieval context. Excellent work!"
+    },
+    {
+      "index": 29,
+      "score": 1.0,
+      "reason": "The score is 1.00 because there are no contradictions between the actual output and the retrieval context, indicating a perfectly faithful response. Excellent work maintaining complete alignment with "
+    },
+    {
+      "index": 28,
+      "score": 1.0,
+      "reason": "The score is 1.00 because there are no contradictions, meaning the actual output aligns perfectly with the retrieval context. Excellent work!"
+    },
+    {
+      "index": 30,
+      "score": 1.0,
+      "reason": "The score is 1.00 because there are no contradictions, meaning the actual output perfectly aligns with the retrieval context without any discrepancies. Excellent work maintaining complete accuracy!"
+    },
+    {
+      "index": 31,
+      "score": 1.0,
+      "reason": "The score is 1.00 because the actual output contains no contradictions and perfectly aligns with the retrieval context, demonstrating excellent faithfulness. Keep up the fantastic work!"
+    },
+    {
+      "index": 36,
+      "score": 1.0,
+      "reason": "The score is 1.00 because there are no contradictions between the actual output and the retrieval context, indicating perfect alignment and accurate representation of the provided information. Excelle"
+    },
+    {
+      "index": 34,
+      "score": 1.0,
+      "reason": "The score is 1.00 because the contradictions list is empty, confirming that the actual output flawlessly aligns with the retrieval context without any discrepancies. Outstanding performance!"
+    },
+    {
+      "index": 35,
+      "score": 1.0,
+      "reason": "The score is 1.00 because the actual output perfectly aligns with the retrieval context, with zero contradictions detected. The response demonstrates excellent faithfulness and accuracy, making it a h"
+    },
+    {
+      "index": 33,
+      "score": 1.0,
+      "reason": "The score is 1.00 because there are no contradictions between the actual output and the retrieval context, indicating a perfectly faithful and accurate response. Excellent work!"
+    },
+    {
+      "index": 38,
+      "score": 1.0,
+      "reason": "The score is 1.00 because there are no contradictions between the actual output and the retrieval context, indicating perfect alignment and accurate representation of the provided information. Excelle"
+    },
+    {
+      "index": 32,
+      "score": 1.0,
+      "reason": "The score is 1.00 because there are no contradictions, indicating that the actual output aligns perfectly with the retrieval context. Excellent work!"
+    },
+    {
+      "index": 37,
+      "score": 1.0,
+      "reason": "The score is 1.00 because the contradictions list is completely empty, meaning the actual output perfectly aligns with the retrieval context without any discrepancies. Exceptional accuracy and complet"
+    }
+  ]
+}

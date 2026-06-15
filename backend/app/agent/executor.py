@@ -1,4 +1,4 @@
-import json
+import asyncio
 import uuid
 from typing import AsyncGenerator
 
@@ -17,16 +17,16 @@ async def stream_agent(
     session_id: str | None = None,
     chat_history: list | None = None,
     memory_context: str | None = None,
-) -> AsyncGenerator[str, None]:
-    """Stream agent response as SSE events.
+) -> AsyncGenerator[dict, None]:
+    """Stream agent response as structured event dicts.
 
-    Yields SSE-formatted strings: 'data: {...}\n\n'
+    Yields dict objects with ``type`` and ``content`` keys.
+    Callers are responsible for SSE serialization via ``sse_event()``.
     """
     if session_id is None:
         session_id = str(uuid.uuid4())
-        yield sse_event({"type": "session", "content": {"session_id": session_id}})
-    else:
-        yield sse_event({"type": "session", "content": {"session_id": session_id}})
+
+    yield {"type": "session", "content": {"session_id": session_id}}
 
     chat_history = chat_history or []
     messages = list(chat_history)
@@ -51,23 +51,23 @@ async def stream_agent(
             if kind == "on_chat_model_stream":
                 chunk = event["data"]["chunk"]
                 if chunk.content:
-                    yield sse_event({"type": "text", "content": chunk.content})
+                    yield {"type": "text", "content": chunk.content}
 
             elif kind == "on_tool_start":
                 name = event.get("name", "")
                 tool_input = event["data"].get("input", {})
-                yield sse_event({"type": "tool_start", "content": {"tool": name, "args": tool_input}})
+                yield {"type": "tool_start", "content": {"tool": name, "args": tool_input}}
 
             elif kind == "on_tool_end":
                 name = event.get("name", "")
                 output = event["data"].get("output", "")
-                yield sse_event({"type": "tool_end", "content": {"tool": name, "result": str(output)}})
+                yield {"type": "tool_end", "content": {"tool": name, "result": str(output)}}
 
     except Exception as e:
         logger.error("Agent stream error: %s", e, exc_info=True)
-        yield sse_event({"type": "error", "content": {"message": "An internal error occurred while processing your request."}})
+        yield {"type": "error", "content": {"message": "An internal error occurred while processing your request."}}
 
-    yield sse_event({"type": "done", "content": None})
+    yield {"type": "done", "content": None}
 
 
 async def stream_agent_with_memory(
@@ -78,52 +78,46 @@ async def stream_agent_with_memory(
 ) -> AsyncGenerator[str, None]:
     """Stream agent response with automatic post-stream memory recording.
 
-    Wraps stream_agent() and intercepts SSE events to:
+    Wraps stream_agent() and intercepts structured event dicts to:
     1. Track session_id (may change if new)
     2. Collect full assistant response text
     3. On 'done' event: record user + assistant messages to L0,
        then trigger L1 atom extraction asynchronously.
 
-    All parse errors are logged at WARNING level (not silently dropped).
-    If full_response is empty after 'done', a warning is emitted.
+    Yields SSE-formatted strings (serialization happens here).
     """
     sid = session_id
     full_response = ""
 
-    async for event_str in stream_agent(
+    memory_context = (
+        await asyncio.to_thread(memory_manager.get_context, sid)
+        if memory_manager else None
+    )
+
+    async for event in stream_agent(
         agent_graph, user_message, sid,
-        memory_context=memory_manager.get_context(sid) if memory_manager else None,
+        memory_context=memory_context,
     ):
-        yield event_str
-        try:
-            prefix = "data: "
-            if not event_str.startswith(prefix):
-                continue
-            event = json.loads(event_str[len(prefix):].strip())
-            evt_type = event.get("type", "")
+        # Serialize to SSE string for the HTTP layer
+        yield sse_event(event)
 
-            if evt_type == "session":
-                sid = event["content"]["session_id"]
+        evt_type = event.get("type", "")
 
-            elif evt_type == "text":
-                full_response += event.get("content", "")
+        if evt_type == "session":
+            sid = event["content"]["session_id"]
 
-            elif evt_type == "done" and sid and memory_manager:
-                if not full_response.strip():
-                    logger.warning(f"Memory: empty assistant response for session {sid}")
+        elif evt_type == "text":
+            full_response += event.get("content", "")
 
-                memory_manager.record_message(sid, "user", user_message)
-                memory_manager.record_message(sid, "assistant", full_response)
-                try:
-                    await memory_manager.extract_atoms(sid)
-                except Exception as e:
-                    logger.warning(f"Atom extraction failed for session {sid}: {e}")
+        elif evt_type == "done" and sid and memory_manager:
+            if not full_response.strip():
+                logger.warning(f"Memory: empty assistant response for session {sid}")
 
-        except json.JSONDecodeError as e:
-            logger.warning(f"Memory: SSE JSON parse failed: {e} | raw={event_str[:120]}")
-        except KeyError as e:
-            logger.warning(f"Memory: missing field in SSE event: {e} | raw={event_str[:120]}")
-        except Exception as e:
-            logger.warning(f"Memory: unexpected error during recording: {e}")
+            await asyncio.to_thread(memory_manager.record_message, sid, "user", user_message)
+            await asyncio.to_thread(memory_manager.record_message, sid, "assistant", full_response)
+            try:
+                await memory_manager.extract_atoms(sid)
+            except Exception as e:
+                logger.warning(f"Atom extraction failed for session {sid}: {e}")
 
 

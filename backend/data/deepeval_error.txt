@@ -1,0 +1,25 @@
+Traceback (most recent call last):
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\tests\run_deepeval_faithfulness.py", line 160, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\tests\run_deepeval_faithfulness.py", line 51, in main
+    llm = create_llm()
+  File "C:\Users\Yum\Desktop\Aureon-test\backend\tests\..\app\agent\llm.py", line 87, in create_llm
+    llm = ChatOpenAI(
+        model=settings.llm_model,
+    ...<7 lines>...
+        extra_body=extra_body,
+    )
+  File "D:\Python3.14\Lib\site-packages\langchain_core\load\serializable.py", line 118, in __init__
+    super().__init__(*args, **kwargs)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "D:\Python3.14\Lib\site-packages\pydantic\main.py", line 263, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+  File "D:\Python3.14\Lib\site-packages\langchain_openai\chat_models\base.py", line 1235, in validate_environment
+    self.root_client = openai.OpenAI(**client_params, **sync_specific)  # type: ignore[arg-type]
+                       ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Python3.14\Lib\site-packages\openai\_client.py", line 194, in __init__
+    raise OpenAIError(
+        "Missing credentials. Please pass an `api_key`, `workload_identity`, `admin_api_key`, or set the `OPENAI_API_KEY` or `OPENAI_ADMIN_KEY` environment variable."
+    )
+openai.OpenAIError: Missing credentials. Please pass an `api_key`, `workload_identity`, `admin_api_key`, or set the `OPENAI_API_KEY` or `OPENAI_ADMIN_KEY` environment variable.

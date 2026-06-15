@@ -1,0 +1,10 @@
+# Development / Evaluation dependencies (NOT included in production Docker image)
+# Install with: pip install -r requirements-dev.txt
+
+# Evaluation frameworks
+deepeval>=4.0,<5.0
+ragas>=0.1,<0.2
+
+# Test coverage
+pytest-cov>=5.0,<6.0
+pytest-timeout>=2.3,<3.0

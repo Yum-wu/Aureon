@@ -7,6 +7,7 @@ from app.memory import l1_atom
 from app.memory import l2_scenario
 from app.memory import l3_persona
 from app.memory import offload
+from app.memory.storage import get_backend
 
 logger = structlog.get_logger()
 
@@ -51,20 +52,23 @@ class MemoryManager:
 
     def record_message(self, session_id: str, role: str, content: str, tokens: int = 0,
                        tool_name: str | None = None, tool_args: str | None = None):
-        l0_conversation.record_message(session_id, role, content, tokens, tool_name, tool_args)
-        l0_conversation.cleanup_oldest(session_id)
+        backend = get_backend()
+        backend.record_message(session_id, role, content, tokens, tool_name, tool_args)
+        backend.cleanup_oldest(session_id)
         self.touch_session(session_id)
 
     async def extract_atoms(self, session_id: str):
-        messages = l0_conversation.get_conversation(session_id, limit=10)
+        backend = get_backend()
+        messages = await asyncio.to_thread(backend.get_conversation, session_id, 10)
         if not messages:
             return
         user_msgs = [m for m in messages if m["role"] == "user"]
         if user_msgs:
             last = user_msgs[-1]
-            l1_atom.save_atom(
-                session_id, subject="user", predicate="said",
-                obj=last["content"][:100], source_ref=last["id"], confidence=0.3,
+            await asyncio.to_thread(
+                backend.save_atom,
+                session_id, "user", "said",
+                last["content"][:100], last["id"], 0.3,
             )
 
     # ── Scenario / Persona ──
@@ -111,7 +115,7 @@ class MemoryManager:
                     if idle_seconds > _INACTIVE_TIMEOUT:
                         logger.info(f"Auto-finalizing inactive session {sid} (idle={idle_seconds:.0f}s)")
                         try:
-                            self.finalize_scenario(sid, summary="会话因超时而结束")
+                            await asyncio.to_thread(self.finalize_scenario, sid, "会话因超时而结束")
                         except Exception as e:
                             logger.error(f"Auto-finalize failed for {sid}: {e}")
                         self._sessions.pop(sid, None)

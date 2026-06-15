@@ -57,7 +57,7 @@ class VectorStoreSettings(BaseModel):
     low_score_threshold: float = 0.004
     negative_detection_enabled: bool = True
     context_compression_enabled: bool = True
-    context_compression_threshold: float = 0.15
+    context_compression_threshold: float = 0.25
     kw_min_raw_score: float = 0.15
     stats_cache_ttl: float = 60.0
     hyde_enabled: bool = False

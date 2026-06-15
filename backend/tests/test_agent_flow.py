@@ -175,7 +175,7 @@ class TestStreamAgent:
         async for evt in stream_agent(graph, "hi"):
             events.append(evt)
 
-        first = json.loads(events[0][len("data: "):].strip())
+        first = events[0]
         assert first["type"] == "session"
         assert "session_id" in first["content"]
 
@@ -188,7 +188,7 @@ class TestStreamAgent:
         async for evt in stream_agent(graph, "hi"):
             events.append(evt)
 
-        last = json.loads(events[-1][len("data: "):].strip())
+        last = events[-1]
         assert last["type"] == "done"
 
     @pytest.mark.asyncio
@@ -203,11 +203,7 @@ class TestStreamAgent:
         async for evt in stream_agent(graph, "hi"):
             events.append(evt)
 
-        text_events = [
-            json.loads(e[len("data: "):].strip())
-            for e in events
-            if '"text"' in e
-        ]
+        text_events = [e for e in events if e.get("type") == "text"]
         assert len(text_events) == 2
         assert text_events[0]["content"] == "Hello "
         assert text_events[1]["content"] == "world"
@@ -225,8 +221,7 @@ class TestStreamAgent:
         async for evt in stream_agent(graph, "what is 6*7"):
             events.append(evt)
 
-        parsed = [json.loads(e[len("data: "):].strip()) for e in events]
-        types = [p["type"] for p in parsed]
+        types = [e["type"] for e in events]
         assert "tool_start" in types
         assert "tool_end" in types
 
@@ -239,7 +234,7 @@ class TestStreamAgent:
         async for evt in stream_agent(graph, "hi", session_id="my-session"):
             events.append(evt)
 
-        first = json.loads(events[0][len("data: "):].strip())
+        first = events[0]
         assert first["content"]["session_id"] == "my-session"
 
     @pytest.mark.asyncio
@@ -257,8 +252,7 @@ class TestStreamAgent:
         async for evt in stream_agent(graph, "crash"):
             events.append(evt)
 
-        parsed = [json.loads(e[len("data: "):].strip()) for e in events]
-        types = [p["type"] for p in parsed]
+        types = [e["type"] for e in events]
         assert "error" in types
 
     @pytest.mark.asyncio
