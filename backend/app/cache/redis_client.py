@@ -110,6 +110,56 @@ _redis_fail_count = 0
 _RECONNECT_AFTER = 5  # Retry reconnect after N consecutive failures
 
 
+# ── 同步 Redis 连接池（供后台线程使用，如 embedding 缓存） ──
+_sync_redis_pool = None
+_sync_redis_fail_count = 0
+_SYNC_RECONNECT_AFTER = 5
+
+
+def get_sync_redis():
+    """返回同步 Redis 客户端单例（连接池复用），或 None 如果不可用。
+
+    用于后台线程（如 embed_texts_llm）中无法 await 异步客户端的场景。
+    使用 ConnectionPool 复用 TCP 连接，避免每次操作创建新连接。
+
+    线程安全：redis-py 的 Redis + ConnectionPool 本身是线程安全的。
+    """
+    global _sync_redis_pool, _sync_redis_fail_count
+    if _sync_redis_pool is not None:
+        return _sync_redis_pool
+    if _sync_redis_fail_count >= _SYNC_RECONNECT_AFTER:
+        return None
+    try:
+        import redis as redis_sync
+        from app.config import settings
+        pool = redis_sync.ConnectionPool.from_url(
+            settings.redis_url or "redis://localhost:6379/0",
+            decode_responses=False,
+            socket_connect_timeout=2,
+            socket_timeout=2,
+            max_connections=10,
+        )
+        _sync_redis_pool = redis_sync.Redis(connection_pool=pool)
+        _sync_redis_fail_count = 0
+        logger.info("Sync Redis connected (connection pool, max_connections=10)")
+    except Exception as e:
+        _sync_redis_fail_count += 1
+        if _sync_redis_fail_count <= 3 or _sync_redis_fail_count % 100 == 0:
+            logger.warning("Sync Redis unavailable (fail #%d): %s", _sync_redis_fail_count, e)
+    return _sync_redis_pool
+
+
+def close_sync_redis():
+    """关闭同步 Redis 连接池，在应用 shutdown 时调用。"""
+    global _sync_redis_pool
+    if _sync_redis_pool is not None:
+        try:
+            _sync_redis_pool.connection_pool.disconnect()
+        except Exception:
+            pass
+        _sync_redis_pool = None
+
+
 def _get_redis():
     """Return Redis client singleton, or False if unavailable.
 

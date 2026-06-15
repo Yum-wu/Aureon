@@ -14,7 +14,7 @@ from app.config import settings
 from app.memory.db import init_db, close_db
 from app.memory.manager import manager as memory_manager
 from app.memory.storage import get_backend
-from app.cache.redis_client import close_redis
+from app.cache.redis_client import close_redis, close_sync_redis
 from app.startup.warmup import warmup_bm25
 
 logger = structlog.get_logger()
@@ -103,3 +103,4 @@ async def lifespan(app: FastAPI):
     backend.close()
     close_db()
     await close_redis()
+    close_sync_redis()

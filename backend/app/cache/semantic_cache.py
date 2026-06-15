@@ -177,45 +177,18 @@ class SemanticLLMCache:
             return False
 
     def _load_embedding_model(self):
-        """Lazy-load the BGE embedding model on first use.
+        """Lazy-load embedding model on first use.
 
+        API-only mode: uses embed_texts_llm from vector_store.
+        Local model loading has been removed.
         """
         if self._embedding_model_loaded:
-            # API 模式或本地模型已加载
-            return self._embedding_model is not None or getattr(self, '_use_api_embed', False)
+            return getattr(self, '_use_api_embed', False)
 
         # API-only mode: no local model
         self._use_api_embed = True
         self._embedding_model_loaded = True
         return True
-
-        try:
-            from sentence_transformers import SentenceTransformer
-
-            logger.info(
-                "Loading embedding model: %s (this may take a moment)",
-                self.embedding_model_name,
-            )
-            self._embedding_model = SentenceTransformer(self.embedding_model_name)
-            self._embedding_model_loaded = True
-            logger.info("Embedding model loaded successfully")
-            return True
-        except ImportError:
-            logger.warning(
-                "sentence-transformers not installed. "
-                "Semantic cache will fallback to exact match only. "
-                "Install with: pip install sentence-transformers"
-            )
-            self._embedding_model_loaded = True
-            return False
-        except Exception as e:
-            logger.error(
-                "Failed to load embedding model %s: %s",
-                self.embedding_model_name,
-                e,
-            )
-            self._embedding_model_loaded = True
-            return False
 
     def _get_embedding(self, text: str) -> Optional[List[float]]:
         """Generate embedding vector for text.

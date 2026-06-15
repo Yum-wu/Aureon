@@ -282,10 +282,7 @@ class EnsembleReranker:
         reranker_type, config = reranker
 
         try:
-            if reranker_type == "gpu":
-                # GPU-accelerated reranker
-                return self._rerank_with_gpu(config, query, documents)
-            elif reranker_type == "cpu":
+            if reranker_type == "cpu":
                 # CPU reranker (lazy-load CrossEncoder)
                 return await self._rerank_with_cpu(config, query, documents)
             elif reranker_type == "api":
@@ -297,18 +294,6 @@ class EnsembleReranker:
         except Exception as e:
             logger.warning("Reranker %s failed: %s", name, e)
             return None
-
-    def _rerank_with_gpu(
-        self,
-        config: Any,
-        query: str,
-        documents: List[Dict[str, Any]],
-    ) -> np.ndarray:
-        """Rerank using GPU-accelerated cross-encoder."""
-        reranker = config["reranker"]
-        pairs = [(query, doc["text"]) for doc in documents]
-        scores = reranker._model.predict(pairs)
-        return np.array(scores, dtype=np.float32)
 
     async def _rerank_with_cpu(
         self,
