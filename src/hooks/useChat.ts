@@ -44,7 +44,7 @@ export function useChat() {
     });
   }, []);
 
-  const { append: appendToBuffer, flushNow, scheduleFlush } =
+  const { append: appendToBuffer, flushNow } =
     useSSEBuffer(flushTextToMessages);
 
   useEffect(() => {

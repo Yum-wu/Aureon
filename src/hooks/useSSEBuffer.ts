@@ -18,7 +18,10 @@ export function useSSEBuffer(
   const bufferRef = useRef("");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onFlushRef = useRef(onFlush);
-  onFlushRef.current = onFlush;
+
+  useEffect(() => {
+    onFlushRef.current = onFlush;
+  }, [onFlush]);
 
   const flushNow = useCallback(() => {
     if (timerRef.current) {
