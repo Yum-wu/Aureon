@@ -116,12 +116,12 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     });
 
     ws.onMessage('sources', (msg) => {
-      setSources(msg.sources || []);
+      setSources((msg.sources as SourceItem[]) || []);
     });
 
     ws.onMessage('text', (msg) => {
       setIsStreaming(true);
-      streamingTextRef.current += msg.content || '';
+      streamingTextRef.current += (msg.content as string) || '';
       setStreamingText(streamingTextRef.current);
     });
 
@@ -134,7 +134,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
         ...prev,
         {
           role: 'assistant',
-          content: msg.full_response || '',
+          content: (msg.full_response as string) || '',
           sources: [],
           timestamp: new Date(),
         },
@@ -142,7 +142,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     });
 
     ws.onMessage('error', (msg) => {
-      setError(msg.message || 'Unknown error');
+      setError((msg.message as string) || 'Unknown error');
       setIsStreaming(false);
     });
 
