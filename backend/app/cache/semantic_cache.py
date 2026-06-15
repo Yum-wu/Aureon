@@ -179,21 +179,15 @@ class SemanticLLMCache:
     def _load_embedding_model(self):
         """Lazy-load the BGE embedding model on first use.
 
-        Skips loading if SKIP_LOCAL_EMBED=true (recommended for Railway/CPU).
-        When SKIP_LOCAL_EMBED=true, uses API embedding fallback instead.
         """
         if self._embedding_model_loaded:
             # API 模式或本地模型已加载
             return self._embedding_model is not None or getattr(self, '_use_api_embed', False)
 
-        # Check if local embedding is disabled (e.g., Railway with limited memory)
-        from app.config import settings
-        skip_local = settings.skip_local_embed
-        if skip_local:
-            logger.info("Using API embedding for semantic cache (SKIP_LOCAL_EMBED=true)")
-            self._use_api_embed = True
-            self._embedding_model_loaded = True
-            return True  # 标记为已加载，但使用 API
+        # API-only mode: no local model
+        self._use_api_embed = True
+        self._embedding_model_loaded = True
+        return True
 
         try:
             from sentence_transformers import SentenceTransformer

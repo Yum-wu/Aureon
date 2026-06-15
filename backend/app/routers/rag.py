@@ -566,7 +566,6 @@ async def rag_experiment_endpoint():
 @router.get("/health")
 async def rag_health():
     """RAG system health + live service status."""
-    from app.rag.vector_store import get_bm25_stats, _skip_local_embed
 
     bm25 = get_bm25_stats()
 
@@ -596,7 +595,6 @@ async def rag_health():
         "bm25_min_raw": bm25.get("min_raw_score", 0),
         "bm25_idf_samples": bm25.get("sample_idf", {}),
         "embedding_providers": embed_providers,
-        "skip_local_embed": _skip_local_embed,
         "hybrid_search_enabled": True,
         "guardrails_enabled": True,
         "langsmith_enabled": bool(

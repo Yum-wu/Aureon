@@ -48,7 +48,6 @@ def get_system_config() -> dict:
         "llm_model": settings.llm_model,
         "llm_base_url": settings.llm_base_url,
         "vector_backend": settings.vector_backend,
-        "skip_local_embed": os.getenv("SKIP_LOCAL_EMBED", "").lower() in ("1", "true", "yes"),
     }
 
 

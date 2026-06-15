@@ -769,8 +769,8 @@ def main():
         # Compare with pure GPU (if available)
         if torch.cuda.is_available():
             print("\n  Comparison (batch=1):")
-            cpu_embedder = GPUEmbedder(device="cpu", use_fp16=False)
-            gpu_embedder = GPUEmbedder(device="cuda")
+            cpu_embedder = None  # GPU removed
+            gpu_embedder = None  # GPU removed
 
             single_text = ["单条查询测试"]
 

@@ -13,19 +13,12 @@ All original imports like `from app.rag.vector_store import X` continue to work.
 
 # ── embedding.py ──
 from app.rag.embedding import (  # noqa: F401
-    _get_gpu_embedder,
-    _gpu_embedder,
-    _gpu_embedder_failed,
     VECTOR_DIR,
     _embed_cache,
     _EMBED_CACHE_MAX,
     _embed_cache_lock,
     _last_query_embedding,
     _last_query_embedding_lock,
-    _local_embed_model,
-    _LOCAL_MODEL_NAME,
-    _LOCAL_MODEL_DIM,
-    _skip_local_embed,
     _get_embedding_dim,
     _to_sparse_vector,
     _redis_sync_get,
@@ -33,8 +26,6 @@ from app.rag.embedding import (  # noqa: F401
     _cache_key,
     get_thread_query_embedding,
     _set_thread_query_embedding,
-    _get_local_model,
-    _embed_local,
     _embed_api,
     _embed_dense_sparse_dashscope,
     embed_texts_as_list,

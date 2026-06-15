@@ -227,31 +227,7 @@ def compress_context(query: str, chunks: List[Dict[str, Any]], threshold: float 
 
 
 
-            embeddings = None
-
-            from app.rag.vector_store import _skip_local_embed
-
-            if not _skip_local_embed:
-
-                try:
-
-                    from app.rag.vector_store import _get_gpu_embedder
-
-                    gpu_embedder = _get_gpu_embedder()
-
-                    if gpu_embedder is not None:
-
-                        embeddings = gpu_embedder.encode(chunk_texts, batch_size=len(chunk_texts))
-
-                except Exception:
-
-                    pass
-
-
-
-            if embeddings is None:
-
-                embeddings = embed_texts_llm(chunk_texts)
+            embeddings = embed_texts_llm(chunk_texts)
 
 
 
