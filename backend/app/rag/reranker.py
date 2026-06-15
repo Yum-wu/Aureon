@@ -126,8 +126,6 @@ def _rerank_via_api(query: str, chunks: List[Dict[str, Any]], top_k: int = 3) ->
 
     """
 
-    import os
-
     import httpx
 
 
@@ -210,13 +208,13 @@ def _rerank_via_api(query: str, chunks: List[Dict[str, Any]], top_k: int = 3) ->
 
     # ���� Build provider list (preferred first, then fallbacks) ����
 
-    ds_key = os.environ.get("DASHSCOPE_API_KEY") or getattr(settings, "dashscope_api_key", "")
+    ds_key = settings.dashscope_api_key
 
-    sf_key = os.environ.get("SILICONFLOW_API_KEY") or getattr(settings, "siliconflow_api_key", "")
+    sf_key = settings.siliconflow_api_key
 
-    cohere_key = os.environ.get("COHERE_API_KEY") or getattr(settings, "cohere_api_key", None)
+    cohere_key = getattr(settings, "cohere_api_key", None)
 
-    jina_key = os.environ.get("JINA_API_KEY") or getattr(settings, "jina_api_key", None)
+    jina_key = getattr(settings, "jina_api_key", None)
 
 
 

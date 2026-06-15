@@ -32,8 +32,11 @@ logger = structlog.get_logger()
 # ���� Stats cache (avoid full-scan on every health check) ����
 
 _stats_cache: dict = {"doc_count": 0, "chunk_count": 0, "updated_at": 0.0}
+_STATS_CACHE_TTL = max(settings.stats_cache_ttl, 300)  # 至少 5 分钟，避免频繁全量滚动
 
-_STATS_CACHE_TTL = settings.stats_cache_ttl  # seconds
+# 索引来源缓存（get_indexed_sources 全量滚动代价高，缓存 5 分钟）
+_sources_cache: dict = {"sources": set(), "updated_at": 0.0}
+_SOURCES_CACHE_TTL = 300
 
 
 
@@ -43,9 +46,10 @@ _STATS_CACHE_TTL = settings.stats_cache_ttl  # seconds
 
 def _invalidate_stats_cache():
 
-    """Invalidate stats cache after index changes."""
+    """Invalidate stats and sources cache after index changes."""
 
     _stats_cache["updated_at"] = 0.0
+    _sources_cache["updated_at"] = 0.0
 
 
 
@@ -586,15 +590,23 @@ def _get_collection_stats_qdrant(now: float) -> tuple[int, int]:
 
 def get_indexed_sources() -> set:
 
-    """Return set of source filenames currently in Qdrant."""
+    """Return set of source filenames currently in Qdrant.
+
+    Results are cached for _SOURCES_CACHE_TTL seconds (default 300s).
+    Full scroll is expensive for large collections, so we cache aggressively.
+    """
+    import time as _time
+    now = _time.time()
+    if (now - _sources_cache["updated_at"]) < _SOURCES_CACHE_TTL:
+        return _sources_cache["sources"].copy()
 
     try:
-
-        return _get_indexed_sources_qdrant()
-
+        sources = _get_indexed_sources_qdrant()
+        _sources_cache["sources"] = sources
+        _sources_cache["updated_at"] = now
+        return sources.copy()
     except Exception:
-
-        return set()
+        return _sources_cache["sources"].copy()
 
 
 

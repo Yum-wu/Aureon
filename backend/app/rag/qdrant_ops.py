@@ -31,6 +31,11 @@ from app.multi_tenant.middleware import get_current_tenant_id
 logger = structlog.get_logger()
 
 
+# ── tenant_id 检查缓存（避免每次查询都 scroll） ──
+_tenant_id_cache: dict = {"value": None, "updated_at": 0.0}
+_TENANT_ID_CACHE_TTL = 300  # 5 分钟
+
+
 
 # ���� Qdrant Backend ����
 
@@ -110,13 +115,11 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
 
     """Save chunks to Qdrant vector store.
 
-
-
-    ��������Ѵ���������ƥ�䣬ֱ�� upsert ���ǣ����� delete_collection ����
-
-    �ؽ��ж�ʱ���ݶ�ʧ����ֻ�����ò�ƥ��ʱ��ɾ���ؽ���
-
+    分布式锁保护：当配置不匹配需要 delete+rebuild 时，使用 Redis 分布式锁
+    防止多实例同时重建索引导致数据丢失。
     """
+    lock_acquired = False
+    lock_key = f"aureon:index_rebuild:{collection_name}"
 
     from qdrant_client import models as qmodels
 
@@ -190,29 +193,60 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
 
 
 
-    # ֻ�����ò�ƥ��ʱɾ���ؽ�������ƥ��ʱֱ�� upsert ����
-
+    # 只在配置不匹配时删除重建，配置匹配时直接 upsert 即可
     if collection_exists and config_matches:
 
         logger.info("Collection '%s' exists with matching config, upserting %d chunks", collection_name, len(chunks))
 
     else:
 
-        if collection_exists:
-
-            logger.info("Collection '%s' config mismatch, deleting and recreating", collection_name)
+        # 分布式锁：防止多实例同时删除+重建集合
+        # 只在需要重建时加锁，upsert 不需要锁
+        try:
+            from app.cache.redis_client import get_sync_redis
+            r = get_sync_redis()
+            if r is not None:
+                lock_acquired = r.set(lock_key, "locked", nx=True, ex=600)  # 10 分钟超时
+                if not lock_acquired:
+                    logger.info("Another instance is rebuilding index '%s', waiting...", collection_name)
+                    # 等待锁释放（最多 5 分钟）
+                    import time as _wt
+                    for _ in range(30):
+                        _wt.sleep(10)
+                        if r.get(lock_key) is None:
+                            lock_acquired = True
+                            lock_acquired = r.set(lock_key, "locked", nx=True, ex=600)
+                            if lock_acquired:
+                                break
+                    if not lock_acquired:
+                        logger.warning("Timed out waiting for index rebuild lock on '%s'", collection_name)
+                        return
+        except Exception as e:
+            logger.warning("Distributed lock unavailable, proceeding without lock: %s", e)
+            lock_acquired = True  # Redis 不可用时跳过锁
 
         try:
+            if collection_exists:
+                logger.info("Collection '%s' config mismatch, deleting and recreating", collection_name)
 
-            client.delete_collection(collection_name)
+            try:
+                client.delete_collection(collection_name)
+            except Exception:
+                pass
+        except Exception as e:
+            logger.error("Failed to rebuild collection '%s': %s", collection_name, e)
+            # 释放锁
+            if lock_acquired:
+                try:
+                    from app.cache.redis_client import get_sync_redis
+                    r = get_sync_redis()
+                    if r is not None:
+                        r.delete(lock_key)
+                except Exception:
+                    pass
+            raise
 
-        except Exception:
-
-            pass
-
-
-
-    # �����Ƿ����� sparse ����ѡ�� vectors_config
+    # 根据是否启用 sparse 向量选择 vectors_config
 
     if settings.sparse_enabled:
 
@@ -382,8 +416,6 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
 
         settings.sparse_enabled
 
-        and True
-
         and settings.dashscope_api_key
 
         and settings.dashscope_model in ("text-embedding-v3", "text-embedding-v4")
@@ -450,13 +482,7 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
 
 
 
-            if True:  # API-only
-
-                batch_embeddings = embed_texts_llm(batch_texts)
-
-            else:
-
-                batch_embeddings = embed_texts_llm(batch_texts)
+            batch_embeddings = embed_texts_llm(batch_texts)
 
 
 
@@ -523,6 +549,16 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
 
 
     logger.info("Qdrant: indexed %d chunks into '%s' (complete)", len(chunks), collection_name)
+
+    # 释放分布式锁（仅在重建时获取了锁）
+    if lock_acquired:
+        try:
+            from app.cache.redis_client import get_sync_redis
+            r = get_sync_redis()
+            if r is not None:
+                r.delete(lock_key)
+        except Exception:
+            pass
 
 
 
@@ -594,10 +630,8 @@ def hybrid_search_qdrant(
 
             dense_vector = query_emb[0].tolist()
 
-            sparse_vector = sparse_results[0] if sparse_results else _to_sparse_vector(None)
-
-            if not isinstance(sparse_vector, type(None)):
-
+            sparse_vector = sparse_results[0] if sparse_results else None
+            if sparse_vector is not None:
                 sparse_vector = _to_sparse_vector(sparse_vector)
 
         else:
@@ -762,7 +796,7 @@ def retrieve_qdrant(query: str, top_k: int = 3, collection_name: str = "aureon",
 
     from app.rag.embedding import (
 
-        embed_texts_llm, _set_thread_query_embedding,
+        embed_texts_llm,
 
     )
 
@@ -786,9 +820,9 @@ def retrieve_qdrant(query: str, top_k: int = 3, collection_name: str = "aureon",
 
     except Exception as e:
 
-        logger.warning("Adaptive embedding failed: %s, falling back to API", e)
+        logger.error("Embedding failed for query: %s", e)
 
-        query_emb = embed_texts_llm([query])
+        raise
 
 
 
@@ -796,35 +830,29 @@ def retrieve_qdrant(query: str, top_k: int = 3, collection_name: str = "aureon",
 
 
 
-    # deprecated: ȫ�ֱ������ݣ����ڲ�����̬������ʹ�� _query_embedding �ֶ�
-
-    _set_thread_query_embedding(query_emb[0])
 
 
 
-    # Check if stored data actually has tenant_id �� skip filter if not
 
+    # Check if stored data actually has tenant_id — skip filter if not
+    # 缓存结果 5 分钟，避免每次查询都 scroll
     _has_tenant_id = False
-
-    try:
-
-        _sample, _ = client.scroll(
-
-            collection_name=collection_name, limit=1,
-
-            with_payload=True, with_vectors=False,
-
-        )
-
-        if _sample:
-
-            _sample_meta = _sample[0].payload.get("metadata", {}) if _sample[0].payload else {}
-
-            _has_tenant_id = "tenant_id" in _sample_meta
-
-    except Exception:
-
-        pass
+    now = time.time()
+    if (now - _tenant_id_cache["updated_at"]) < _TENANT_ID_CACHE_TTL and _tenant_id_cache["value"] is not None:
+        _has_tenant_id = _tenant_id_cache["value"]
+    else:
+        try:
+            _sample, _ = client.scroll(
+                collection_name=collection_name, limit=1,
+                with_payload=True, with_vectors=False,
+            )
+            if _sample:
+                _sample_meta = _sample[0].payload.get("metadata", {}) if _sample[0].payload else {}
+                _has_tenant_id = "tenant_id" in _sample_meta
+            _tenant_id_cache["value"] = _has_tenant_id
+            _tenant_id_cache["updated_at"] = now
+        except Exception:
+            pass
 
 
 
