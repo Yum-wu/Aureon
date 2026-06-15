@@ -219,33 +219,11 @@ class EnsembleReranker:
     def _load_bge_reranker(self, config: RerankerConfig) -> Optional[Any]:
         """Load BGE cross-encoder reranker.
 
-        Uses GPU-accelerated reranker if available, falls back to CPU.
-        Skipped when SKIP_LOCAL_EMBED=true (API-only mode).
+        Uses CPU cross-encoder with lazy loading.
         """
-        from app.config import settings
-        if settings.skip_local_embed:
-            logger.info("Skipping local BGE reranker (SKIP_LOCAL_EMBED=true)")
-            return None
-
         model_name = config.model_name or "BAAI/bge-reranker-v2-m3"
 
-        # Try GPU-accelerated reranker first
-        try:
-            from app.rag.embed_gpu import GPUReranker
-            from app.config import settings
-
-            if settings.gpu_enabled:
-                reranker = GPUReranker(
-                    model_name=model_name,
-                    device=config.device or "cuda",
-                    use_fp16=config.use_fp16,
-                )
-                # Wrap to match expected interface
-                return ("gpu", reranker)
-        except Exception as e:
-            logger.debug("GPU reranker unavailable: %s", e)
-
-        # Fallback: CPU reranker with lazy loading
+        # CPU reranker with lazy loading
         try:
             return ("cpu", {"model_name": model_name})
         except Exception as e:

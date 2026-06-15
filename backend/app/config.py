@@ -26,9 +26,6 @@ class EmbeddingSettings(BaseModel):
     embedding_model: str = "embedding-2"
     embedding_dim: int = 1024
     embedding_batch_size: int = 64
-    gpu_enabled: bool = False
-    embed_gpu_threshold: int = 4
-    skip_local_embed: bool = False
     dashscope_api_key: str = ""
     dashscope_base_url: str = "https://dashscope.aliyuncs.com/api/v1"
     dashscope_model: str = "text-embedding-v4"
