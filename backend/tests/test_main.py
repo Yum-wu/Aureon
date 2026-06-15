@@ -19,7 +19,7 @@ def _clear_overrides():
 
 @pytest.mark.asyncio
 async def test_health_endpoint():
-    with patch("app.main._bm25_warmup_done", True):
+    with patch("app.main.bm25_warmup_done", True):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             resp = await ac.get("/api/health")
@@ -111,7 +111,7 @@ async def test_aureon_exception_handler():
 
 @pytest.mark.asyncio
 async def test_request_id_in_response():
-    with patch("app.main._bm25_warmup_done", True):
+    with patch("app.main.bm25_warmup_done", True):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             resp = await ac.get("/api/health")

@@ -227,7 +227,7 @@ export class AureonWebSocket {
   /**
    * Get current conversation ID.
    */
-  getConversationId(): string | null {
+  getConversationId(): string | undefined {
     return this.conversationId;
   }
 
