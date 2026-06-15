@@ -44,12 +44,12 @@ class VectorStoreSettings(BaseModel):
     qdrant_api_key: str = ""
     qdrant_collection: str = "aureon"
     rrf_k: int = 200
-    retrieval_multiplier: int = 10  # 优化：增加检索候选数提升 Recall
+    retrieval_multiplier: int = 12  # 优化：增加检索候选数提升 Recall
     multi_query_enabled: bool = True
     semantic_chunking_enabled: bool = True
     min_relevance_score: float = 0.003
     vector_min_cosine: float = 0.001
-    vector_max_contrib: int = 10
+    vector_max_contrib: int = 15
     vector_confidence_threshold: float = 0.01
     low_score_threshold: float = 0.004
     negative_detection_enabled: bool = True
@@ -73,7 +73,7 @@ class RerankSettings(BaseModel):
     rerank_enabled: bool = True
     rerank_backend: str = "api"
     rerank_provider: str = "dashscope"
-    rerank_candidates: int = 15  # 优化：增加 rerank 候选数提升 Precision
+    rerank_candidates: int = 20  # 优化：增加 rerank 候选数提升 Precision
     reranker_device: str = "cpu"
     adaptive_rerank_enabled: bool = True
     adaptive_rerank_threshold: float = 0.3  # 优化：降低阈值强制更多查询走 rerank

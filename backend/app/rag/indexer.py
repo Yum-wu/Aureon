@@ -84,8 +84,8 @@ def run_incremental_index(filepath: str) -> dict:
         separators=["\n## ", "\n### ", "\n\n", "\n", " ", ""],
     )
     child_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=512,
-        chunk_overlap=50,
+        chunk_size=350,
+        chunk_overlap=70,
         separators=["\n", " ", ""],
     )
 
@@ -263,15 +263,15 @@ def run_index_pipeline(
 
     # 2. Split into parent-child structure
     # Parent: 1500 chars (rich context for LLM)
-    # Child:  512 chars (small chunks for precise retrieval)
+    # Child:  350 chars (small chunks for precise retrieval, 20% overlap)
     parent_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1500,
         chunk_overlap=100,
         separators=["\n## ", "\n### ", "\n\n", "\n", " ", ""],
     )
     child_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=512,
-        chunk_overlap=50,
+        chunk_size=350,
+        chunk_overlap=70,
         separators=["\n", " ", ""],
     )
 

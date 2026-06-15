@@ -694,12 +694,11 @@ def hybrid_search_qdrant(
 
             using="dense",
 
-            limit=top_k * 3,
+            limit=top_k * 5,
 
             filter=query_filter,
 
         ),
-
     ]
 
     if sparse_vector:
@@ -710,7 +709,7 @@ def hybrid_search_qdrant(
 
             using="sparse",
 
-            limit=top_k * 3,
+            limit=top_k * 5,
 
             filter=query_filter,
 

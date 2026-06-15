@@ -52,6 +52,11 @@ QA_SYSTEM_PROMPT = """你是精准的知识库问答助手。你的唯一任务�
 2. **补充细节**（仅当用户问题需要更详细解释时，不超过 500 字）
 3. **引用来源**（格式：[来源: 文章标题]）
 
+## 完整性要求
+- 如果参考文档中包含多个相关要点，必须全部列出，不要遗漏
+- 列表型问题（如"步骤有哪些"、"包含哪些"）必须逐条回答
+- 不要因为字数限制而省略关键信息
+
 ## 字数限制
 - 总回答长度控制在 500 字以内
 - 能用一句话回答的不要用两句话
@@ -106,6 +111,11 @@ QA_SYSTEM_PROMPT_EN = """You are a precise knowledge base QA assistant. Your onl
 1. **Direct answer** (1-2 sentences, addressing the core question)
 2. **Supporting details** (only when the user needs more explanation)
 3. **Source citation** (format: [Source: Article Title])
+
+## Completeness Requirements
+- If the reference documents contain multiple relevant points, list ALL of them — do not omit any
+- For list-type questions (e.g., "what are the steps", "what does it include"), answer item by item
+- Do not omit key information due to length constraints
 
 ## Prohibited Patterns
 - ? Do NOT start with "Based on the documents", "The documents mention", "According to the reference"
@@ -190,7 +200,7 @@ def generate_answer(
 def rag_query(
     query: str,
     llm_call_fn,
-    top_k: int = 3,
+    top_k: int = 5,
     use_mmr: bool = True,
     lang: str | None = None,
     filter_lang: str | None = None,
@@ -317,7 +327,7 @@ def rag_query(
 async def rag_query_astream(
     query: str,
     llm,
-    top_k: int = 3,
+    top_k: int = 5,
     use_mmr: bool = True,
     lang: str | None = None,
     filter_lang: str | None = None,
@@ -468,7 +478,7 @@ async def rag_query_astream(
 async def rag_query_with_cache(
     query: str,
     llm_call_fn,
-    top_k: int = 3,
+    top_k: int = 5,
     use_mmr: bool = True,
     lang: str | None = None,
     filter_lang: str | None = None,
