@@ -325,7 +325,7 @@ async def _stream_one(client, qa, semaphore, counter, total, ttft_list, tpot_lis
 
             async with client.stream(
                 "POST", f"{BASE_URL}/api/rag/query/stream",
-                json={"query": query, "top_k": 3}, timeout=60,
+                json={"query": query, "top_k": 7}, timeout=60,
             ) as stream_resp:
                 async for line in stream_resp.aiter_lines():
                     if line.startswith("data: "):

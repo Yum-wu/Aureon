@@ -57,7 +57,7 @@ class VectorStoreSettings(BaseModel):
     context_compression_threshold: float = 0.15
     kw_min_raw_score: float = 0.15
     stats_cache_ttl: float = 60.0
-    hyde_enabled: bool = False
+    hyde_enabled: bool = True  # 开启 HyDE，配合 query router 按复杂度条件使用
     hyde_fallback_threshold: float = 0.01
     high_score_skip_threshold: float = 0.1
     classifier_cache_ttl: float = 3600.0

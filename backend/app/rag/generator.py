@@ -219,9 +219,12 @@ def rag_query(
         lang = detect_language(query)
 
     # 1. Hybrid retrieval: BM25 keyword + vector search, RRF fusion
-    #    If HyDE is enabled, use hypothetical answer for retrieval
-    if _HYDE_ENABLED:
-        logger.info("HyDE enabled: using hypothetical answer for retrieval")
+    #    HyDE only for medium/complex queries (skip for simple to save latency)
+    from app.rag.query_classifier import route_retrieval
+    route = route_retrieval(query)
+
+    if _HYDE_ENABLED and route in ("medium", "complex"):
+        logger.info("HyDE enabled for %s query: using hypothetical answer for retrieval", route)
         chunks = hyde_retrieve(
             query,
             llm_call_fn,
@@ -242,6 +245,8 @@ def rag_query(
             logger.info("HyDE: no results, falling back to hybrid retrieval")
             chunks = multi_query_retrieve(query, top_k=top_k, lang_filter=filter_lang)
     else:
+        if _HYDE_ENABLED:
+            logger.info("HyDE skipped: simple query (latency priority)")
         chunks = multi_query_retrieve(query, top_k=top_k, lang_filter=filter_lang)
 
     # 2. Negative detection: LLM classifier for queries the KB can't answer.
@@ -374,8 +379,19 @@ async def rag_query_astream(
             hybrid_retrieve, query, top_k=top_k, lang_filter=filter_lang
         )
     else:
-        # 复杂查询：完整 pipeline
-        chunks = await asyncio.to_thread(multi_query_retrieve, query, top_k=top_k, lang_filter=filter_lang)
+        # 复杂查询：完整 pipeline + HyDE
+        if _HYDE_ENABLED:
+            logger.info("HyDE enabled for complex query in streaming mode")
+            from app.rag.query_rewriter import hyde_retrieve_async
+            async def _llm_call_fn(messages):
+                resp = await llm.ainvoke(messages)
+                return resp
+            chunks = await hyde_retrieve_async(query, _llm_call_fn, top_k=top_k, lang=lang, lang_filter=filter_lang)
+            if not chunks:
+                logger.info("HyDE: no results in streaming, falling back to multi_query")
+                chunks = await asyncio.to_thread(multi_query_retrieve, query, top_k=top_k, lang_filter=filter_lang)
+        else:
+            chunks = await asyncio.to_thread(multi_query_retrieve, query, top_k=top_k, lang_filter=filter_lang)
 
     # 2. 轻量 CRAG 评估（基于检索分数，无需 LLM 调用）
     if settings.crag_enabled and chunks:
