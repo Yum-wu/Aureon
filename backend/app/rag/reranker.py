@@ -266,6 +266,135 @@ def _rerank_via_api(query: str, chunks: List[Dict[str, Any]], top_k: int = 3) ->
 
 
 
+
+# ── Batch parallel reranking ──────────────────────────────────────
+def _get_rerank_provider_info() -> Optional[tuple]:
+    """Get first available rerank provider (url, api_key, model, name)."""
+    from app.config import settings as _cfg
+    preferred = _cfg.rerank.rerank_provider
+
+    ds_key = settings.dashscope_api_key
+    sf_key = settings.siliconflow_api_key
+    cohere_key = getattr(settings, "cohere_api_key", None)
+    jina_key = getattr(settings, "jina_api_key", None)
+
+    providers = []
+    if preferred == "dashscope" and ds_key:
+        providers.append(("dashscope", ds_key, settings.dashscope_rerank_model, settings.dashscope_rerank_url))
+    if sf_key:
+        providers.append(("siliconflow", sf_key, "BAAI/bge-reranker-v2-m3", settings.siliconflow_base_url))
+    if cohere_key:
+        providers.append(("cohere", cohere_key, settings.cohere_rerank_model, "https://api.cohere.ai/v2"))
+    if jina_key:
+        providers.append(("jina", jina_key, "jina-reranker-v2-base-multilingual", "https://api.jina.ai/v1"))
+    if preferred != "dashscope" and ds_key:
+        providers.append(("dashscope", ds_key, settings.dashscope_rerank_model, settings.dashscope_rerank_url))
+
+    for name, key, model, base_url in providers:
+        suffix = "reranks" if name == "dashscope" else "rerank"
+        url = f"{base_url.rstrip('/')}/{suffix}"
+        return (url, key, model, name)
+
+    return None
+
+
+async def _rerank_batch_async(
+    url: str, api_key: str, model: str, provider_name: str,
+    query: str, chunks: List[Dict[str, Any]], top_k: int,
+) -> Optional[List[Dict[str, Any]]]:
+    """Single async rerank request (used by batch parallel)."""
+    import httpx
+
+    texts = [c["text"] for c in chunks]
+    body: dict = {
+        "model": model,
+        "query": query,
+        "documents": texts,
+        "top_n": min(top_k, len(chunks)),
+    }
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            url,
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json=body,
+            timeout=20.0,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+    scored = []
+    for item in data.get("results", []):
+        idx = item["index"]
+        score = item["relevance_score"]
+        chunk = chunks[idx].copy()
+        chunk["rerank_score"] = float(score)
+        scored.append(chunk)
+
+    return scored
+
+
+async def _rerank_via_api_batched(
+    query: str, chunks: List[Dict[str, Any]], top_k: int = 3,
+    batch_size: int = 18, max_concurrent: int = 2,
+) -> Optional[List[Dict[str, Any]]]:
+    """Batch parallel reranking: split docs into batches, concurrent API calls."""
+    import asyncio
+
+    provider_info = _get_rerank_provider_info()
+    if provider_info is None:
+        return None
+
+    url, api_key, model, provider_name = provider_info
+
+    if len(chunks) <= batch_size:
+        return await _rerank_batch_async(url, api_key, model, provider_name, query=query, chunks=chunks, top_k=top_k)
+
+    batches = [chunks[i:i + batch_size] for i in range(0, len(chunks), batch_size)]
+    logger.info("Batch parallel rerank: %d chunks -> %d batches", len(chunks), len(batches))
+
+    sem = asyncio.Semaphore(max_concurrent)
+
+    async def _limited(batch_chunks):
+        async with sem:
+            return await _rerank_batch_async(url, api_key, model, provider_name, query=query, chunks=batch_chunks, top_k=top_k)
+
+    results = await asyncio.gather(*[_limited(b) for b in batches], return_exceptions=True)
+
+    all_scored = []
+    for i, result in enumerate(results):
+        if isinstance(result, Exception):
+            logger.warning("Batch %d failed: %s", i, result)
+            continue
+        if result:
+            all_scored.extend(result)
+
+    if not all_scored:
+        return None
+
+    all_scored.sort(key=lambda x: x.get("rerank_score", 0), reverse=True)
+    logger.info("Batch parallel rerank merged: %d total -> top %d", len(all_scored), top_k)
+    return all_scored[:top_k]
+
+
+def rerank_batched(query: str, chunks: List[Dict[str, Any]], top_k: int = 3,
+                   batch_size: int = 18) -> List[Dict[str, Any]]:
+    """Batch parallel reranking (sync wrapper). Falls back to serial on failure."""
+    import asyncio
+
+    if not chunks or len(chunks) <= 1:
+        return chunks
+
+    try:
+        result = asyncio.run(_rerank_via_api_batched(query, chunks, top_k=top_k, batch_size=batch_size))
+        if result:
+            return result
+    except Exception as e:
+        logger.warning("Batch parallel rerank failed, falling back to serial: %s", e)
+
+    return rerank(query, chunks, top_k=top_k)
+
+
 def rerank(query: str, chunks: List[Dict[str, Any]], top_k: int = 3) -> List[Dict[str, Any]]:
 
     """Rerank chunks using cross-encoder or remote API. Returns top_k results.

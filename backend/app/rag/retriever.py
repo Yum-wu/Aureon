@@ -6,6 +6,7 @@ Contains: BM25 + vector hybrid retrieval, multi-query retrieval, RRF fusion.
 from typing import List, Dict, Any
 
 from app.rag.vector_store import retrieve, retrieve_keyword, rerank
+from app.rag.reranker import rerank_batched
 from app.rag.query_rewriter import is_cross_article_query, expand_queries_rules
 from app.rag.classifier import _extract_title_keywords
 from app.config import settings
@@ -177,12 +178,12 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
             elif complexity == "complex":
                 # Aggressive reranking for complex queries:
                 # - More candidates to rerank (top_k * 5 vs * 3)
-                # - Always rerank, never skip
+                # - Batch parallel reranking for latency optimization
                 logger.info(
                     "Adaptive rerank: AGGRESSIVE (complex query, max quality)"
                 )
                 rerank_limit = max(top_k * 5, 15)
-                candidates = rerank(query, candidates, top_k=min(len(candidates), rerank_limit))
+                candidates = rerank_batched(query, candidates, top_k=min(len(candidates), rerank_limit))
             else:
                 # Default: single reranker
                 logger.info(
