@@ -14,8 +14,6 @@ export function BenchmarkSection() {
   const findMetric = (pat: string) =>
     benchmark?.metrics?.find((m: { label: string; value: string | number }) => m.label.includes(pat))?.value ?? null;
 
-  const recallVal = findMetric('Recall@3');
-  const latencyVal = findMetric('Retrieval Latency');
   const ttftVal = findMetric('TTFT');
   const costVal = findMetric('Cost');
 
