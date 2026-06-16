@@ -21,28 +21,28 @@ export function BenchmarkSection() {
 
   const metrics = [
     {
-      label: 'Recall@3 (Hybrid)',
-      value: fmtVal(recallVal, '96.5%'),
-      change: '192 QA pairs',
-      sub: t('landing.benchmark.vs_baseline'),
+      label: 'Faithfulness',
+      value: fmtVal(findMetric('Faithfulness'), '98.1%'),
+      change: 'DeepEval',
+      sub: '>=70%',
     },
     {
-      label: 'Retrieval Latency',
-      value: fmtVal(latencyVal, '156ms'),
-      change: 'BM25 + Vec + RRF + Reranker',
-      sub: t('landing.benchmark.optimized'),
+      label: 'Answer Relevancy',
+      value: fmtVal(findMetric('Answer Relevancy'), '92.4%'),
+      change: '192 QA pairs',
+      sub: '>=75%',
     },
     {
       label: 'Negative Detection',
-      value: '100%',
-      change: '20/20',
-      sub: t('landing.benchmark.reduced'),
+      value: '90%',
+      change: '18/20',
+      sub: '>=80%',
     },
   ];
 
   const optimizations = [
-    { label: 'TTFT', before: '~800ms', after: fmtVal(ttftVal, '~310ms') },
-    { label: 'Retrieval Latency', before: '153ms', after: fmtVal(latencyVal, '156ms') },
+    { label: 'TTFT', before: '~825ms', after: fmtVal(ttftVal, '~586ms') },
+    { label: 'E2E Latency', before: '12,076ms', after: '~853ms' },
     { label: t('landing.benchmark.cost_per_query'), before: '$0.01', after: fmtVal(costVal, '~$0.001') },
   ];
 

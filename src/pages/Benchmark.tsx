@@ -65,7 +65,7 @@ const Benchmark = () => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
           <div className="bg-cyan-100 text-cyan-700 px-4 py-3 rounded-lg border-2 border-cyan-300">
-            <div className="font-semibold">Chroma DB</div>
+            <div className="font-semibold">Qdrant Cloud</div>
             <div className="text-xs opacity-75">{t('benchmark.vector_database')}</div>
           </div>
           <svg className="w-6 h-6 text-[var(--text-tertiary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -96,7 +96,7 @@ const Benchmark = () => {
           {[
             { name: t('benchmark.document_input'), detail: 'PDF / MD / TXT', color: 'blue' },
             { name: 'BGE Embedding', detail: t('benchmark.local_inference'), color: 'purple' },
-            { name: 'Chroma DB', detail: t('benchmark.vector_database'), color: 'cyan' },
+            { name: 'Qdrant Cloud', detail: t('benchmark.vector_database'), color: 'cyan' },
             { name: 'Hybrid Search', detail: 'BM25 + Dense', color: 'green' },
             { name: 'LLM', detail: benchmark?.services?.llm || 'LLM', color: 'amber' },
             { name: 'SSE Streaming', detail: t('benchmark.realtime_output'), color: 'rose' },
@@ -117,7 +117,7 @@ const Benchmark = () => {
             <div>
               <div className="flex justify-between text-sm mb-1">
                 <span className="text-[var(--text-secondary)]">{t('benchmark.before_optimization')}</span>
-                <span className="text-[var(--error)] font-medium">153ms</span>
+                <span className="text-[var(--error)] font-medium">825ms</span>
               </div>
               <div className="h-3 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
                 <div className="h-full bg-red-400 rounded-full w-full" />
@@ -126,10 +126,10 @@ const Benchmark = () => {
             <div>
               <div className="flex justify-between text-sm mb-1">
                 <span className="text-[var(--text-secondary)]">{t('benchmark.after_optimization')}</span>
-                <span className="text-[var(--success)] font-medium">5.8ms</span>
+                <span className="text-[var(--success)] font-medium">586ms</span>
               </div>
               <div className="h-3 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
-                <div className="h-full bg-green-500 rounded-full" style={{ width: '39%' }} />
+                <div className="h-full bg-green-500 rounded-full" style={{ width: '71%' }} />
               </div>
             </div>
             <div className="text-xs text-[var(--text-tertiary)] mt-3">
@@ -153,10 +153,10 @@ const Benchmark = () => {
             <div>
               <div className="flex justify-between text-sm mb-1">
                 <span className="text-[var(--text-secondary)]">Hybrid (BM25+ + RRF)</span>
-                <span className="text-[var(--success)] font-medium">98.7%</span>
+                <span className="text-[var(--success)] font-medium">91.9%</span>
               </div>
               <div className="h-3 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
-                <div className="h-full bg-green-500 rounded-full" style={{ width: '98.7%' }} />
+                <div className="h-full bg-green-500 rounded-full" style={{ width: '91.9%' }} />
               </div>
             </div>
             <div className="text-xs text-[var(--text-tertiary)] mt-3">
@@ -172,13 +172,13 @@ const Benchmark = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           <div className="p-3 bg-[var(--bg-tertiary)] rounded-lg">
             <div className="font-medium text-[var(--text-primary)] mb-1">Embedding</div>
-            <div className="text-[var(--text-secondary)]">BGE-large-zh-v1.5</div>
-            <div className="text-xs text-[var(--text-tertiary)]">512d · {t('benchmark.local_inference')} · ~7ms</div>
+            <div className="text-[var(--text-secondary)]">BGE-M3</div>
+            <div className="text-xs text-[var(--text-tertiary)]">1024d · DashScope API · ~100ms</div>
           </div>
           <div className="p-3 bg-[var(--bg-tertiary)] rounded-lg">
             <div className="font-medium text-[var(--text-primary)] mb-1">{t('benchmark.vector_database')}</div>
-            <div className="text-[var(--text-secondary)]">ChromaDB</div>
-            <div className="text-xs text-[var(--text-tertiary)]">{t('benchmark.persistent_local')}</div>
+            <div className="text-[var(--text-secondary)]">Qdrant Cloud</div>
+            <div className="text-xs text-[var(--text-tertiary)]">HNSW + Sparse Vectors</div>
           </div>
           <div className="p-3 bg-[var(--bg-tertiary)] rounded-lg">
             <div className="font-medium text-[var(--text-primary)] mb-1">{t('benchmark.retrieval_strategy')}</div>
