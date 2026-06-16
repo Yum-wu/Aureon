@@ -16,7 +16,7 @@ Aureon/
 │   ├── memory/       # L0-L3 四层记忆 + 上下文卸载
 │   ├── rag/          # Qdrant + Hybrid Search + Context Compression + Adaptive Re-ranking
 │   │   ├── vector_store.py  # 向量库（Qdrant 原生稀疏向量 + HNSW 量化，替代 jieba BM25）
-│   │   ├── qa_chain.py      # RAG pipeline（HyDE→检索→轻量 CRAG→压缩→路由→生成→来源）
+│   │   ├── qa_chain.py      # RAG pipeline（HyDE→检索→轻量 CRAG→压缩→路由→生成→来源，已优化跳过冗余步骤）
 │   │   ├── guardrails.py    # Prompt Injection 检测
 │   │   ├── evaluator.py     # Recall + Faithfulness + 延迟
 │   │   ├── models.py        # Pydantic 请求/响应
@@ -178,35 +178,35 @@ Query → Query Router（简单/中等/复杂）→
 
 | 指标 | 值 | 目标 | 状态 |
 |------|-----|------|------|
-| Faithfulness | 0.981 | >=0.70 | ✅ |
-| Answer Relevancy | 0.924 | >=0.75 | ✅ |
-| Answer Correctness | 0.731 | >=0.70 | ✅ |
-| Hallucination | 0.071 | <=0.20 | ✅ |
+| Faithfulness | 0.979 | >=0.70 | ✅ |
+| Answer Relevancy | 0.917 | >=0.75 | ✅ |
+| Answer Correctness | 0.733 | >=0.70 | ✅ |
+| Hallucination | 0.000 | <=0.20 | ✅ |
 | Negative Detection | 90% | >=80% | ✅ |
 | PII Leakage | 1.000 | >=0.90 | ✅ |
 | Toxicity | 1.000 | >=0.90 | ✅ |
-| MRR | 0.891 | >=0.85 | ✅ |
+| MRR | 0.888 | >=0.85 | ✅ |
+| Context Precision | 85.0% | >=70% | ✅ |
 
 ### 延迟性能（192 条采样）
 
 | 指标 | 值 | 目标 | 状态 |
 |------|-----|------|------|
-| TTFT P50 | 586ms | <=2000ms | ✅ |
-| TTFT P90 | 684ms | - | - |
-| TPOT | 7.6ms/tok | <=100ms/tok | ✅ |
-| E2E P50 | 1,029ms | <=5000ms | ✅（串行） |
-| E2E P90 | 1,062ms | - | - |
-| E2E P99 | 1,117ms | - | - |
+| TTFT P50 | 610ms | <=2000ms | ✅ |
+| TTFT P95 | 1,866ms | - | - |
+| TPOT | 72.9ms/tok | <=100ms/tok | ✅ |
+| E2E P50 | 980ms | <=5000ms | ✅ |
+| E2E P95 | 14,773ms | - | - |
 
-**说明**：E2E 延迟为串行测试结果（10 条 QA）。Benchmark 并发测试时受 Railway 免费版限制，P50 为 12,395ms。
+**说明**：E2E 延迟为 192 QA benchmark 结果。Pipeline 优化后，简单查询 ~1.6-1.9s，复杂查询 ~4-8s。
 
-### 内部优化指标（暂不达标，不影响用户体验）
+### 内部优化指标（优化中）
 
 | 指标 | 值 | 目标 | 说明 |
 |------|-----|------|------|
-| Contextual Relevancy | 0.282 | >=0.70 | 检索噪声较多，但 LLM 能过滤 |
-| Contextual Recall | 0.417 | >=0.75 | 部分信息遗漏，但答案仍正确 |
-| Recall@5 | 91.9% | >=95% | 略低，可通过调参优化 |
+| Contextual Relevancy | 39.1% | >=0.70 | 检索噪声较多，但 LLM 能过滤 |
+| Contextual Recall | 50.0% | >=0.75 | 部分信息遗漏，但答案仍正确 |
+| Recall@5 | 92.4% | >=95% | 略低，可通过调参优化 |
 
 ### Judge 模型配置
 
@@ -323,6 +323,8 @@ concurrency:         # 并发测试参数
 ### 质量门禁关键设计
 
 - **走完整 rag_query() pipeline**：HyDE → 检索 → CRAG 自纠正 → 压缩 → 负例检测 → 生成
+- **Pipeline 优化**：简单查询跳过 context compression（复用 query embedding），高置信度跳过 CRAG retry
+- **批处理 rerank**：复杂查询 35 候选分 2 批并发 DashScope API，延迟减半
 - **超时保护**：单次查询 60s + 整体评估 300s
 - **并发数据准备**：`asyncio.gather` + `Semaphore(10)` 并发构建 test cases
 - **DeepEval 配置**：`AsyncConfig(max_concurrent=15)` + `CacheConfig(use_cache=True)`
