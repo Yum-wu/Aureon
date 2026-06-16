@@ -518,7 +518,7 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
 
                     "sparse_enabled": settings.sparse_enabled,
 
-                    "chunk_size": 350,  # 与 indexer.py child_chunk_size 保持一致
+                    "chunk_size": 512,  # 与 indexer.py child_chunk_size 保持一致
 
                     "created_at": time.time(),
 

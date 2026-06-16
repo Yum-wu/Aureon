@@ -1181,7 +1181,7 @@ def check_index_upgrade_strategy(collection_name: str = "aureon", articles_dir: 
 
         # 检查 chunk_size 是否变化
         stored_chunk_size = idx_cfg.get('chunk_size', 0)
-        current_chunk_size = 350  # 与 indexer.py child_chunk_size 保持一致
+        current_chunk_size = 512  # 与 indexer.py child_chunk_size 保持一致
         if stored_chunk_size != current_chunk_size:
             return {
                 'action': 'rebuild',
