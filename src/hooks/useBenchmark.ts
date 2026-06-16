@@ -7,6 +7,7 @@ export interface BenchmarkMetric {
   detail: string;
   customer_facing?: boolean;
   priority?: number;
+  status?: string;
 }
 
 export interface BenchmarkData {

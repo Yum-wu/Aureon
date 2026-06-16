@@ -51,6 +51,9 @@ export function BenchmarkSection() {
               <p className="text-2xl mb-2">{ICONS[m.label] ?? '📊'}</p>
               <p className="text-xs text-[var(--text-tertiary)] uppercase tracking-wider mb-3">
                 {m.label}
+                {m.status === 'optimizing' && (
+                  <span className="ml-2 text-amber-400 normal-case">优化中</span>
+                )}
               </p>
               <p className="metric-value text-2xl md:text-3xl mb-1">{fmtVal(m.value, '—')}</p>
             </div>

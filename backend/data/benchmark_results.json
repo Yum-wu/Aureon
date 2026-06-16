@@ -45,6 +45,30 @@
       "priority": 6
     },
     {
+      "label": "Context Recall",
+      "value": "41.7%",
+      "detail": "RAGAS core metric, optimizing — HyDE + top_k boost in progress",
+      "customer_facing": true,
+      "priority": 9,
+      "status": "optimizing"
+    },
+    {
+      "label": "Context Precision",
+      "value": "74.4%",
+      "detail": "RAGAS core metric, meets threshold — improving with aggressive rerank",
+      "customer_facing": true,
+      "priority": 10,
+      "status": "optimizing"
+    },
+    {
+      "label": "Context Relevancy",
+      "value": "28.2%",
+      "detail": "RAGAS core metric, optimizing — retrieval noise reduction in progress",
+      "customer_facing": true,
+      "priority": 11,
+      "status": "optimizing"
+    },
+    {
       "label": "Answer Correctness",
       "value": "73.1%",
       "detail": "DeepEval GEval metric, target >=70%",
