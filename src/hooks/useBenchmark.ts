@@ -5,6 +5,8 @@ export interface BenchmarkMetric {
   label: string;
   value: string | number;
   detail: string;
+  customer_facing?: boolean;
+  priority?: number;
 }
 
 export interface BenchmarkData {

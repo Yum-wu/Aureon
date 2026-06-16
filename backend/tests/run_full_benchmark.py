@@ -467,6 +467,7 @@ async def phase1_collect() -> tuple:
             "mean_ms": round(statistics.mean(lat_sorted), 1),
             "p50_ms": round(lat_sorted[n_lat // 2], 1),
             "p90_ms": round(lat_sorted[int(n_lat * 0.9)], 1),
+            "p95_ms": round(lat_sorted[min(int(n_lat * 0.95), n_lat - 1)], 1),
             "p99_ms": round(lat_sorted[min(int(n_lat * 0.99), n_lat - 1)], 1),
             "min_ms": round(lat_sorted[0], 1),
             "max_ms": round(lat_sorted[-1], 1),
@@ -479,6 +480,7 @@ async def phase1_collect() -> tuple:
             "mean_ms": round(statistics.mean(ts), 1),
             "p50_ms": round(ts[len(ts) // 2], 1),
             "p90_ms": round(ts[int(len(ts) * 0.9)], 1),
+            "p95_ms": round(ts[min(int(len(ts) * 0.95), len(ts) - 1)], 1),
             "samples": len(ts),
         }
     if tpot_list:
@@ -521,9 +523,11 @@ async def phase1_collect() -> tuple:
     print(f"  Answer Comp:  {answer_comp*100:.1f}% ({answer_has_content}/{len(raw_results)})")
     print()
     print(f"  E2E P50:      {latency_stats['e2e']['p50_ms']:.0f}ms")
+    print(f"  E2E P95:      {latency_stats['e2e']['p95_ms']:.0f}ms")
     print(f"  E2E P99:      {latency_stats['e2e']['p99_ms']:.0f}ms")
     if "ttft" in latency_stats:
         print(f"  TTFT P50:     {latency_stats['ttft']['p50_ms']:.0f}ms")
+        print(f"  TTFT P95:     {latency_stats['ttft']['p95_ms']:.0f}ms")
     if "tpot" in latency_stats:
         print(f"  TPOT mean:    {latency_stats['tpot']['mean_ms']:.1f}ms/tok")
 
@@ -935,8 +939,10 @@ def phase3_report(summary_path: Path = None, eval_path: Path = None) -> None:
         ]),
         ("4. 延迟性能", [
             ("TTFT P50", f"{ttft.get('p50_ms',0):.0f}ms", "<=2000ms", _pass(ttft.get('p50_ms',9999), 2000, False)),
+            ("TTFT P95", f"{ttft.get('p95_ms',0):.0f}ms", "-", True),
             ("TPOT mean", f"{tpot.get('mean_ms',0):.1f}ms/tok", "<=100ms", _pass(tpot.get('mean_ms',9999), 100, False)),
             ("E2E P50", f"{e2e.get('p50_ms',0):.0f}ms", "<=5000ms", _pass(e2e.get('p50_ms',9999), 5000, False)),
+            ("E2E P95", f"{e2e.get('p95_ms',0):.0f}ms", "-", True),
             ("E2E P99", f"{e2e.get('p99_ms',0):.0f}ms", "-", True),
         ]),
     ]
