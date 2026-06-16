@@ -168,24 +168,25 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
                     "Adaptive rerank: SKIP (simple query, latency priority)"
                 )
             elif complexity == "medium":
-                # Single BGE reranker (balance latency/quality)
+                # Single reranker (balance latency/quality)
                 logger.info(
-                    "Adaptive rerank: SINGLE_BGE (medium complexity)"
+                    "Adaptive rerank: SINGLE (medium complexity)"
                 )
                 rerank_limit = max(top_k * 3, 10)
                 candidates = rerank(query, candidates, top_k=min(len(candidates), rerank_limit))
-            elif complexity == "complex" and _ENSEMBLE_RERANK_ENABLED:
-                # Ensemble reranking not available in sync path; fall back to single BGE
-                # Use hybrid_retrieve_async for ensemble reranking
+            elif complexity == "complex":
+                # Aggressive reranking for complex queries:
+                # - More candidates to rerank (top_k * 5 vs * 3)
+                # - Always rerank, never skip
                 logger.info(
-                    "Adaptive rerank: SINGLE_BGE (complex, ensemble unavailable in sync)"
+                    "Adaptive rerank: AGGRESSIVE (complex query, max quality)"
                 )
-                rerank_limit = max(top_k * 3, 10)
+                rerank_limit = max(top_k * 5, 15)
                 candidates = rerank(query, candidates, top_k=min(len(candidates), rerank_limit))
             else:
-                # Default: single BGE reranker
+                # Default: single reranker
                 logger.info(
-                    "Adaptive rerank: SINGLE_BGE (default)"
+                    "Adaptive rerank: SINGLE (default)"
                 )
                 rerank_limit = max(top_k * 3, 10)
                 candidates = rerank(query, candidates, top_k=min(len(candidates), rerank_limit))
