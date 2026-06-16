@@ -84,8 +84,8 @@ def run_incremental_index(filepath: str) -> dict:
         separators=["\n## ", "\n### ", "\n\n", "\n", " ", ""],
     )
     child_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=350,
-        chunk_overlap=70,
+        chunk_size=512,
+        chunk_overlap=80,
         separators=["\n", " ", ""],
     )
 
@@ -263,15 +263,15 @@ def run_index_pipeline(
 
     # 2. Split into parent-child structure
     # Parent: 1500 chars (rich context for LLM)
-    # Child:  350 chars (small chunks for precise retrieval, 20% overlap)
+    # Child:  512 chars (medium chunks for balanced retrieval, 80 overlap)
     parent_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1500,
         chunk_overlap=100,
         separators=["\n## ", "\n### ", "\n\n", "\n", " ", ""],
     )
     child_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=350,
-        chunk_overlap=70,
+        chunk_size=512,
+        chunk_overlap=80,
         separators=["\n", " ", ""],
     )
 
@@ -287,8 +287,8 @@ def run_index_pipeline(
                     semantic_splitter = SemanticTextSplitter(
                         embed_fn=embed_texts_as_list,
                         breakpoint_threshold=80.0,
-                        max_chunk_size=800,
-                        min_chunk_size=100,
+                        max_chunk_size=1024,
+                        min_chunk_size=150,
                     )
                     children = semantic_splitter.split_text(parent_text)
                 except Exception as e:
