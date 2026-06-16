@@ -116,20 +116,20 @@ const Benchmark = () => {
           <div className="space-y-4">
             <div>
               <div className="flex justify-between text-sm mb-1">
-                <span className="text-[var(--text-secondary)]">{t('benchmark.before_optimization')}</span>
-                <span className="text-[var(--error)] font-medium">825ms</span>
+                <span className="text-[var(--text-secondary)]">TTFT P50</span>
+                <span className="text-[var(--success)] font-medium">{benchmark?.metrics?.find(m => m.label.includes('TTFT'))?.value ?? '—'}</span>
               </div>
               <div className="h-3 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
-                <div className="h-full bg-red-400 rounded-full w-full" />
+                <div className="h-full bg-green-500 rounded-full" style={{ width: `${Math.min(100, parseFloat(String(benchmark?.metrics?.find(m => m.label.includes('TTFT'))?.value ?? '0').replace(/[^0-9.]/g, '')) / 20)}%` }} />
               </div>
             </div>
             <div>
               <div className="flex justify-between text-sm mb-1">
-                <span className="text-[var(--text-secondary)]">{t('benchmark.after_optimization')}</span>
-                <span className="text-[var(--success)] font-medium">586ms</span>
+                <span className="text-[var(--text-secondary)]">E2E P50</span>
+                <span className="text-[var(--success)] font-medium">{benchmark?.metrics?.find(m => m.label.includes('E2E'))?.value ?? '—'}</span>
               </div>
               <div className="h-3 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
-                <div className="h-full bg-green-500 rounded-full" style={{ width: '71%' }} />
+                <div className="h-full bg-green-500 rounded-full" style={{ width: `${Math.min(100, parseFloat(String(benchmark?.metrics?.find(m => m.label.includes('E2E'))?.value ?? '0').replace(/[^0-9.]/g, '')) / 50)}%` }} />
               </div>
             </div>
             <div className="text-xs text-[var(--text-tertiary)] mt-3">
@@ -143,20 +143,20 @@ const Benchmark = () => {
           <div className="space-y-4">
             <div>
               <div className="flex justify-between text-sm mb-1">
-                <span className="text-[var(--text-secondary)]">Dense Only</span>
-                <span className="text-blue-500 font-medium">90.2%</span>
+                <span className="text-[var(--text-secondary)]">Recall@5</span>
+                <span className="text-blue-500 font-medium">{benchmark?.metrics?.find(m => m.label.includes('Recall@5'))?.value ?? '—'}</span>
               </div>
               <div className="h-3 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
-                <div className="h-full bg-blue-400 rounded-full" style={{ width: '90.2%' }} />
+                <div className="h-full bg-blue-400 rounded-full" style={{ width: `${parseFloat(String(benchmark?.metrics?.find(m => m.label.includes('Recall@5'))?.value ?? '0'))}%` }} />
               </div>
             </div>
             <div>
               <div className="flex justify-between text-sm mb-1">
-                <span className="text-[var(--text-secondary)]">Hybrid (BM25+ + RRF)</span>
-                <span className="text-[var(--success)] font-medium">91.9%</span>
+                <span className="text-[var(--text-secondary)]">MRR</span>
+                <span className="text-[var(--success)] font-medium">{benchmark?.metrics?.find(m => m.label.includes('MRR'))?.value ?? '—'}</span>
               </div>
               <div className="h-3 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
-                <div className="h-full bg-green-500 rounded-full" style={{ width: '91.9%' }} />
+                <div className="h-full bg-green-500 rounded-full" style={{ width: `${parseFloat(String(benchmark?.metrics?.find(m => m.label.includes('MRR'))?.value ?? '0')) * 100}%` }} />
               </div>
             </div>
             <div className="text-xs text-[var(--text-tertiary)] mt-3">
@@ -172,23 +172,23 @@ const Benchmark = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           <div className="p-3 bg-[var(--bg-tertiary)] rounded-lg">
             <div className="font-medium text-[var(--text-primary)] mb-1">Embedding</div>
-            <div className="text-[var(--text-secondary)]">BGE-M3</div>
-            <div className="text-xs text-[var(--text-tertiary)]">1024d · DashScope API · ~100ms</div>
+            <div className="text-[var(--text-secondary)]">{benchmark?.services?.embedding?.split('+')[0]?.trim() ?? '—'}</div>
+            <div className="text-xs text-[var(--text-tertiary)]">1024d · DashScope API</div>
           </div>
           <div className="p-3 bg-[var(--bg-tertiary)] rounded-lg">
             <div className="font-medium text-[var(--text-primary)] mb-1">{t('benchmark.vector_database')}</div>
-            <div className="text-[var(--text-secondary)]">Qdrant Cloud</div>
-            <div className="text-xs text-[var(--text-tertiary)]">HNSW + Sparse Vectors</div>
+            <div className="text-[var(--text-secondary)]">{benchmark?.services?.vector_db?.split('(')[0]?.trim() ?? '—'}</div>
+            <div className="text-xs text-[var(--text-tertiary)]">{benchmark?.services?.vector_db?.includes('HNSW') ? 'HNSW + Sparse Vectors' : ''}</div>
           </div>
           <div className="p-3 bg-[var(--bg-tertiary)] rounded-lg">
             <div className="font-medium text-[var(--text-primary)] mb-1">{t('benchmark.retrieval_strategy')}</div>
             <div className="text-[var(--text-secondary)]">Hybrid Search</div>
-            <div className="text-xs text-[var(--text-tertiary)]">{t('benchmark.bm25_dense_fusion')}</div>
+            <div className="text-xs text-[var(--text-tertiary)]">{benchmark?.services?.hybrid_search?.split('→')[0]?.trim() ?? '—'}</div>
           </div>
           <div className="p-3 bg-[var(--bg-tertiary)] rounded-lg">
             <div className="font-medium text-[var(--text-primary)] mb-1">{t('benchmark.caching')}</div>
-            <div className="text-[var(--text-secondary)]">Redis + In-memory</div>
-            <div className="text-xs text-[var(--text-tertiary)]">{t('benchmark.multi_level_cache')}</div>
+            <div className="text-[var(--text-secondary)]">{benchmark?.services?.cache?.split('+')[0]?.trim() ?? '—'}</div>
+            <div className="text-xs text-[var(--text-tertiary)]">{benchmark?.services?.cache?.includes('semantic') ? 'Semantic Cache' : ''}</div>
           </div>
         </div>
       </div>

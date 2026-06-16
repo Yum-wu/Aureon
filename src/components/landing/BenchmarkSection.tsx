@@ -14,34 +14,38 @@ export function BenchmarkSection() {
   const findMetric = (pat: string) =>
     benchmark?.metrics?.find((m: { label: string; value: string | number }) => m.label.includes(pat))?.value ?? null;
 
+  const faithfulnessVal = findMetric('Faithfulness');
+  const answerRelevancyVal = findMetric('Answer Relevancy');
+  const negativeDetectionVal = findMetric('Negative Detection');
   const ttftVal = findMetric('TTFT');
+  const e2eVal = findMetric('E2E');
   const costVal = findMetric('Cost');
 
   const metrics = [
     {
       label: 'Faithfulness',
-      value: fmtVal(findMetric('Faithfulness'), '98.1%'),
-      change: 'DeepEval',
-      sub: '>=70%',
+      value: fmtVal(faithfulnessVal, '—'),
+      detail: findMetric('Faithfulness') ? 'DeepEval' : '',
+      target: '>=70%',
     },
     {
       label: 'Answer Relevancy',
-      value: fmtVal(findMetric('Answer Relevancy'), '92.4%'),
-      change: '192 QA pairs',
-      sub: '>=75%',
+      value: fmtVal(answerRelevancyVal, '—'),
+      detail: findMetric('Answer Relevancy') ? '192 QA pairs' : '',
+      target: '>=75%',
     },
     {
       label: 'Negative Detection',
-      value: '90%',
-      change: '18/20',
-      sub: '>=80%',
+      value: fmtVal(negativeDetectionVal, '—'),
+      detail: findMetric('Negative Detection') ? '18/20' : '',
+      target: '>=80%',
     },
   ];
 
   const optimizations = [
-    { label: 'TTFT', before: '~825ms', after: fmtVal(ttftVal, '~586ms') },
-    { label: 'E2E Latency', before: '12,076ms', after: '~853ms' },
-    { label: t('landing.benchmark.cost_per_query'), before: '$0.01', after: fmtVal(costVal, '~$0.001') },
+    { label: 'TTFT', before: '~825ms', after: fmtVal(ttftVal, '—') },
+    { label: 'E2E Latency', before: '12,076ms', after: fmtVal(e2eVal, '—') },
+    { label: t('landing.benchmark.cost_per_query'), before: '$0.01', after: fmtVal(costVal, '—') },
   ];
 
   return (
@@ -67,8 +71,8 @@ export function BenchmarkSection() {
               </p>
               <p className="metric-value text-3xl mb-1">{m.value}</p>
               <p className="text-xs text-[var(--success)]">
-                {m.change}
-                <span className="text-[var(--text-tertiary)] ml-1">{m.sub}</span>
+                {m.detail}
+                <span className="text-[var(--text-tertiary)] ml-1">{m.target}</span>
               </p>
             </div>
           ))}
