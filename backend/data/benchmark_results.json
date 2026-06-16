@@ -5,87 +5,130 @@
     {
       "label": "Faithfulness",
       "value": "98.1%",
-      "detail": "DeepEval native metric, target >=70%"
+      "detail": "DeepEval native metric, target >=70%",
+      "customer_facing": true,
+      "priority": 1
     },
     {
       "label": "Answer Relevancy",
       "value": "92.4%",
-      "detail": "DeepEval native metric, target >=75%"
-    },
-    {
-      "label": "Answer Correctness",
-      "value": "73.1%",
-      "detail": "DeepEval GEval metric, target >=70%"
-    },
-    {
-      "label": "Hallucination",
-      "value": "7.1%",
-      "detail": "DeepEval native metric, target <=20%"
+      "detail": "DeepEval native metric, target >=75%",
+      "customer_facing": true,
+      "priority": 2
     },
     {
       "label": "Negative Detection",
       "value": "90%",
-      "detail": "18/20 negative QA correctly identified, target >=80%"
-    },
-    {
-      "label": "PII Leakage",
-      "value": "100%",
-      "detail": "DeepEval GEval metric, target >=90%"
-    },
-    {
-      "label": "Toxicity",
-      "value": "100%",
-      "detail": "DeepEval GEval metric, target >=90%"
-    },
-    {
-      "label": "MRR",
-      "value": "0.891",
-      "detail": "Mean Reciprocal Rank, 192 QA pairs, target >=0.85"
-    },
-    {
-      "label": "Recall@5",
-      "value": "91.9%",
-      "detail": "192 QA pairs, BM25 + Vector RRF fusion + Reranker"
-    },
-    {
-      "label": "Answer Completeness",
-      "value": "100%",
-      "detail": "All queries received complete answers"
-    },
-    {
-      "label": "TTFT P50",
-      "value": "586ms",
-      "detail": "Time to first token, streaming queries"
-    },
-    {
-      "label": "TPOT",
-      "value": "7.6ms/tok",
-      "detail": "Time per output token"
+      "detail": "18/20 negative QA correctly identified, target >=80%",
+      "customer_facing": true,
+      "priority": 3
     },
     {
       "label": "E2E P50",
       "value": "1,029ms",
-      "detail": "Serial test (10 QA), Railway free tier"
+      "detail": "Serial test (10 QA), Railway free tier",
+      "customer_facing": true,
+      "priority": 4
+    },
+    {
+      "label": "TTFT P50",
+      "value": "586ms",
+      "detail": "Time to first token, streaming queries",
+      "customer_facing": true,
+      "priority": 5
+    },
+    {
+      "label": "Cost per Query",
+      "value": "$0.003",
+      "detail": "Qwen3.5-Flash production, per query average",
+      "customer_facing": true,
+      "priority": 6
+    },
+    {
+      "label": "Answer Correctness",
+      "value": "73.1%",
+      "detail": "DeepEval GEval metric, target >=70%",
+      "customer_facing": false
+    },
+    {
+      "label": "Hallucination",
+      "value": "7.1%",
+      "detail": "DeepEval native metric, target <=20%",
+      "customer_facing": false
+    },
+    {
+      "label": "PII Leakage",
+      "value": "100%",
+      "detail": "DeepEval GEval metric, target >=90%",
+      "customer_facing": false
+    },
+    {
+      "label": "Toxicity",
+      "value": "100%",
+      "detail": "DeepEval GEval metric, target >=90%",
+      "customer_facing": false
+    },
+    {
+      "label": "MRR",
+      "value": "0.891",
+      "detail": "Mean Reciprocal Rank, 192 QA pairs, target >=0.85",
+      "customer_facing": false
+    },
+    {
+      "label": "Recall@5",
+      "value": "91.9%",
+      "detail": "192 QA pairs, BM25 + Vector RRF fusion + Reranker",
+      "customer_facing": false
+    },
+    {
+      "label": "Answer Completeness",
+      "value": "100%",
+      "detail": "All queries received complete answers",
+      "customer_facing": false
+    },
+    {
+      "label": "TTFT P95",
+      "value": "3,257ms",
+      "detail": "P95 tail latency, serial 10 QA",
+      "customer_facing": true,
+      "priority": 7
+    },
+    {
+      "label": "TPOT",
+      "value": "7.6ms/tok",
+      "detail": "Time per output token",
+      "customer_facing": false
+    },
+    {
+      "label": "E2E P95",
+      "value": "4,334ms",
+      "detail": "P95 tail latency, serial 10 QA",
+      "customer_facing": true,
+      "priority": 8
     },
     {
       "label": "Contextual Precision",
       "value": "74.4%",
-      "detail": "DeepEval native metric, target >=70%"
+      "detail": "DeepEval native metric, target >=70%",
+      "customer_facing": false
     },
     {
       "label": "Knowledge Base",
       "value": "26 articles / 434 chunks",
-      "detail": "AI tech, dev experience, deployment practices"
+      "detail": "AI tech, dev experience, deployment practices",
+      "customer_facing": false
     },
     {
       "label": "Test QA Pairs",
       "value": 192,
-      "detail": "24 factual + 92 reasoning + 42 synthesis + 14 cross-article + 20 negative"
+      "detail": "24 factual + 92 reasoning + 42 synthesis + 14 cross-article + 20 negative",
+      "customer_facing": false
     },
     {
       "label": "Judge Model",
       "value": "DeepSeek-V4-Flash",
-      "detail": "SiliconFlow API, max_concurrent=15"
+      "detail": "SiliconFlow API, max_concurrent=15",
+      "customer_facing": false
     }
   ],
   "services": {
