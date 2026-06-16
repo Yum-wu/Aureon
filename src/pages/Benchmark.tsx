@@ -53,7 +53,12 @@ const Benchmark = () => {
         {customerMetrics.map((m, i) => (
           <div key={m.label} className={`bg-gradient-to-br ${HERO_COLORS[i % HERO_COLORS.length]} rounded-xl p-5 text-white shadow-lg`}>
             <div className="text-3xl font-bold">{m.value}</div>
-            <div className="text-sm opacity-90 mt-1">{m.label}</div>
+            <div className="text-sm opacity-90 mt-1">
+              {m.label}
+              {m.status === 'optimizing' && (
+                <span className="ml-2 text-xs bg-white/20 px-2 py-0.5 rounded-full">优化中</span>
+              )}
+            </div>
           </div>
         ))}
       </div>
