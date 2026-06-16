@@ -38,25 +38,40 @@ sys.path.insert(0, str(BACKEND_DIR))
 from dotenv import load_dotenv
 load_dotenv(BACKEND_DIR / ".env", override=True)
 
-# -- 配置 DeepEval Judge 模型（deepseek-v4-flash via DashScope OpenAI-compatible）--
-# 成本优化：flash 模型无 thinking 模式，output_token 成本低
-JUDGE_MODEL = "deepseek-v4-flash"
-_llm_api_key = os.getenv("LLM_API_KEY", "")
-_llm_base_url = os.getenv("LLM_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
+# -- 配置 DeepEval Judge 模型 --
+# Provider: SiliconFlow（主力 + 备用都走硅基流动）
+# DashScope 仅用于 embedding / reranker
+#   主力: deepseek-ai/DeepSeek-V3.2
+#   备用: deepseek-v4-flash（SiliconFlow 上也支持）
+# 可通过环境变量覆盖:
+#   JUDGE_MODEL       — 模型名（默认 deepseek-ai/DeepSeek-V3.2）
+#   JUDGE_BASE_URL    — API base URL
+#   JUDGE_API_KEY     — API key
+JUDGE_MODEL = os.getenv("JUDGE_MODEL", "deepseek-ai/DeepSeek-V3.2")
+
+_sf_key = os.getenv("SILICONFLOW_API_KEY", "") or os.getenv("siliconflow_api_key", "")
+_sf_url = "https://api.siliconflow.cn/v1"
+
+# Judge 全走 SiliconFlow
+_llm_api_key = os.getenv("JUDGE_API_KEY", _sf_key)
+_llm_base_url = os.getenv("JUDGE_BASE_URL", _sf_url)
+_judge_provider = "siliconflow"
+
 os.environ["OPENAI_API_KEY"] = _llm_api_key
 os.environ["OPENAI_API_BASE"] = _llm_base_url
 os.environ["OPENAI_BASE_URL"] = _llm_base_url
 
 # DeepEval 并发配置
-MAX_CONCURRENT = 15  # DashScope 限流约 20 QPS，留余量
+MAX_CONCURRENT = 15  # SiliconFlow 限流约 20-30 QPS，留余量
 PHASE1_CONCURRENT = 3  # Railway 采集并发数（避免打爆生产服务）
 
 
 class _QwenDashScopeJudge:
-    """deepseek-v4-flash wrapper（无 thinking 模式，JSON 解析稳定）。
+    """SiliconFlow Judge wrapper — OpenAI-compatible API。
 
-    通过 DashScope OpenAI-compatible API 调用。
-    flash 模型输出不含 <think> 标签，但仍保留重试 + JSON 提取逻辑以防异常。
+    主力: deepseek-ai/DeepSeek-V3.2（SiliconFlow）
+    备用: deepseek-v4-flash（SiliconFlow）
+    含 thinking 标签剥离 + 重试 + JSON 提取逻辑。
     """
 
     def __init__(self):
@@ -629,7 +644,7 @@ def phase2_evaluate(raw_path: Path = None) -> Path:
     from deepeval.evaluate.configs import AsyncConfig, CacheConfig, ErrorConfig
 
     _print_header("Phase 2: 全量 DeepEval 评估 (11 指标)")
-    print(f"  Judge: {JUDGE_MODEL} | 并发: {MAX_CONCURRENT}")
+    print(f"  Judge: {JUDGE_MODEL} ({_judge_provider}) | 并发: {MAX_CONCURRENT}")
 
     # -- 加载 raw 数据 --
     if raw_path is None:
@@ -945,6 +960,13 @@ def main():
     print("+---------------------------------------------+")
     print("|       Aureon RAG Benchmark — 统一测试        |")
     print("+---------------------------------------------+")
+    print()
+
+    # 显示 judge 配置
+    print(f"  Judge Provider: {_judge_provider}")
+    print(f"  Judge Model:    {JUDGE_MODEL}")
+    print(f"  Judge Base URL: {_llm_base_url}")
+    print()
 
     start = time.time()
     raw_path = None
