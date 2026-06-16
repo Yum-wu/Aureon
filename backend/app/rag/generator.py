@@ -269,17 +269,27 @@ def rag_query(
             logger.info("Skipping negative detection (top_score=%.4f >= %.4f)", top_score, _HIGH_SCORE_SKIP_THRESHOLD)
 
     # 1b. Context compression: filter chunks by embedding similarity to query
+    #     Skip for simple queries with high retrieval confidence (already optimal)
+    top_score = max(c.get("score", 0) for c in chunks) if chunks else 0
     if chunks:
-        chunks = compress_context(query, chunks)
+        # 简单查询 + 高置信度 → 跳过 compression（节省 ~1-2s embedding API 调用）
+        if route == "simple" and top_score >= 0.5:
+            logger.info("Skipping context compression: simple query, top_score=%.4f", top_score)
+        else:
+            chunks = compress_context(query, chunks)
 
     # 1c. CRAG self-correction: if compression removed all chunks or top score is low,
     #     rewrite query and re-retrieve once (lightweight corrective RAG).
+    #     Skip when retrieval confidence is high (top_score >= 0.5).
     if chunks:
         top_compression = max(c.get("compression_score", 1.0) for c in chunks)
     else:
         top_compression = 0.0
 
-    if not chunks or top_compression < _CONTEXT_COMPRESSION_THRESHOLD * 1.2:
+    # 高置信度跳过 CRAG retry（top_score 已经很高，不需要重新检索）
+    if top_score >= 0.5:
+        logger.info("Skipping CRAG retry: high confidence (top_score=%.4f)", top_score)
+    elif not chunks or top_compression < _CONTEXT_COMPRESSION_THRESHOLD * 1.2:
         # Try expanding query with rule-based variants
         variants = expand_queries_rules(query)
         if len(variants) > 1:
@@ -441,9 +451,14 @@ async def rag_query_astream(
             logger.info("Skipping negative detection (top_score=%.4f >= %.4f)", top_score, _HIGH_SCORE_SKIP_THRESHOLD)
 
     # 1b. Context compression: filter chunks by embedding similarity to query
-    #     Wrapped in asyncio.to_thread to avoid blocking event loop with sync embedding API
+    #     Skip for simple queries with high retrieval confidence (already optimal)
     if chunks:
-        chunks = await asyncio.to_thread(compress_context, query, chunks)
+        top_score = max(c.get("score", 0) for c in chunks) if chunks else 0
+        # 简单查询 + 高置信度 → 跳过 compression（节省 ~1-2s embedding API 调用）
+        if route == "simple" and top_score >= 0.5:
+            logger.info("Skipping context compression: simple query, top_score=%.4f", top_score)
+        else:
+            chunks = await asyncio.to_thread(compress_context, query, chunks)
 
     # 2. Format context
     context = format_context(chunks)

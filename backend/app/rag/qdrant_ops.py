@@ -743,26 +743,23 @@ def hybrid_search_qdrant(
 
     # 4. ��ʽ�����
 
+    # 4. 格式化结果
+    # 保存 query embedding 到 chunks（供 compress_context 复用，避免重复 API 调用）
     formatted = []
-
+    _query_emb_array = np.array(query_emb[0], dtype=np.float32) if query_emb is not None else None
     for point in results.points:
-
         payload = point.payload or {}
-
-        formatted.append({
-
+        chunk = {
             "id": str(point.id),
-
             "text": payload.get("text", ""),
-
             "metadata": payload.get("metadata", {}),
-
             "score": point.score,
-
-        })
-
+        }
+        # 附加 query embedding 供下游复用
+        if _query_emb_array is not None:
+            chunk["_query_embedding"] = _query_emb_array
+        formatted.append(chunk)
     return formatted
-
 
 
 
