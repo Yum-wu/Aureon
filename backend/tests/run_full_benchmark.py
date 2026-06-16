@@ -29,6 +29,9 @@ from pathlib import Path
 
 # -- Windows GBK 编码修复（必须在所有 print 之前）--
 os.environ["PYTHONIOENCODING"] = "utf-8"
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 # -- 路径设置 --
 BACKEND_DIR = Path(__file__).resolve().parent.parent
@@ -39,20 +42,19 @@ from dotenv import load_dotenv
 load_dotenv(BACKEND_DIR / ".env", override=True)
 
 # -- 配置 DeepEval Judge 模型 --
-# Provider: SiliconFlow（主力 + 备用都走硅基流动）
+# Provider: SiliconFlow（快、便宜）
+#   模型: Qwen/Qwen3.5-4B（thinking 关闭，通过 extra_body 控制）
 # DashScope 仅用于 embedding / reranker
-#   主力: deepseek-ai/DeepSeek-V3.2
-#   备用: deepseek-v4-flash（SiliconFlow 上也支持）
 # 可通过环境变量覆盖:
-#   JUDGE_MODEL       — 模型名（默认 deepseek-ai/DeepSeek-V3.2）
+#   JUDGE_MODEL       — 模型名（默认 Qwen/Qwen3.5-4B）
 #   JUDGE_BASE_URL    — API base URL
 #   JUDGE_API_KEY     — API key
-JUDGE_MODEL = os.getenv("JUDGE_MODEL", "deepseek-ai/DeepSeek-V3.2")
+JUDGE_MODEL = os.getenv("JUDGE_MODEL", "deepseek-ai/DeepSeek-V4-Flash")
 
 _sf_key = os.getenv("SILICONFLOW_API_KEY", "") or os.getenv("siliconflow_api_key", "")
 _sf_url = "https://api.siliconflow.cn/v1"
 
-# Judge 全走 SiliconFlow
+# Judge 走 SiliconFlow
 _llm_api_key = os.getenv("JUDGE_API_KEY", _sf_key)
 _llm_base_url = os.getenv("JUDGE_BASE_URL", _sf_url)
 _judge_provider = "siliconflow"
@@ -62,15 +64,14 @@ os.environ["OPENAI_API_BASE"] = _llm_base_url
 os.environ["OPENAI_BASE_URL"] = _llm_base_url
 
 # DeepEval 并发配置
-MAX_CONCURRENT = 15  # SiliconFlow 限流约 20-30 QPS，留余量
+MAX_CONCURRENT = 15  # V4-Flash 限流约 20-30 QPS
 PHASE1_CONCURRENT = 3  # Railway 采集并发数（避免打爆生产服务）
 
 
 class _QwenDashScopeJudge:
-    """SiliconFlow Judge wrapper — OpenAI-compatible API。
+    """SiliconFlow Judge wrapper — Qwen/Qwen3.5-4B（thinking 关闭）。
 
-    主力: deepseek-ai/DeepSeek-V3.2（SiliconFlow）
-    备用: deepseek-v4-flash（SiliconFlow）
+    快+便宜，通过 extra_body 关闭思考模式。
     含 thinking 标签剥离 + 重试 + JSON 提取逻辑。
     """
 
@@ -92,8 +93,8 @@ class _QwenDashScopeJudge:
             return match.group(0)
         return cleaned
 
-    def _call_with_retry(self, prompt: str, retries: int = 3) -> str:
-        """同步调用 + 重试"""
+    def _call_with_retry(self, prompt: str, retries: int = 5) -> str:
+        """同步调用 + 重试（429 指数退避）"""
         for attempt in range(retries):
             try:
                 resp = self._client.chat.completions.create(
@@ -101,8 +102,14 @@ class _QwenDashScopeJudge:
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.0,
                     max_tokens=4096,
+                    extra_body={"chat_template_kwargs": {"enable_thinking": False}},
                 )
                 raw = resp.choices[0].message.content or ""
+                # 如果 content 为空但 reasoning_content 有内容，从 reasoning 提取
+                if not raw.strip():
+                    rc = getattr(resp.choices[0].message, "reasoning_content", None)
+                    if rc:
+                        raw = rc
                 cleaned = self._clean_response(raw)
                 json.loads(cleaned)  # 验证合法 JSON
                 return cleaned
@@ -111,14 +118,20 @@ class _QwenDashScopeJudge:
                     time.sleep(1)
                     continue
                 raise
-            except Exception:
+            except Exception as e:
+                err_str = str(e)
+                # 429 限流：指数退避
+                if "429" in err_str:
+                    wait = min(2 ** (attempt + 2), 30)  # 4s, 8s, 16s, 30s
+                    time.sleep(wait)
+                    continue
                 if attempt < retries - 1:
                     time.sleep(2)
                     continue
                 raise
 
-    async def _acall_with_retry(self, prompt: str, retries: int = 3) -> str:
-        """异步调用 + 重试"""
+    async def _acall_with_retry(self, prompt: str, retries: int = 5) -> str:
+        """异步调用 + 重试（429 指数退避）"""
         for attempt in range(retries):
             try:
                 resp = await self._async_client.chat.completions.create(
@@ -126,8 +139,13 @@ class _QwenDashScopeJudge:
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.0,
                     max_tokens=4096,
+                    extra_body={"chat_template_kwargs": {"enable_thinking": False}},
                 )
                 raw = resp.choices[0].message.content or ""
+                if not raw.strip():
+                    rc = getattr(resp.choices[0].message, "reasoning_content", None)
+                    if rc:
+                        raw = rc
                 cleaned = self._clean_response(raw)
                 json.loads(cleaned)
                 return cleaned
@@ -136,7 +154,12 @@ class _QwenDashScopeJudge:
                     await asyncio.sleep(1)
                     continue
                 raise
-            except Exception:
+            except Exception as e:
+                err_str = str(e)
+                if "429" in err_str:
+                    wait = min(2 ** (attempt + 2), 30)
+                    await asyncio.sleep(wait)
+                    continue
                 if attempt < retries - 1:
                     await asyncio.sleep(2)
                     continue
