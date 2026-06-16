@@ -31,6 +31,7 @@ from app.rag.classifier import (
     _NEGATIVE_KEYWORDS_ZH,
     _is_negative_by_keywords,
     classify_query_answerable_sync,
+    filter_sentences_by_relevance,
 )
 
 # 鈹�鈹� retriever.py 鈹�鈹�
@@ -91,7 +92,7 @@ __all__ = [
     "_CLASSIFIER_CACHE_MAXSIZE", "_CLASSIFIER_CACHE_LOCK",
     "_classifier_cache_key", "_classifier_cache_get", "_classifier_cache_set",
     "classify_query_answerable", "_NEGATIVE_KEYWORDS_ZH", "_is_negative_by_keywords",
-    "classify_query_answerable_sync",
+    "classify_query_answerable_sync", "filter_sentences_by_relevance",
     # retriever
     "_RRF_K", "_RETRIEVAL_MULTIPLIER", "_RERANK_CANDIDATES", "_ADAPTIVE_RERANK_THRESHOLD",
     "MULTI_QUERY_ENABLED", "_ADAPTIVE_RERANK_ENABLED", "_ENSEMBLE_RERANK_ENABLED",

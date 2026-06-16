@@ -290,6 +290,87 @@ def compress_context(query: str, chunks: List[Dict[str, Any]], threshold: float 
 
 
 
+
+# ── Sentence-level relevance filtering ──
+_SENTENCE_FILTER_ENABLED = True
+_SENTENCE_FILTER_THRESHOLD = 0.35
+_SENTENCE_MIN_LENGTH = 10
+
+
+def filter_sentences_by_relevance(
+    query: str,
+    chunks: list,
+    threshold: float = None,
+    query_embedding=None,
+) -> list:
+    if not chunks or not _SENTENCE_FILTER_ENABLED:
+        return chunks
+    if threshold is None:
+        threshold = _SENTENCE_FILTER_THRESHOLD
+    import numpy as np
+    emb = query_embedding
+    if emb is None and chunks:
+        emb = chunks[0].get("_query_embedding")
+    if emb is None:
+        try:
+            emb = embed_texts_llm([query])[0]
+        except Exception:
+            return chunks
+    try:
+        import re as _re
+        _SENT_SPLIT = _re.compile(r'(?<=[。！？.!?\n])\s*')
+        all_sentences = []
+        for i, chunk in enumerate(chunks):
+            text = chunk.get("text", "")
+            sentences = [s.strip() for s in _SENT_SPLIT.split(text) if len(s.strip()) >= _SENTENCE_MIN_LENGTH]
+            if not sentences:
+                sentences = [text]
+            for s in sentences:
+                all_sentences.append((i, s))
+        if not all_sentences:
+            return chunks
+        sentence_texts = [s[1] for s in all_sentences]
+        sentence_embs = embed_texts_llm(sentence_texts)
+        query_norm = emb / (np.linalg.norm(emb) + 1e-8)
+        sent_norms = sentence_embs / (np.linalg.norm(sentence_embs, axis=1, keepdims=True) + 1e-8)
+        similarities = np.dot(sent_norms, query_norm)
+        chunk_sent_scores = {}
+        for idx, ((chunk_idx, sentence), sim) in enumerate(zip(all_sentences, similarities)):
+            if chunk_idx not in chunk_sent_scores:
+                chunk_sent_scores[chunk_idx] = []
+            chunk_sent_scores[chunk_idx].append((sentence, float(sim)))
+        filtered_chunks = []
+        total_removed = 0
+        total_kept = 0
+        for i, chunk in enumerate(chunks):
+            sent_scores = chunk_sent_scores.get(i, [])
+            if not sent_scores:
+                filtered_chunks.append(chunk)
+                continue
+            kept = [(s, sc) for s, sc in sent_scores if sc >= threshold]
+            if not kept and sent_scores:
+                best = max(sent_scores, key=lambda x: x[1])
+                kept = [best]
+            total_removed += len(sent_scores) - len(kept)
+            total_kept += len(kept)
+            if len(kept) < len(sent_scores):
+                new_text = " ".join(s for s, _ in kept)
+                chunk_copy = dict(chunk)
+                chunk_copy["text"] = new_text
+                chunk_copy["_original_text"] = chunk.get("text", "")
+                filtered_chunks.append(chunk_copy)
+            else:
+                filtered_chunks.append(chunk)
+        if total_removed > 0:
+            logger.info(
+                "Sentence filter: kept %d/%d sentences (%d removed, threshold=%.2f)",
+                total_kept, total_kept + total_removed, total_removed, threshold,
+            )
+        return filtered_chunks
+    except Exception as e:
+        logger.warning("Sentence filtering failed, returning all chunks: %s", e)
+        return chunks
+
 # ── Negative detection thresholds ──
 
 # Skip Negative Detection when top RRF score is above this threshold.

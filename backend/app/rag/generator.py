@@ -16,6 +16,7 @@ from app.rag.classifier import (
     _NEGATIVE_DETECTION_ENABLED,
     _HIGH_SCORE_SKIP_THRESHOLD,
     _CONTEXT_COMPRESSION_THRESHOLD,
+    filter_sentences_by_relevance,
 )
 from app.rag.retriever import multi_query_retrieve, hybrid_retrieve
 from app.utils.lang_detect import detect_language, lang_instruction
@@ -302,6 +303,9 @@ def rag_query(
             sources=[],
         )
 
+    # 1d. Sentence-level relevance filtering: remove noisy sentences within chunks
+    chunks = filter_sentences_by_relevance(query, chunks)
+
     # 2. Format context
     context = format_context(chunks)
 
@@ -428,6 +432,10 @@ async def rag_query_astream(
     #     Wrapped in asyncio.to_thread to avoid blocking event loop with sync embedding API
     if chunks:
         chunks = await asyncio.to_thread(compress_context, query, chunks)
+
+    # 1c. Sentence-level relevance filtering: remove noisy sentences within chunks
+    if chunks:
+        chunks = await asyncio.to_thread(filter_sentences_by_relevance, query, chunks)
 
     # 2. Format context
     context = format_context(chunks)
