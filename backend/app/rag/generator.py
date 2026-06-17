@@ -8,7 +8,7 @@ import asyncio
 import time
 from pathlib import Path
 
-from app.rag.vector_store import format_context, retrieve_keyword
+from app.rag.vector_store import format_context
 from app.rag.query_rewriter import expand_queries_rules, hyde_retrieve
 from app.rag.models import RAGQueryResponse, SourceItem
 from app.rag.classifier import (
@@ -421,16 +421,11 @@ async def rag_query_astream(
 
     route = route_retrieval(query)
     if route == "simple":
-        # 简单查询：只走 sparse/keyword 检索
-        if settings.sparse_enabled:
-            from app.rag.vector_store import hybrid_search_qdrant
-            chunks = await asyncio.to_thread(
-                hybrid_search_qdrant, query, top_k=top_k, lang_filter=filter_lang
-            )
-        else:
-            chunks = await asyncio.to_thread(
-                retrieve_keyword, query, top_k=top_k, lang_filter=filter_lang
-            )
+        # 简单查询：hybrid retrieve（dense+sparse + title boost + rerank）
+        # 不再只用 sparse/keyword，因为语义匹配对很多查询至关重要
+        chunks = await asyncio.to_thread(
+            hybrid_retrieve, query, top_k=top_k, lang_filter=filter_lang
+        )
     elif route == "medium":
         # 中等查询：hybrid retrieve（不含 multi_query）
         chunks = await asyncio.to_thread(
