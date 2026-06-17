@@ -311,24 +311,10 @@ def multi_query_retrieve(query: str, top_k: int = 3, lang_filter: str = None) ->
     # Reranker disabled — RRF alone gives better recall.
     # CRAG assessment in rag_query handles quality filtering.
 
-    # Diversity selection: one per unique slug, then fill remaining slots
-    selected = []
-    seen_slugs = set()
-    # Pass 1: best chunk per unique article
-    for doc in candidates:
-        slug = doc.get("metadata", {}).get("slug", "")
-        if slug not in seen_slugs:
-            seen_slugs.add(slug)
-            selected.append(doc)
-            if len(selected) >= top_k:
-                break
-    # Pass 2: fill remaining with best scores from duplicates
-    if len(selected) < top_k:
-        for doc in candidates:
-            if doc not in selected:
-                selected.append(doc)
-                if len(selected) >= top_k:
-                    break
+    # 不再强制 diversity selection（每个 slug 只取 1 条），
+    # 改为按 score 排序取 top_k，让同一文章的多条相关 chunk 都被保留。
+    # rerank score 过滤是主要的质量门控，不需要 diversity 限制。
+    selected = candidates[:top_k]
 
     # Relevance gate (same as hybrid_retrieve): check RRF score
     if selected and selected[0].get("score", 0) < _MIN_RELEVANCE_SCORE:
