@@ -58,7 +58,7 @@ class TestMultiQueryRetrieve:
     def test_respects_top_k(self, mock_hybrid):
         all_chunks = [_make_chunk(f"doc-{i}", score=0.9 - i * 0.1) for i in range(5)]
 
-        def _hybrid_with_topk(query, top_k=3, lang_filter=None):
+        def _hybrid_with_topk(query, top_k=3, lang_filter=None, query_complexity="simple"):
             return all_chunks[:top_k]
 
         mock_hybrid.side_effect = _hybrid_with_topk
