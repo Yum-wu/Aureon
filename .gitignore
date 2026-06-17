@@ -92,6 +92,7 @@ process.exit*
 backend/bench_*.py
 backend/data/benchmark_*.json
 backend/data/benchmark_*.md
+backend/data/feedback_log.jsonl
 
 # DeepEval 缓存
 backend/.deepeval/
