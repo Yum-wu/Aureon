@@ -40,7 +40,7 @@ _VECTOR_MAX_CONTRIB = settings.vector_max_contrib
 _VECTOR_CONFIDENCE_THRESHOLD = settings.vector_confidence_threshold
 
 
-def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List[Dict[str, Any]]:
+def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None, query_complexity: str = "simple") -> List[Dict[str, Any]]:
     """Hybrid retrieval: BM25 keyword + vector search, fused via RRF.
 
     Runs both retrievers and combines results using Reciprocal Rank Fusion.
@@ -52,11 +52,12 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
         query: 查询文本
         top_k: 返回结果数量
         lang_filter: 语言过滤（"zh" 或 "en"）
+        query_complexity: 查询复杂度（"simple"/"medium"/"complex"），影响 rerank 阈值
     """
     # 当 sparse 向量启用时，优先使用 Qdrant 原生混合搜索
     if settings.sparse_enabled:
         from app.rag.vector_store import hybrid_search_qdrant
-        return hybrid_search_qdrant(query, top_k=top_k, lang_filter=lang_filter)
+        return hybrid_search_qdrant(query, top_k=top_k, lang_filter=lang_filter, query_complexity=query_complexity)
 
     bm25_results = retrieve_keyword(query, top_k=top_k * _RETRIEVAL_MULTIPLIER, lang_filter=lang_filter)
     vector_results = retrieve(query, top_k=top_k * _RETRIEVAL_MULTIPLIER, use_mmr=False, lang_filter=lang_filter)
@@ -251,7 +252,7 @@ def multi_query_retrieve(query: str, top_k: int = 3, lang_filter: str = None) ->
     """
     # Fast path: skip expansion for simple queries or when disabled
     if not MULTI_QUERY_ENABLED or not is_cross_article_query(query):
-        return hybrid_retrieve(query, top_k=top_k)
+        return hybrid_retrieve(query, top_k=top_k, query_complexity="complex")
 
     # Cross-article path: expand into variants and retrieve each
     variants = expand_queries_rules(query)
@@ -259,7 +260,7 @@ def multi_query_retrieve(query: str, top_k: int = 3, lang_filter: str = None) ->
     # Collect all results with their source variant for RRF scoring
     all_results: List[Dict[str, Any]] = []
     for variant in variants:
-        variant_results = hybrid_retrieve(variant, top_k=top_k * 2)
+        variant_results = hybrid_retrieve(variant, top_k=top_k * 2, query_complexity="complex")
         all_results.append(variant_results)
 
     # RRF fusion across all variant result lists

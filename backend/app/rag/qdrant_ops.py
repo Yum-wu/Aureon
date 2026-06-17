@@ -578,6 +578,8 @@ def hybrid_search_qdrant(
 
     lang_filter: str = None,
 
+    query_complexity: str = "simple",
+
 ) -> List[Dict]:
 
     """Qdrant ԭ�����������dense + sparse��RRF �ںϡ�
@@ -755,19 +757,21 @@ def hybrid_search_qdrant(
             rerank_top = min(len(formatted), top_k * 5)
             reranked = do_rerank(query, formatted, top_k=rerank_top)
             if reranked:
-                # R17: 回到 R10 的硬阈值过滤 + P0 的 top-20
-                # R10 配置：rerank 后过滤 score >= 0.55，过滤后为空则取 top-K
-                # P0 改动：rerank_top 从 top_k*5 改为 20（Anthropic 论文推荐）
-                _RERANK_SCORE_THRESHOLD = 0.55
+                # R19: 动态 rerank 阈值——根据查询复杂度调整
+                # 简单查询：0.55（R10 最佳配置）
+                # 中等查询：0.40（中等复杂度查询 rerank score 普遍偏低）
+                # 复杂查询：0.30（复杂查询 rerank score 更低，0.55 会过滤掉所有结果）
+                _RERANK_THRESHOLDS = {"simple": 0.55, "medium": 0.40, "complex": 0.30}
+                _RERANK_SCORE_THRESHOLD = _RERANK_THRESHOLDS.get(query_complexity, 0.55)
                 filtered = [c for c in reranked if c.get("rerank_score", 0) >= _RERANK_SCORE_THRESHOLD]
                 if filtered:
-                    logger.info("Qdrant hybrid rerank: %d/%d passed threshold (>=%.2f), returning top %d",
-                                len(filtered), len(reranked), _RERANK_SCORE_THRESHOLD, top_k)
+                    logger.info("Qdrant hybrid rerank (%s): %d/%d passed threshold (>=%.2f), returning top %d",
+                                query_complexity, len(filtered), len(reranked), _RERANK_SCORE_THRESHOLD, top_k)
                     return filtered[:top_k]
                 else:
-                    # 所有 rerank score < 0.55，返回 rerank top-K（避免空结果）
-                    logger.warning("Qdrant hybrid rerank: 0/%d passed threshold (>=%.2f), returning rerank top-%d",
-                                   len(reranked), _RERANK_SCORE_THRESHOLD, top_k)
+                    # 所有 rerank score < 阈值，返回 rerank top-K（避免空结果）
+                    logger.warning("Qdrant hybrid rerank (%s): 0/%d passed threshold (>=%.2f), returning rerank top-%d",
+                                   query_complexity, len(reranked), _RERANK_SCORE_THRESHOLD, top_k)
                     return reranked[:top_k]
             else:
                 logger.warning("Qdrant hybrid rerank returned None, using RRF results")

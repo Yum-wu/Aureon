@@ -118,7 +118,7 @@ def test_hyde_retrieve_empty_hypothetical():
 
         assert len(result) == 1
         # Should fallback to direct query retrieval
-        mock_hybrid.assert_called_once_with("Test query", top_k=3, lang_filter=None)
+        mock_hybrid.assert_called_once_with("Test query", top_k=3, lang_filter=None, query_complexity="complex")
 
 
 if __name__ == "__main__":

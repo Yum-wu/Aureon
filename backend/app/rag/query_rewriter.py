@@ -198,7 +198,7 @@ def hyde_retrieve(
     if not hypothetical:
         logger.info("HyDE: empty hypothetical answer, falling back to direct retrieval")
         from app.rag.qa_chain import hybrid_retrieve
-        return hybrid_retrieve(query, top_k=top_k, lang_filter=lang_filter)
+        return hybrid_retrieve(query, top_k=top_k, lang_filter=lang_filter, query_complexity="complex")
 
     logger.info(
         "HyDE: generated hypothetical answer (%d chars), retrieving with it",
@@ -207,7 +207,7 @@ def hyde_retrieve(
 
     # 2. 使用混合检索（BM25 + 向量），而非纯向量检索
     from app.rag.qa_chain import hybrid_retrieve
-    results = hybrid_retrieve(hypothetical, top_k=top_k, lang_filter=lang_filter)
+    results = hybrid_retrieve(hypothetical, top_k=top_k, lang_filter=lang_filter, query_complexity="complex")
 
     # 3. If HyDE returns no results, fallback to direct query retrieval
     if not results:
