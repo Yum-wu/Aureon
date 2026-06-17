@@ -204,7 +204,13 @@ def load_markdown_files(articles_dir: str) -> List[Dict[str, Any]]:
         logger.warning("Articles dir not found: %s", articles_dir)
         return docs
 
+    # 跳过 expansion 目录（扩展文档，等 500 文档扩容时使用）
+    _EXCLUDE_DIRS = {"expansion", "uploads"}
+
     for fpath in sorted(path.rglob("*.md")):
+        # 跳过排除目录中的文件
+        if any(part in _EXCLUDE_DIRS for part in fpath.parts):
+            continue
         content = fpath.read_text(encoding="utf-8")
         metadata, body = parse_frontmatter(content)
         lang = detect_doc_language(body, metadata.get("lang"))

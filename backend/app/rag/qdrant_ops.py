@@ -687,8 +687,9 @@ def hybrid_search_qdrant(
 
 
     # 3. Qdrant Query API: prefetch dense + sparse, RRF fusion
-    # 先多取候选，再 rerank 精排
-    _candidate_multiplier = 5  # RRF 融合后取 top_k * 5 候选，供 rerank 筛选
+    # 参考 Anthropic Contextual Retrieval 最佳实践：初始检索 top-150 → rerank → top-20
+    # 候选池扩大到 top_k * 12（top_k=12 → fetch_limit=144，接近 top-150）
+    _candidate_multiplier = 12
     fetch_limit = top_k * _candidate_multiplier
 
     prefetch = [
@@ -753,7 +754,8 @@ def hybrid_search_qdrant(
         try:
             from app.rag.reranker import rerank as do_rerank
             # 多取一些候选，给 score 过滤留余量
-            rerank_top = min(len(formatted), top_k * 5)
+            # rerank_top 与 fetch_limit 对齐，确保 rerank 能看到所有 RRF 候选
+            rerank_top = min(len(formatted), fetch_limit)
             reranked = do_rerank(query, formatted, top_k=rerank_top)
             if reranked:
                 # Rerank score 过滤：丢弃相关性过低的 chunk，提升 Contextual Relevancy
