@@ -751,9 +751,8 @@ def hybrid_search_qdrant(
     if settings.rerank_enabled and len(formatted) > top_k:
         try:
             from app.rag.reranker import rerank as do_rerank
-            # Anthropic 论文推荐 rerank 后取 top-20
-            _RERANK_TOP = 20
-            rerank_top = min(len(formatted), _RERANK_TOP)
+            # R18: 回到 R10 的 rerank_top = top_k * 5（P0 的 top-20 导致 Contextual Relevancy/Recall 退化）
+            rerank_top = min(len(formatted), top_k * 5)
             reranked = do_rerank(query, formatted, top_k=rerank_top)
             if reranked:
                 # R17: 回到 R10 的硬阈值过滤 + P0 的 top-20
