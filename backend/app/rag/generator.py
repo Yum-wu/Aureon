@@ -231,7 +231,7 @@ def generate_answer(
 def rag_query(
     query: str,
     llm_call_fn,
-    top_k: int = 8,
+    top_k: int = 12,
     use_mmr: bool = True,
     lang: str | None = None,
     filter_lang: str | None = None,
@@ -390,7 +390,7 @@ def rag_query(
 async def rag_query_astream(
     query: str,
     llm,
-    top_k: int = 8,
+    top_k: int = 12,
     use_mmr: bool = True,
     lang: str | None = None,
     filter_lang: str | None = None,
@@ -570,7 +570,7 @@ async def rag_query_astream(
 async def rag_query_with_cache(
     query: str,
     llm_call_fn,
-    top_k: int = 8,
+    top_k: int = 12,
     use_mmr: bool = True,
     lang: str | None = None,
     filter_lang: str | None = None,

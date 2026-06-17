@@ -753,11 +753,12 @@ def hybrid_search_qdrant(
         try:
             from app.rag.reranker import rerank as do_rerank
             # 多取一些候选，给 score 过滤留余量
-            rerank_top = min(len(formatted), top_k * 2)
+            rerank_top = min(len(formatted), top_k * 5)
             reranked = do_rerank(query, formatted, top_k=rerank_top)
             if reranked:
                 # Rerank score 过滤：丢弃相关性过低的 chunk，提升 Contextual Relevancy
-                _RERANK_SCORE_MIN = 0.1  # 低于此分数的 chunk 视为不相关
+                # 参考8阶段流水线 Stage 7：rerank_score >= 0.55
+                _RERANK_SCORE_MIN = 0.55
                 before_filter = len(reranked)
                 reranked = [c for c in reranked if c.get("rerank_score", 0) >= _RERANK_SCORE_MIN]
                 if len(reranked) < before_filter:
