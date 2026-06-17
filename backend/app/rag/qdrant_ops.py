@@ -687,50 +687,34 @@ def hybrid_search_qdrant(
 
 
     # 3. Qdrant Query API: prefetch dense + sparse, RRF fusion
+    # 先多取候选，再 rerank 精排
+    _candidate_multiplier = 3  # RRF 融合后取 top_k * 3 候选，供 rerank 筛选
+    fetch_limit = top_k * _candidate_multiplier
 
     prefetch = [
-
         qmodels.Prefetch(
-
             query=dense_vector,
-
             using="dense",
-
-            limit=top_k * 10,  # 扩大候选池提升 Recall
+            limit=fetch_limit * 10,  # 扩大候选池提升 Recall
             filter=query_filter,
         ),
     ]
 
     if sparse_vector:
-
         prefetch.append(qmodels.Prefetch(
-
             query=sparse_vector,
-
             using="sparse",
-
-            limit=top_k * 10,  # 扩大候选池提升 Recall
-
+            limit=fetch_limit * 10,  # 扩大候选池提升 Recall
             filter=query_filter,
-
         ))
 
-
-
     results = client.query_points(
-
         collection_name=collection_name,
-
         prefetch=prefetch,
-
         query=qmodels.FusionQuery(fusion=qmodels.Fusion.RRF),
-
-        limit=top_k,
-
+        limit=fetch_limit,
         search_params=qmodels.SearchParams(
-
             hnsw_ef=settings.hnsw_ef_search,
-
             quantization=qmodels.QuantizationSearchParams(rescore=True),
 
         ),
@@ -761,7 +745,19 @@ def hybrid_search_qdrant(
         if _query_emb_array is not None:
             chunk["_query_embedding"] = _query_emb_array
         formatted.append(chunk)
-    return formatted
+
+    # 5. Rerank: 对 Qdrant RRF 候选做 API rerank 精排，提升 Recall 和 Relevancy
+    if settings.rerank_enabled and len(formatted) > top_k:
+        try:
+            from app.rag.reranker import rerank as do_rerank
+            reranked = do_rerank(query, formatted, top_k=top_k)
+            if reranked:
+                logger.info("Qdrant hybrid rerank: %d candidates -> top %d", len(formatted), len(reranked))
+                return reranked
+        except Exception as e:
+            logger.warning("Qdrant hybrid rerank failed, using RRF results: %s", e)
+
+    return formatted[:top_k]
 
 
 

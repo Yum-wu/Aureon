@@ -231,18 +231,33 @@ _progress.start = time.time()
 
 
 def wait_for_service(base_url: str, max_retries: int = 10, interval: int = 10):
-    """等待服务就绪，避免冷启动污染延迟数据。"""
+    """等待服务就绪 + LLM 预热查询，避免冷启动污染延迟数据。"""
     for i in range(max_retries):
         try:
             resp = httpx.get(f"{base_url}/api/health", timeout=10)
             if resp.status_code == 200 and resp.json().get("status") == "ok":
                 print(f"✅ 服务就绪（第 {i+1} 次尝试）")
-                return True
+                break
         except Exception:
             pass
         print(f"⏳ 等待服务就绪...（第 {i+1}/{max_retries} 次）")
         time.sleep(interval)
-    raise RuntimeError(f"服务在 {max_retries * interval}s 内未就绪")
+    else:
+        raise RuntimeError(f"服务在 {max_retries * interval}s 内未就绪")
+
+    # 发送预热查询，确保 LLM / Embedding / Qdrant 连接池都已热身
+    try:
+        warmup_resp = httpx.post(
+            f"{base_url}/api/rag/query",
+            json={"query": "warmup", "top_k": 1},
+            timeout=60,
+        )
+        if warmup_resp.status_code == 200:
+            print("✅ LLM 预热查询完成")
+        else:
+            print(f"⚠️ 预热查询返回 {warmup_resp.status_code}（非致命）")
+    except Exception as e:
+        print(f"⚠️ 预热查询异常: {e}（非致命）")
 
 
 def sample_qa(qa_dataset: list, sample_size: int, seed: int = 42) -> list:
@@ -251,7 +266,7 @@ def sample_qa(qa_dataset: list, sample_size: int, seed: int = 42) -> list:
     negatives = [q for q in qa_dataset if q.get("is_negative")]
     non_neg = [q for q in qa_dataset if not q.get("is_negative")]
 
-    simple = [q for q in non_neg if q.get("difficulty") == "simple"]
+    simple = [q for q in non_neg if q.get("difficulty") in ("simple", "easy")]
     medium = [q for q in non_neg if q.get("difficulty") == "medium"]
     hard = [q for q in non_neg if q.get("difficulty") == "hard"]
 
