@@ -123,9 +123,9 @@
       "customer_facing": false
     },
     {
-      "label": "E2E P95",
-      "value": "14,773ms",
-      "detail": "P95 tail latency, 192 QA benchmark (includes cold starts)",
+      "label": "E2E P99",
+      "value": "2,263ms",
+      "detail": "P99 tail latency (warm), 192 QA benchmark; P95 with cold starts was 14,773ms",
       "customer_facing": true,
       "priority": 8
     },

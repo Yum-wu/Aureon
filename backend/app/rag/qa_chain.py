@@ -14,6 +14,7 @@ from app.rag.classifier import (
     _TITLE_KEYWORDS_ZH,
     _extract_title_keywords,
     compress_context,
+    _deduplicate_chunks,
     _CONTEXT_COMPRESSION_ENABLED,
     _CONTEXT_COMPRESSION_THRESHOLD,
     _HIGH_SCORE_SKIP_THRESHOLD,
@@ -84,7 +85,7 @@ SEMANTIC_CHUNKING_ENABLED = __import__('app.config', fromlist=['settings']).sett
 
 __all__ = [
     # classifier
-    "_TITLE_KEYWORDS_ZH", "_extract_title_keywords", "compress_context",
+    "_TITLE_KEYWORDS_ZH", "_extract_title_keywords", "compress_context", "_deduplicate_chunks",
     "_CONTEXT_COMPRESSION_ENABLED", "_CONTEXT_COMPRESSION_THRESHOLD",
     "_HIGH_SCORE_SKIP_THRESHOLD", "_LOW_SCORE_THRESHOLD", "_NEGATIVE_DETECTION_ENABLED",
     "_CLASSIFIER_CACHE", "_CLASSIFIER_CACHE_TIMESTAMPS", "_CLASSIFIER_CACHE_TTL",

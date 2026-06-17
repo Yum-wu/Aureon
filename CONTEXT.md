@@ -25,7 +25,7 @@
 - **云端部署**：Railway，500MB 内存限制，本地模型不可用
 - **向量后端**：Qdrant（唯一后端，ChromaDB 已移除）
 - **Embedding**：API-only 模式（SKIP_LOCAL_EMBED=true），统一 1024d
-- **目标规模**：1000+ 文档（≈5000+ chunks）
+- **目标规模**：1000+ 文档（≈5000+ chunks），阶梯扩容：100 → 500 → 1000+
 
 ## 关键约束
 
@@ -34,3 +34,11 @@
 3. API 成本敏感 → 减少 LLM 调用次数，优先用轻量级方案
 4. 查询路由优化：简单查询走纯稀疏向量（<10ms），复杂查询走完整 pipeline
 5. Qdrant 原生稀疏向量替代外部 BM25，消除 jieba 依赖
+6. 扩容内容策略：50 篇同领域（RAG 最佳实践/官方文档/核心论文）+ 24 篇跨领域（商业板块相关），由 AI 生成
+7. Contextual Retrieval 已完整实现（dense + sparse 均基于带 prefix 的文本生成），扩容时直接启用
+8. 索引并发度：max_concurrent 从 10 提升到 15-20
+9. hybrid_search_qdrant prefetch limit：从 top_k*5 调整为 top_k*10，根据实际效果再调
+10. E2E P99 预热后 2,263ms，冷启动 P95 14,773ms（Railway 自动休眠），需预热策略
+11. Benchmark 前 health check 保活，服务就绪后才开始测试，避免冷启动污染延迟数据
+12. Benchmark 采样固定种子，确保可复现 A/B 对比；难度分布 6:3:1（简单:中等:困难）
+13. Benchmark 分级验证：快速验证（10 条 6:3:1）→ 详细验证（50 条 6:3:1）→ 全量测试（仅用户要求时）

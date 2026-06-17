@@ -27,6 +27,8 @@ import sys
 import time
 from pathlib import Path
 
+import httpx
+
 # -- Windows GBK 编码修复（必须在所有 print 之前）--
 os.environ["PYTHONIOENCODING"] = "utf-8"
 if sys.platform == "win32":
@@ -228,6 +230,58 @@ def _progress(current: int, total: int, prefix: str = "", suffix: str = "") -> N
 _progress.start = time.time()
 
 
+def wait_for_service(base_url: str, max_retries: int = 10, interval: int = 10):
+    """等待服务就绪，避免冷启动污染延迟数据。"""
+    for i in range(max_retries):
+        try:
+            resp = httpx.get(f"{base_url}/api/health", timeout=10)
+            if resp.status_code == 200 and resp.json().get("status") == "ok":
+                print(f"✅ 服务就绪（第 {i+1} 次尝试）")
+                return True
+        except Exception:
+            pass
+        print(f"⏳ 等待服务就绪...（第 {i+1}/{max_retries} 次）")
+        time.sleep(interval)
+    raise RuntimeError(f"服务在 {max_retries * interval}s 内未就绪")
+
+
+def sample_qa(qa_dataset: list, sample_size: int, seed: int = 42) -> list:
+    """固定种子采样，确保 6:3:1 难度分布。"""
+    rng = random.Random(seed)
+    negatives = [q for q in qa_dataset if q.get("is_negative")]
+    non_neg = [q for q in qa_dataset if not q.get("is_negative")]
+
+    simple = [q for q in non_neg if q.get("difficulty") == "simple"]
+    medium = [q for q in non_neg if q.get("difficulty") == "medium"]
+    hard = [q for q in non_neg if q.get("difficulty") == "hard"]
+
+    # 6:3:1 分布
+    n_simple = max(1, round(sample_size * 0.6))
+    n_medium = max(1, round(sample_size * 0.3))
+    n_hard = max(1, sample_size - n_simple - n_medium)
+
+    sampled = (
+        rng.sample(simple, min(n_simple, len(simple))) +
+        rng.sample(medium, min(n_medium, len(medium))) +
+        rng.sample(hard, min(n_hard, len(hard))) +
+        negatives  # 负例全部包含
+    )
+    rng.shuffle(sampled)
+    return sampled
+
+
+def evaluate_negative_detection(results: list) -> float:
+    """评估负例检测率。"""
+    negative_results = [r for r in results if r.get("is_negative")]
+    if not negative_results:
+        return 0.0
+    correctly_rejected = sum(
+        1 for r in negative_results
+        if r.get("detected_as_negative", False)
+    )
+    return correctly_rejected / len(negative_results)
+
+
 def _print_header(title: str) -> None:
     """打印阶段标题"""
     print()
@@ -346,14 +400,20 @@ async def _stream_one(client, qa, semaphore, counter, total, ttft_list, tpot_lis
         _progress(counter[0], total, prefix="流式测量")
 
 
-async def phase1_collect() -> tuple:
+async def phase1_collect(level: str = "detailed", seed: int = 42) -> tuple:
     """并发采集 Railway /api/rag/query 数据 + 流式 TTFT/TPOT"""
-    import httpx
     from app.rag.test_data import TEST_QA_PAIRS
 
-    _print_header(f"Phase 1: Railway 数据采集 ({len(TEST_QA_PAIRS)} queries, 并发={PHASE1_CONCURRENT})")
+    # 分层采样
+    LEVEL_SIZES = {"quick": 10, "detailed": 50, "full": None}
+    sample_size = LEVEL_SIZES[level]
+    qa_dataset = TEST_QA_PAIRS
+    if sample_size and len(qa_dataset) > sample_size:
+        qa_dataset = sample_qa(qa_dataset, sample_size, seed)
+
+    _print_header(f"Phase 1: Railway 数据采集 ({len(qa_dataset)} queries, level={level}, 并发={PHASE1_CONCURRENT})")
     _progress.start = time.time()
-    _progress(0, len(TEST_QA_PAIRS), prefix="采集进度")
+    _progress(0, len(qa_dataset), prefix="采集进度")
 
     semaphore = asyncio.Semaphore(PHASE1_CONCURRENT)
 
@@ -377,8 +437,8 @@ async def phase1_collect() -> tuple:
         counter = [0]  # mutable counter for progress
 
         tasks = [
-            _fetch_one(client, qa, semaphore, counter, len(TEST_QA_PAIRS), raw_results, latencies)
-            for qa in TEST_QA_PAIRS
+            _fetch_one(client, qa, semaphore, counter, len(qa_dataset), raw_results, latencies)
+            for qa in qa_dataset
         ]
         await asyncio.gather(*tasks)
 
@@ -387,7 +447,7 @@ async def phase1_collect() -> tuple:
 
         # -- 并发流式采样（每 5 条取 1 条）--
         _print_header("Phase 1b: 流式延迟测量 (TTFT/TPOT, 采样 20%)")
-        sample_qas = [TEST_QA_PAIRS[i] for i in range(0, len(TEST_QA_PAIRS), 5)]
+        sample_qas = [qa_dataset[i] for i in range(0, len(qa_dataset), 5)]
         _progress.start = time.time()
         _progress(0, len(sample_qas), prefix="流式测量")
 
@@ -445,8 +505,10 @@ async def phase1_collect() -> tuple:
         source_article = r["expected_source"]
 
         if r["is_negative"]:
+            detected = _is_rejected_neg(answer, sources)
+            r["detected_as_negative"] = detected
             negative_total += 1
-            if _is_rejected_neg(answer, sources):
+            if detected:
                 negative_correct += 1
         else:
             positive_total += 1
@@ -495,7 +557,7 @@ async def phase1_collect() -> tuple:
     # 统计（排除 error 样本）
     valid_results = [r for r in raw_results if not r.get("error")]
     answer_has_content = sum(1 for r in valid_results if r.get("actual_answer") and len(r["actual_answer"]) > 8)
-    neg_rate = negative_correct / negative_total if negative_total > 0 else 0
+    neg_rate = evaluate_negative_detection(raw_results)
     answer_comp = answer_has_content / len(valid_results) if valid_results else 0
 
     # 来源准确率（Top-1 命中）
@@ -983,6 +1045,9 @@ def phase3_report(summary_path: Path = None, eval_path: Path = None) -> None:
 def main():
     parser = argparse.ArgumentParser(description="统一 RAG Benchmark 测试")
     parser.add_argument("--phase", type=int, choices=[1, 2, 3], help="仅运行指定阶段（默认全部）")
+    parser.add_argument("--level", choices=["quick", "detailed", "full"], default="detailed",
+                        help="验证级别：quick=10条, detailed=50条, full=全部")
+    parser.add_argument("--seed", type=int, default=42, help="固定随机种子")
     args = parser.parse_args()
 
     print()
@@ -995,7 +1060,12 @@ def main():
     print(f"  Judge Provider: {_judge_provider}")
     print(f"  Judge Model:    {JUDGE_MODEL}")
     print(f"  Judge Base URL: {_llm_base_url}")
+    print(f"  验证级别:       {args.level} (seed={args.seed})")
     print()
+
+    # 健康检查预热，避免冷启动污染延迟数据
+    if args.phase is None or args.phase == 1:
+        wait_for_service(BASE_URL)
 
     start = time.time()
     raw_path = None
@@ -1003,7 +1073,7 @@ def main():
     eval_out_path = None
 
     if args.phase is None or args.phase == 1:
-        raw_path, summary_path = asyncio.run(phase1_collect())
+        raw_path, summary_path = asyncio.run(phase1_collect(level=args.level, seed=args.seed))
 
     if args.phase is None or args.phase == 2:
         eval_out_path = phase2_evaluate(raw_path)

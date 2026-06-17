@@ -5,12 +5,15 @@ Contains: generate_answer, rag_query, rag_query_astream, rag_query_with_cache.
 
 import json
 import asyncio
+import time
+from pathlib import Path
 
 from app.rag.vector_store import format_context, retrieve_keyword
 from app.rag.query_rewriter import expand_queries_rules, hyde_retrieve
 from app.rag.models import RAGQueryResponse, SourceItem
 from app.rag.classifier import (
     compress_context,
+    _deduplicate_chunks,
     classify_query_answerable,
     classify_query_answerable_sync,
     _NEGATIVE_DETECTION_ENABLED,
@@ -31,6 +34,34 @@ _HYDE_FALLBACK_THRESHOLD = settings.hyde_fallback_threshold
 
 # ── Context compression (for CRAG retry threshold) ──
 _CONTEXT_COMPRESSION_ENABLED = settings.context_compression_enabled
+
+# ── Generation quality feedback ──
+_UNANSWERABLE_PATTERNS = [
+    "文档中未提及", "无法回答", "知识库中不包含",
+    "我没有找到相关信息", "无法从提供的上下文中",
+    "没有找到相关", "无法提供",
+]
+
+_FEEDBACK_LOG = Path("data/feedback_log.jsonl")
+
+
+def _check_unanswerable(response_text: str) -> bool:
+    """检查 LLM 输出是否表示无法回答。"""
+    return any(p in response_text for p in _UNANSWERABLE_PATTERNS)
+
+
+def _log_feedback(query: str, top_score: float, action: str, answer: str = ""):
+    """记录检索-生成反馈，供后续分析。"""
+    entry = {
+        "timestamp": time.time(),
+        "query": query[:200],
+        "top_score": top_score,
+        "action": action,  # "retry" | "accepted" | "no_result"
+        "answer_preview": answer[:100],
+    }
+    _FEEDBACK_LOG.parent.mkdir(parents=True, exist_ok=True)
+    with open(_FEEDBACK_LOG, "a", encoding="utf-8") as f:
+        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
 QA_SYSTEM_PROMPT = """你是精准的知识库问答助手。你的唯一任务是回答用户的问题。
@@ -277,6 +308,8 @@ def rag_query(
             logger.info("Skipping context compression: simple query, top_score=%.4f", top_score)
         else:
             chunks = compress_context(query, chunks)
+            if chunks:
+                chunks = _deduplicate_chunks(chunks, threshold=0.85)
 
     # 1c. CRAG self-correction: if compression removed all chunks or top score is low,
     #     rewrite query and re-retrieve once (lightweight corrective RAG).
@@ -300,6 +333,8 @@ def rag_query(
             if retry_chunks:
                 retry_chunks = compress_context(retry_query, retry_chunks)
                 if retry_chunks:
+                    retry_chunks = _deduplicate_chunks(retry_chunks, threshold=0.85)
+                if retry_chunks:
                     # Use whichever set has better top compression score
                     retry_top = max(c.get("compression_score", 0) for c in retry_chunks)
                     if retry_top > top_compression:
@@ -322,6 +357,19 @@ def rag_query(
 
     # 3. Generate
     answer = generate_answer(query, context, llm_call_fn, lang=lang)
+
+    # 轻量级生成质量反馈
+    top_score = max(c.get("score", 0) for c in chunks) if chunks else 0
+    if _check_unanswerable(answer):
+        if top_score > 0.3:
+            # 检索到了相关内容但 LLM 没用上
+            _log_feedback(query, top_score, "retry", answer)
+            logger.info("unanswerable_with_relevant_context", top_score=top_score, query=query[:100])
+        else:
+            # 确实无相关信息
+            _log_feedback(query, top_score, "no_result", answer)
+    else:
+        _log_feedback(query, top_score, "accepted", answer)
 
     # 4. Build response with sources
     sources = [
@@ -459,6 +507,8 @@ async def rag_query_astream(
             logger.info("Skipping context compression: simple query, top_score=%.4f", top_score)
         else:
             chunks = await asyncio.to_thread(compress_context, query, chunks)
+            if chunks:
+                chunks = _deduplicate_chunks(chunks, threshold=0.85)
 
     # 2. Format context
     context = format_context(chunks)
@@ -500,10 +550,26 @@ async def rag_query_astream(
         }
 
     # 5. Stream LLM tokens
+    full_answer_parts: list[str] = []
     async for chunk in llm.astream(messages):
         content = chunk.content if hasattr(chunk, "content") else ""
         if content:
+            full_answer_parts.append(content)
             yield {"type": "text", "content": content}
+
+    # 轻量级生成质量反馈
+    full_answer = "".join(full_answer_parts)
+    top_score = max(c.get("score", 0) for c in chunks) if chunks else 0
+    if _check_unanswerable(full_answer):
+        if top_score > 0.3:
+            # 检索到了相关内容但 LLM 没用上
+            _log_feedback(query, top_score, "retry", full_answer)
+            logger.info("unanswerable_with_relevant_context", top_score=top_score, query=query[:100])
+        else:
+            # 确实无相关信息
+            _log_feedback(query, top_score, "no_result", full_answer)
+    else:
+        _log_feedback(query, top_score, "accepted", full_answer)
 
 
 async def rag_query_with_cache(

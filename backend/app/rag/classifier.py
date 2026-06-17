@@ -251,10 +251,8 @@ def compress_context(query: str, chunks: List[Dict[str, Any]], threshold: float 
                 chunk_copy = dict(chunk)
 
                 chunk_copy["compression_score"] = float(sim)
-
-                # Remove _embedding from output to save memory (no longer needed)
-
-                chunk_copy.pop("_embedding", None)
+                # 保留 embedding 供后续 _deduplicate_chunks 去重使用
+                chunk_copy["embedding"] = chunk_copy.pop("_embedding", None)
 
                 scored_chunks.append(chunk_copy)
 
@@ -286,6 +284,73 @@ def compress_context(query: str, chunks: List[Dict[str, Any]], threshold: float 
 
         return chunks
 
+
+
+
+# ── Chunk deduplication ──
+
+def _deduplicate_chunks(chunks: list, threshold: float = 0.85) -> list:
+    """同 slug 内语义重复的 chunk 去重，保留 compression_score 最高的。
+
+    不同 slug 间不做去重，保留跨文章多样性。
+    复用 chunk 中已有的 embedding，避免额外 API 调用。
+    """
+    if not chunks:
+        return chunks
+
+    # 按 slug 分组
+    slug_groups: dict[str, list] = {}
+    for chunk in chunks:
+        slug = chunk.get("metadata", {}).get("slug", "")
+        slug_groups.setdefault(slug, []).append(chunk)
+
+    result = []
+    for slug, group in slug_groups.items():
+        if len(group) <= 1:
+            result.extend(group)
+            continue
+
+        # 按 compression_score 降序排列
+        group.sort(key=lambda c: c.get("compression_score", 0), reverse=True)
+
+        kept = []
+        for chunk in group:
+            chunk_emb = chunk.get("embedding")
+            if chunk_emb is None:
+                kept.append(chunk)
+                continue
+
+            # 检查是否与已保留的 chunk 语义重复
+            is_duplicate = False
+            for kept_chunk in kept:
+                kept_emb = kept_chunk.get("embedding")
+                if kept_emb is None:
+                    continue
+                # cosine 相似度
+                norm_a = np.linalg.norm(chunk_emb)
+                norm_b = np.linalg.norm(kept_emb)
+                if norm_a < 1e-6 or norm_b < 1e-6:
+                    continue
+                cosine = float(np.dot(chunk_emb, kept_emb) / (norm_a * norm_b))
+                if cosine > threshold:
+                    is_duplicate = True
+                    break
+
+            if not is_duplicate:
+                kept.append(chunk)
+
+        result.extend(kept)
+
+    # 按 compression_score 降序重排
+    result.sort(key=lambda c: c.get("compression_score", 0), reverse=True)
+
+    if len(result) < len(chunks):
+        logger.info(
+            "Chunk deduplication: %d/%d chunks kept (threshold=%.2f)",
+            len(result), len(chunks), threshold,
+        )
+
+    return result
 
 
 

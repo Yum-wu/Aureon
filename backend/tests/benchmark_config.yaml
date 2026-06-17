@@ -1,76 +1,2186 @@
 # benchmark_config.yaml — 企业级 RAG 基准测试配置
 # QA 数据集、性能阈值、端点配置
+# 数据集统计：372 QA pairs，覆盖 99 篇文章
+# 分布：simple 225 (63.9%) | medium 97 (27.6%) | hard 30 (8.5%) | negative 20
 
 qa_dataset:
+  # ═══════════════════════════════════════════════════════════════
+  # A 组：检索策略（A-01 ~ A-12）
+  # ═══════════════════════════════════════════════════════════════
+
+  # A-01 HyDE 原理与实践
+  - question: "HyDE 的全称是什么？"
+    expected_answer: "HyDE 全称 Hypothetical Document Embeddings，即假设性文档嵌入"
+    source_article: "A-01-hyde-principles-and-practice"
+    difficulty: "simple"
+    is_negative: false
+  - question: "HyDE 的检索流程与传统检索流程有什么不同？"
+    expected_answer: "传统流程是 Query→Embedding→检索，HyDE 流程是 Query→LLM 生成假设文档→假设文档 Embedding→检索真实文档"
+    source_article: "A-01-hyde-principles-and-practice"
+    difficulty: "simple"
+    is_negative: false
+  - question: "为什么 HyDE 即使假设文档包含事实错误仍然有效？"
+    expected_answer: "因为即使假设文档包含事实错误，其语言模式和词汇分布仍然与真实相关文档高度相似，假设文档的嵌入向量比原始查询更接近目标文档"
+    source_article: "A-01-hyde-principles-and-practice"
+    difficulty: "medium"
+    is_negative: false
+
+  # A-02 Multi-Query 检索策略对比
+  - question: "Multi-Query 检索的核心思想是什么？"
+    expected_answer: "将用户原始查询改写为多个不同角度的子查询，分别检索后合并结果，从而提高召回率和覆盖度"
+    source_article: "A-02-multi-query-retrieval-comparison"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Multi-Query 和 HyDE 的主要区别是什么？"
+    expected_answer: "HyDE 生成假设性答案文档再检索，Multi-Query 生成多个查询变体从不同角度检索。HyDE 产出的是文档，Multi-Query 产出的是查询"
+    source_article: "A-02-multi-query-retrieval-comparison"
+    difficulty: "medium"
+    is_negative: false
+  - question: "Step-Back Prompting 策略的原理是什么？"
+    expected_answer: "让 LLM 从更高层次抽象原始查询，生成更宽泛的后退查询，关注背后的概念和原理而非具体细节，从而检索到更全面的背景知识"
+    source_article: "A-02-multi-query-retrieval-comparison"
+    difficulty: "simple"
+    is_negative: false
+
+  # A-03 BM25 vs 稀疏向量
+  - question: "BM25 算法中参数 k1 和 b 分别控制什么？"
+    expected_answer: "k1 控制词频饱和程度，通常取 1.2-2.0；b 控制文档长度归一化，通常取 0.75"
+    source_article: "A-03-bm25-vs-sparse-vector-evolution"
+    difficulty: "simple"
+    is_negative: false
+  - question: "BM25 的主要局限性有哪些？"
+    expected_answer: "词汇鸿沟（无法处理同义词）、分词依赖（中文需 jieba 等分词器）、无语义理解、固定权重（IDF 无法针对特定查询调整）"
+    source_article: "A-03-bm25-vs-sparse-vector-evolution"
+    difficulty: "simple"
+    is_negative: false
+  - question: "稀疏向量相比 BM25 的核心优势是什么？为什么？"
+    expected_answer: "稀疏向量是学习型关键词检索，能通过神经网络学习词项权重，解决同义词问题，且无需分词器。BM25 是纯统计方法，无法理解语义等价关系"
+    source_article: "A-03-bm25-vs-sparse-vector-evolution"
+    difficulty: "medium"
+    is_negative: false
+
+  # A-04 查询扩展技术
+  - question: "查询扩展技术要解决用户查询的哪三个核心问题？"
+    expected_answer: "表述模糊、词汇不匹配、信息需求表达不完整"
+    source_article: "A-04-query-expansion-techniques"
+    difficulty: "simple"
+    is_negative: false
+  - question: "伪相关反馈（PRF）的基本假设是什么？"
+    expected_answer: "初次检索返回的前 k 个文档虽然不完全相关，但包含与查询相关的扩展词"
+    source_article: "A-04-query-expansion-techniques"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Rocchio 算法中 α、β、γ 三个参数分别控制什么？"
+    expected_answer: "α 控制原始查询权重，β 控制相关文档权重，γ 控制不相关文档权重。通过调整三者平衡来优化查询向量"
+    source_article: "A-04-query-expansion-techniques"
+    difficulty: "medium"
+    is_negative: false
+
+  # A-05 RRF 融合
+  - question: "RRF 的全称是什么？由谁在什么时候提出？"
+    expected_answer: "Reciprocal Rank Fusion，由 Cormack、Clarke 和 Büttcher 于 2009 年提出"
+    source_article: "A-05-reciprocal-rank-fusion-deep-dive"
+    difficulty: "simple"
+    is_negative: false
+  - question: "RRF 公式中参数 k 的默认值是多少？它控制什么？"
+    expected_answer: "默认值为 60。k 值控制排名靠前文档的优势程度，k 越小排名靠前的文档优势越大"
+    source_article: "A-05-reciprocal-rank-fusion-deep-dive"
+    difficulty: "simple"
+    is_negative: false
+  - question: "为什么 RRF 基于排名而非原始分数进行融合？"
+    expected_answer: "不同检索方法的分数尺度不同（如余弦相似度 vs BM25 分数），RRF 基于排名天然归一化，避免分数尺度不一致的问题，同时通过长尾抑制和共识增强提升融合效果"
+    source_article: "A-05-reciprocal-rank-fusion-deep-dive"
+    difficulty: "medium"
+    is_negative: false
+
+  # A-06 Late Interaction / ColBERT
+  - question: "ColBERT 的核心创新是什么？"
+    expected_answer: "保留 Token 级别嵌入而非压缩为单一向量，使用延迟交互在检索时计算查询和文档 Token 间的交互，通过 MaxSim 操作计算相关性分数"
+    source_article: "A-06-late-interaction-models-colbert"
+    difficulty: "simple"
+    is_negative: false
+  - question: "MaxSim 机制的计算方式是什么？"
+    expected_answer: "对于查询 Q 中每个 Token q，找到文档 D 中与之最相似的 Token d 取最大相似度，然后对所有查询 Token 求和"
+    source_article: "A-06-late-interaction-models-colbert"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Late Interaction 模型如何在 Bi-Encoder 和 Cross-Encoder 之间取得平衡？"
+    expected_answer: "Bi-Encoder 独立编码速度快但精度有限，Cross-Encoder 联合编码精度高但速度慢。Late Interaction 保留 Token 级别细粒度交互同时支持预计算和高效检索，在精度和速度间取得平衡"
+    source_article: "A-06-late-interaction-models-colbert"
+    difficulty: "medium"
+    is_negative: false
+
+  # A-07 RAG 概述
+  - question: "RAG 由谁在什么时候提出？"
+    expected_answer: "由 Lewis 等人在 2020 年提出"
+    source_article: "A-07-retrieval-augmented-generation-overview"
+    difficulty: "simple"
+    is_negative: false
+  - question: "朴素 RAG 的基本流程是什么？"
+    expected_answer: "用户查询→Embedding→向量检索→Top-K 文档→拼接 Prompt→LLM 生成"
+    source_article: "A-07-retrieval-augmented-generation-overview"
+    difficulty: "simple"
+    is_negative: false
+  - question: "高级 RAG 相比朴素 RAG 增加了哪些环节？"
+    expected_answer: "增加了查询理解与改写、多路检索与融合、检索结果评估与重排、自我纠正与迭代、答案验证与引用等环节，形成更完整的 Pipeline"
+    source_article: "A-07-retrieval-augmented-generation-overview"
+    difficulty: "medium"
+    is_negative: false
+
+  # A-08 Cross-Encoder vs Bi-Encoder
+  - question: "Bi-Encoder 的核心特性有哪些？"
+    expected_answer: "独立编码、预计算（文档向量可离线预计算并索引）、ANN 检索（支持 HNSW/IVF 等近似最近邻算法）、无交互（查询和文档 Token 间没有交叉注意力）"
+    source_article: "A-08-cross-encoder-vs-bi-encoder"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Cross-Encoder 为什么精度高但速度慢？"
+    expected_answer: "Cross-Encoder 将查询和文档拼接后联合编码，通过交叉注意力实现 Token 级别深度交互，因此精度高。但无法预计算文档向量，每次查询都需要与所有文档联合编码，所以速度慢"
+    source_article: "A-08-cross-encoder-vs-bi-encoder"
+    difficulty: "medium"
+    is_negative: false
+
+  # A-09 MMR 多样性检索
+  - question: "MMR 的全称是什么？由谁在什么时候提出？"
+    expected_answer: "Maximal Marginal Relevance，由 Carbonell 和 Goldstein 于 1998 年提出"
+    source_article: "A-09-maximal-marginal-relevance"
+    difficulty: "simple"
+    is_negative: false
+  - question: "MMR 算法中参数 λ 取值 0.7-0.8 时是什么效果？"
+    expected_answer: "偏相关性，适度去重，保留最相关结果。λ=1.0 退化为标准排序，λ=0.5 为平衡模式"
+    source_article: "A-09-maximal-marginal-relevance"
+    difficulty: "simple"
+    is_negative: false
+  - question: "MMR 如何解决传统检索的信息冗余问题？"
+    expected_answer: "传统检索按相关性排序返回结果，排名靠前的文档内容高度相似。MMR 采用贪心策略，每次选择使相关性最大化和与已选文档相似度最小化的文档，在相关性和多样性间取得平衡"
+    source_article: "A-09-maximal-marginal-relevance"
+    difficulty: "medium"
+    is_negative: false
+
+  # A-10 检索反馈闭环
+  - question: "检索反馈闭环中显式信号有哪些？"
+    expected_answer: "点赞/点踩、投票、纠错、收藏"
+    source_article: "A-10-retrieval-feedback-loops"
+    difficulty: "simple"
+    is_negative: false
+  - question: "隐式信号中哪些是正面信号，哪些是负面信号？"
+    expected_answer: "正面信号包括停留时间长、复制行为、追问；负面信号包括请求重新生成、跳出、用户自行改写查询重新搜索"
+    source_article: "A-10-retrieval-feedback-loops"
+    difficulty: "medium"
+    is_negative: false
+
+  # A-11 语义搜索基础
+  - question: "语义搜索经历了哪三个主要阶段？"
+    expected_answer: "统计方法（TF-IDF/BM25）、学习排序（LTR）、基于深度学习的稠密检索"
+    source_article: "A-11-semantic-search-fundamentals"
+    difficulty: "simple"
+    is_negative: false
+  - question: "TF-IDF 的主要局限性是什么？"
+    expected_answer: "无语义理解（无法区分一词多义）、词序无关、稀疏表示（向量大部分为 0）、同义词问题（无法处理等价关系）"
+    source_article: "A-11-semantic-search-fundamentals"
+    difficulty: "simple"
+    is_negative: false
+  - question: "从 TF-IDF 到稠密检索的演进解决了哪些核心问题？"
+    expected_answer: "解决了语义理解问题（一词多义、同义词）、词序信息丢失问题、稀疏表示效率问题。稠密检索通过神经网络将文本编码为低维稠密向量，语义相似的文本在向量空间中距离相近"
+    source_article: "A-11-semantic-search-fundamentals"
+    difficulty: "medium"
+    is_negative: false
+
+  # A-12 联邦检索
+  - question: "联邦检索的四个核心组件是什么？"
+    expected_answer: "查询路由器、适配器层、结果归一化、融合排序"
+    source_article: "A-12-federated-search-multi-source"
+    difficulty: "simple"
+    is_negative: false
+  - question: "联邦检索面临的核心挑战是什么？"
+    expected_answer: "如何统一不同数据源的检索接口、排序标准和结果格式，提供一致的用户体验"
+    source_article: "A-12-federated-search-multi-source"
+    difficulty: "simple"
+    is_negative: false
+  - question: "联邦检索中适配器模式的设计目的是什么？"
+    expected_answer: "统一不同数据源的检索接口，将不同格式的结果统一为标准格式，使上层逻辑无需关心底层数据源的差异性"
+    source_article: "A-12-federated-search-multi-source"
+    difficulty: "medium"
+    is_negative: false
+
+  # ═══════════════════════════════════════════════════════════════
+  # B 组：Embedding 与向量索引（B-01 ~ B-10）
+  # ═══════════════════════════════════════════════════════════════
+
+  # B-01 Embedding 模型选型
+  - question: "C-MTEB 中文检索排行榜上排名第一的模型是什么？"
+    expected_answer: "bge-large-zh-v1.5，检索平均分 70.5"
+    source_article: "B-01-embedding-model-selection-guide"
+    difficulty: "simple"
+    is_negative: false
+  - question: "选择 Embedding 模型需要综合考虑哪些因素？"
+    expected_answer: "检索精度、推理延迟、成本、多语言支持、部署方式"
+    source_article: "B-01-embedding-model-selection-guide"
+    difficulty: "simple"
+    is_negative: false
+  - question: "在中文检索场景下，为什么 bge-large-zh-v1.5 比 OpenAI text-embedding-3-large 更受欢迎？"
+    expected_answer: "bge-large-zh-v1.5 在 C-MTEB 中文检索排行榜上得分更高（70.5 vs 67.5），支持本地部署免费使用，且专为中文优化；OpenAI 模型需要 API 调用产生成本，且中文效果不如专门优化的模型"
+    source_article: "B-01-embedding-model-selection-guide"
+    difficulty: "medium"
+    is_negative: false
+
+  # B-02 向量量化
+  - question: "FP32 转 INT8 量化可以实现多少倍压缩？"
+    expected_answer: "4 倍压缩"
+    source_article: "B-02-vector-quantization-int8-fp16"
+    difficulty: "simple"
+    is_negative: false
+  - question: "标量量化和乘积量化的主要区别是什么？"
+    expected_answer: "标量量化将每个浮点数量化为低位整数（如 FP32→INT8），乘积量化将向量分成多个子空间每个子空间独立量化，乘积量化压缩率更高且能保持更好的检索精度"
+    source_article: "B-02-vector-quantization-int8-fp16"
+    difficulty: "medium"
+    is_negative: false
+
+  # B-03 Matryoshka 嵌入
+  - question: "Matryoshka Representation Learning 的核心思想是什么？"
+    expected_answer: "训练嵌入模型使其前 N 维就是一个有效的低维表示，无需重新训练或蒸馏即可灵活选择维度"
+    source_article: "B-03-matryoshka-embeddings"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Matryoshka 嵌入与传统嵌入在截断操作上有什么区别？"
+    expected_answer: "传统嵌入截断前 256 维会严重损失精度，Matryoshka 嵌入截断是安全的，前 256 维约等于 256 维模型的精度"
+    source_article: "B-03-matryoshka-embeddings"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Matryoshka 嵌入如何在训练中实现多粒度表示？"
+    expected_answer: "在多个粒度上同时计算损失，对前 256 维、前 512 维、前 1024 维等分别计算损失并加权求和，使模型在所有粒度上都学到有效表示"
+    source_article: "B-03-matryoshka-embeddings"
+    difficulty: "medium"
+    is_negative: false
+
+  # B-04 领域微调
+  - question: "通用 Embedding 模型在特定领域可能存在哪些不足？"
+    expected_answer: "术语不匹配、语义偏差、细粒度区分不足、领域知识缺失"
+    source_article: "B-04-domain-specific-fine-tuning"
+    difficulty: "simple"
+    is_negative: false
+  - question: "金融领域中'牛市'一词如何体现通用 Embedding 的语义偏差问题？"
+    expected_answer: "金融领域的'牛市'指市场上涨，日常语境中指动物，通用模型可能混淆这两种完全不同的含义"
+    source_article: "B-04-domain-specific-fine-tuning"
+    difficulty: "medium"
+    is_negative: false
+
+  # B-05 多语言 Embedding
+  - question: "多语言 Embedding 面临的五个核心挑战是什么？"
+    expected_answer: "语言不对称、词序差异、分词差异、文化差异、低资源语言"
+    source_article: "B-05-multilingual-embedding-challenges"
+    difficulty: "simple"
+    is_negative: false
+  - question: "bge-m3 和 bge-large-zh 在跨语言检索能力上有什么区别？"
+    expected_answer: "bge-m3 支持 100+ 语言且跨语言检索优秀，bge-large-zh 仅支持中文不支持跨语言检索但在中文单语场景效果最优"
+    source_article: "B-05-multilingual-embedding-challenges"
+    difficulty: "medium"
+    is_negative: false
+
+  # B-06 Embedding 降维
+  - question: "Embedding 降维的主要动机是什么？"
+    expected_answer: "降低存储成本和检索速度。1024 维向量每个文档占 4KB，百万级文档需约 4GB，降维可在保留大部分语义信息前提下显著降低存储和计算成本"
+    source_article: "B-06-embedding-dimension-reduction"
+    difficulty: "simple"
+    is_negative: false
+  - question: "PCA 降维和 Matryoshka 降维的本质区别是什么？"
+    expected_answer: "PCA 是后处理的线性降维方法，通过正交变换投影到方差最大方向；Matryoshka 是训练时多粒度优化，前 N 维本身就是有效表示。Matryoshka 降维后精度损失更小"
+    source_article: "B-06-embedding-dimension-reduction"
+    difficulty: "medium"
+    is_negative: false
+
+  # B-07 BGE-M3 架构
+  - question: "BGE-M3 中 M3 代表什么？"
+    expected_answer: "Multi-lingual（多语言）、Multi-function（多功能）、Multi-granularity（多粒度）"
+    source_article: "B-07-bge-m3-architecture-analysis"
+    difficulty: "simple"
+    is_negative: false
+  - question: "BGE-M3 一次推理可以同时生成哪三种向量？"
+    expected_answer: "dense 向量（[CLS]+Mean Pooling→1024 维）、sparse 向量（Linear+ReLU+Log→词项权重）、ColBERT 向量（Linear Projection→Token 级别 1024 维向量）"
+    source_article: "B-07-bge-m3-architecture-analysis"
+    difficulty: "simple"
+    is_negative: false
+  - question: "BGE-M3 的三合一输出为什么比分别使用三个模型更高效？"
+    expected_answer: "一次推理同时生成三种向量，共享 XLM-RoBERTa Encoder 的计算，避免三次独立推理的开销，显著降低延迟和成本"
+    source_article: "B-07-bge-m3-architecture-analysis"
+    difficulty: "medium"
+    is_negative: false
+
+  # B-08 Embedding API 性能对比
+  - question: "DashScope Embedding API 的 P50 延迟是多少？"
+    expected_answer: "80ms"
+    source_article: "B-08-embedding-api-benchmark"
+    difficulty: "simple"
+    is_negative: false
+  - question: "在中文场景下，哪个 Embedding API 的延迟最低？"
+    expected_answer: "DashScope text-embedding-v3，P50 延迟 80ms，吞吐 100/s，中文效果优秀"
+    source_article: "B-08-embedding-api-benchmark"
+    difficulty: "medium"
+    is_negative: false
+
+  # B-09 向量索引算法
+  - question: "HNSW 算法的全称是什么？它的核心结构是什么？"
+    expected_answer: "Hierarchical Navigable Small World，核心是多层图结构，类似跳表，上层稀疏下层稠密，通过贪心搜索和逐层下降实现高效检索"
+    source_article: "B-09-vector-index-algorithms"
+    difficulty: "simple"
+    is_negative: false
+  - question: "HNSW 中参数 m 和 ef_construct 分别控制什么？"
+    expected_answer: "m 控制每层最大连接数（越大精度越高但内存越大），ef_construct 控制构建时搜索宽度（越大构建越慢但质量越高）"
+    source_article: "B-09-vector-index-algorithms"
+    difficulty: "simple"
+    is_negative: false
+  - question: "HNSW、IVF 和 ScaNN 三种索引算法分别适合什么场景？"
+    expected_answer: "HNSW 适合中等规模高精度场景，IVF 适合大规模数据且可接受轻微精度损失，ScaNN 适合追求极致性能的大规模场景"
+    source_article: "B-09-vector-index-algorithms"
+    difficulty: "medium"
+    is_negative: false
+
+  # B-10 Embedding 漂移检测
+  - question: "什么是 Embedding 漂移？"
+    expected_answer: "当 Embedding 模型更新后，同一文本的向量表示发生变化，导致检索质量下降、排序混乱、缓存失效"
+    source_article: "B-10-embedding-drift-detection"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Embedding 漂移的四个主要来源是什么？"
+    expected_answer: "模型版本更新、微调后部署、API 提供方静默更新、训练数据变化"
+    source_article: "B-10-embedding-drift-detection"
+    difficulty: "simple"
+    is_negative: false
+  - question: "如何检测和应对 Embedding 漂移？"
+    expected_answer: "通过向量距离监控（同一文本在新旧模型下的向量距离）、检索质量回归测试、A/B 对比检测漂移。应对策略包括全量重索引、双模型过渡期、版本化向量存储"
+    source_article: "B-10-embedding-drift-detection"
+    difficulty: "medium"
+    is_negative: false
+
+  # ═══════════════════════════════════════════════════════════════
+  # C 组：RAG 高级架构（C-01 ~ C-12）
+  # ═══════════════════════════════════════════════════════════════
+
+  # C-01 CRAG 自纠正
+  - question: "CRAG 的全称是什么？由谁在什么时候提出？"
+    expected_answer: "Corrective RAG，由 Yan 等人在 2024 年提出"
+    source_article: "C-01-corrective-rag-implementation"
+    difficulty: "simple"
+    is_negative: false
+  - question: "CRAG 的三路动作分别是什么？"
+    expected_answer: "Correct（正确）直接生成、Ambiguous（模糊）查询改写+重新检索+生成、Incorrect（错误）返回无法回答或使用 Web 搜索"
+    source_article: "C-01-corrective-rag-implementation"
+    difficulty: "simple"
+    is_negative: false
+  - question: "CRAG 的轻量级质量评估方法相比 LLM 评估有什么优势？"
+    expected_answer: "基于 embedding 相似度的快速评估延迟约 50ms，而 LLM 评估约 1s。轻量评估通过计算查询与检索文档的相似度来判断检索质量，适合流式路径中的实时决策"
+    source_article: "C-01-corrective-rag-implementation"
+    difficulty: "medium"
+    is_negative: false
+
+  # C-02 Self-RAG
+  - question: "Self-RAG 引入了哪三种反思 Token？"
+    expected_answer: "Retrieve Token（是否需要检索）、IsRel Token（检索结果是否相关）、IsSup Token（生成内容是否有检索支持），还有 IsUse Token（生成内容是否有用）"
+    source_article: "C-02-self-rag-learn-retrieve-generate-critique"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Self-RAG 与传统 RAG 的根本区别是什么？"
+    expected_answer: "传统 RAG 的检索和生成是分离的，无论是否需要都会检索。Self-RAG 让模型学会自主决定何时检索、何时生成、何时批评，通过反思 Token 实现自我评估和纠正"
+    source_article: "C-02-self-rag-learn-retrieve-generate-critique"
+    difficulty: "medium"
+    is_negative: false
+
+  # C-03 Adaptive-RAG 查询路由
+  - question: "Adaptive-RAG 的三级查询分类分别对应什么检索策略？"
+    expected_answer: "简单（事实型）→纯 Sparse；中等（分析型）→Hybrid+自适应 Rerank；复杂（推理型）→HyDE+Multi-Query+Hybrid+Rerank+CRAG"
+    source_article: "C-03-adaptive-rag-query-routing"
+    difficulty: "simple"
+    is_negative: false
+  - question: "查询路由的规则方法和 LLM 方法各有什么优缺点？"
+    expected_answer: "规则方法速度快、可解释性强，但覆盖有限且需人工维护；LLM 方法灵活且能理解语义，但增加延迟和成本，且可能误判"
+    source_article: "C-03-adaptive-rag-query-routing"
+    difficulty: "medium"
+    is_negative: false
+
+  # C-04 Contextual Retrieval
+  - question: "Contextual Retrieval 由谁在什么时候提出？它解决什么问题？"
+    expected_answer: "由 Anthropic 在 2024 年提出，解决文档切分后 chunk 丢失上下文信息的问题"
+    source_article: "C-04-contextual-retrieval-in-practice"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Contextual Retrieval 如何为 chunk 添加上下文？"
+    expected_answer: "在索引构建时为每个 chunk 生成简短的上下文前缀，说明该 chunk 在原文档中的位置和主题，然后将有上下文前缀的 chunk 进行 embedding 和索引"
+    source_article: "C-04-contextual-retrieval-in-practice"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Contextual Retrieval 的并发化如何实现？效果如何？"
+    expected_answer: "使用 asyncio.gather + Semaphore(5) 并发生成 chunk 上下文前缀，1000 文档索引构建时间从约 1 小时降至约 10 分钟"
+    source_article: "C-04-contextual-retrieval-in-practice"
+    difficulty: "medium"
+    is_negative: false
+
+  # C-05 RAG Pipeline 优化
+  - question: "传统串行 RAG Pipeline 的主要瓶颈是什么？"
+    expected_answer: "每一步等待上一步完成导致延迟累积，端到端延迟往往超过 5 秒"
+    source_article: "C-05-rag-pipeline-optimization"
+    difficulty: "simple"
+    is_negative: false
+  - question: "RAG Pipeline 并行化的主要策略有哪些？"
+    expected_answer: "检索并行化（多路检索并行执行）、查询路由与 Embedding 并行、Rerank 批处理并发、简单查询跳过冗余步骤"
+    source_article: "C-05-rag-pipeline-optimization"
+    difficulty: "medium"
+    is_negative: false
+
+  # C-06 多模态 RAG
+  - question: "多模态 RAG 的三种实现路径是什么？"
+    expected_answer: "文本中心（图片→OCR/描述→文本检索）、向量中心（图片→视觉编码→联合向量检索）、混合（文本+视觉双编码→多模态融合检索）"
+    source_article: "C-06-multi-modal-rag"
+    difficulty: "simple"
+    is_negative: false
+  - question: "多模态 RAG 相比纯文本 RAG 面临哪些额外挑战？"
+    expected_answer: "图文对齐问题（不同模态的语义空间对齐）、图片描述质量依赖多模态 LLM、联合向量空间构建复杂、检索时需处理混合模态查询"
+    source_article: "C-06-multi-modal-rag"
+    difficulty: "medium"
+    is_negative: false
+
+  # C-07 Agentic RAG
+  - question: "Agentic RAG 与传统 RAG 的根本区别是什么？"
+    expected_answer: "传统 RAG 是被动的，流程固定；Agentic RAG 让 LLM Agent 主动决定何时检索、检索什么、如何使用检索结果，通过工具调用实现更灵活的检索策略"
+    source_article: "C-07-agentic-rag-tool-calling"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Agentic RAG 中 Agent 可以调用哪些类型的工具？"
+    expected_answer: "search_knowledge_base（知识库检索）、calculator（计算）、sql_query（数据库查询）、web_search（网络搜索）等，Agent 根据查询自主决定调用哪些工具"
+    source_article: "C-07-agentic-rag-tool-calling"
+    difficulty: "medium"
+    is_negative: false
+
+  # C-08 RAG 缓存策略
+  - question: "RAG 缓存的三个层级分别是什么？"
+    expected_answer: "L1 精确缓存（查询完全匹配）、L2 语义缓存（语义相似匹配）、L3 结果缓存（部分结果复用）"
+    source_article: "C-08-rag-caching-strategies"
+    difficulty: "simple"
+    is_negative: false
+  - question: "生产环境中缓存命中率通常能达到多少？"
+    expected_answer: "约 30-40% 的查询是重复或语义相似的，缓存命中率可达 60% 以上"
+    source_article: "C-08-rag-caching-strategies"
+    difficulty: "simple"
+    is_negative: false
+  - question: "语义缓存如何解决查询表述不同但意图相同的问题？"
+    expected_answer: "语义缓存通过 Embedding 计算查询向量与缓存查询的相似度，当相似度超过阈值时命中缓存，解决了精确缓存无法处理同义不同表述的问题"
+    source_article: "C-08-rag-caching-strategies"
+    difficulty: "medium"
+    is_negative: false
+
+  # C-09 RAG 错误恢复
+  - question: "RAG 系统可能遇到哪六种检索失败类型？"
+    expected_answer: "向量库不可用、Embedding 服务不可用、Rerank 服务不可用、LLM 服务不可用、检索结果为空、检索结果质量差"
+    source_article: "C-09-rag-error-recovery"
+    difficulty: "simple"
+    is_negative: false
+  - question: "服务降级链的设计思路是什么？"
+    expected_answer: "每个服务都有降级替代方案，如本地 Embedding 失败则回退到 API Embedding，API Rerank 失败则跳过 Rerank 使用 RRF 融合，确保系统在部分服务不可用时仍能返回结果"
+    source_article: "C-09-rag-error-recovery"
+    difficulty: "medium"
+    is_negative: false
+
+  # C-10 RAG 流式架构
+  - question: "SSE 的全称是什么？它的基本格式是什么？"
+    expected_answer: "Server-Sent Events，基于 HTTP 的单向推送协议，格式为 event+data 字段"
+    source_article: "C-10-rag-streaming-architecture"
+    difficulty: "simple"
+    is_negative: false
+  - question: "流式输出对用户体验的改善体现在哪里？"
+    expected_answer: "传统方式用户需等待 5-10 秒才能看到完整答案，流式输出通过 SSE 逐步推送内容，用户在 1 秒内就能看到答案开头，显著改善感知延迟"
+    source_article: "C-10-rag-streaming-architecture"
+    difficulty: "medium"
+    is_negative: false
+
+  # C-11 RAG 安全护栏
+  - question: "RAG 系统面临的两种主要安全威胁是什么？"
+    expected_answer: "Prompt Injection（恶意用户通过查询注入指令操纵 LLM 行为）和 PII 泄露（系统在回答中泄露个人身份信息）"
+    source_article: "C-11-rag-security-guardrails"
+    difficulty: "simple"
+    is_negative: false
+  - question: "直接注入和间接注入的区别是什么？"
+    expected_answer: "直接注入是用户查询中直接包含恶意指令，间接注入是通过文档内容注入指令，当检索到包含恶意内容的文档时 LLM 可能被操纵"
+    source_article: "C-11-rag-security-guardrails"
+    difficulty: "medium"
+    is_negative: false
+
+  # C-12 RAG 成本优化
+  - question: "RAG 系统中成本占比最大的组件是什么？占多少？"
+    expected_answer: "答案生成，占 50-60%"
+    source_article: "C-12-rag-cost-optimization"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Token 预算管理的核心思路是什么？"
+    expected_answer: "为每次查询分配 Token 预算，根据查询复杂度动态分配，简单查询使用更少的 Token 和更便宜的模型，复杂查询才使用完整 Pipeline 和高端模型"
+    source_article: "C-12-rag-cost-optimization"
+    difficulty: "medium"
+    is_negative: false
+
+  # ═══════════════════════════════════════════════════════════════
+  # D 组：RAG 评估与优化（D-01 ~ D-10）
+  # ═══════════════════════════════════════════════════════════════
+
+  # D-01 RAG 评估框架
+  - question: "RAG Triad 由哪三个核心指标构成？"
+    expected_answer: "Context Relevancy（上下文相关性）、Faithfulness（忠实度）、Answer Relevancy（答案相关性）"
+    source_article: "D-01-rag-evaluation-framework"
+    difficulty: "simple"
+    is_negative: false
+  - question: "RAG 评估需要回答的三个核心问题是什么？"
+    expected_answer: "检索到的文档是否相关？生成的答案是否忠实于检索文档？答案是否回应了用户查询？"
+    source_article: "D-01-rag-evaluation-framework"
+    difficulty: "simple"
+    is_negative: false
+  - question: "为什么 RAG 评估中 Faithfulness 和 Answer Relevancy 缺一不可？"
+    expected_answer: "仅有 Faithfulness 可能产生正确但无关的答案（高忠实低相关），仅有 Answer Relevancy 可能产生相关但编造的答案（低忠实高相关），两者结合才能确保答案既忠实于文档又回应用户查询"
+    source_article: "D-01-rag-evaluation-framework"
+    difficulty: "medium"
+    is_negative: false
+
+  # D-02 Faithfulness vs Relevancy 冲突
+  - question: "Faithfulness 和 Answer Relevancy 冲突的三种典型场景是什么？"
+    expected_answer: "高 Faithfulness+低 Relevancy（答案基于文档但没回答问题）、低 Faithfulness+高 Relevancy（答案回应了查询但编造了信息）、高 Faithfulness+高 Relevancy（理想状态）"
+    source_article: "D-02-faithfulness-vs-relevancy-conflict"
+    difficulty: "simple"
+    is_negative: false
+  - question: "当 Faithfulness 和 Relevancy 冲突时，应该优先保证哪个指标？为什么？"
+    expected_answer: "应优先保证 Faithfulness（忠实度），因为产生幻觉（低 Faithfulness）比不回答问题（低 Relevancy）危害更大。低 Relevancy 可以通过优化查询理解改善，低 Faithfulness 意味着系统在编造信息"
+    source_article: "D-02-faithfulness-vs-relevancy-conflict"
+    difficulty: "medium"
+    is_negative: false
+
+  # D-03 RAG 延迟优化
+  - question: "RAG 延迟优化中，哪个步骤占比最大？"
+    expected_answer: "LLM 生成，占比约 44%（2200ms）"
+    source_article: "D-03-rag-latency-optimization"
+    difficulty: "simple"
+    is_negative: false
+  - question: "查询路由优化如何减少 2700ms 延迟？"
+    expected_answer: "简单查询跳过 HyDE、Multi-Query、Rerank、CRAG 等步骤，直接走 Sparse 检索+生成，避免不必要的计算开销"
+    source_article: "D-03-rag-latency-optimization"
+    difficulty: "medium"
+    is_negative: false
+
+  # D-04 Benchmark 设计
+  - question: "一个好的 RAG Benchmark 需要具备哪三个特性？"
+    expected_answer: "代表性、可复现、可比较"
+    source_article: "D-04-benchmark-design-for-rag"
+    difficulty: "simple"
+    is_negative: false
+  - question: "RAG Benchmark 中 QA 数据集应该包含哪些类型的测试用例？"
+    expected_answer: "应包含简单事实型、中等推理型、复杂综合型和负例（知识库无法回答的问题），确保覆盖不同难度和边界情况"
+    source_article: "D-04-benchmark-design-for-rag"
+    difficulty: "medium"
+    is_negative: false
+
+  # D-05 LLM-as-Judge
+  - question: "LLM-as-Judge 的三种评估方式分别是什么？"
+    expected_answer: "单点评分（给单个输出打分 1-5 分）、成对比较（比较两个输出的优劣）、参考对比（将输出与参考答案对比）"
+    source_article: "D-05-llm-as-judge-evaluation"
+    difficulty: "simple"
+    is_negative: false
+  - question: "LLM-as-Judge 存在哪些偏见？如何缓解？"
+    expected_answer: "位置偏见（倾向选择排在前面的选项）、长度偏见（倾向选择更长的输出）、自增强偏见（倾向给自己生成的输出更高分）。缓解方法包括随机化顺序、归一化长度、多 Judge 投票"
+    source_article: "D-05-llm-as-judge-evaluation"
+    difficulty: "medium"
+    is_negative: false
+
+  # D-06 检索质量指标
+  - question: "Recall@K 的计算公式是什么？"
+    expected_answer: "Recall@K = |相关文档 ∩ 前K结果| / |相关文档总数|"
+    source_article: "D-06-retrieval-quality-metrics"
+    difficulty: "simple"
+    is_negative: false
+  - question: "MRR 和 nDCG 的区别是什么？"
+    expected_answer: "MRR 只关注第一个相关文档的排名倒数，nDCG 考虑所有相关文档的排名和相关性等级，对排名靠前的相关文档给予更高权重。nDCG 更适合多相关文档场景，MRR 更适合单答案场景"
+    source_article: "D-06-retrieval-quality-metrics"
+    difficulty: "medium"
+    is_negative: false
+
+  # D-07 A/B 测试
+  - question: "RAG A/B 测试可以测试哪些变量？"
+    expected_answer: "检索策略（Hybrid vs Dense-only）、Rerank 阈值、Embedding 模型、查询路由方法、Prompt 模板等"
+    source_article: "D-07-ab-testing-for-rag"
+    difficulty: "simple"
+    is_negative: false
+  - question: "RAG A/B 测试中如何确保统计显著性？"
+    expected_answer: "需要足够的样本量（基于基线率、最小可检测效应和统计功效计算）、合理的流量分配、足够的运行时间，并使用统计检验（如卡方检验或 t 检验）确认差异显著"
+    source_article: "D-07-ab-testing-for-rag"
+    difficulty: "medium"
+    is_negative: false
+
+  # D-08 回归测试
+  - question: "RAG 回归测试的目的是什么？"
+    expected_answer: "在每次变更后运行固定测试集，确保优化不会导致已有功能劣化，防止优化变劣化"
+    source_article: "D-08-rag-regression-testing"
+    difficulty: "simple"
+    is_negative: false
+  - question: "回归测试用例应该包含哪些维度的验证？"
+    expected_answer: "最小 Faithfulness 阈值、最小 Relevancy 阈值、最大延迟限制、必须包含的关键词、不能包含的词汇、负例应被正确拒绝"
+    source_article: "D-08-rag-regression-testing"
+    difficulty: "medium"
+    is_negative: false
+
+  # D-09 Context Window 优化
+  - question: "Context Window 中噪声信息占比通常是多少？主要来源有哪些？"
+    expected_answer: "噪声信息约占 37.5%，来源包括不相关文档、冗余内容、低信息密度段落、格式噪声"
+    source_article: "D-09-context-window-optimization"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Context Window 优化的核心策略有哪些？"
+    expected_answer: "检索结果压缩（去除冗余和低信息密度内容）、相关性过滤（丢弃不相关文档）、信息密度排序（优先保留高密度内容）、动态 Token 分配（根据查询复杂度分配上下文空间）"
+    source_article: "D-09-context-window-optimization"
+    difficulty: "medium"
+    is_negative: false
+
+  # D-10 RAG 可观测性
+  - question: "RAG 可观测性的三大支柱是什么？"
+    expected_answer: "日志（Logging）、指标（Metrics）、追踪（Tracing）"
+    source_article: "D-10-rag-observability"
+    difficulty: "simple"
+    is_negative: false
+  - question: "LangFuse 在 RAG 可观测性中扮演什么角色？"
+    expected_answer: "LangFuse 作为全链路追踪平台，通过 CallbackHandler 注入 astream_events，自动追踪 LLM 调用、工具调用、Chain 步骤和 RAG 查询，提供延迟、Token 使用和检索质量的可视化"
+    source_article: "D-10-rag-observability"
+    difficulty: "medium"
+    is_negative: false
+
+  # ═══════════════════════════════════════════════════════════════
+  # E 组：工具与集成（E-01 ~ E-06）
+  # ═══════════════════════════════════════════════════════════════
+
+  # E-01 Qdrant Hybrid Search
+  - question: "Aureon 的 Qdrant 生产环境中 HNSW 的 m 和 ef_construct 参数分别是多少？"
+    expected_answer: "m=32，ef_construct=200"
+    source_article: "E-01-qdrant-hybrid-search-best-practices"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Qdrant 中标量量化如何配置？原始向量和量化向量分别存储在哪里？"
+    expected_answer: "配置 ScalarQuantization 为 INT8，原始向量存磁盘（on_disk=True），量化向量常驻内存（always_ram=True），兼顾检索速度和存储成本"
+    source_article: "E-01-qdrant-hybrid-search-best-practices"
+    difficulty: "medium"
+    is_negative: false
+
+  # E-02 LangChain RAG 模块
+  - question: "LangChain VectorStore 抽象层支持哪些后端？"
+    expected_answer: "Qdrant、Pinecone、Chroma 等"
+    source_article: "E-02-langchain-rag-module-deep-dive"
+    difficulty: "simple"
+    is_negative: false
+  - question: "LangChain RAG 模块中自定义 Embedding 适配器需要实现哪些方法？"
+    expected_answer: "需要实现 aembed_query（异步编码查询）和 aembed_documents（异步编码文档）方法，以及同步版本的 embed_query 和 embed_documents"
+    source_article: "E-02-langchain-rag-module-deep-dive"
+    difficulty: "medium"
+    is_negative: false
+
+  # E-03 Cohere Rerank
+  - question: "Cohere Rerank 基于什么架构？"
+    expected_answer: "Cross-Encoder 架构"
+    source_article: "E-03-cohere-rerank-integration"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Cohere Rerank 在 RAG 系统中扮演什么角色？"
+    expected_answer: "作为两阶段检索的精排层，先通过 Bi-Encoder 快速召回候选，再用 Cohere Rerank 基于 Cross-Encoder 精排，显著提升检索精度"
+    source_article: "E-03-cohere-rerank-integration"
+    difficulty: "medium"
+    is_negative: false
+
+  # E-04 DashScope Embedding API
+  - question: "DashScope Embedding 和 Rerank 的端点有什么区别？"
+    expected_answer: "Embedding 使用 compatible-mode 端点（dashscope-intl.aliyuncs.com/compatible-mode/v1），Rerank 使用 compatible-api 端点（dashscope-intl.aliyuncs.com/compatible-api/v1），注意不是同一个"
+    source_article: "E-04-dashscope-embedding-api-guide"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Aureon 为什么选择 DashScope 新加坡节点作为主力 API？"
+    expected_answer: "DashScope P50 延迟仅 80ms，吞吐 100/s，中文效果优秀，价格低（¥0.0007/1K tokens），新加坡节点对亚太用户延迟更低"
+    source_article: "E-04-dashscope-embedding-api-guide"
+    difficulty: "medium"
+    is_negative: false
+
+  # E-05 LangFuse RAG 追踪
+  - question: "LangFuse 集成的三个核心函数分别是什么？"
+    expected_answer: "init_langfuse()（启动时初始化并验证连接）、get_langfuse_handler()（返回 CallbackHandler 单例注入 astream_events）、shutdown_langfuse()（关闭时 flush 待发送事件）"
+    source_article: "E-05-langfuse-rag-tracing"
+    difficulty: "simple"
+    is_negative: false
+  - question: "LangFuse 自动追踪的内容包括哪些？"
+    expected_answer: "LLM 调用（延迟、Token 使用）、工具调用（参数和结果）、Chain 步骤（输入输出）、RAG 查询（检索质量、检索文档），session_id 自动映射到 trace 的 session 标签"
+    source_article: "E-05-langfuse-rag-tracing"
+    difficulty: "medium"
+    is_negative: false
+
+  # E-06 Redis 语义缓存
+  - question: "Redis 语义缓存的 L1 精确缓存如何实现？"
+    expected_answer: "使用 MD5 哈希查询文本作为 Redis 键，设置 TTL 过期时间，查询完全匹配时命中缓存直接返回结果"
+    source_article: "E-06-redis-semantic-cache"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Redis 语义缓存如何实现语义级别的匹配？"
+    expected_answer: "将查询通过 Embedding 编码为向量，在 Redis 中存储查询向量和答案，检索时计算查询向量与缓存向量的余弦相似度，超过阈值则命中缓存返回对应答案"
+    source_article: "E-06-redis-semantic-cache"
+    difficulty: "medium"
+    is_negative: false
+
+  # ═══════════════════════════════════════════════════════════════
+  # F 组：增长与定价（F-01 ~ F-08）
+  # ═══════════════════════════════════════════════════════════════
+
+  # F-01 SaaS 定价策略
+  - question: "SaaS 常见的定价模型有哪些？"
+    expected_answer: "免费增值（Freemium）、按量计费（Usage-based）、按席计费（Per-seat）、分层定价（Tiered）、混合定价"
+    source_article: "F-01-saas-pricing-strategy"
+    difficulty: "simple"
+    is_negative: false
+  - question: "免费增值模式的转化率通常是多少？它适合什么类型的产品？"
+    expected_answer: "转化率通常 2-5%，适合 C 端产品、协作工具和开发者工具，优势是降低获客成本和用户基数大"
+    source_article: "F-01-saas-pricing-strategy"
+    difficulty: "medium"
+    is_negative: false
+
+  # F-02 PLG vs SLG
+  - question: "PLG 和 SLG 分别代表什么？"
+    expected_answer: "PLG 是 Product-Led Growth（产品驱动增长），SLG 是 Sales-Led Growth（销售驱动增长）"
+    source_article: "F-02-plg-vs-slg-growth"
+    difficulty: "simple"
+    is_negative: false
+  - question: "PLG 和 SLG 在获客方式和销售周期上有什么区别？"
+    expected_answer: "PLG 通过产品自传播获客，销售周期短（天到周），客单价低到中；SLG 通过销售主动触达获客，销售周期长（月到季度），客单价中到高"
+    source_article: "F-02-plg-vs-slg-growth"
+    difficulty: "medium"
+    is_negative: false
+
+  # F-03 用户留存
+  - question: "留存率提升 5% 可以带来多少利润增长？"
+    expected_answer: "25-95% 的利润增长"
+    source_article: "F-03-user-retention-framework"
+    difficulty: "simple"
+    is_negative: false
+  - question: "净留存率（NRR）的计算公式是什么？"
+    expected_answer: "NRR = (期初 MRR + 增购 - 流失 - 降级) / 期初 MRR，考虑了增购和流失的留存"
+    source_article: "F-03-user-retention-framework"
+    difficulty: "medium"
+    is_negative: false
+
+  # F-04 PMF 验证
+  - question: "PMF 的全称是什么？由谁提出？"
+    expected_answer: "Product-Market Fit（产品市场匹配），由 Marc Andreessen 提出"
+    source_article: "F-04-product-market-fit-validation"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Sean Ellis 测试的判断标准是什么？"
+    expected_answer: "40% 以上的用户表示'如果产品消失会非常失望'，则认为达到 PMF"
+    source_article: "F-04-product-market-fit-validation"
+    difficulty: "simple"
+    is_negative: false
+  - question: "PMF 的定量信号有哪些？"
+    expected_answer: "Sean Ellis 测试 40%+、留存曲线拐点（留存率下降后趋于平稳）、自然增长率 >5%/月、NPS>50、付费转化率 >5%"
+    source_article: "F-04-product-market-fit-validation"
+    difficulty: "medium"
+    is_negative: false
+
+  # F-05 增长飞轮
+  - question: "增长飞轮的五个环节是什么？"
+    expected_answer: "获客（Acquire）、激活（Activate）、留存（Retain）、变现（Revenue）、推荐（Refer）"
+    source_article: "F-05-growth-loops-design"
+    difficulty: "simple"
+    is_negative: false
+  - question: "飞轮模型和漏斗模型的根本区别是什么？"
+    expected_answer: "漏斗模型是线性的（获客→激活→留存→变现→推荐），飞轮模型是循环的，推荐又驱动获客形成闭环，每一个环节的产出都是下一个环节的输入"
+    source_article: "F-05-growth-loops-design"
+    difficulty: "medium"
+    is_negative: false
+
+  # F-06 转化率优化
+  - question: "转化漏斗的典型步骤是什么？"
+    expected_answer: "访问→注册→激活→付费→增购，每一步都有流失"
+    source_article: "F-06-conversion-rate-optimization"
+    difficulty: "simple"
+    is_negative: false
+  - question: "如何科学地优化转化率？"
+    expected_answer: "通过漏斗分析识别流失最大的步骤，针对该步骤设计假设和实验（A/B 测试），用数据验证优化效果，避免主观判断"
+    source_article: "F-06-conversion-rate-optimization"
+    difficulty: "medium"
+    is_negative: false
+
+  # F-07 流失预测
+  - question: "获取一个新客户的成本是保留现有客户的多少倍？"
+    expected_answer: "5-25 倍"
+    source_article: "F-07-churn-prediction"
+    difficulty: "simple"
+    is_negative: false
+  - question: "流失预测中行为信号、财务信号和互动信号各有哪些？"
+    expected_answer: "行为信号包括登录频率下降、核心功能使用减少、支持工单增加、数据导出增加、团队规模缩减；财务信号包括付款失败、降级计划、合同缩短；互动信号包括 NPS 评分低"
+    source_article: "F-07-churn-prediction"
+    difficulty: "medium"
+    is_negative: false
+
+  # F-08 Onboarding 优化
+  - question: "有多少比例的用户在注册后第一次使用就流失了？"
+    expected_answer: "40-60%"
+    source_article: "F-08-onboarding-optimization"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Onboarding 设计的三个核心原则是什么？"
+    expected_answer: "快速到 Aha Moment（5 分钟内体验核心价值）、渐进式引导（根据进度逐步展示功能）、价值先行（先让用户体验价值再要求信息）"
+    source_article: "F-08-onboarding-optimization"
+    difficulty: "medium"
+    is_negative: false
+
+  # ═══════════════════════════════════════════════════════════════
+  # G 组：团队与管理（G-01 ~ G-08）
+  # ═══════════════════════════════════════════════════════════════
+
+  # G-01 OKR 落地
+  - question: "OKR 的全称是什么？由谁发明？"
+    expected_answer: "Objectives and Key Results，由 Intel 的 Andy Grove 发明，后经 Google 推广"
+    source_article: "G-01-okr-implementation"
+    difficulty: "simple"
+    is_negative: false
+  - question: "OKR 和 KPI 的主要区别是什么？"
+    expected_answer: "OKR 是挑战性目标（70% 即优秀）、季度周期、全公司可见、上下对齐；KPI 是维持性指标（100% 才达标）、月度/年度周期、部门内可见、各自独立"
+    source_article: "G-01-okr-implementation"
+    difficulty: "medium"
+    is_negative: false
+
+  # G-02 技术债务治理
+  - question: "技术债务的四种类型分别是什么？"
+    expected_answer: "有意债务（刻意走捷径）、无意债务（经验不足）、环境债务（外部变化）、增长债务（规模变化）"
+    source_article: "G-02-tech-debt-governance"
+    difficulty: "simple"
+    is_negative: false
+  - question: "如何量化技术债务？"
+    expected_answer: "通过技术债务追踪器记录债务项，评估每个债务的影响范围、修复成本和利息（维护成本），计算债务总量和趋势，制定偿还计划"
+    source_article: "G-02-tech-debt-governance"
+    difficulty: "medium"
+    is_negative: false
+
+  # G-03 A/B 测试指南
+  - question: "A/B 测试假设的标准格式是什么？"
+    expected_answer: "如果我们做 [改变]，那么 [指标] 会 [提升/降低] [幅度]，因为 [原因]"
+    source_article: "G-03-ab-testing-guide"
+    difficulty: "simple"
+    is_negative: false
+  - question: "A/B 测试中如何确定样本量？"
+    expected_answer: "基于基线率、最小可检测效应（MDE）、显著性水平（alpha，通常 0.05）和统计功效（power，通常 0.8）计算所需样本量"
+    source_article: "G-03-ab-testing-guide"
+    difficulty: "medium"
+    is_negative: false
+
+  # G-04 团队生产力度量
+  - question: "DORA 四大指标分别是什么？"
+    expected_answer: "部署频率、变更前置时间、变更失败率、服务恢复时间"
+    source_article: "G-04-team-productivity-metrics"
+    difficulty: "simple"
+    is_negative: false
+  - question: "DORA 高绩效团队的标准是什么？"
+    expected_answer: "部署频率按需（每天多次）、变更前置时间 <1 天、变更失败率 <5%、服务恢复时间 <1 小时"
+    source_article: "G-04-team-productivity-metrics"
+    difficulty: "medium"
+    is_negative: false
+
+  # G-05 事件管理
+  - question: "事件管理的生命周期是什么？"
+    expected_answer: "检测→响应→缓解→解决→复盘"
+    source_article: "G-05-incident-management"
+    difficulty: "simple"
+    is_negative: false
+  - question: "P0 和 P1 事件的区别是什么？"
+    expected_answer: "P0 是全面服务中断（如数据库宕机），5 分钟内响应；P1 是核心功能受损（如 RAG 查询超时），15 分钟内响应"
+    source_article: "G-05-incident-management"
+    difficulty: "medium"
+    is_negative: false
+
+  # G-06 知识管理
+  - question: "团队知识中隐性知识占比多少？"
+    expected_answer: "70-80%"
+    source_article: "G-06-knowledge-management"
+    difficulty: "simple"
+    is_negative: false
+  - question: "知识管理的三层架构是什么？"
+    expected_answer: "L0 个人知识（笔记、收藏、经验）、L1 团队知识（Wiki、文档、Runbook）、L2 组织知识（最佳实践、培训体系、知识库）"
+    source_article: "G-06-knowledge-management"
+    difficulty: "medium"
+    is_negative: false
+
+  # G-07 跨职能协作
+  - question: "产品、设计和工程三个职能分别关注什么？"
+    expected_answer: "产品关注用户价值和商业目标（What & Why），设计关注用户体验和交互流程（How it feels），工程关注技术可行性和系统质量（How it works）"
+    source_article: "G-07-cross-functional-collaboration"
+    difficulty: "simple"
+    is_negative: false
+  - question: "跨职能协作中对齐阶段的目标是什么？"
+    expected_answer: "产品、设计、工程共同参与需求讨论确保三方理解一致，产品明确用户问题和成功标准，设计明确用户流程和交互方案，工程明确技术方案和风险约束"
+    source_article: "G-07-cross-functional-collaboration"
+    difficulty: "medium"
+    is_negative: false
+
+  # G-08 数据驱动决策
+  - question: "北极星指标的选择标准有哪些？"
+    expected_answer: "反映客户核心价值、代表产品策略方向、是收入的先行指标、易于理解和沟通"
+    source_article: "G-08-data-driven-decision-making"
+    difficulty: "simple"
+    is_negative: false
+  - question: "为什么北极星指标只能有一个？"
+    expected_answer: "多个指标会导致优先级冲突和资源分散，单一指标确保全公司对齐方向，所有决策都围绕同一个目标，避免局部优化"
+    source_article: "G-08-data-driven-decision-making"
+    difficulty: "medium"
+    is_negative: false
+
+  # ═══════════════════════════════════════════════════════════════
+  # H 组：产品与商业（H-01 ~ H-08）
+  # ═══════════════════════════════════════════════════════════════
+
+  # H-01 MVP 方法论
+  - question: "MVP 的全称是什么？由谁在什么书中提出？"
+    expected_answer: "Minimum Viable Product（最小可行产品），由 Eric Ries 在《精益创业》中提出"
+    source_article: "H-01-mvp-methodology"
+    difficulty: "simple"
+    is_negative: false
+  - question: "MVP 的两个核心原则是什么？"
+    expected_answer: "假设驱动（每个功能背后都是一个假设，MVP 的目的是验证假设）和最小化构建（只构建验证假设所需的最少功能）"
+    source_article: "H-01-mvp-methodology"
+    difficulty: "medium"
+    is_negative: false
+
+  # H-02 B2B 客户成功
+  - question: "客户成功和客户支持的根本区别是什么？"
+    expected_answer: "客户成功是主动的、预防性的（帮助客户实现业务目标驱动续费和增购），客户支持是被动的（响应问题）"
+    source_article: "H-02-b2b-customer-success"
+    difficulty: "simple"
+    is_negative: false
+  - question: "客户健康度评分中产品使用占比多少？"
+    expected_answer: "40%"
+    source_article: "H-02-b2b-customer-success"
+    difficulty: "simple"
+    is_negative: false
+  - question: "客户健康度评分模型包含哪些维度？"
+    expected_answer: "产品使用（40%）、互动参与（20%）、业务成果（20%）、满意度（10%）、合同健康度（10%）"
+    source_article: "H-02-b2b-customer-success"
+    difficulty: "medium"
+    is_negative: false
+
+  # H-03 产品路线图
+  - question: "产品路线图和项目计划的区别是什么？"
+    expected_answer: "产品路线图是战略沟通工具，回答'为什么做'和'什么时候做'；项目计划回答'怎么做'。路线图不是项目计划"
+    source_article: "H-03-product-roadmap-planning"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Now-Next-Later 路线图格式的优点是什么？"
+    expected_answer: "最简洁的路线图格式，Now 是当前季度正在做的，Next 是下季度计划做的，Later 是未来可能做的。避免过度承诺，保持灵活性"
+    source_article: "H-03-product-roadmap-planning"
+    difficulty: "medium"
+    is_negative: false
+
+  # H-04 商业模式画布
+  - question: "商业模式画布由谁提出？包含几个模块？"
+    expected_answer: "由 Alexander Osterwalder 提出，包含九个模块"
+    source_article: "H-04-business-model-canvas"
+    difficulty: "simple"
+    is_negative: false
+  - question: "商业模式画布的九大模块是什么？"
+    expected_answer: "客户细分、价值主张、渠道通路、客户关系、收入来源、核心资源、关键活动、关键伙伴、成本结构"
+    source_article: "H-04-business-model-canvas"
+    difficulty: "medium"
+    is_negative: false
+
+  # H-05 竞争分析
+  - question: "竞争分析的三个层次分别是什么？"
+    expected_answer: "宏观层（市场结构、行业趋势、技术范式转移）、中观层（竞争格局、细分市场、生态位分布）、微观层（功能对比、定价策略、用户体验差异）"
+    source_article: "H-05-competitive-analysis"
+    difficulty: "simple"
+    is_negative: false
+  - question: "市场地图构建的第一步是什么？为什么重要？"
+    expected_answer: "定义市场边界，因为边界不同竞争者不同（如 RAG 平台市场 vs 知识管理市场 vs 企业搜索市场），错误的边界定义会导致竞争分析偏离"
+    source_article: "H-05-competitive-analysis"
+    difficulty: "medium"
+    is_negative: false
+
+  # H-06 GTM 策略
+  - question: "GTM 策略需要回答哪四个核心问题？"
+    expected_answer: "卖给谁（目标客户画像 ICP）、卖什么（价值主张和差异化定位）、怎么卖（销售渠道和获客路径）、怎么扩（从种子用户到规模化的增长引擎）"
+    source_article: "H-06-go-to-market-strategy"
+    difficulty: "simple"
+    is_negative: false
+  - question: "ICP 的五层模型是什么？"
+    expected_answer: "第 1 层行业与规模、第 2 层技术栈与痛点、第 3 层决策者与购买流程、第 4 层使用场景与成功标准、第 5 层付费意愿与预算"
+    source_article: "H-06-go-to-market-strategy"
+    difficulty: "medium"
+    is_negative: false
+
+  # H-07 单位经济学
+  - question: "单位经济学中 LTV/CAC 的健康标准是什么？"
+    expected_answer: "LTV/CAC > 3 是健康的获客效率，< 1 则每获取一个客户都在亏钱。CAC 回收期应 < 12 个月，毛利率 > 70%"
+    source_article: "H-07-unit-economics"
+    difficulty: "simple"
+    is_negative: false
+  - question: "CAC 的完整构成包括哪些？"
+    expected_answer: "CAC = (营销费用 + 销售费用 + 相关工具费用) / 新获客数，不仅是广告费除以新客户数"
+    source_article: "H-07-unit-economics"
+    difficulty: "medium"
+    is_negative: false
+
+  # H-08 平台经济学
+  - question: "平台业务和线性业务的根本区别是什么？"
+    expected_answer: "线性业务公司自己生产价值，平台业务由生态参与者共同创造价值。平台成长模式是指数增长（网络效应），线性业务是线性增长"
+    source_article: "H-08-platform-economics"
+    difficulty: "simple"
+    is_negative: false
+  - question: "直接网络效应和间接网络效应的区别是什么？"
+    expected_answer: "直接网络效应（同侧）是用户数量增加直接提升每个用户的价值，如微信、电话网络；间接网络效应（跨侧）是一侧用户增加提升另一侧用户的价值，如电商平台买家越多卖家越愿意入驻"
+    source_article: "H-08-platform-economics"
+    difficulty: "medium"
+    is_negative: false
+
+  # ═══════════════════════════════════════════════════════════════
+  # 现有文章（25 篇）
+  # ═══════════════════════════════════════════════════════════════
+
+  # hermes-agent-practical-guide
   - question: "Hermes Agent 的分层记忆系统有几层？每层叫什么？"
     expected_answer: "4 层：L0 Conversation、L1 Atoms、L2 Scenarios、L3 Persona"
-    expected_sources: ["hermes-agent-practical-guide"]
     source_article: "hermes-agent-practical-guide"
-    category: "factual"
-    difficulty: "easy"
+    difficulty: "simple"
     is_negative: false
-  - question: "React SPA 部署到 GitHub Pages 时，路由系统会遇到什么典型问题？如何解决？"
-    expected_answer: "刷新页面会出现 404，因为 GitHub Pages 找不到对应的 HTML 文件。解决方案是复制 index.html 为 404.html"
-    expected_sources: ["spa-github-pages"]
+  - question: "Hermes Agent 的核心优势是什么？"
+    expected_answer: "模块化设计、分层可扩展性，以及约 900 个测试文件和 17000+ 测试用例的工程实践"
+    source_article: "hermes-agent-practical-guide"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Hermes Agent 的 L1 Atoms 层存储什么类型的数据？"
+    expected_answer: "原子事实三元组（主语-谓词-宾语形式的事实提取），用于中期记忆存储"
+    source_article: "hermes-agent-practical-guide"
+    difficulty: "medium"
+    is_negative: false
+
+  # spa-github-pages
+  - question: "React SPA 部署到 GitHub Pages 时路由系统会遇到什么典型问题？"
+    expected_answer: "刷新页面会出现 404，因为 GitHub Pages 找不到对应的 HTML 文件"
     source_article: "spa-github-pages"
-    category: "factual"
-    difficulty: "easy"
+    difficulty: "simple"
     is_negative: false
-  - question: "如何配置不存在的功能 XYZ？"
-    expected_answer: ""
-    expected_sources: []
-    source_article: "none"
-    category: "negative"
-    difficulty: "easy"
-    is_negative: true
-  - question: "什么是 RAG？"
-    expected_answer: "RAG（Retrieval-Augmented Generation）是一种结合检索和生成的AI技术"
-    expected_sources: ["rag-overview"]
-    source_article: "rag-overview"
-    category: "factual"
-    difficulty: "easy"
-    is_negative: false
-  - question: "BM25 和向量检索有什么区别？"
-    expected_answer: "BM25 基于关键词匹配，向量检索基于语义相似度"
-    expected_sources: ["rag-overview"]
-    source_article: "rag-overview"
-    category: "reasoning"
+  - question: "SPA 部署 GitHub Pages 的三个阶段问题分别是什么？"
+    expected_answer: "404（上传错误目录）、白屏（base 路径没配）、路由 404（GitHub Pages 不支持 SPA 路由）"
+    source_article: "spa-github-pages"
     difficulty: "medium"
     is_negative: false
-  - question: "请详细解释量子计算在 Aureon 中的应用"
-    expected_answer: ""
-    expected_sources: []
-    source_article: "none"
-    category: "negative"
+
+  # rag-system-guide
+  - question: "RAG 系统的全链路包含哪六个步骤？"
+    expected_answer: "文档加载、文本分块、向量嵌入、向量存储、检索、生成"
+    source_article: "rag-system-guide"
+    difficulty: "simple"
+    is_negative: false
+  - question: "RAG 文档分块时 chunk_size 和 chunk_overlap 通常设为多少？"
+    expected_answer: "chunk_size=500，chunk_overlap=50"
+    source_article: "rag-system-guide"
+    difficulty: "simple"
+    is_negative: false
+
+  # langchain-framework-guide
+  - question: "LangChain 的核心价值是什么？"
+    expected_answer: "将 LLM 调用、外部数据检索、工具调用、记忆管理等能力抽象为可组合的模块，降低开发复杂度"
+    source_article: "langchain-framework-guide"
+    difficulty: "simple"
+    is_negative: false
+  - question: "LangChain 的核心概念 Models 模块支持哪些 LLM 提供商？"
+    expected_answer: "支持 OpenAI、智谱 AI（ZhipuAI）等多种 LLM 提供商，统一接口调用"
+    source_article: "langchain-framework-guide"
+    difficulty: "medium"
+    is_negative: false
+
+  # langchain-agent-intro
+  - question: "LangChain Agent 的三个核心概念是什么？"
+    expected_answer: "LLM（理解用户意图并决定下一步动作）、Tools（Agent 可调用的外部函数）、Agent Executor（协调 LLM 和 Tools 之间的循环）"
+    source_article: "langchain-agent-intro"
+    difficulty: "simple"
+    is_negative: false
+  - question: "LangChain Agent 的执行流程是怎样的？"
+    expected_answer: "LLM 接收用户输入，决定是否需要调用工具，如果需要则选择工具并执行，将工具结果反馈给 LLM，LLM 继续推理或生成最终答案，循环直到任务完成"
+    source_article: "langchain-agent-intro"
+    difficulty: "medium"
+    is_negative: false
+
+  # ai-agent-architecture
+  - question: "AI Agent 的四个核心组件是什么？"
+    expected_answer: "LLM（大脑）、Tools（工具）、Memory（记忆）、Planning（规划）"
+    source_article: "ai-agent-architecture"
+    difficulty: "simple"
+    is_negative: false
+  - question: "ReAct 模式的全称和工作方式是什么？"
+    expected_answer: "Reasoning + Acting，交替进行推理和行动：先推理下一步该做什么，然后执行动作，观察结果后再推理，循环直到任务完成"
+    source_article: "ai-agent-architecture"
+    difficulty: "medium"
+    is_negative: false
+
+  # prompt-engineering-guide
+  - question: "Prompt Engineering 的核心目标是什么？"
+    expected_answer: "让 LLM 理解任务意图，按预期格式和质量输出"
+    source_article: "prompt-engineering-guide"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Few-shot Learning 在 Prompt 中的作用是什么？"
+    expected_answer: "在 Prompt 中提供少量示例，引导 LLM 模仿输出格式和风格，使输出更符合预期"
+    source_article: "prompt-engineering-guide"
+    difficulty: "medium"
+    is_negative: false
+
+  # embedding-models-guide
+  - question: "Embedding 的核心原理是什么？"
+    expected_answer: "深度神经网络（通常是 Transformer 架构）将文本编码为高维向量，语义相似的文本在向量空间中距离相近，语义不同的文本距离较远"
+    source_article: "embedding-models-guide"
+    difficulty: "simple"
+    is_negative: false
+  - question: "OpenAI text-embedding-3-small 和 text-embedding-3-large 的维度和定位有什么区别？"
+    expected_answer: "text-embedding-3-small 维度 1536 性价比最高，text-embedding-3-large 维度 3072 精度更高但成本也更高"
+    source_article: "embedding-models-guide"
+    difficulty: "medium"
+    is_negative: false
+
+  # vector-database-guide
+  - question: "向量数据库的核心能力是什么？"
+    expected_answer: "给定一个查询向量，快速找到数据库中与其最相似的 Top-K 个向量"
+    source_article: "vector-database-guide"
+    difficulty: "simple"
+    is_negative: false
+  - question: "向量数据库相比传统数据库的优势是什么？"
+    expected_answer: "支持语义搜索（理解含义而非关键词）、高维检索（支持数百到数千维度的向量）、相似度排序（返回最相关的 K 个结果），而 SQL 只能做精确匹配，全文搜索依赖关键词"
+    source_article: "vector-database-guide"
+    difficulty: "medium"
+    is_negative: false
+
+  # rag-concepts-deep-dive
+  - question: "RAG 的基本公式是什么？"
+    expected_answer: "问题→检索→上下文+问题→LLM→回答"
+    source_article: "rag-concepts-deep-dive"
+    difficulty: "simple"
+    is_negative: false
+  - question: "RAG 和 Fine-tuning 在知识更新方面有什么区别？"
+    expected_answer: "RAG 实时更新改文档即可，Fine-tuning 需要重新训练。RAG 可解释性高（可追溯来源），Fine-tuning 知识内化可解释性低"
+    source_article: "rag-concepts-deep-dive"
+    difficulty: "medium"
+    is_negative: false
+
+  # llamaindex-rag-guide
+  - question: "LlamaIndex 的 RAG 流水线三个核心阶段是什么？"
+    expected_answer: "Loading（数据加载）、Indexing（索引构建）、Querying（查询检索）"
+    source_article: "llamaindex-rag-guide"
+    difficulty: "simple"
+    is_negative: false
+  - question: "LlamaIndex 和 LangChain 的定位有什么区别？"
+    expected_answer: "LangChain 偏向通用 Agent 编排，LlamaIndex 专注于数据索引和检索，在 RAG 场景下提供更精细的控制"
+    source_article: "llamaindex-rag-guide"
+    difficulty: "medium"
+    is_negative: false
+
+  # langgraph-workflow
+  - question: "LangGraph StateGraph 的三个核心要素是什么？"
+    expected_answer: "状态类型、节点和边"
+    source_article: "langgraph-workflow"
+    difficulty: "simple"
+    is_negative: false
+  - question: "LangGraph 中 AgentState 通常包含哪些字段？"
+    expected_answer: "query、intent、intent_confidence、rag_context、agent_result、final_answer 等，用于在节点间传递状态"
+    source_article: "langgraph-workflow"
+    difficulty: "medium"
+    is_negative: false
+
+  # agent-memory-system
+  - question: "AI Agent 四层记忆架构中 L0 和 L3 分别存储什么？"
+    expected_answer: "L0 Conversation 存储原始对话记录（短期），L3 Persona 存储用户画像（长期）"
+    source_article: "agent-memory-system"
+    difficulty: "simple"
+    is_negative: false
+  - question: "L1 Atoms 层的三元组格式是什么？"
+    expected_answer: "主语-谓词-宾语格式的原子事实提取"
+    source_article: "agent-memory-system"
+    difficulty: "medium"
+    is_negative: false
+
+  # deepseek-cache-optimization
+  - question: "DeepSeek 的 KV 缓存机制的关键约束是什么？"
+    expected_answer: "精确字节匹配，不是语义匹配。多一个空格、换行、JSON key 顺序不同，缓存就不命中"
+    source_article: "deepseek-cache-optimization"
+    difficulty: "simple"
+    is_negative: false
+  - question: "DeepSeek cached 和 uncached 的价格差多少倍？"
+    expected_answer: "差约 120 倍，cached ¥0.025 vs uncached ¥3/100万 tokens"
+    source_article: "deepseek-cache-optimization"
+    difficulty: "simple"
+    is_negative: false
+  - question: "如何提升 DeepSeek 代理的缓存命中率？"
+    expected_answer: "确保系统提示词和上下文前缀字节完全一致，避免 JSON key 顺序变化、多余空格或换行，使用固定格式的消息结构"
+    source_article: "deepseek-cache-optimization"
+    difficulty: "medium"
+    is_negative: false
+
+  # chatbot-railway-deployment
+  - question: "AI Chatbot 部署到 Railway 的项目技术栈是什么？"
+    expected_answer: "React 19 + FastAPI + LangChain + Chroma RAG"
+    source_article: "chatbot-railway-deployment"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Railway 部署中 Docker 多阶段构建的优势是什么？"
+    expected_answer: "减小镜像体积，构建阶段安装依赖，运行阶段只包含必要文件，加快部署速度和减少资源消耗"
+    source_article: "chatbot-railway-deployment"
+    difficulty: "medium"
+    is_negative: false
+
+  # ai-writing-assistant
+  - question: "AI 写作助手使用什么技术实现流式输出？"
+    expected_answer: "Server-Sent Events (SSE)"
+    source_article: "ai-writing-assistant"
+    difficulty: "simple"
+    is_negative: false
+  - question: "AI 写作助手和 AI Chatbot 两个项目的主要区别是什么？"
+    expected_answer: "AI Writing Assistant 是智能写作助手，支持多种写作模式、文本优化和历史记录；AI Chatbot 是简洁的 AI 对话聊天界面"
+    source_article: "ai-writing-assistant"
+    difficulty: "medium"
+    is_negative: false
+
+  # blog-migration-troubleshooting
+  - question: "博客搬家事故的起因是什么？"
+    expected_answer: "清理仓库时一个 git commit 导致 13 个文件被 Git 报错信息覆盖，GitHub Pages 白屏，Vercel 反复部署失败"
+    source_article: "blog-migration-troubleshooting"
+    difficulty: "simple"
+    is_negative: false
+  - question: "博客搬家时 package.json 被覆盖成了什么内容？"
+    expected_answer: "被覆盖成了 Git 报错信息：'fatal: ambiguous argument /package.json: unknown revision or path not in the working tree'"
+    source_article: "blog-migration-troubleshooting"
+    difficulty: "medium"
+    is_negative: false
+
+  # eleven-projects-two-months
+  - question: "作者在两个月内完成了多少个项目？"
+    expected_answer: "11 个项目"
+    source_article: "eleven-projects-two-months"
+    difficulty: "simple"
+    is_negative: false
+  - question: "作者做这些项目的动机是什么？"
+    expected_answer: "想看看自己能不能在短时间内从只会'写页面'变成真正能独立交付产品的人"
+    source_article: "eleven-projects-two-months"
+    difficulty: "medium"
+    is_negative: false
+
+  # hello-world
+  - question: "博客使用什么技术栈构建和部署？"
+    expected_answer: "React + Vite 构建，Markdown 文件管理文章，Vercel 部署，完全免费"
+    source_article: "hello-world"
+    difficulty: "simple"
+    is_negative: false
+
+  # git-workflow
+  - question: "主干开发（Trunk-Based Development）的核心思想是什么？"
+    expected_answer: "所有开发者在 main 分支上工作，通过短生命周期特性分支和频繁合并保持代码最新"
+    source_article: "git-workflow"
+    difficulty: "simple"
+    is_negative: false
+  - question: "为什么团队需要规范的 Git 工作流？"
+    expected_answer: "没有规范的工作流程容易陷入混乱，规范的分支策略和 commit 规范能确保代码质量和团队协作效率"
+    source_article: "git-workflow"
+    difficulty: "medium"
+    is_negative: false
+
+  # react-performance-tips
+  - question: "React.memo 的作用是什么？"
+    expected_answer: "对组件的 props 进行浅比较，如果 props 没有变化就跳过重渲染"
+    source_article: "react-performance-tips"
+    difficulty: "simple"
+    is_negative: false
+  - question: "useMemo 和 useCallback 的区别是什么？"
+    expected_answer: "useMemo 缓存计算结果值，useCallback 缓存函数引用。useMemo 用于避免重复计算，useCallback 用于避免子组件不必要的重渲染"
+    source_article: "react-performance-tips"
+    difficulty: "medium"
+    is_negative: false
+
+  # zustand-todo-app
+  - question: "Zustand 相比 Redux 的主要优势是什么？"
+    expected_answer: "极简的 API、无需 Provider 包裹、更少的样板代码、TypeScript 友好、bundle 体积小"
+    source_article: "zustand-todo-app"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Zustand 为什么不需要 Provider？"
+    expected_answer: "Zustand 使用独立的 store 实例，组件通过 hook 直接订阅 store，不需要 Context Provider 包裹组件树"
+    source_article: "zustand-todo-app"
+    difficulty: "medium"
+    is_negative: false
+
+  # markdown-notes-app
+  - question: "Markdown 笔记应用的三栏布局是什么？"
+    expected_answer: "左侧笔记列表、中间编辑器、右侧实时预览"
+    source_article: "markdown-notes-app"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Markdown 笔记应用如何实现实时预览？"
+    expected_answer: "编辑器内容变化时通过防抖机制延迟解析 Markdown，解析后渲染到预览区域，避免频繁重渲染影响性能"
+    source_article: "markdown-notes-app"
+    difficulty: "medium"
+    is_negative: false
+
+  # wechat-miniprogram-ai-agent
+  - question: "微信小程序 AI 销售助手使用了什么技术栈？"
+    expected_answer: "微信小程序 + 腾讯云开发 CloudBase + 混元大模型"
+    source_article: "wechat-miniprogram-ai-agent"
+    difficulty: "simple"
+    is_negative: false
+  - question: "微信开发者工具基础库 3.15.2 的 timeout 问题是什么？"
+    expected_answer: "启动小程序必报 Error: timeout，需要降级基础库版本或更新开发者工具解决"
+    source_article: "wechat-miniprogram-ai-agent"
+    difficulty: "medium"
+    is_negative: false
+
+  # weather-app-api
+  - question: "天气查询应用支持哪些功能？"
+    expected_answer: "按城市名搜索天气、浏览器自动定位、7 天天气预报、空气质量指数 AQI、多城市对比"
+    source_article: "weather-app-api"
+    difficulty: "simple"
+    is_negative: false
+  - question: "天气查询应用的三层 API 调用设计是什么？"
+    expected_answer: "第一层获取地理位置（浏览器 API 或城市名解析），第二层调用天气 API 获取数据，第三层处理和展示数据"
+    source_article: "weather-app-api"
+    difficulty: "medium"
+    is_negative: false
+
+  # ═══════════════════════════════════════════════════════════════
+  # Hard 难度：跨文档综合题（30 题）
+  # ═══════════════════════════════════════════════════════════════
+
+  - question: "比较 HyDE 和 Multi-Query 两种检索策略的原理、适用场景和优缺点"
+    expected_answer: "HyDE 通过 LLM 生成假设文档再检索，适合查询模糊需要语义扩展的场景，优势是能将模糊查询映射到更接近真实文档的语义空间，劣势是假设文档可能误导检索方向且增加 LLM 调用成本；Multi-Query 生成多个查询变体从不同角度检索，适合需要多角度理解的场景，优势是覆盖面广不易遗漏，劣势是多个查询增加检索开销且结果融合需要额外处理"
+    source_article: "A-01-hyde-principles-and-practice"
     difficulty: "hard"
-    is_negative: true
-  - question: "Aureon 的核心功能是什么？"
-    expected_answer: "Aureon 是一个 AI 聊天助手平台，支持 RAG 检索增强生成"
-    expected_sources: ["aureon-intro"]
-    source_article: "aureon-intro"
-    category: "factual"
-    difficulty: "easy"
     is_negative: false
-  - question: "如何优化检索性能？"
-    expected_answer: "可以通过调整 BM25 参数、使用向量索引、优化分块策略来提升检索性能"
-    expected_sources: ["rag-overview"]
-    source_article: "rag-overview"
-    category: "reasoning"
-    difficulty: "medium"
-    is_negative: false
-  - question: "HyDE 和 Multi-Query 检索策略分别适用于什么场景？"
-    expected_answer: "HyDE 适用于查询模糊需要假设性答案的场景，Multi-Query 适用于查询需要多角度理解的场景"
-    expected_sources: ["rag-overview"]
-    source_article: "rag-overview"
-    category: "synthesis"
+
+  - question: "从 BM25 到稀疏向量再到 BGE-M3 的 dense+sparse 联合检索，关键词检索技术经历了怎样的演进？各自的优劣是什么？"
+    expected_answer: "BM25 是纯统计方法，无需训练开箱即用但无法处理同义词和语义等价；稀疏向量通过神经网络学习词项权重解决了同义词问题但仍是词袋模型；BGE-M3 的 dense+sparse 联合检索结合了稠密向量的语义理解能力和稀疏向量的精确匹配能力，通过 RRF 融合实现最佳效果，但计算成本更高"
+    source_article: "A-03-bm25-vs-sparse-vector-evolution"
     difficulty: "hard"
     is_negative: false
-  - question: "CRAG 自纠正机制如何工作？"
-    expected_answer: "CRAG 在检索质量低时重写查询并重新检索，通过规则扩展生成变体查询"
-    expected_sources: ["rag-overview"]
-    source_article: "rag-overview"
-    category: "reasoning"
+
+  - question: "Bi-Encoder、Cross-Encoder 和 Late Interaction（ColBERT）三种编码架构在精度、速度和适用场景上如何权衡？"
+    expected_answer: "Bi-Encoder 独立编码速度快支持预计算和 ANN 检索但精度有限；Cross-Encoder 联合编码精度最高但无法预计算速度慢适合 Rerank；Late Interaction 保留 Token 级别交互在精度和速度间取得平衡，支持预计算文档向量但检索时需 MaxSim 计算。生产中通常 Bi-Encoder 召回+Cross-Encoder/Late Interaction 精排"
+    source_article: "A-08-cross-encoder-vs-bi-encoder"
+    difficulty: "hard"
+    is_negative: false
+
+  - question: "CRAG 和 Self-RAG 都是对传统 RAG 的改进，它们的纠正机制有什么本质区别？"
+    expected_answer: "CRAG 在生成前评估检索质量执行三路动作（correct/ambiguous/incorrect），是外部评估模块驱动的纠正；Self-RAG 让模型自身通过反思 Token 自主决定何时检索、评估检索相关性和生成支持度，是模型内化的自我纠正。CRAG 更容易集成到现有系统，Self-RAG 需要专门训练但更灵活"
+    source_article: "C-01-corrective-rag-implementation"
+    difficulty: "hard"
+    is_negative: false
+
+  - question: "Adaptive-RAG 查询路由如何与 CRAG、HyDE、Multi-Query 等技术组合形成完整的检索 Pipeline？"
+    expected_answer: "查询路由根据复杂度分级：简单查询走纯 Sparse 检索直接生成；中等查询走 Hybrid+自适应 Rerank；复杂查询走 HyDE 生成假设文档+Multi-Query 多角度检索+Hybrid 混合检索+Rerank 精排+CRAG 质量评估与纠正。路由是调度层，其他技术是执行层，路由决定调用哪些执行组件"
+    source_article: "C-03-adaptive-rag-query-routing"
+    difficulty: "hard"
+    is_negative: false
+
+  - question: "Contextual Retrieval 和 Context Window 优化分别解决 RAG 的什么问题？它们如何互补？"
+    expected_answer: "Contextual Retrieval 解决文档切分后 chunk 丢失上下文导致检索不准的问题，通过为 chunk 添加上下文前缀提升检索质量；Context Window 优化解决检索结果注入 LLM 时信息密度低噪声多的问题，通过压缩和过滤提升生成质量。前者优化检索端，后者优化生成端，互补形成高质量 Pipeline"
+    source_article: "C-04-contextual-retrieval-in-practice"
+    difficulty: "hard"
+    is_negative: false
+
+  - question: "RAG 缓存策略的 L1 精确缓存和 L2 语义缓存如何与 Redis 语义缓存实现结合？"
+    expected_answer: "L1 精确缓存使用 MD5 哈希查询文本作为 Redis 键实现快速匹配，L2 语义缓存将查询 Embedding 向量存入 Redis 并通过余弦相似度匹配语义相似的查询。两层缓存串联：先查精确缓存（O(1)），未命中再查语义缓存（需向量检索），都未命中才执行完整 Pipeline"
+    source_article: "C-08-rag-caching-strategies"
+    difficulty: "hard"
+    is_negative: false
+
+  - question: "RAG Triad 评估框架中 Faithfulness 和 Answer Relevancy 冲突时如何处理？这与 RAG 安全护栏有什么关联？"
+    expected_answer: "冲突时应优先保证 Faithfulness，因为幻觉比不回答更危险。这与安全护栏关联：低 Faithfulness 可能意味着 LLM 编造信息（类似 Prompt Injection 的效果），高 Relevancy 但低 Faithfulness 的答案可能包含从恶意文档注入的内容。安全护栏的 PII 检测和 Prompt Injection 防御是 Faithfulness 的前置保障"
+    source_article: "D-02-faithfulness-vs-relevancy-conflict"
+    difficulty: "hard"
+    is_negative: false
+
+  - question: "从 RAG 延迟优化的角度，分析查询路由、检索并行化和缓存策略如何协同将端到端延迟从 5 秒降到 1 秒？"
+    expected_answer: "查询路由减少不必要步骤（简单查询跳过 HyDE/Multi-Query/Rerank/CRAG 节省约 2700ms），检索并行化将多路检索从串行改为并行（节省约 500ms），缓存策略命中时直接返回（节省全部 Pipeline 时间约 5000ms）。三者协同：路由减少步骤、并行加速必要步骤、缓存跳过重复步骤"
+    source_article: "D-03-rag-latency-optimization"
+    difficulty: "hard"
+    is_negative: false
+
+  - question: "LLM-as-Judge 评估的偏见问题如何影响 RAG Benchmark 的可靠性？如何与 DeepEval 等自动化评估工具结合使用？"
+    expected_answer: "LLM-as-Judge 的位置偏见、长度偏见和自增强偏见可能导致评估结果系统性偏差，影响 Benchmark 可靠性。与 DeepEval 结合时，可用 DeepEval 的自动化指标（Faithfulness、Relevancy）作为客观基线，LLM-as-Judge 补充评估需要主观判断的维度（完整性、可读性），多 Judge 投票减少偏见影响"
+    source_article: "D-05-llm-as-judge-evaluation"
+    difficulty: "hard"
+    is_negative: false
+
+  - question: "Qdrant 的 HNSW 参数（m=32, ef_construct=200）和标量量化配置如何影响检索质量和延迟？"
+    expected_answer: "m=32 增加每层连接数提升精度但增加内存占用，ef_construct=200 增加构建时搜索宽度提升索引质量但增加构建时间。标量量化 INT8 将向量从 FP32 压缩 4 倍，量化向量常驻内存（always_ram=True）加速检索，原始向量存磁盘（on_disk=True）节省内存。三者协同在精度、内存和延迟间取得平衡"
+    source_article: "E-01-qdrant-hybrid-search-best-practices"
+    difficulty: "hard"
+    is_negative: false
+
+  - question: "DashScope Embedding API 和 Cohere Rerank 在 RAG Pipeline 中分别扮演什么角色？它们的端点配置有什么需要注意的？"
+    expected_answer: "DashScope Embedding 负责将文本编码为向量用于检索，Cohere Rerank 负责对检索结果精排。注意 DashScope Embedding 使用 compatible-mode 端点，Rerank 使用 compatible-api 端点（不是 compatible-mode），两者端点不同容易混淆。Aureon 使用 DashScope 新加坡节点降低延迟"
+    source_article: "E-04-dashscope-embedding-api-guide"
+    difficulty: "hard"
+    is_negative: false
+
+  - question: "LangFuse 全链路追踪如何帮助诊断 RAG 系统的延迟和质量问题？"
+    expected_answer: "LangFuse 通过 CallbackHandler 自动追踪每步延迟（查询路由、检索、Rerank、生成）、Token 使用量和检索质量（检索文档相关性）。当延迟异常时可定位瓶颈步骤，当质量下降时可追溯是检索问题还是生成问题。session_id 映射到 trace 标签便于跨会话分析"
+    source_article: "E-05-langfuse-rag-tracing"
+    difficulty: "hard"
+    is_negative: false
+
+  - question: "BGE-M3 的 dense+sparse+ColBERT 三合一输出如何与 Qdrant 的混合检索和 RRF 融合配合？"
+    expected_answer: "BGE-M3 一次推理生成三种向量：dense 向量用于 Qdrant 的 dense 检索，sparse 向量用于 Qdrant 的原生稀疏向量检索，ColBERT 向量可用于精排。Qdrant 通过 RRF 融合 dense 和 sparse 检索结果，ColBERT 可作为 Rerank 层进一步提升精度。三者协同实现高质量混合检索"
+    source_article: "B-07-bge-m3-architecture-analysis"
+    difficulty: "hard"
+    is_negative: false
+
+  - question: "Embedding 漂移检测和 RAG 回归测试如何协同确保系统升级后的质量？"
+    expected_answer: "Embedding 漂移检测在模型更新时监控向量空间变化，通过向量距离对比和检索质量回归测试发现漂移；RAG 回归测试在每次变更后运行固定测试集验证 Faithfulness、Relevancy 和延迟不劣化。漂移检测是预防性的（在问题出现前发现），回归测试是验证性的（在变更后确认质量），两者互补"
+    source_article: "B-10-embedding-drift-detection"
+    difficulty: "hard"
+    is_negative: false
+
+  - question: "SaaS 定价策略和单位经济学（LTV/CAC）如何相互影响？"
+    expected_answer: "定价策略直接影响 LTV 和 CAC：免费增值模式降低获客成本但 LTV 也低，按量计费 LTV 随使用增长但 CAC 可能较高，按席计费 LTV 可预测但扩展受限。LTV/CAC>3 是健康标准，定价需确保单位经济学为正。高客单价 SLG 模式 CAC 高但 LTV 也高，低客单价 PLG 模式 CAC 低但需高转化率补偿"
+    source_article: "F-01-saas-pricing-strategy"
+    difficulty: "hard"
+    is_negative: false
+
+  - question: "PLG 增长模式和用户留存框架如何协同设计？"
+    expected_answer: "PLG 依赖产品自身驱动增长，留存是核心——没有留存的 PLG 只是漏水桶。留存框架中的 Aha Moment 是 PLG 激活的关键节点，Onboarding 优化确保用户快速到达 Aha Moment。PLG 的病毒系数依赖留存用户推荐，留存率直接影响 PLG 的增长飞轮是否转动"
+    source_article: "F-02-plg-vs-slg-growth"
+    difficulty: "hard"
+    is_negative: false
+
+  - question: "PMF 验证和 MVP 方法论如何形成产品验证的闭环？"
+    expected_answer: "MVP 方法论指导用最低成本构建验证核心假设的产品版本，PMF 验证提供判断产品是否满足市场需求的框架。MVP 是验证工具，PMF 是验证标准：先通过 MVP 快速验证假设，再用 Sean Ellis 测试、留存曲线拐点等 PMF 信号判断是否达到产品市场匹配，未达到则调整假设重新构建 MVP"
+    source_article: "F-04-product-market-fit-validation"
+    difficulty: "hard"
+    is_negative: false
+
+  - question: "增长飞轮设计和转化率优化如何协同驱动增长？"
+    expected_answer: "增长飞轮提供整体增长框架（获客→激活→留存→变现→推荐→获客），转化率优化针对飞轮中每个环节的转化效率进行漏斗分析和实验优化。飞轮是战略层确保闭环运转，CRO 是战术层提升每个环节效率。两者协同：飞轮指明优化方向，CRO 提供优化手段"
+    source_article: "F-05-growth-loops-design"
+    difficulty: "hard"
+    is_negative: false
+
+  - question: "流失预测和 B2B 客户成功管理如何协同降低流失率？"
+    expected_answer: "流失预测通过行为信号、财务信号和互动信号识别高风险客户，客户成功管理通过健康度评分主动干预。流失预测是发现层（识别谁可能流失），客户成功是行动层（主动帮助客户实现目标防止流失）。两者协同：预测模型触发预警，客户成功团队介入干预"
+    source_article: "F-07-churn-prediction"
+    difficulty: "hard"
+    is_negative: false
+
+  - question: "OKR 落地和技术债务治理如何在敏捷开发中平衡？"
+    expected_answer: "OKR 确保团队聚焦高价值目标，技术债务治理确保长期代码质量。在 OKR 制定时应将技术债务偿还纳入 Key Results（如本季度偿还 20% 高优先级债务），避免只追求功能交付忽视技术质量。技术债务量化后可作为 OKR 的输入，确保债务治理有明确的优先级和时间表"
+    source_article: "G-01-okr-implementation"
+    difficulty: "hard"
+    is_negative: false
+
+  - question: "DORA 四大指标和事件管理如何共同保障工程团队的生产力和可靠性？"
+    expected_answer: "DORA 指标度量团队的交付效率（部署频率、变更前置时间）和稳定性（变更失败率、服务恢复时间），事件管理提供故障响应和复盘机制。DORA 中的服务恢复时间直接关联事件管理的 P0/P1 响应时间，变更失败率关联事件管理的故障归因。两者形成度量-改进闭环：DORA 发现瓶颈，事件管理提供改进方案"
+    source_article: "G-04-team-productivity-metrics"
+    difficulty: "hard"
+    is_negative: false
+
+  - question: "商业模式画布和竞争分析如何协同制定 GTM 策略？"
+    expected_answer: "商业模式画布定义价值主张、客户细分和收入来源，竞争分析识别市场空白和差异化机会。GTM 策略需要两者输入：画布明确'卖什么'和'卖给谁'，竞争分析明确'怎么差异化'和'怎么定位'。ICP 构建需要画布的客户细分和竞争分析的市场地图共同确定"
+    source_article: "H-04-business-model-canvas"
+    difficulty: "hard"
+    is_negative: false
+
+  - question: "平台经济学中的网络效应如何影响 SaaS 定价策略和增长飞轮设计？"
+    expected_answer: "直接网络效应使产品价值随用户增长而提升，支持免费增值定价（用户基数本身就是价值）；间接网络效应（跨侧）使平台两侧互为增长动力，飞轮设计应强化跨侧互动。网络效应强的平台可采用更激进的免费策略，因为用户增长本身创造价值，LTV 随网络规模增长而提升"
+    source_article: "H-08-platform-economics"
+    difficulty: "hard"
+    is_negative: false
+
+  - question: "从 Hermes Agent 的四层记忆到 Aureon 的 L0-L3 记忆系统，Agent 记忆架构如何与 RAG 检索增强结合？"
+    expected_answer: "Agent 记忆存储用户历史交互和偏好（L0 对话、L1 原子事实、L2 场景、L3 画像），RAG 检索外部知识库。两者结合：Agent 记忆提供个性化上下文（如用户之前问过什么），RAG 提供领域知识。查询时先从记忆中提取相关上下文，再通过 RAG 检索外部知识，两者融合生成更精准的答案"
+    source_article: "hermes-agent-practical-guide"
+    difficulty: "hard"
+    is_negative: false
+
+  - question: "LangChain Agent 的工具调用机制和 Agentic RAG 的工具调用增强检索有什么关系？"
+    expected_answer: "LangChain Agent 的 @tool 装饰器定义可调用工具，Agentic RAG 将知识库检索封装为工具之一。Agent 根据查询自主决定是否调用 search_knowledge_base 工具，实现了从被动检索到主动检索的转变。LangChain Agent 是基础设施层，Agentic RAG 是应用层，后者利用前者的工具调用机制实现灵活的检索策略"
+    source_article: "langchain-agent-intro"
+    difficulty: "hard"
+    is_negative: false
+
+  - question: "RAG 系统的流式架构（SSE）和缓存策略如何协同优化用户体验？"
+    expected_answer: "流式架构通过 SSE 逐步推送生成内容让用户 1 秒内看到答案开头改善感知延迟，缓存策略命中时直接返回完整答案避免重复计算。两者协同：缓存未命中时走流式输出改善等待体验，缓存命中时直接返回完整答案无需流式。流式架构的 session/text/tool_start/tool_end/done 事件也可用于缓存预热"
+    source_article: "C-10-rag-streaming-architecture"
+    difficulty: "hard"
+    is_negative: false
+
+  - question: "A/B 测试在 RAG 优化和产品增长中的方法论有什么共通之处？"
+    expected_answer: "两者都遵循假设驱动的实验方法论：定义假设→确定变量和指标→计算样本量→随机分组→运行实验→统计检验→决策。RAG A/B 测试对比检索策略或 Rerank 阈值，产品 A/B 测试对比功能或定价。共通原则包括：单变量测试、足够样本量、统计显著性验证、避免偷看效应"
+    source_article: "D-07-ab-testing-for-rag"
+    difficulty: "hard"
+    is_negative: false
+
+  - question: "知识管理的三层架构（L0/L1/L2）和 Agent 记忆系统的四层架构（L0-L3）有什么对应关系？"
+    expected_answer: "知识管理 L0 个人知识对应 Agent L0 对话记录，知识管理 L1 团队知识对应 Agent L1 原子事实+L2 场景聚合，知识管理 L2 组织知识对应 Agent L3 用户画像。Agent 记忆更侧重个人化和实时性，知识管理更侧重团队协作和知识传承。RAG 系统可作为 L2 组织知识的检索层"
+    source_article: "G-06-knowledge-management"
+    difficulty: "hard"
+    is_negative: false
+
+  - question: "DeepSeek 缓存优化的精确字节匹配原则和 RAG 语义缓存的语义匹配原则有什么本质区别？"
+    expected_answer: "DeepSeek KV 缓存要求精确字节匹配（多一个空格就不命中），RAG 语义缓存通过 Embedding 相似度匹配（语义相近即可命中）。前者是 LLM 推理层的缓存优化，关注 Token 级别的精确复用；后者是应用层的缓存优化，关注查询意图的语义等价。两者互补：DeepSeek 缓存降低 LLM 推理成本，语义缓存降低整个 Pipeline 的计算成本"
+    source_article: "deepseek-cache-optimization"
+    difficulty: "hard"
+    is_negative: false
+
+  # ═══════════════════════════════════════════════════════════════
+  # 负例：知识库无法回答的问题（20 题）
+  # ═══════════════════════════════════════════════════════════════
+
+  # 公司内部流程
+  - question: "公司报销流程是什么？需要提交哪些材料？"
+    expected_answer: "知识库中未包含此信息"
+    source_article: ""
+    difficulty: "simple"
+    is_negative: true
+
+  - question: "如何申请年假？审批流程是怎样的？"
+    expected_answer: "知识库中未包含此信息"
+    source_article: ""
+    difficulty: "simple"
+    is_negative: true
+
+  - question: "新员工入职需要办理哪些手续？"
+    expected_answer: "知识库中未包含此信息"
+    source_article: ""
+    difficulty: "simple"
+    is_negative: true
+
+  - question: "公司的考勤制度是怎样的？迟到怎么扣款？"
+    expected_answer: "知识库中未包含此信息"
+    source_article: ""
+    difficulty: "simple"
+    is_negative: true
+
+  # 个人生活
+  - question: "感冒了应该吃什么药？"
+    expected_answer: "知识库中未包含此信息"
+    source_article: ""
+    difficulty: "simple"
+    is_negative: true
+
+  - question: "个人所得税怎么申报？有哪些减免政策？"
+    expected_answer: "知识库中未包含此信息"
+    source_article: ""
+    difficulty: "simple"
+    is_negative: true
+
+  - question: "租房合同需要注意哪些法律条款？"
+    expected_answer: "知识库中未包含此信息"
+    source_article: ""
+    difficulty: "simple"
+    is_negative: true
+
+  - question: "如何办理出国签证？需要准备什么材料？"
+    expected_answer: "知识库中未包含此信息"
+    source_article: ""
+    difficulty: "simple"
+    is_negative: true
+
+  # 非技术产品
+  - question: "附近有什么好吃的餐厅推荐？"
+    expected_answer: "知识库中未包含此信息"
+    source_article: ""
+    difficulty: "simple"
+    is_negative: true
+
+  - question: "去日本旅游有哪些必去的景点？"
+    expected_answer: "知识库中未包含此信息"
+    source_article: ""
+    difficulty: "simple"
+    is_negative: true
+
+  - question: "北京朝阳区有哪些新楼盘在售？均价多少？"
+    expected_answer: "知识库中未包含此信息"
+    source_article: ""
+    difficulty: "simple"
+    is_negative: true
+
+  - question: "最近有什么好看的电影推荐？"
+    expected_answer: "知识库中未包含此信息"
+    source_article: ""
+    difficulty: "simple"
+    is_negative: true
+
+  # 具体公司信息
+  - question: "Aureon 公司的融资情况如何？估值多少？"
+    expected_answer: "知识库中未包含此信息"
+    source_article: ""
+    difficulty: "simple"
+    is_negative: true
+
+  - question: "Aureon 的团队有多少人？办公室在哪里？"
+    expected_answer: "知识库中未包含此信息"
+    source_article: ""
+    difficulty: "simple"
+    is_negative: true
+
+  - question: "Aureon 的产品定价是多少？有哪些套餐？"
+    expected_answer: "知识库中未包含此信息"
+    source_article: ""
+    difficulty: "simple"
+    is_negative: true
+
+  - question: "Aureon 的客户有哪些？服务了哪些企业？"
+    expected_answer: "知识库中未包含此信息"
+    source_article: ""
+    difficulty: "simple"
+    is_negative: true
+
+  # 技术领域外
+  - question: "量子计算在密码学中的应用前景如何？"
+    expected_answer: "知识库中未包含此信息"
+    source_article: ""
     difficulty: "medium"
+    is_negative: true
+
+  - question: "区块链技术如何解决供应链溯源问题？"
+    expected_answer: "知识库中未包含此信息"
+    source_article: ""
+    difficulty: "medium"
+    is_negative: true
+
+  - question: "自动驾驶的 L4 和 L5 级别有什么区别？"
+    expected_answer: "知识库中未包含此信息"
+    source_article: ""
+    difficulty: "medium"
+    is_negative: true
+
+  - question: "如何用机器学习预测股票走势？"
+    expected_answer: "知识库中未包含此信息"
+    source_article: ""
+    difficulty: "medium"
+    is_negative: true
+
+  # ═══════════════════════════════════════════════════════════════
+  # 补充 Simple 题目：每篇文章追加事实型问题以达 60% 目标
+  # ═══════════════════════════════════════════════════════════════
+
+  # A 组补充
+  - question: "HyDE 由谁在什么时候提出？"
+    expected_answer: "由 Gao 等人在 2022 年提出"
+    source_article: "A-01-hyde-principles-and-practice"
+    difficulty: "simple"
+    is_negative: false
+  - question: "HyDE 生成假设文档的 Prompt 模板要求 LLM 做什么？"
+    expected_answer: "要求 LLM 根据问题写一段详细的回答，即使不确定答案也尽量写出看起来合理的回答"
+    source_article: "A-01-hyde-principles-and-practice"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Multi-Query 检索中 LLM 改写策略的 Prompt 要求生成几个版本？"
+    expected_answer: "通常生成 3 个不同角度的查询版本，保留原始查询共 4 个"
+    source_article: "A-02-multi-query-retrieval-comparison"
+    difficulty: "simple"
+    is_negative: false
+  - question: "BM25 的全称是什么？"
+    expected_answer: "Best Matching 25，是 Okapi BM25 的改进版本"
+    source_article: "A-03-bm25-vs-sparse-vector-evolution"
+    difficulty: "simple"
+    is_negative: false
+  - question: "BM25 的 IDF 计算公式中 N 代表什么？"
+    expected_answer: "N 代表文档总数"
+    source_article: "A-03-bm25-vs-sparse-vector-evolution"
+    difficulty: "simple"
+    is_negative: false
+  - question: "研究表明约多少比例的检索失败源于词汇不匹配？"
+    expected_answer: "约 50%"
+    source_article: "A-04-query-expansion-techniques"
+    difficulty: "simple"
+    is_negative: false
+  - question: "RRF 融合分数的计算公式是什么？"
+    expected_answer: "RRF_score(d) = Σ 1/(k + r(d))，其中 r(d) 是文档 d 在各列表中的排名，k 是平滑常数"
+    source_article: "A-05-reciprocal-rank-fusion-deep-dive"
+    difficulty: "simple"
+    is_negative: false
+  - question: "ColBERT 由谁在什么时候提出？"
+    expected_answer: "由 Khattab 和 Zaharia 于 2020 年提出"
+    source_article: "A-06-late-interaction-models-colbert"
+    difficulty: "simple"
+    is_negative: false
+  - question: "高级 RAG 的典型流程是什么？"
+    expected_answer: "查询理解→查询改写→多路检索→融合→Rerank→压缩→CRAG 评估→生成"
+    source_article: "A-07-retrieval-augmented-generation-overview"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Bi-Encoder 支持哪些近似最近邻算法？"
+    expected_answer: "HNSW、IVF 等"
+    source_article: "A-08-cross-encoder-vs-bi-encoder"
+    difficulty: "simple"
+    is_negative: false
+  - question: "MMR 算法中 λ=1.0 时退化为哪种检索？"
+    expected_answer: "退化为标准相关性排序"
+    source_article: "A-09-maximal-marginal-relevance"
+    difficulty: "simple"
+    is_negative: false
+  - question: "检索反馈闭环中隐式信号包括哪些？"
+    expected_answer: "停留时间、复制行为、重新生成、追问、跳出、查询改写"
+    source_article: "A-10-retrieval-feedback-loops"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Word2Vec 在语义搜索演进中解决了什么问题？"
+    expected_answer: "从稀疏表示到稠密表示，将文本编码为低维稠密向量，语义相似的词在向量空间中距离相近"
+    source_article: "A-11-semantic-search-fundamentals"
+    difficulty: "simple"
+    is_negative: false
+  - question: "联邦检索的整体流程是什么？"
+    expected_answer: "用户查询→查询路由→并行分发到多个数据源→结果归一化→融合排序→返回"
+    source_article: "A-12-federated-search-multi-source"
+    difficulty: "simple"
+    is_negative: false
+
+  # B 组补充
+  - question: "bge-large-zh-v1.5 的向量维度是多少？"
+    expected_answer: "1024 维"
+    source_article: "B-01-embedding-model-selection-guide"
+    difficulty: "simple"
+    is_negative: false
+  - question: "OpenAI text-embedding-3-large 的向量维度是多少？"
+    expected_answer: "3072 维"
+    source_article: "B-01-embedding-model-selection-guide"
+    difficulty: "simple"
+    is_negative: false
+  - question: "FP32 转 FP16 可以实现多少倍压缩？"
+    expected_answer: "2 倍压缩"
+    source_article: "B-02-vector-quantization-int8-fp16"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Matryoshka Representation Learning 由谁在什么时候提出？"
+    expected_answer: "由 Kusupati 等人在 2022 年提出"
+    source_article: "B-03-matryoshka-embeddings"
+    difficulty: "simple"
+    is_negative: false
+  - question: "法律领域中'合同解除'和'合同终止'的区别说明了什么问题？"
+    expected_answer: "语义差异微妙但法律后果不同，说明通用 Embedding 细粒度区分不足"
+    source_article: "B-04-domain-specific-fine-tuning"
+    difficulty: "simple"
+    is_negative: false
+  - question: "多语言 Embedding 模型通过什么方式实现跨语言对齐？"
+    expected_answer: "多语言预训练（学习跨语言共享表示）和翻译对训练（使用平行语料将翻译对拉近）"
+    source_article: "B-05-multilingual-embedding-challenges"
+    difficulty: "simple"
+    is_negative: false
+  - question: "PCA 降维的原理是什么？"
+    expected_answer: "通过正交变换将高维数据投影到方差最大的方向，保留主要信息"
+    source_article: "B-06-embedding-dimension-reduction"
+    difficulty: "simple"
+    is_negative: false
+  - question: "BGE-M3 支持的最大 Token 输入长度是多少？"
+    expected_answer: "8192 Token"
+    source_article: "B-07-bge-m3-architecture-analysis"
+    difficulty: "simple"
+    is_negative: false
+  - question: "BGE-M3 使用什么基础编码器？"
+    expected_answer: "XLM-RoBERTa Encoder"
+    source_article: "B-07-bge-m3-architecture-analysis"
+    difficulty: "simple"
+    is_negative: false
+  - question: "OpenAI text-embedding-3-small 的 P50 延迟是多少？"
+    expected_answer: "200ms"
+    source_article: "B-08-embedding-api-benchmark"
+    difficulty: "simple"
+    is_negative: false
+  - question: "HNSW 算法由谁在什么时候提出？"
+    expected_answer: "由 Malkov 和 Yashunin 于 2018 年提出"
+    source_article: "B-09-vector-index-algorithms"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Embedding 漂移可能导致哪三个问题？"
+    expected_answer: "检索质量下降、排序混乱、缓存失效"
+    source_article: "B-10-embedding-drift-detection"
+    difficulty: "simple"
+    is_negative: false
+
+  # C 组补充
+  - question: "CRAG 的 Correct 动作意味着什么？"
+    expected_answer: "检索结果正确，直接基于检索文档生成答案"
+    source_article: "C-01-corrective-rag-implementation"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Self-RAG 由谁在什么时候提出？"
+    expected_answer: "由 Asai 等人在 2023 年提出"
+    source_article: "C-02-self-rag-learn-retrieve-generate-critique"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Adaptive-RAG 由谁在什么时候提出？"
+    expected_answer: "由 Jeong 等人在 2024 年提出"
+    source_article: "C-03-adaptive-rag-query-routing"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Contextual Retrieval 的上下文前缀通常多长？"
+    expected_answer: "1-2 句话的简短上下文说明"
+    source_article: "C-04-contextual-retrieval-in-practice"
+    difficulty: "simple"
+    is_negative: false
+  - question: "RAG Pipeline 优化前端到端延迟大约是多少？"
+    expected_answer: "超过 5 秒"
+    source_article: "C-05-rag-pipeline-optimization"
+    difficulty: "simple"
+    is_negative: false
+  - question: "多模态 RAG 中图片描述生成使用什么模型？"
+    expected_answer: "多模态 LLM（如 GPT-4V）"
+    source_article: "C-06-multi-modal-rag"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Agentic RAG 中 search_knowledge_base 工具的作用是什么？"
+    expected_answer: "搜索内部知识库获取相关文档，Agent 根据查询自主决定是否调用"
+    source_article: "C-07-agentic-rag-tool-calling"
+    difficulty: "simple"
+    is_negative: false
+  - question: "RAG 缓存中 L1 精确缓存使用什么作为缓存键？"
+    expected_answer: "查询文本的 MD5 哈希值"
+    source_article: "C-08-rag-caching-strategies"
+    difficulty: "simple"
+    is_negative: false
+  - question: "RAG 错误恢复中 Embedding 降级链的顺序是什么？"
+    expected_answer: "本地模型→API Embedding，主服务失败则回退到降级方案"
+    source_article: "C-09-rag-error-recovery"
+    difficulty: "simple"
+    is_negative: false
+  - question: "SSE 协议中 done 事件的作用是什么？"
+    expected_answer: "标记流式输出结束，通知客户端生成完成"
+    source_article: "C-10-rag-streaming-architecture"
+    difficulty: "simple"
+    is_negative: false
+  - question: "PII 泄露指的是什么？"
+    expected_answer: "系统在回答中泄露个人身份信息，如姓名、电话、身份证号等"
+    source_article: "C-11-rag-security-guardrails"
+    difficulty: "simple"
+    is_negative: false
+  - question: "RAG 成本中 HyDE/查询改写占比多少？"
+    expected_answer: "10-15%"
+    source_article: "C-12-rag-cost-optimization"
+    difficulty: "simple"
+    is_negative: false
+
+  # D 组补充
+  - question: "RAG Triad 的三角评估框架中 Faithfulness 连接哪两个角？"
+    expected_answer: "连接 Context Relevancy 和 Answer Relevancy，是检索和生成的桥梁"
+    source_article: "D-01-rag-evaluation-framework"
+    difficulty: "simple"
+    is_negative: false
+  - question: "高 Faithfulness 低 Relevancy 的答案有什么特征？"
+    expected_answer: "答案完全基于检索文档，但没有回答用户的问题"
+    source_article: "D-02-faithfulness-vs-relevancy-conflict"
+    difficulty: "simple"
+    is_negative: false
+  - question: "RAG 延迟优化前 HyDE 生成步骤的延迟是多少？"
+    expected_answer: "800ms"
+    source_article: "D-03-rag-latency-optimization"
+    difficulty: "simple"
+    is_negative: false
+  - question: "RAG Benchmark 中负例测试用例的作用是什么？"
+    expected_answer: "验证系统能正确拒绝知识库无法回答的问题，避免幻觉"
+    source_article: "D-04-benchmark-design-for-rag"
+    difficulty: "simple"
+    is_negative: false
+  - question: "LLM-as-Judge 的长度偏见是什么？"
+    expected_answer: "倾向选择更长的输出，认为更长的答案质量更高"
+    source_article: "D-05-llm-as-judge-evaluation"
+    difficulty: "simple"
+    is_negative: false
+  - question: "MRR 的全称是什么？"
+    expected_answer: "Mean Reciprocal Rank，平均倒数排名"
+    source_article: "D-06-retrieval-quality-metrics"
+    difficulty: "simple"
+    is_negative: false
+  - question: "RAG A/B 测试中流量分配通常使用什么方法？"
+    expected_answer: "基于用户 ID 哈希的确定性分流，确保同一用户始终在同一组"
+    source_article: "D-07-ab-testing-for-rag"
+    difficulty: "simple"
+    is_negative: false
+  - question: "回归测试中 must_contain 字段的作用是什么？"
+    expected_answer: "指定答案必须包含的关键词，确保答案涵盖核心信息"
+    source_article: "D-08-rag-regression-testing"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Context Window 中检索文档通常占多少 Token？"
+    expected_answer: "约 5000 tokens，占 Context Window 的 62.5%"
+    source_article: "D-09-context-window-optimization"
+    difficulty: "simple"
+    is_negative: false
+  - question: "RAG 可观测性中追踪（Tracing）的作用是什么？"
+    expected_answer: "跟踪请求在各个组件间的流转，定位延迟瓶颈和质量问题"
+    source_article: "D-10-rag-observability"
+    difficulty: "simple"
+    is_negative: false
+
+  # E 组补充
+  - question: "Aureon 使用什么作为向量后端？"
+    expected_answer: "Qdrant Cloud"
+    source_article: "E-01-qdrant-hybrid-search-best-practices"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Qdrant 的 dense 向量使用什么距离度量？"
+    expected_answer: "COSINE（余弦相似度）"
+    source_article: "E-01-qdrant-hybrid-search-best-practices"
+    difficulty: "simple"
+    is_negative: false
+  - question: "LangChain 的 VectorStore 抽象层的作用是什么？"
+    expected_answer: "提供统一的向量存储接口，支持多种后端（Qdrant、Pinecone、Chroma 等）"
+    source_article: "E-02-langchain-rag-module-deep-dive"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Cohere Rerank 支持多语言吗？"
+    expected_answer: "支持，基于 Cross-Encoder 架构支持多语言精排"
+    source_article: "E-03-cohere-rerank-integration"
+    difficulty: "simple"
+    is_negative: false
+  - question: "DashScope 是哪个公司的 AI 平台？"
+    expected_answer: "阿里云的 AI 模型服务平台"
+    source_article: "E-04-dashscope-embedding-api-guide"
+    difficulty: "simple"
+    is_negative: false
+  - question: "LangFuse 是什么类型的平台？"
+    expected_answer: "开源的 LLM 应用可观测性平台，提供全链路追踪、Prompt 管理和评估"
+    source_article: "E-05-langfuse-rag-tracing"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Redis 语义缓存中 L1 精确缓存的默认 TTL 是多少？"
+    expected_answer: "3600 秒（1 小时）"
+    source_article: "E-06-redis-semantic-cache"
+    difficulty: "simple"
+    is_negative: false
+
+  # F 组补充
+  - question: "按量计费模式的优势和劣势分别是什么？"
+    expected_answer: "优势是与价值对齐、低门槛试用、收入随使用增长；劣势是收入不可预测、用户可能控制使用量"
+    source_article: "F-01-saas-pricing-strategy"
+    difficulty: "simple"
+    is_negative: false
+  - question: "PLG 的代表企业有哪些？"
+    expected_answer: "Slack、Notion、Figma、Zoom"
+    source_article: "F-02-plg-vs-slg-growth"
+    difficulty: "simple"
+    is_negative: false
+  - question: "SLG 的代表企业有哪些？"
+    expected_answer: "Salesforce、SAP、Oracle"
+    source_article: "F-02-plg-vs-slg-growth"
+    difficulty: "simple"
+    is_negative: false
+  - question: "留存曲线拐点意味着什么？"
+    expected_answer: "留存率在下降后趋于平稳，说明核心用户已经形成稳定使用习惯"
+    source_article: "F-03-user-retention-framework"
+    difficulty: "simple"
+    is_negative: false
+  - question: "PMF 的定性信号有哪些？"
+    expected_answer: "用户主动推荐、用户强烈反应、口碑传播、用户深度使用、付费意愿"
+    source_article: "F-04-product-market-fit-validation"
+    difficulty: "simple"
+    is_negative: false
+  - question: "增长飞轮借鉴了哪个公司的理念？"
+    expected_answer: "亚马逊的飞轮效应"
+    source_article: "F-05-growth-loops-design"
+    difficulty: "simple"
+    is_negative: false
+  - question: "转化漏斗中从访问到付费的典型转化率是多少？"
+    expected_answer: "约 5%"
+    source_article: "F-06-conversion-rate-optimization"
+    difficulty: "simple"
+    is_negative: false
+  - question: "流失预测中数据导出增加意味着什么？"
+    expected_answer: "用户可能在准备迁移到其他产品，是流失的前兆信号"
+    source_article: "F-07-churn-prediction"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Aha Moment 是什么？"
+    expected_answer: "用户第一次体验到产品核心价值的时刻，目标是在 5 分钟内让用户到达"
+    source_article: "F-08-onboarding-optimization"
+    difficulty: "simple"
+    is_negative: false
+
+  # G 组补充
+  - question: "OKR 中 Objective 应该是什么性质的？"
+    expected_answer: "方向性目标，定性描述，不用数字，有方向感和激励性"
+    source_article: "G-01-okr-implementation"
+    difficulty: "simple"
+    is_negative: false
+  - question: "技术债务的概念由谁提出？"
+    expected_answer: "Ward Cunningham"
+    source_article: "G-02-tech-debt-governance"
+    difficulty: "simple"
+    is_negative: false
+  - question: "A/B 测试中统计功效（power）通常设为多少？"
+    expected_answer: "0.8"
+    source_article: "G-03-ab-testing-guide"
+    difficulty: "simple"
+    is_negative: false
+  - question: "DORA 研究由哪个公司提出？"
+    expected_answer: "Google"
+    source_article: "G-04-team-productivity-metrics"
+    difficulty: "simple"
+    is_negative: false
+  - question: "事件管理中告警设计的第一原则是什么？"
+    expected_answer: "可操作性，每个告警都应有明确的处理步骤"
+    source_article: "G-05-incident-management"
+    difficulty: "simple"
+    is_negative: false
+  - question: "知识管理的生命周期是什么？"
+    expected_answer: "创建→审核→发布→使用→更新→归档"
+    source_article: "G-06-knowledge-management"
+    difficulty: "simple"
+    is_negative: false
+  - question: "跨职能协作中产品、设计、工程对齐阶段需要回答什么问题？"
+    expected_answer: "产品回答用户问题和成功标准，设计回答用户流程和交互方案，工程回答技术方案和风险约束"
+    source_article: "G-07-cross-functional-collaboration"
+    difficulty: "simple"
+    is_negative: false
+  - question: "北极星指标的示例中 Airbnb 的北极星指标是什么？"
+    expected_answer: "预订夜晚数"
+    source_article: "G-08-data-driven-decision-making"
+    difficulty: "simple"
+    is_negative: false
+
+  # H 组补充
+  - question: "MVP 不是什么？"
+    expected_answer: "MVP 不是半成品，而是精心设计的验证工具"
+    source_article: "H-01-mvp-methodology"
+    difficulty: "simple"
+    is_negative: false
+  - question: "客户健康度评分中互动参与占比多少？"
+    expected_answer: "20%"
+    source_article: "H-02-b2b-customer-success"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Now-Next-Later 路线图中 Now 代表什么？"
+    expected_answer: "当前季度正在做的"
+    source_article: "H-03-product-roadmap-planning"
+    difficulty: "simple"
+    is_negative: false
+  - question: "商业模式画布中价值主张回答什么问题？"
+    expected_answer: "我们解决什么问题？提供什么价值？"
+    source_article: "H-04-business-model-canvas"
+    difficulty: "simple"
+    is_negative: false
+  - question: "市场地图的定义是什么？"
+    expected_answer: "将市场参与者按维度分类形成可视化矩阵，帮助识别空白区域和竞争密度"
+    source_article: "H-05-competitive-analysis"
+    difficulty: "simple"
+    is_negative: false
+  - question: "ICP 的全称是什么？"
+    expected_answer: "Ideal Customer Profile（理想客户画像）"
+    source_article: "H-06-go-to-market-strategy"
+    difficulty: "simple"
+    is_negative: false
+  - question: "单位经济学中 CAC 的全称是什么？"
+    expected_answer: "Customer Acquisition Cost（客户获取成本）"
+    source_article: "H-07-unit-economics"
+    difficulty: "simple"
+    is_negative: false
+  - question: "平台业务的核心风险是什么？"
+    expected_answer: "冷启动问题——没有足够的用户就无法吸引更多用户"
+    source_article: "H-08-platform-economics"
+    difficulty: "simple"
+    is_negative: false
+
+  # 现有文章补充
+  - question: "Hermes Agent 的 L2 Scenarios 层的作用是什么？"
+    expected_answer: "场景块聚合，将原子事实聚合为结构化的场景文档"
+    source_article: "hermes-agent-practical-guide"
+    difficulty: "simple"
+    is_negative: false
+  - question: "SPA 部署 GitHub Pages 时白屏的原因通常是什么？"
+    expected_answer: "base 路径没配"
+    source_article: "spa-github-pages"
+    difficulty: "simple"
+    is_negative: false
+  - question: "RAG 文档分块使用什么分割器？"
+    expected_answer: "RecursiveCharacterTextSplitter"
+    source_article: "rag-system-guide"
+    difficulty: "simple"
+    is_negative: false
+  - question: "LangChain 支持哪些向量数据库后端？"
+    expected_answer: "Qdrant、Pinecone、Chroma 等"
+    source_article: "langchain-framework-guide"
+    difficulty: "simple"
+    is_negative: false
+  - question: "AI Agent 与简单 LLM 调用的根本区别是什么？"
+    expected_answer: "Agent 具备自主决策能力，可以根据中间结果动态调整行动策略，而非按固定流程执行"
+    source_article: "ai-agent-architecture"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Prompt Engineering 中好的 Prompt 是什么决定因素？"
+    expected_answer: "好的 Prompt 是 AI 应用质量的决定性因素——同样的模型，不同的 Prompt 可以产出天壤之别的结果"
+    source_article: "prompt-engineering-guide"
+    difficulty: "simple"
+    is_negative: false
+  - question: "向量数据库使用什么相似度计算方法？"
+    expected_answer: "余弦相似度、欧氏距离等"
+    source_article: "vector-database-guide"
+    difficulty: "simple"
+    is_negative: false
+  - question: "RAG 相比 Fine-tuning 的成本优势是什么？"
+    expected_answer: "RAG 成本低无需训练，Fine-tuning 成本高需要 GPU 和数据标注"
+    source_article: "rag-concepts-deep-dive"
+    difficulty: "simple"
+    is_negative: false
+  - question: "LlamaIndex 原名是什么？"
+    expected_answer: "GPT Index"
+    source_article: "llamaindex-rag-guide"
+    difficulty: "simple"
+    is_negative: false
+  - question: "LangGraph StateGraph 中边的作用是什么？"
+    expected_answer: "定义节点之间的流转关系和条件，控制状态在节点间的传递"
+    source_article: "langgraph-workflow"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Agent 记忆系统中 L2 Scenarios 使用什么格式存储？"
+    expected_answer: "Markdown 格式"
+    source_article: "agent-memory-system"
+    difficulty: "simple"
+    is_negative: false
+  - question: "DeepSeek 的上下文硬盘缓存是自动开启的吗？"
+    expected_answer: "是的，自动开启"
+    source_article: "deepseek-cache-optimization"
+    difficulty: "simple"
+    is_negative: false
+  - question: "AI Chatbot 部署到 Railway 时使用了什么持久化方案？"
+    expected_answer: "Chroma 持久化向量存储"
+    source_article: "chatbot-railway-deployment"
+    difficulty: "simple"
+    is_negative: false
+  - question: "博客搬家从哪个平台迁到哪个平台？"
+    expected_answer: "从 GitHub Pages 迁到 Vercel"
+    source_article: "blog-migration-troubleshooting"
+    difficulty: "simple"
+    is_negative: false
+  - question: "作者做项目的起始日期是什么时候？"
+    expected_answer: "2026 年 4 月 28 日"
+    source_article: "eleven-projects-two-months"
+    difficulty: "simple"
+    is_negative: false
+  - question: "博客文章使用什么格式管理？"
+    expected_answer: "Markdown 文件"
+    source_article: "hello-world"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Git 工作流中 commit 规范的作用是什么？"
+    expected_answer: "确保提交信息清晰可追溯，方便代码审查和版本回溯"
+    source_article: "git-workflow"
+    difficulty: "simple"
+    is_negative: false
+  - question: "React 性能优化中 useMemo 的作用是什么？"
+    expected_answer: "缓存计算结果值，避免在每次渲染时重复执行昂贵的计算"
+    source_article: "react-performance-tips"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Zustand 的 bundle 体积相比 Redux 有什么优势？"
+    expected_answer: "Zustand 的 bundle 体积更小"
+    source_article: "zustand-todo-app"
+    difficulty: "simple"
+    is_negative: false
+  - question: "Markdown 笔记应用使用什么防抖机制？"
+    expected_answer: "编辑器内容变化时通过防抖机制延迟解析 Markdown，避免频繁重渲染"
+    source_article: "markdown-notes-app"
+    difficulty: "simple"
+    is_negative: false
+  - question: "微信小程序 AI 销售助手的功能是什么？"
+    expected_answer: "帮助电池销售人员通过自然语言快速记账、自动算提成"
+    source_article: "wechat-miniprogram-ai-agent"
+    difficulty: "simple"
+    is_negative: false
+  - question: "天气查询应用支持多城市对比吗？"
+    expected_answer: "支持多城市对比功能"
+    source_article: "weather-app-api"
+    difficulty: "simple"
     is_negative: false
 
 thresholds:

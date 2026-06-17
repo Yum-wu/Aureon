@@ -696,10 +696,8 @@ def hybrid_search_qdrant(
 
             using="dense",
 
-            limit=top_k * 5,
-
+            limit=top_k * 10,  # 扩大候选池提升 Recall
             filter=query_filter,
-
         ),
     ]
 
@@ -711,7 +709,7 @@ def hybrid_search_qdrant(
 
             using="sparse",
 
-            limit=top_k * 5,
+            limit=top_k * 10,  # 扩大候选池提升 Recall
 
             filter=query_filter,
 
@@ -749,10 +747,14 @@ def hybrid_search_qdrant(
     _query_emb_array = np.array(query_emb[0], dtype=np.float32) if query_emb is not None else None
     for point in results.points:
         payload = point.payload or {}
+        payload_meta = payload.get("metadata", {})
+        # Parent-Child chunking: use parent_text for richer context if available
+        parent_text = payload_meta.get("parent_text", "")
+        display_text = parent_text if parent_text else payload.get("text", "")
         chunk = {
             "id": str(point.id),
-            "text": payload.get("text", ""),
-            "metadata": payload.get("metadata", {}),
+            "text": display_text,
+            "metadata": payload_meta,
             "score": point.score,
         }
         # 附加 query embedding 供下游复用
