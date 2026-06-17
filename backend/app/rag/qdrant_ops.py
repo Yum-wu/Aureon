@@ -756,34 +756,19 @@ def hybrid_search_qdrant(
             rerank_top = min(len(formatted), _RERANK_TOP)
             reranked = do_rerank(query, formatted, top_k=rerank_top)
             if reranked:
-                # Rerank 软过滤三级策略（R16 调优）：
-                # - 高置信（top1 ≥ 0.7）：直接取 top-K，不过滤
-                # - 中置信（0.3 ≤ top1 < 0.7）：保留 score ≥ 0.4 的结果，至少保留 2 条
-                # - 低置信（top1 < 0.3）：仍取 rerank top-K（rerank 即使低置信也比 RRF 更准确）
-                _RERANK_SCORE_HIGH = 0.70
-                _RERANK_SCORE_MID = 0.30
-                _RERANK_SCORE_MIN_MID = 0.40
-                _MIN_RESULTS = 2
-
-                top1_score = reranked[0].get("rerank_score", 0) if reranked else 0
-
-                if top1_score >= _RERANK_SCORE_HIGH:
-                    # 高置信：直接取 top-K，不做额外过滤
-                    logger.info("Rerank high confidence (top1=%.3f), returning top %d",
-                                top1_score, top_k)
-                    return reranked[:top_k]
-                elif top1_score >= _RERANK_SCORE_MID:
-                    # 中置信：保留 score ≥ 0.4 的结果，至少保留 2 条
-                    filtered = [c for c in reranked if c.get("rerank_score", 0) >= _RERANK_SCORE_MIN_MID]
-                    if len(filtered) < _MIN_RESULTS:
-                        filtered = reranked[:_MIN_RESULTS]
-                    logger.info("Rerank mid confidence (top1=%.3f), %d/%d passed filter (>=%.2f)",
-                                top1_score, len(filtered), len(reranked), _RERANK_SCORE_MIN_MID)
+                # R17: 回到 R10 的硬阈值过滤 + P0 的 top-20
+                # R10 配置：rerank 后过滤 score >= 0.55，过滤后为空则取 top-K
+                # P0 改动：rerank_top 从 top_k*5 改为 20（Anthropic 论文推荐）
+                _RERANK_SCORE_THRESHOLD = 0.55
+                filtered = [c for c in reranked if c.get("rerank_score", 0) >= _RERANK_SCORE_THRESHOLD]
+                if filtered:
+                    logger.info("Qdrant hybrid rerank: %d/%d passed threshold (>=%.2f), returning top %d",
+                                len(filtered), len(reranked), _RERANK_SCORE_THRESHOLD, top_k)
                     return filtered[:top_k]
                 else:
-                    # 低置信：仍取 rerank top-K（rerank 即使低置信也比 RRF 更准确）
-                    logger.warning("Rerank low confidence (top1=%.3f), returning rerank top-%d",
-                                   top1_score, top_k)
+                    # 所有 rerank score < 0.55，返回 rerank top-K（避免空结果）
+                    logger.warning("Qdrant hybrid rerank: 0/%d passed threshold (>=%.2f), returning rerank top-%d",
+                                   len(reranked), _RERANK_SCORE_THRESHOLD, top_k)
                     return reranked[:top_k]
             else:
                 logger.warning("Qdrant hybrid rerank returned None, using RRF results")
