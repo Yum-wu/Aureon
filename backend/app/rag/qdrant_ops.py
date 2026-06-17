@@ -764,15 +764,25 @@ def hybrid_search_qdrant(
                 if len(reranked) < before_filter:
                     logger.info("Rerank score filter: %d -> %d (threshold=%.2f)",
                                 before_filter, len(reranked), _RERANK_SCORE_MIN)
-                # 回退保护：如果 rerank 过滤后结果为空，回退到 RRF 结果
+                # 回退保护：如果 rerank 过滤后结果为空，降低阈值重试
                 # 避免因 rerank score 阈值过高导致完全丢失相关结果
                 if reranked:
                     logger.info("Qdrant hybrid rerank: %d candidates -> top %d (after filter: %d)",
                                 len(formatted), rerank_top, len(reranked))
                     return reranked[:top_k]
                 else:
-                    logger.warning("Rerank score filter removed all %d candidates (threshold=%.2f), "
-                                   "falling back to RRF results", before_filter, _RERANK_SCORE_MIN)
+                    # 降低阈值到 0.30 重试，保留至少一些结果
+                    _RERANK_SCORE_FALLBACK = 0.30
+                    reranked = [c for c in do_rerank(query, formatted, top_k=rerank_top)
+                                if c.get("rerank_score", 0) >= _RERANK_SCORE_FALLBACK]
+                    if reranked:
+                        logger.warning("Rerank fallback: %d candidates with threshold=%.2f "
+                                       "(original threshold=%.2f removed all)",
+                                       len(reranked), _RERANK_SCORE_FALLBACK, _RERANK_SCORE_MIN)
+                        return reranked[:top_k]
+                    else:
+                        logger.warning("Rerank fallback also empty (threshold=%.2f), "
+                                       "using top RRF results", _RERANK_SCORE_FALLBACK)
             else:
                 logger.warning("Qdrant hybrid rerank returned None, using RRF results")
         except Exception as e:
