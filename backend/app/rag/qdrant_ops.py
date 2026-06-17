@@ -752,10 +752,20 @@ def hybrid_search_qdrant(
     if settings.rerank_enabled and len(formatted) > top_k:
         try:
             from app.rag.reranker import rerank as do_rerank
-            reranked = do_rerank(query, formatted, top_k=top_k)
+            # 多取一些候选，给 score 过滤留余量
+            rerank_top = min(len(formatted), top_k * 2)
+            reranked = do_rerank(query, formatted, top_k=rerank_top)
             if reranked:
-                logger.info("Qdrant hybrid rerank: %d candidates -> top %d", len(formatted), len(reranked))
-                return reranked
+                # Rerank score 过滤：丢弃相关性过低的 chunk，提升 Contextual Relevancy
+                _RERANK_SCORE_MIN = 0.1  # 低于此分数的 chunk 视为不相关
+                before_filter = len(reranked)
+                reranked = [c for c in reranked if c.get("rerank_score", 0) >= _RERANK_SCORE_MIN]
+                if len(reranked) < before_filter:
+                    logger.info("Rerank score filter: %d -> %d (threshold=%.2f)",
+                                before_filter, len(reranked), _RERANK_SCORE_MIN)
+                logger.info("Qdrant hybrid rerank: %d candidates -> top %d (after filter: %d)",
+                            len(formatted), rerank_top, len(reranked))
+                return reranked[:top_k]
             else:
                 logger.warning("Qdrant hybrid rerank returned None, using RRF results")
         except Exception as e:
