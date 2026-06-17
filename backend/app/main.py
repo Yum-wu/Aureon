@@ -42,7 +42,7 @@ from app.tools import ALL_TOOLS
 from app.config import settings
 from app.multi_tenant.middleware import TenantMiddleware
 from app.startup.lifespan import lifespan
-from app.startup.warmup import bm25_warmup_done, index_ready
+from app.startup import warmup
 from app.middleware.logging import logging_middleware
 
 # ── Structured logging (replaces stdlib logging) ──
@@ -128,17 +128,17 @@ async def langgraph_run(req: LangGraphRunRequest, request: Request):
 @app.get("/api/health")
 async def health():
     return {
-        "status": "ok" if bm25_warmup_done else "warming_up",
+        "status": "ok" if warmup.bm25_warmup_done else "warming_up",
         "model": settings.llm_model,
-        "tools": [t.name for t in ALL_TOOLS] if bm25_warmup_done else [],
-        "index_ready": index_ready,
+        "tools": [t.name for t in ALL_TOOLS] if warmup.bm25_warmup_done else [],
+        "index_ready": warmup.index_ready,
     }
 
 
 @app.get("/health/ready")
 async def health_ready():
     """Readiness probe — checks if dependency services are reachable."""
-    checks = {"index_ready": index_ready}
+    checks = {"index_ready": warmup.index_ready}
     try:
         from app.cache.redis_client import get_redis
         r = get_redis()
@@ -149,7 +149,7 @@ async def health_ready():
             checks["redis"] = "skipped"
     except Exception as e:
         checks["redis"] = f"error: {e}"
-    all_ok = index_ready and checks.get("redis") in ("ok", "skipped")
+    all_ok = warmup.index_ready and checks.get("redis") in ("ok", "skipped")
     return {"status": "ready" if all_ok else "not_ready", "checks": checks}
 
 
