@@ -747,6 +747,8 @@ def hybrid_search_qdrant(
         formatted.append(chunk)
 
     # 5. Rerank: 对 Qdrant RRF 候选做 API rerank 精排，提升 Recall 和 Relevancy
+    logger.info("Qdrant hybrid: %d RRF candidates, top_k=%d, rerank_enabled=%s",
+                len(formatted), top_k, settings.rerank_enabled)
     if settings.rerank_enabled and len(formatted) > top_k:
         try:
             from app.rag.reranker import rerank as do_rerank
@@ -754,8 +756,15 @@ def hybrid_search_qdrant(
             if reranked:
                 logger.info("Qdrant hybrid rerank: %d candidates -> top %d", len(formatted), len(reranked))
                 return reranked
+            else:
+                logger.warning("Qdrant hybrid rerank returned None, using RRF results")
         except Exception as e:
             logger.warning("Qdrant hybrid rerank failed, using RRF results: %s", e)
+    else:
+        if not settings.rerank_enabled:
+            logger.info("Qdrant hybrid: rerank disabled, returning top %d RRF results", top_k)
+        elif len(formatted) <= top_k:
+            logger.info("Qdrant hybrid: only %d candidates (<=top_k=%d), skipping rerank", len(formatted), top_k)
 
     return formatted[:top_k]
 
