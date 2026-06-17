@@ -758,7 +758,8 @@ def hybrid_search_qdrant(
             if reranked:
                 # Rerank score 过滤：丢弃相关性过低的 chunk，提升 Contextual Relevancy
                 # 参考8阶段流水线 Stage 7：rerank_score >= 0.55
-                _RERANK_SCORE_MIN = 0.55
+                # 第二轮优化：从 0.55 提高到 0.65，进一步过滤不相关 chunk
+                _RERANK_SCORE_MIN = 0.65
                 before_filter = len(reranked)
                 reranked = [c for c in reranked if c.get("rerank_score", 0) >= _RERANK_SCORE_MIN]
                 if len(reranked) < before_filter:
