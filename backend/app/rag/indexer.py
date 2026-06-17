@@ -152,6 +152,8 @@ async def _generate_context_prefixes_async(chunks_with_docs, llm_call_fn, max_co
 
     async def _process_one(chunk_text, doc_text):
         async with semaphore:
+            # P3 优化：基于 Anthropic 官方 prompt，增加文档标题和领域定制化提示
+            # Anthropic 官方推荐：可针对特定领域定制 prompt 以获得更好效果
             prompt = f"""<document>
 {doc_text}
 </document>
@@ -159,7 +161,7 @@ Here is the chunk we want to situate within the whole document
 <chunk>
 {chunk_text}
 </chunk>
-Please give a short succinct context to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk. Answer only with the succinct context and nothing else."""
+Please give a short succinct context to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk. Include the document title and the specific topic or section this chunk covers. Answer only with the succinct context and nothing else."""
             result = await asyncio.to_thread(llm_call_fn, [{"role": "user", "content": prompt}])
             return result if isinstance(result, str) else str(result)
 
@@ -201,8 +203,12 @@ async def _add_contextual_prefixes(
         slug = chunk["metadata"].get("slug", "")
         doc = doc_map.get(slug)
         if doc:
-            doc_text = doc["content"][:2000]  # truncate for prompt
-            chunk_text = chunk["text"][:300]  # truncate for prompt
+            # P3 优化：增大截断限制，让 LLM 生成更准确的上下文前缀
+            # Anthropic 官方推荐使用完整文档，但受 token 限制需截断
+            # doc_text: 2000→8000（覆盖大部分文档的完整内容）
+            # chunk_text: 300→不截断（完整 chunk 让 LLM 理解更准确）
+            doc_text = doc["content"][:8000]
+            chunk_text = chunk["text"]
             chunks_with_docs.append((chunk_text, doc_text))
             valid_indices.append(i)
 
