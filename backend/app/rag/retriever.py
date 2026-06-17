@@ -199,12 +199,13 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
     # since the correct article's chunks should cluster at the top.
     if is_cross_article_query(query):
         selected = []
-        seen_slugs = set()
-        # Pass 1: best chunk per unique article
+        slug_count_ht: Dict[str, int] = {}
+        max_per_slug_ht = 2  # 同一 slug 最多取 2 条
         for doc in candidates:
             slug = doc.get("metadata", {}).get("slug", "")
-            if slug not in seen_slugs:
-                seen_slugs.add(slug)
+            count = slug_count_ht.get(slug, 0)
+            if count < max_per_slug_ht:
+                slug_count_ht[slug] = count + 1
                 selected.append(doc)
                 if len(selected) >= top_k:
                     break
@@ -311,10 +312,19 @@ def multi_query_retrieve(query: str, top_k: int = 3, lang_filter: str = None) ->
     # Reranker disabled — RRF alone gives better recall.
     # CRAG assessment in rag_query handles quality filtering.
 
-    # 不再强制 diversity selection（每个 slug 只取 1 条），
-    # 改为按 score 排序取 top_k，让同一文章的多条相关 chunk 都被保留。
-    # rerank score 过滤是主要的质量门控，不需要 diversity 限制。
-    selected = candidates[:top_k]
+    # Diversity selection: 同一 slug 最多取 2 条，平衡 Recall@5 和 Contextual Relevancy
+    # 允许同一文章的多条相关 chunk 被保留，但不会让单一文章占满结果
+    selected = []
+    slug_count: Dict[str, int] = {}
+    max_per_slug = 2
+    for doc in candidates:
+        slug = doc.get("metadata", {}).get("slug", "")
+        count = slug_count.get(slug, 0)
+        if count < max_per_slug:
+            slug_count[slug] = count + 1
+            selected.append(doc)
+            if len(selected) >= top_k:
+                break
 
     # Relevance gate (same as hybrid_retrieve): check RRF score
     if selected and selected[0].get("score", 0) < _MIN_RELEVANCE_SCORE:
