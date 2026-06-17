@@ -303,13 +303,13 @@ def rag_query(
     #     Skip for simple queries with high retrieval confidence (already optimal)
     top_score = max(c.get("score", 0) for c in chunks) if chunks else 0
     if chunks:
-        # 简单查询 + 高置信度 → 跳过 compression（节省 ~1-2s embedding API 调用）
-        if route == "simple" and top_score >= 0.5:
+        # 简单查询 + 中等置信度 → 跳过 compression（节省 ~1-2s embedding API 调用）
+        if route == "simple" and top_score >= 0.3:
             logger.info("Skipping context compression: simple query, top_score=%.4f", top_score)
         else:
             chunks = compress_context(query, chunks)
             if chunks:
-                chunks = _deduplicate_chunks(chunks, threshold=0.85)
+                chunks = _deduplicate_chunks(chunks, threshold=0.80)
 
     # 1c. CRAG self-correction: if compression removed all chunks or top score is low,
     #     rewrite query and re-retrieve once (lightweight corrective RAG).
@@ -502,8 +502,8 @@ async def rag_query_astream(
     #     Skip for simple queries with high retrieval confidence (already optimal)
     if chunks:
         top_score = max(c.get("score", 0) for c in chunks) if chunks else 0
-        # 简单查询 + 高置信度 → 跳过 compression（节省 ~1-2s embedding API 调用）
-        if route == "simple" and top_score >= 0.5:
+        # 简单查询 + 中等置信度 → 跳过 compression（节省 ~1-2s embedding API 调用）
+        if route == "simple" and top_score >= 0.3:
             logger.info("Skipping context compression: simple query, top_score=%.4f", top_score)
         else:
             chunks = await asyncio.to_thread(compress_context, query, chunks)
