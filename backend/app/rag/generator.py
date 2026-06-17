@@ -424,12 +424,12 @@ async def rag_query_astream(
         # 简单查询：hybrid retrieve（dense+sparse + title boost + rerank）
         # 不再只用 sparse/keyword，因为语义匹配对很多查询至关重要
         chunks = await asyncio.to_thread(
-            hybrid_retrieve, query, top_k=top_k, lang_filter=filter_lang
+            hybrid_retrieve, query, top_k=top_k, lang_filter=filter_lang, query_complexity=route
         )
     elif route == "medium":
         # 中等查询：hybrid retrieve（不含 multi_query）
         chunks = await asyncio.to_thread(
-            hybrid_retrieve, query, top_k=top_k, lang_filter=filter_lang
+            hybrid_retrieve, query, top_k=top_k, lang_filter=filter_lang, query_complexity=route
         )
     else:
         # 复杂查询：完整 pipeline + HyDE
