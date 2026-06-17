@@ -199,7 +199,6 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
     # since the correct article's chunks should cluster at the top.
     if is_cross_article_query(query):
         selected = []
-        seen_slugs = set()
         slug_count_ht: Dict[str, int] = {}
         max_per_slug_ht = 3  # 同一 slug 最多取 3 条
         # Pass 1: best chunk per unique article (up to max_per_slug)
@@ -317,7 +316,6 @@ def multi_query_retrieve(query: str, top_k: int = 3, lang_filter: str = None) ->
     # Diversity selection: one per unique slug, then fill remaining slots
     # 允许同一 slug 取多条 chunk，提升 Recall@5
     selected = []
-    seen_slugs = set()
     slug_count: Dict[str, int] = {}
     max_per_slug = 3  # 同一 slug 最多取 3 条，避免单一文章占满结果
     # Pass 1: best chunk per unique article
