@@ -8,7 +8,7 @@ from app.main import app
 
 @pytest.mark.asyncio
 async def test_health():
-    with patch("app.main.bm25_warmup_done", True):
+    with patch("app.startup.warmup.bm25_warmup_done", True):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             resp = await ac.get("/api/health")
