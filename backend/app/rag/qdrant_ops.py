@@ -688,7 +688,7 @@ def hybrid_search_qdrant(
 
     # 3. Qdrant Query API: prefetch dense + sparse, RRF fusion
     # 先多取候选，再 rerank 精排
-    _candidate_multiplier = 3  # RRF 融合后取 top_k * 3 候选，供 rerank 筛选
+    _candidate_multiplier = 5  # RRF 融合后取 top_k * 5 候选，供 rerank 筛选
     fetch_limit = top_k * _candidate_multiplier
 
     prefetch = [
