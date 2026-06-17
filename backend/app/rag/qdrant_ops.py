@@ -766,9 +766,15 @@ def hybrid_search_qdrant(
                 if len(reranked) < before_filter:
                     logger.info("Rerank score filter: %d -> %d (threshold=%.2f)",
                                 before_filter, len(reranked), _RERANK_SCORE_MIN)
-                logger.info("Qdrant hybrid rerank: %d candidates -> top %d (after filter: %d)",
-                            len(formatted), rerank_top, len(reranked))
-                return reranked[:top_k]
+                # 回退保护：如果 rerank 过滤后结果为空，回退到 RRF 结果
+                # 避免因 rerank score 阈值过高导致完全丢失相关结果
+                if reranked:
+                    logger.info("Qdrant hybrid rerank: %d candidates -> top %d (after filter: %d)",
+                                len(formatted), rerank_top, len(reranked))
+                    return reranked[:top_k]
+                else:
+                    logger.warning("Rerank score filter removed all %d candidates (threshold=%.2f), "
+                                   "falling back to RRF results", before_filter, _RERANK_SCORE_MIN)
             else:
                 logger.warning("Qdrant hybrid rerank returned None, using RRF results")
         except Exception as e:
