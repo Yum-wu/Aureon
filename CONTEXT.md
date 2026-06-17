@@ -86,14 +86,15 @@ context_compression_threshold = 0.30
 简单查询走 hybrid_retrieve
 ```
 
-### 可改善方向（4项，按优先级）
+### 可改善方向（5项，按优先级）
 
-| 优先级 | 方案 | 预期效果 | 风险 | 关键点 |
-|--------|------|---------|------|--------|
-| P0 | 改参数：RERANK_CANDIDATES 12→20, RETRIEVAL_MULTIPLIER 7→9, temperature=0 | Recall@5 +3-5%, AC 方差-50% | 极低 | 只改 rerank 后取多少和初始检索量，不改 RRF 融合后取多少 |
-| P1 | Rerank 软过滤三级策略 | 解决空结果问题，Recall@5 +2-3% | 低 | 高/中/低置信分级，永远不返回空结果 |
-| P2 | Parent-Child 分块 | Contextual Recall +0.05-0.10 | 中 | 检索小块、返回大块，需改索引 |
-| P3 | 优化 Contextual Prefix prompt | Contextual Recall +0.02-0.04 | 低 | 增加前缀信息量、领域定制化 |
+| 优先级 | 方案 | 预期效果 | 风险 | 关键点 | 状态 |
+|--------|------|---------|------|--------|------|
+| P0 | 改参数：RERANK_CANDIDATES 12→20, RETRIEVAL_MULTIPLIER 7→9, temperature=0 | Recall@5 +3-5%, AC 方差-50% | 极低 | 只改 rerank 后取多少和初始检索量，不改 RRF 融合后取多少 | ✅ 已实现 |
+| P1 | Rerank 软过滤三级策略 | 解决空结果问题，Recall@5 +2-3% | 低 | 高/中/低置信分级，永远不返回空结果 | ✅ 已实现 |
+| P2 | Parent-Child 分块 | Contextual Recall +0.05-0.10 | 中 | 检索小块、返回大块，需改索引 | ✅ 已确认实现 |
+| P3 | 优化 Contextual Prefix prompt | Contextual Recall +0.02-0.04 | 低 | 增加前缀信息量、领域定制化 | ✅ 已实现 |
+| P4 | Qdrant RRF 路径补齐 title/slug boost | Recall@5 +2-4% | 极低 | sparse_enabled=True 时 title boost 被跳过，导致检索到错误文章 | ✅ 已实现 |
 
 ### 关键发现
 
@@ -102,3 +103,4 @@ context_compression_threshold = 0.30
 3. **Recall@5 miss 根因**：6 个 miss 中 4 个是 rerank score 全部 < 0.55 导致返回空结果（hello-world 等），2 个是检索到错误文章
 4. **Pipeline 与论文高度一致**：Adaptive-RAG/CRAG/HyDE/RRF 的实现方向正确
 5. **正确优化方向**：不增加噪声的前提下提升 Recall（改参数）、改善 chunk 质量（Parent-Child）、稳定化生成（temperature=0）
+6. **Qdrant RRF 路径缺失 title boost**：当 sparse_enabled=True（生产环境），hybrid_retrieve 直接返回 hybrid_search_qdrant 结果，retriever.py 中的 title/slug boost 被完全跳过。这是 2 个 wrong-article miss 的可能根因
