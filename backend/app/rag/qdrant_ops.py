@@ -744,23 +744,6 @@ def hybrid_search_qdrant(
             chunk["_query_embedding"] = _query_emb_array
         formatted.append(chunk)
 
-    # 4b. Title/slug boost: P4 优化——Qdrant RRF 路径缺失 title boost
-    # 当 sparse_enabled=True 时，hybrid_retrieve 直接返回此函数结果，
-    # 但 retriever.py 中的 title boost 逻辑被跳过了。
-    # 此处补齐 title boost，与 retriever.py 保持一致。
-    from app.rag.classifier import _extract_title_keywords
-    _title_boost_keywords = _extract_title_keywords(query)
-    if _title_boost_keywords:
-        for chunk in formatted:
-            title = (chunk.get("metadata", {}).get("title", "") + " " +
-                     chunk.get("metadata", {}).get("slug", "")).lower()
-            matches = sum(1 for kw in _title_boost_keywords if kw in title)
-            if matches > 0:
-                boost = 1.0 + 0.5 * matches  # 50% boost per matching keyword
-                chunk["score"] *= boost
-        # 按 boost 后的 score 重新排序
-        formatted.sort(key=lambda c: c.get("score", 0), reverse=True)
-
     # 5. Rerank: 对 Qdrant RRF 候选做 API rerank 精排，提升 Recall 和 Relevancy
     # 参考 Anthropic Contextual Retrieval 论文：rerank 后取 top-20 比 top-10/5 更有效
     logger.info("Qdrant hybrid: %d RRF candidates, top_k=%d, rerank_enabled=%s",
