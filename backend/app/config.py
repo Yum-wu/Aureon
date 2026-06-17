@@ -54,7 +54,7 @@ class VectorStoreSettings(BaseModel):
     low_score_threshold: float = 0.004
     negative_detection_enabled: bool = True
     context_compression_enabled: bool = True
-    context_compression_threshold: float = 0.40
+    context_compression_threshold: float = 0.45
     kw_min_raw_score: float = 0.15
     stats_cache_ttl: float = 60.0
     hyde_enabled: bool = True  # 开启 HyDE，配合 query router 按复杂度条件使用
