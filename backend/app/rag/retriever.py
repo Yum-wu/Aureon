@@ -200,11 +200,14 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List
     if is_cross_article_query(query):
         selected = []
         seen_slugs = set()
-        # Pass 1: best chunk per unique article
+        slug_count_ht: Dict[str, int] = {}
+        max_per_slug_ht = 3  # 同一 slug 最多取 3 条
+        # Pass 1: best chunk per unique article (up to max_per_slug)
         for doc in candidates:
             slug = doc.get("metadata", {}).get("slug", "")
-            if slug not in seen_slugs:
-                seen_slugs.add(slug)
+            count = slug_count_ht.get(slug, 0)
+            if count < max_per_slug_ht:
+                slug_count_ht[slug] = count + 1
                 selected.append(doc)
                 if len(selected) >= top_k:
                     break
@@ -312,13 +315,17 @@ def multi_query_retrieve(query: str, top_k: int = 3, lang_filter: str = None) ->
     # CRAG assessment in rag_query handles quality filtering.
 
     # Diversity selection: one per unique slug, then fill remaining slots
+    # 允许同一 slug 取多条 chunk，提升 Recall@5
     selected = []
     seen_slugs = set()
+    slug_count: Dict[str, int] = {}
+    max_per_slug = 3  # 同一 slug 最多取 3 条，避免单一文章占满结果
     # Pass 1: best chunk per unique article
     for doc in candidates:
         slug = doc.get("metadata", {}).get("slug", "")
-        if slug not in seen_slugs:
-            seen_slugs.add(slug)
+        count = slug_count.get(slug, 0)
+        if count < max_per_slug:
+            slug_count[slug] = count + 1
             selected.append(doc)
             if len(selected) >= top_k:
                 break
