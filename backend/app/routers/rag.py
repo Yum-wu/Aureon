@@ -353,7 +353,7 @@ async def rag_index_endpoint(request: Request, user=Depends(require_role(UserRol
     def llm_call_fn(msgs):
         return llm.invoke(msgs).content
 
-    result = run_index_pipeline(ARTICLES_DIR, llm_call_fn=llm_call_fn, enable_contextual=True)
+    result = await run_index_pipeline(ARTICLES_DIR, llm_call_fn=llm_call_fn, enable_contextual=True)
 
     # Add tenant_id to result metadata if available
     if result.get("metadata"):

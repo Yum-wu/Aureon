@@ -183,19 +183,19 @@ class TestRunIndexPipeline:
     @pytest.mark.integration
     @patch("app.rag.indexer.save_index")
     @patch("app.rag.loader.load_markdown_files", return_value=[])
-    def test_no_docs_returns_error(self, mock_load, mock_save):
-        result = run_index_pipeline("/empty/dir")
+    async def test_no_docs_returns_error(self, mock_load, mock_save):
+        result = await run_index_pipeline("/empty/dir")
         assert result["status"] == "error"
         assert "没有找到" in result["message"]
 
     @pytest.mark.integration
     @patch("app.rag.indexer.save_index")
     @patch("app.rag.loader.load_markdown_files")
-    def test_valid_pipeline(self, mock_load, mock_save):
+    async def test_valid_pipeline(self, mock_load, mock_save):
         mock_load.return_value = [
             {"content": "Some content to index.", "metadata": {"title": "Test", "source": "test.md"}}
         ]
-        result = run_index_pipeline("/articles")
+        result = await run_index_pipeline("/articles")
         assert result["status"] == "ok"
         assert result["documents_indexed"] == 1
         assert result["chunks_created"] >= 1
