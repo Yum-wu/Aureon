@@ -747,26 +747,46 @@ def hybrid_search_qdrant(
         formatted.append(chunk)
 
     # 5. Rerank: 对 Qdrant RRF 候选做 API rerank 精排，提升 Recall 和 Relevancy
+    # 参考 Anthropic Contextual Retrieval 论文：rerank 后取 top-20 比 top-10/5 更有效
     logger.info("Qdrant hybrid: %d RRF candidates, top_k=%d, rerank_enabled=%s",
                 len(formatted), top_k, settings.rerank_enabled)
     if settings.rerank_enabled and len(formatted) > top_k:
         try:
             from app.rag.reranker import rerank as do_rerank
-            # rerank_top 限制在合理范围
-            rerank_top = min(len(formatted), top_k * 5)
+            # Anthropic 论文推荐 rerank 后取 top-20
+            _RERANK_TOP = 20
+            rerank_top = min(len(formatted), _RERANK_TOP)
             reranked = do_rerank(query, formatted, top_k=rerank_top)
             if reranked:
-                # Rerank score 过滤：丢弃相关性过低的 chunk，提升 Contextual Relevancy
-                # 参考8阶段流水线 Stage 7：0.55 是最优阈值（0.65 过于激进会丢失相关 chunk）
-                _RERANK_SCORE_MIN = 0.55
-                before_filter = len(reranked)
-                reranked = [c for c in reranked if c.get("rerank_score", 0) >= _RERANK_SCORE_MIN]
-                if len(reranked) < before_filter:
-                    logger.info("Rerank score filter: %d -> %d (threshold=%.2f)",
-                                before_filter, len(reranked), _RERANK_SCORE_MIN)
-                logger.info("Qdrant hybrid rerank: %d candidates -> top %d (after filter: %d)",
-                            len(formatted), rerank_top, len(reranked))
-                return reranked[:top_k]
+                # Rerank 软过滤三级策略（P1优化）：
+                # - 高置信（top1 ≥ 0.7）：直接取 top-K，不过滤
+                # - 中置信（0.3 ≤ top1 < 0.7）：保留 score ≥ 0.2 的结果，至少保留 3 条
+                # - 低置信（top1 < 0.3）：回退到 RRF 原始排序
+                _RERANK_SCORE_HIGH = 0.70
+                _RERANK_SCORE_MID = 0.30
+                _RERANK_SCORE_MIN_MID = 0.20
+                _MIN_RESULTS = 3
+
+                top1_score = reranked[0].get("rerank_score", 0) if reranked else 0
+
+                if top1_score >= _RERANK_SCORE_HIGH:
+                    # 高置信：直接取 top-K，不做额外过滤
+                    logger.info("Rerank high confidence (top1=%.3f), returning top %d",
+                                top1_score, top_k)
+                    return reranked[:top_k]
+                elif top1_score >= _RERANK_SCORE_MID:
+                    # 中置信：保留 score ≥ 0.2 的结果，至少保留 3 条
+                    filtered = [c for c in reranked if c.get("rerank_score", 0) >= _RERANK_SCORE_MIN_MID]
+                    if len(filtered) < _MIN_RESULTS:
+                        filtered = reranked[:_MIN_RESULTS]
+                    logger.info("Rerank mid confidence (top1=%.3f), %d/%d passed filter (>=%.2f)",
+                                top1_score, len(filtered), len(reranked), _RERANK_SCORE_MIN_MID)
+                    return filtered[:top_k]
+                else:
+                    # 低置信：回退到 RRF 原始排序，取 top-5
+                    logger.warning("Rerank low confidence (top1=%.3f), falling back to RRF top-%d",
+                                   top1_score, _MIN_RESULTS)
+                    return formatted[:_MIN_RESULTS]
             else:
                 logger.warning("Qdrant hybrid rerank returned None, using RRF results")
         except Exception as e:
