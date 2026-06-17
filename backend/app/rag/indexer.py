@@ -146,7 +146,7 @@ Text chunk:
 Context prefix:"""
 
 
-async def _generate_context_prefixes_async(chunks_with_docs, llm_call_fn, max_concurrent=10):
+async def _generate_context_prefixes_async(chunks_with_docs, llm_call_fn, max_concurrent=15):
     """并发生成 contextual prefixes。"""
     semaphore = asyncio.Semaphore(max_concurrent)
 
@@ -210,7 +210,7 @@ def _add_contextual_prefixes(
         return chunks
 
     # 并发生成 contextual prefixes
-    prefixes = asyncio.run(_generate_context_prefixes_async(chunks_with_docs, llm_call_fn, max_concurrent=10))
+    prefixes = asyncio.run(_generate_context_prefixes_async(chunks_with_docs, llm_call_fn, max_concurrent=15))
 
     total_prefixes = 0
     for idx, prefix in zip(valid_indices, prefixes):

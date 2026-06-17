@@ -43,7 +43,7 @@ class VectorStoreSettings(BaseModel):
     qdrant_url: str = "http://localhost:6333"
     qdrant_api_key: str = ""
     qdrant_collection: str = "aureon"
-    rrf_k: int = 200
+    rrf_k: int = 60
     retrieval_multiplier: int = 12  # 优化：增加检索候选数提升 Recall
     multi_query_enabled: bool = True
     semantic_chunking_enabled: bool = True
@@ -54,7 +54,7 @@ class VectorStoreSettings(BaseModel):
     low_score_threshold: float = 0.004
     negative_detection_enabled: bool = True
     context_compression_enabled: bool = True
-    context_compression_threshold: float = 0.15
+    context_compression_threshold: float = 0.30
     kw_min_raw_score: float = 0.15
     stats_cache_ttl: float = 60.0
     hyde_enabled: bool = True  # 开启 HyDE，配合 query router 按复杂度条件使用
