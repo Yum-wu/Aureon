@@ -167,7 +167,7 @@ Please give a short succinct context to situate this chunk within the overall do
     return await asyncio.gather(*tasks)
 
 
-def _add_contextual_prefixes(
+async def _add_contextual_prefixes(
     chunks: List[Dict[str, Any]],
     docs: List[Dict[str, Any]],
     llm_call_fn,
@@ -210,7 +210,7 @@ def _add_contextual_prefixes(
         return chunks
 
     # 并发生成 contextual prefixes
-    prefixes = asyncio.run(_generate_context_prefixes_async(chunks_with_docs, llm_call_fn, max_concurrent=15))
+    prefixes = await _generate_context_prefixes_async(chunks_with_docs, llm_call_fn, max_concurrent=15)
 
     total_prefixes = 0
     for idx, prefix in zip(valid_indices, prefixes):
@@ -225,7 +225,7 @@ def _add_contextual_prefixes(
     return chunks
 
 
-def run_index_pipeline(
+async def run_index_pipeline(
     articles_dir: str,
     llm_call_fn = None,
     enable_contextual: bool = True,
@@ -309,7 +309,7 @@ def run_index_pipeline(
     # 3. Contextual Retrieval: add LLM-generated context prefix to each chunk
     contextual_count = 0
     if enable_contextual and llm_call_fn and chunks:
-        chunks = _add_contextual_prefixes(chunks, docs, llm_call_fn)
+        chunks = await _add_contextual_prefixes(chunks, docs, llm_call_fn)
         contextual_count = sum(1 for c in chunks if c.get("metadata", {}).get("contextual_prefix"))
 
     # 4. Store (save_index_qdrant handles embedding internally via stream embed-upsert)

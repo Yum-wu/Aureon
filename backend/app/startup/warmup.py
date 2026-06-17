@@ -8,6 +8,7 @@ Extracted from main.py to keep the application entry point slim.
 
 
 
+import asyncio
 import os
 
 import structlog
@@ -92,7 +93,7 @@ def warmup_bm25():
 
                 from app.rag.qa_chain import run_index_pipeline
 
-                result = run_index_pipeline(articles_dir)
+                result = asyncio.run(run_index_pipeline(articles_dir))
 
                 logger.info("Auto-rebuild complete: %d docs, %d chunks, %.1fs",
 
@@ -122,7 +123,7 @@ def warmup_bm25():
 
                     from app.rag.qa_chain import run_index_pipeline
 
-                    result = run_index_pipeline(articles_dir)
+                    result = asyncio.run(run_index_pipeline(articles_dir))
 
                     logger.info("Fallback rebuild complete: %d docs, %d chunks, %.1fs",
 
