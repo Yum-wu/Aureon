@@ -756,14 +756,14 @@ def hybrid_search_qdrant(
             rerank_top = min(len(formatted), _RERANK_TOP)
             reranked = do_rerank(query, formatted, top_k=rerank_top)
             if reranked:
-                # Rerank 软过滤三级策略（P1优化）：
+                # Rerank 软过滤三级策略（R16 调优）：
                 # - 高置信（top1 ≥ 0.7）：直接取 top-K，不过滤
-                # - 中置信（0.3 ≤ top1 < 0.7）：保留 score ≥ 0.2 的结果，至少保留 3 条
-                # - 低置信（top1 < 0.3）：回退到 RRF 原始排序
+                # - 中置信（0.3 ≤ top1 < 0.7）：保留 score ≥ 0.4 的结果，至少保留 2 条
+                # - 低置信（top1 < 0.3）：仍取 rerank top-K（rerank 即使低置信也比 RRF 更准确）
                 _RERANK_SCORE_HIGH = 0.70
                 _RERANK_SCORE_MID = 0.30
-                _RERANK_SCORE_MIN_MID = 0.20
-                _MIN_RESULTS = 3
+                _RERANK_SCORE_MIN_MID = 0.40
+                _MIN_RESULTS = 2
 
                 top1_score = reranked[0].get("rerank_score", 0) if reranked else 0
 
@@ -773,7 +773,7 @@ def hybrid_search_qdrant(
                                 top1_score, top_k)
                     return reranked[:top_k]
                 elif top1_score >= _RERANK_SCORE_MID:
-                    # 中置信：保留 score ≥ 0.2 的结果，至少保留 3 条
+                    # 中置信：保留 score ≥ 0.4 的结果，至少保留 2 条
                     filtered = [c for c in reranked if c.get("rerank_score", 0) >= _RERANK_SCORE_MIN_MID]
                     if len(filtered) < _MIN_RESULTS:
                         filtered = reranked[:_MIN_RESULTS]
@@ -781,10 +781,10 @@ def hybrid_search_qdrant(
                                 top1_score, len(filtered), len(reranked), _RERANK_SCORE_MIN_MID)
                     return filtered[:top_k]
                 else:
-                    # 低置信：回退到 RRF 原始排序，取 top-5
-                    logger.warning("Rerank low confidence (top1=%.3f), falling back to RRF top-%d",
-                                   top1_score, _MIN_RESULTS)
-                    return formatted[:_MIN_RESULTS]
+                    # 低置信：仍取 rerank top-K（rerank 即使低置信也比 RRF 更准确）
+                    logger.warning("Rerank low confidence (top1=%.3f), returning rerank top-%d",
+                                   top1_score, top_k)
+                    return reranked[:top_k]
             else:
                 logger.warning("Qdrant hybrid rerank returned None, using RRF results")
         except Exception as e:
