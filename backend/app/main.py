@@ -14,9 +14,12 @@ from pydantic import BaseModel, Field
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
+from starlette.routing import Match, Mount
 
 # ── CrossEncoder safety patch (MUST be early — patches sentence_transformers) ──
 import app.startup.cross_encoder  # noqa: F401
+
+import prometheus_fastapi_instrumentator.routing as _pfi_routing
 
 from app.api.analytics import router as analytics_router
 from app.api.rag_stats import router as stats_router
@@ -44,6 +47,40 @@ from app.security.users_router import router as users_router
 from app.startup import warmup
 from app.startup.lifespan import lifespan
 from app.tools import ALL_TOOLS
+
+# ── Prometheus instrumentator FastAPI 0.137 compat patch ──
+# FastAPI 0.137 changed app.routes from flat list to tree with _IncludedRouter nodes.
+# prometheus_fastapi_instrumentator.routing._get_route_name accesses route.path,
+# which _IncludedRouter doesn't have. Patch to skip non-leaf nodes and recurse.
+
+
+def _patched_get_route_name(scope, routes, route_name=None):
+    """Compat patch: skip _IncludedRouter (no .path), recurse into .routes if present."""
+    for route in routes:
+        # FastAPI 0.137+ _IncludedRouter has .routes but no .path
+        if not hasattr(route, "path"):
+            if hasattr(route, "routes"):
+                child_name = _patched_get_route_name(scope, route.routes, route_name)
+                if child_name is not None:
+                    return child_name
+            continue
+        match, child_scope = route.matches(scope)
+        if match == Match.FULL:
+            route_name = route.path
+            child_scope = {**scope, **child_scope}
+            if isinstance(route, Mount) and route.routes:
+                child_route_name = _patched_get_route_name(child_scope, route.routes, route_name)
+                if child_route_name is None:
+                    route_name = None
+                else:
+                    route_name += child_route_name
+            return route_name
+        elif match == Match.PARTIAL and route_name is None:
+            route_name = route.path
+    return None
+
+
+_pfi_routing._get_route_name = _patched_get_route_name
 
 # Suppress noisy telemetry
 logging.getLogger("urllib3").setLevel(logging.WARNING)
