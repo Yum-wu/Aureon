@@ -422,7 +422,7 @@ function WorkspacesTab() {
     {
       key: 'actions',
       label: t('admin.workspaces.columns.actions'),
-      render: (_ws: WorkspaceRecord) => (
+      render: () => (
         <button className="text-xs text-[var(--accent)] hover:underline">{t('admin.workspaces.edit')}</button>
       ),
     },
