@@ -7,10 +7,10 @@ FROM python:3.12-slim AS backend
 
 WORKDIR /app
 
-# System dependencies
+# System dependencies (pinned versions for reproducibility)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    sqlite3 \
-    curl \
+    sqlite3=3.45.1-1 \
+    curl=8.5.0-2 \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user (UID/GID fixed for volume permission management)
