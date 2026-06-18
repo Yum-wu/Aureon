@@ -135,23 +135,25 @@ function GoldenSignalCard({
         {children}
       </div>
       {/* 迷你折线图 */}
-      {sparklineData && sparklineData.length > 1 && (
-        <div className="mt-3 h-8 flex items-end gap-px">
-          {sparklineData.map((v, i) => {
-            const max = Math.max(...sparklineData);
-            const min = Math.min(...sparklineData);
-            const range = max - min || 1;
-            const height = ((v - min) / range) * 100;
-            return (
-              <div
-                key={i}
-                className="flex-1 bg-[var(--accent)] opacity-40 rounded-t-sm min-w-[2px]"
-                style={{ height: `${Math.max(height, 5)}%` }}
-              />
-            );
-          })}
-        </div>
-      )}
+      {sparklineData && sparklineData.length > 1 && (() => {
+        const max = Math.max(...sparklineData);
+        const min = Math.min(...sparklineData);
+        const range = max - min || 1;
+        return (
+          <div className="mt-3 h-8 flex items-end gap-px">
+            {sparklineData.map((v, i) => {
+              const height = ((v - min) / range) * 100;
+              return (
+                <div
+                  key={i}
+                  className="flex-1 bg-[var(--accent)] opacity-40 rounded-t-sm min-w-[2px]"
+                  style={{ height: `${Math.max(height, 5)}%` }}
+                />
+              );
+            })}
+          </div>
+        );
+      })()}
     </Card>
   );
 }
@@ -254,18 +256,18 @@ export function Dashboard() {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
     const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/chat/dashboard`;
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
+    const socket = new WebSocket(wsUrl);
+    wsRef.current = socket;
 
-    ws.onopen = () => setWsConnected(true);
-    ws.onclose = () => {
+    socket.onopen = () => setWsConnected(true);
+    socket.onclose = () => {
       setWsConnected(false);
       // 自动重连
       reconnectTimerRef.current = setTimeout(connectWebSocket, 5000);
     };
-    ws.onerror = () => ws.close();
+    socket.onerror = () => { socket.close(); };
 
-    ws.onmessage = (event) => {
+    socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
         if (data.type === 'metrics') {
