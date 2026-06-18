@@ -40,6 +40,14 @@ ENV SKIP_LOCAL_EMBED=true
 # 后端代码
 COPY backend/ .
 
+# 调试：验证 __init__.py 是否被正确复制
+RUN echo "=== Checking __init__.py files ===" && \
+    find /app -name "__init__.py" -type f | head -20 && \
+    echo "=== Checking app/cost directory ===" && \
+    ls -la /app/app/cost/ && \
+    echo "=== Checking CostRecord import ===" && \
+    python -c "from app.cost import CostRecord; print('CostRecord imported successfully:', CostRecord)"
+
 # 强制删除 .env 文件（.dockerignore 可能未正确排除）
 RUN rm -f /app/.env /app/backend/.env
 
