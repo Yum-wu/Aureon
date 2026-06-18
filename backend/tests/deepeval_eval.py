@@ -485,5 +485,9 @@ if __name__ == "__main__":
     test_cases, used_qa_indices = build_test_cases(qa_pairs, rag_query_fn, article_texts, max_concurrent=10)
     print(f"Built {len(test_cases)} test cases (concurrent data preparation)")
 
-    scores = run_deepeval_metrics(test_cases, qa_pairs=qa_pairs, used_qa_indices=used_qa_indices)
+    # Judge 模型：优先用硅基流动 DeepSeek-V4-Flash
+    judge_model = os.getenv("JUDGE_MODEL", "deepseek-ai/DeepSeek-V4-Flash")
+    print(f"Judge model: {judge_model}")
+
+    scores = run_deepeval_metrics(test_cases, qa_pairs=qa_pairs, used_qa_indices=used_qa_indices, model=judge_model)
     print(format_results(scores, info))

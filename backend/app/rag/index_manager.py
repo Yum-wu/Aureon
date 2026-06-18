@@ -99,7 +99,9 @@ def _add_to_index_qdrant(chunks: List[Dict[str, Any]]):
 
         existing_count = info.points_count or 0
 
-    except Exception:
+    except Exception as e:
+
+        logger.debug("get_collection_count_failed", error=str(e))
 
         existing_count = 0
 
@@ -344,7 +346,9 @@ def load_index(path: str = None):
 
         return None, None
 
-    except Exception:
+    except Exception as e:
+
+        logger.debug("retrieve_failed", error=str(e))
 
         return None, None
 
@@ -498,7 +502,9 @@ def get_collection_stats() -> tuple[int, int]:
 
         return _get_collection_stats_qdrant(now)
 
-    except Exception:
+    except Exception as e:
+
+        logger.debug("collection_stats_failed", error=str(e))
 
         return _stats_cache["doc_count"], _stats_cache["chunk_count"]
 
@@ -524,7 +530,9 @@ def _get_collection_stats_qdrant(now: float) -> tuple[int, int]:
 
         total_chunks = info.points_count or 0
 
-    except Exception:
+    except Exception as e:
+
+        logger.debug("qdrant_stats_failed", error=str(e))
 
         return _stats_cache["doc_count"], _stats_cache["chunk_count"]
 
@@ -605,7 +613,8 @@ def get_indexed_sources() -> set:
         _sources_cache["sources"] = sources
         _sources_cache["updated_at"] = now
         return sources.copy()
-    except Exception:
+    except Exception as e:
+        logger.debug("indexed_sources_failed", error=str(e))
         return _sources_cache["sources"].copy()
 
 
@@ -632,7 +641,9 @@ def _get_indexed_sources_qdrant() -> set:
 
             return set()
 
-    except Exception:
+    except Exception as e:
+
+        logger.debug("qdrant_sources_check_failed", error=str(e))
 
         return set()
 
@@ -826,7 +837,9 @@ def _check_qdrant_available() -> bool:
 
         return True
 
-    except Exception:
+    except Exception as e:
+
+        logger.warning("qdrant_health_check_failed", error=str(e))
 
         qdrant_ops._qdrant_available = False
 

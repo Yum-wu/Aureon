@@ -373,8 +373,8 @@ def embed_texts_llm(texts: List[str], batch_size: int = 10) -> np.ndarray:
             uncached = still_uncached
             if not uncached:
                 return np.array(result, dtype=np.float32)
-    except Exception:
-        pass  # Redis unavailable, continue with API
+    except Exception as e:
+        logger.debug("redis_embed_cache_read_failed", error=str(e))
 
     uncached_texts = [t for _, t in uncached]
 
@@ -418,8 +418,8 @@ def embed_texts_llm(texts: List[str], batch_size: int = 10) -> np.ndarray:
         key = _cache_key(text)
         try:
             _redis_sync_setex(f"embed:{key}", 86400 * 7, emb.astype(np.float32).tobytes())
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("redis_embed_cache_write_failed", error=str(e))
 
     # Evict if over limit (LRU: 删除最久未使用的条目)
     with _embed_cache_lock:

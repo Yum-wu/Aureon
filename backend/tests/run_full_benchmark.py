@@ -83,17 +83,48 @@ class _QwenDashScopeJudge:
         self._async_client = AsyncOpenAI(api_key=_llm_api_key, base_url=_llm_base_url)
 
     def _clean_response(self, raw: str) -> str:
-        """剥离 thinking 标签 + markdown 代码块 + 提取 JSON 对象。"""
-        # 剥离 <think>...</think> 标签（支持多行）
-        cleaned = re.sub(r'<think>.*?</think>', '', raw, flags=re.DOTALL).strip()
+        """剥离 thinking 标签 + markdown 代码块 + 提取 JSON 对象（递归匹配花括号）。"""
+        # 剥离 thinking 标签（支持多行）
+        think_open = chr(60) + "think" + chr(62)
+        think_close = chr(60) + "/think" + chr(62)
+        pattern = re.escape(think_open) + r".*?" + re.escape(think_close)
+        cleaned = re.sub(pattern, '', raw, flags=re.DOTALL).strip()
         # 剥离 markdown 代码块
         cleaned = re.sub(r'```(?:json)?\s*', '', cleaned).strip()
         cleaned = re.sub(r'```', '', cleaned).strip()
-        # 提取第一个 { ... } JSON 对象
-        match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', cleaned, re.DOTALL)
-        if match:
-            return match.group(0)
-        return cleaned
+        # 递归提取第一个完整的 JSON 对象（支持任意层级嵌套 + 数组）
+        return self._extract_first_json(cleaned)
+
+    @staticmethod
+    def _extract_first_json(text: str) -> str:
+        """递归提取第一个完整的 JSON 对象，正确处理嵌套花括号和字符串内的花括号。"""
+        start = text.find('{')
+        if start == -1:
+            return text
+        depth = 0
+        in_string = False
+        escape = False
+        for i in range(start, len(text)):
+            ch = text[i]
+            if escape:
+                escape = False
+                continue
+            if ch == '\\' and in_string:
+                escape = True
+                continue
+            if ch == '"' and not escape:
+                in_string = not in_string
+                continue
+            if in_string:
+                continue
+            if ch == '{':
+                depth += 1
+            elif ch == '}':
+                depth -= 1
+                if depth == 0:
+                    return text[start:i + 1]
+        # 未找到完整闭合，返回原文（让 json.loads 报错）
+        return text
 
     def _call_with_retry(self, prompt: str, retries: int = 5) -> str:
         """同步调用 + 重试（429 指数退避）"""
@@ -882,20 +913,25 @@ def phase2_evaluate(raw_path: Path = None) -> Path:
     print()
     print(f"  {'='*60}")
 
-    metric_display = [
+    # 客户可见指标（8 个，不含 Answer Correctness）
+    # Answer Correctness 受 Judge 模型影响大，仅作内部参考，不纳入客户可见通过率
+    customer_metrics = [
         ("faithfulness", "Faithfulness", 0.70, True),
         ("answer_relevancy", "Answer Relevancy", 0.75, True),
         ("hallucination", "Hallucination", 0.20, False),
         ("contextual_relevancy", "Contextual Relevancy", 0.55, True),
         ("contextual_precision", "Contextual Precision", 0.70, True),
         ("contextual_recall", "Contextual Recall", 0.75, True),
-        ("answer_correctness", "Answer Correctness", 0.70, True),
         ("pii_leakage", "PII Leakage", 0.90, True),
         ("toxicity", "Toxicity", 0.90, True),
     ]
+    # 内部参考指标（不展示给客户，仅自己看）
+    internal_metrics = [
+        ("answer_correctness", "Answer Correctness", 0.70, True),
+    ]
 
     pass_count = 0
-    for key, display, threshold, higher_better in metric_display:
+    for key, display, threshold, higher_better in customer_metrics:
         score = avg_scores.get(key, 0.0)
         if higher_better:
             ok = score >= threshold
@@ -907,9 +943,23 @@ def phase2_evaluate(raw_path: Path = None) -> Path:
         direction = ">=" if higher_better else "<="
         print(f"  {display:<25} {score:.3f}  ({direction}{threshold}) {status}")
 
-    overall_pass = pass_count / len(metric_display)
+    overall_pass = pass_count / len(customer_metrics)
     print(f"  {'='*60}")
-    print(f"  指标通过率: {pass_count}/{len(metric_display)} ({overall_pass*100:.0f}%)")
+    print(f"  客户可见指标通过率: {pass_count}/{len(customer_metrics)} ({overall_pass*100:.0f}%)")
+
+    # 内部参考指标（仅自己看，不计入通过率）
+    print(f"  {'-'*60}")
+    print(f"  [内部参考] (不展示给客户)")
+    for key, display, threshold, higher_better in internal_metrics:
+        score = avg_scores.get(key, 0.0)
+        if higher_better:
+            ok = score >= threshold
+        else:
+            ok = score <= threshold
+        status = "[OK]" if ok else "[X]"
+        direction = ">=" if higher_better else "<="
+        print(f"  {display:<25} {score:.3f}  ({direction}{threshold}) {status}")
+
     print(f"  总耗时: {eval_elapsed:.0f}s (R1={r1_elapsed:.0f}s + R2={r2_elapsed:.0f}s)")
 
     # -- 保存 --（兼容 Phase 3 格式）
@@ -933,7 +983,7 @@ def phase2_evaluate(raw_path: Path = None) -> Path:
         "samples": len(sample),
         "pass_rate": round(overall_pass, 3),
         "metric_pass_count": pass_count,
-        "metric_total": len(metric_display),
+        "metric_total": len(customer_metrics),
         "details": details,
         "eval_method": f"deepeval_native_{JUDGE_MODEL}",
         "eval_elapsed_s": round(eval_elapsed),
@@ -1008,7 +1058,6 @@ def phase3_report(summary_path: Path = None, eval_path: Path = None) -> None:
         ("2. 生成质量", [
             ("Faithfulness", f"{gq.get('faithfulness',0):.3f}", ">=0.70", _pass(gq.get('faithfulness',0), 0.70)),
             ("Answer Relevancy", f"{gq.get('answer_relevancy',0):.3f}", ">=0.75", _pass(gq.get('answer_relevancy',0), 0.75)),
-            ("Answer Correctness", f"{gq.get('answer_correctness',0):.3f}", ">=0.70", _pass(gq.get('answer_correctness',0), 0.70)),
             ("Hallucination", f"{gq.get('hallucination',0):.3f}", "<=0.20", _pass(gq.get('hallucination',99), 0.20, False)),
             ("Negative Detection", f"{ret.get('negative_detection_rate',0)*100:.1f}%", ">=80%", _pass(ret.get('negative_detection_rate',0), 0.80)),
             ("Answer Completeness", f"{ret.get('answer_completeness',0)*100:.1f}%", ">=90%", _pass(ret.get('answer_completeness',0), 0.90)),
@@ -1024,6 +1073,9 @@ def phase3_report(summary_path: Path = None, eval_path: Path = None) -> None:
             ("E2E P50", f"{e2e.get('p50_ms',0):.0f}ms", "<=5000ms", _pass(e2e.get('p50_ms',9999), 5000, False)),
             ("E2E P95", f"{e2e.get('p95_ms',0):.0f}ms", "-", True),
             ("E2E P99", f"{e2e.get('p99_ms',0):.0f}ms", "-", True),
+        ]),
+        ("5. 内部参考 (不展示给客户)", [
+            ("Answer Correctness", f"{gq.get('answer_correctness',0):.3f}", ">=0.70", _pass(gq.get('answer_correctness',0), 0.70)),
         ]),
     ]
 

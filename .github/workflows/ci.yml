@@ -49,7 +49,7 @@ jobs:
         run: |
           cd backend
           pip install -r requirements.txt
-          pip install pytest pytest-cov pytest-timeout ruff
+          pip install -r requirements-dev.txt ruff pip-audit mypy
 
       - name: Lint backend code
         run: |
@@ -60,6 +60,17 @@ jobs:
         run: |
           cd backend
           PYTHONPATH=. pytest tests/ -v --timeout=60 --ignore=tests/test_railway_http.py --ignore=tests/benchmark_enterprise.py --ignore=tests/run_full_benchmark.py -m "not integration and not benchmark and not quality and not smoke" --cov=app --cov-report=term-missing --cov-report=xml
+
+      - name: Dependency audit (pip-audit)
+        run: |
+          cd backend
+          pip-audit -r requirements.txt --strict
+
+      - name: Type check (mypy)
+        run: |
+          cd backend
+          mypy app/ --ignore-missing-imports --no-error-summary
+        continue-on-error: true  # Gradual enablement
 
       - name: Upload coverage
         if: always()

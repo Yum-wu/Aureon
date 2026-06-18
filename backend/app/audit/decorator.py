@@ -74,6 +74,25 @@ def audit_action(
     return decorator
 
 
+def _extract_user_id_safely(request) -> str:
+    """Extract user_id from verified JWT (not from forgeable headers).
+
+    Per OWASP Logging Cheat Sheet: user identity must come from
+    verified authentication context, never from client-controlled input.
+    """
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return "anonymous"
+
+    token = auth_header[7:]
+    try:
+        from app.security.rbac import verify_token
+        payload = verify_token(token)
+        return payload.get("sub", "anonymous")
+    except Exception:
+        return "anonymous:invalid_token"
+
+
 def _build_audit_log(
     *,
     action: str,
@@ -105,14 +124,11 @@ def _build_audit_log(
                 import structlog.contextvars
                 ctx = structlog.contextvars.get_contextvars()
                 request_id = ctx.get("request_id", "")
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("structlog_contextvars_failed", error=str(e))
 
-        # User ID from headers or query params (extensible)
-        user_id = (
-            request.headers.get("x-user-id")
-            or request.query_params.get("user_id", "anonymous")
-        )
+        # User ID from verified JWT (not from forgeable headers)
+        user_id = _extract_user_id_safely(request)
 
     # Determine resource_id
     resource_id = ""

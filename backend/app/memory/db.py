@@ -3,6 +3,10 @@ import threading
 import time
 from pathlib import Path
 
+import structlog
+
+logger = structlog.get_logger()
+
 DB_DIR = Path("offloads")
 DB_PATH = DB_DIR / "memory.db"
 
@@ -52,8 +56,8 @@ def close_db():
     if conn is not None:
         try:
             conn.close()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("sqlite_conn_close_failed", error=str(e))
         _thread_local.conn = None
 
 

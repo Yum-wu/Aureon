@@ -8,6 +8,14 @@ import time
 from pathlib import Path
 from dotenv import load_dotenv
 
+# -- Windows GBK 编码修复（必须在所有 print / DeepEval import 之前）--
+# DeepEval evaluate() 内部使用 rich 库打印 emoji（如 ✨ \u2728），
+# Windows 控制台默认 GBK 编码无法处理，导致 UnicodeEncodeError
+os.environ["PYTHONIOENCODING"] = "utf-8"
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BACKEND_DIR))
 

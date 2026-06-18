@@ -1,6 +1,6 @@
-# Build-only dependencies for downloading models at Docker build time.
-# These are NOT included in the final production image.
-# Used by: docker build (model download step only)
+# Build-time dependencies (NOT included in production image)
+# CPU-only PyTorch for embedding model download
+--extra-index-url https://download.pytorch.org/whl/cpu
 torch>=2.0.0
 sentence-transformers>=2.2.2
 accelerate>=0.26.0

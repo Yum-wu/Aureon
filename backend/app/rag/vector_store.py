@@ -29,10 +29,9 @@ from app.rag.embedding import (  # noqa: F401
 )
 
 # ── bm25.py ──
+# TODO(E19): 迁移到 Qdrant 稀疏向量后移除此 BM25 调用
 from app.rag.bm25 import (  # noqa: F401
-    _kw_docs,
-    _kw_idf,
-    _kw_avgdl,
+    _kw_indexes,
     _kw_lock,
     _KW_MIN_RAW_SCORE,
     _KW_MIN_IDF,

@@ -7,6 +7,7 @@ Falls back to in-memory dict cache when Redis is down.
 """
 
 import hashlib
+import random
 import re
 import time
 from collections import deque
@@ -66,15 +67,15 @@ def _record_cache_miss(latency_ms: float):
     _cache_metrics["latencies"].append(latency_ms)
 
 
-def _mem_cache_key(key: str) -> str:
+def _mem_cache_key(key: str, tenant_id: str = "default") -> str:
     raw = key.strip().lower()
     tokens = sorted(set(re.findall(r'[\w\u4e00-\u9fff]+', raw)))
-    return f"llm_cache:{_CACHE_VERSION}:{hashlib.md5(' '.join(tokens).encode()).hexdigest()}"
+    return f"llm_cache:{_CACHE_VERSION}:{tenant_id}:{hashlib.md5(' '.join(tokens).encode()).hexdigest()}"
 
 
-def _mem_get(query: str) -> Optional[str]:
+def _mem_get(query: str, tenant_id: str = "default") -> Optional[str]:
     """In-memory cache lookup. Checks expiry."""
-    full_key = _mem_cache_key(query)
+    full_key = _mem_cache_key(query, tenant_id)
     entry = _mem_cache.get(full_key)
     if entry is None:
         return None
@@ -85,14 +86,20 @@ def _mem_get(query: str) -> Optional[str]:
     return value
 
 
-def _mem_set(query: str, response: str, ttl: int = _MEM_TTL):
-    """Store in in-memory cache with expiry. Skips if value exceeds size limit."""
+def _mem_set(query: str, response: str, ttl: int = _MEM_TTL, tenant_id: str = "default"):
+    """Store in in-memory cache with expiry + TTL jitter. Skips if value exceeds size limit.
+
+    TTL 加随机抖动（0~300s）防止缓存雪崩：同一时刻大量缓存同时过期，
+    导致请求全部穿透到后端。抖动使过期时间分散，避免集中失效。
+    """
     # Skip oversized values to prevent OOM
     if len(response) > _MEM_MAX_VALUE_BYTES:
         logger.debug("In-memory cache: skipping oversized value (%d bytes)", len(response))
         return
-    full_key = _mem_cache_key(query)
-    _mem_cache[full_key] = (response, time.monotonic() + ttl)
+    # TTL 随机抖动：0~300 秒，防止缓存雪崩
+    jittered_ttl = ttl + (random.randint(0, 300) if ttl > 0 else 0)
+    full_key = _mem_cache_key(query, tenant_id)
+    _mem_cache[full_key] = (response, time.monotonic() + jittered_ttl)
     # Evict old entries if cache is too large (keep max 500)
     if len(_mem_cache) > 500:
         now = time.monotonic()
@@ -155,8 +162,8 @@ def close_sync_redis():
     if _sync_redis_pool is not None:
         try:
             _sync_redis_pool.connection_pool.disconnect()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("redis_pool_disconnect_failed", error=str(e))
         _sync_redis_pool = None
 
 
@@ -212,8 +219,8 @@ async def semantic_cache_key(query: str) -> str:
 async def get_cached(query: str, threshold: float = 0.92) -> Optional[str]:
     """Exact-match cache lookup. Falls back to in-memory if Redis down."""
     tenant_id = get_current_tenant_id()
-    # 1. Try in-memory first (fastest)
-    mem_result = _mem_get(query)
+    # 1. Try in-memory first (fastest, tenant-isolated)
+    mem_result = _mem_get(query, tenant_id)
     if mem_result is not None:
         logger.debug("In-memory cache HIT for query hash")
         return mem_result
@@ -228,7 +235,7 @@ async def get_cached(query: str, threshold: float = 0.92) -> Optional[str]:
             cached = await r.get(tenant_key)
             if cached is not None:
                 # Also populate in-memory for faster next access
-                _mem_set(query, cached)
+                _mem_set(query, cached, tenant_id=tenant_id)
                 logger.debug("Redis cache HIT for query hash")
                 return cached
         except Exception as e:
@@ -238,12 +245,16 @@ async def get_cached(query: str, threshold: float = 0.92) -> Optional[str]:
 
 
 async def set_cached(query: str, response: str, ttl: int = 3600):
-    """Store a response in both in-memory and Redis."""
-    tenant_id = get_current_tenant_id()
-    # Always store in-memory
-    _mem_set(query, response, ttl)
+    """Store a response in both in-memory and Redis.
 
-    # Try Redis
+    TTL 加随机抖动（0~300s）防止缓存雪崩：同一时刻大量缓存同时过期，
+    导致请求全部穿透到后端。抖动使过期时间分散，避免集中失效。
+    """
+    tenant_id = get_current_tenant_id()
+    # Always store in-memory (tenant-isolated, with TTL jitter)
+    _mem_set(query, response, ttl, tenant_id=tenant_id)
+
+    # Try Redis (TTL jitter applied independently)
     r = _get_redis()
     if not r:
         return
@@ -251,7 +262,9 @@ async def set_cached(query: str, response: str, ttl: int = 3600):
         key = await semantic_cache_key(query)
         # Add tenant prefix to key
         tenant_key = f"{tenant_id}:{key}"
-        await r.setex(tenant_key, ttl, response)
+        # Redis TTL 随机抖动：0~300 秒，防止缓存雪崩
+        jittered_ttl = ttl + (random.randint(0, 300) if ttl > 0 else 0)
+        await r.setex(tenant_key, jittered_ttl, response)
     except Exception as e:
         logger.debug("Cache write error: %s", e)
 
@@ -297,8 +310,8 @@ async def close_redis():
     if _redis:
         try:
             await _redis.close()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("redis_async_close_failed", error=str(e))
         _redis = None
 
 
@@ -445,6 +458,7 @@ async def get_cached_with_semantic(
 
     # Layer 2: Semantic cache — tracked internally by semantic_cache._stats
     sem_cache = get_semantic_cache_instance()
+    tenant_id = get_current_tenant_id()
     if sem_cache:
         try:
             result = await sem_cache.get_exact(
@@ -452,6 +466,7 @@ async def get_cached_with_semantic(
                 model=model,
                 temperature=temperature,
                 max_tokens=max_tokens,
+                tenant_id=tenant_id,
             )
             if result is not None:
                 logger.debug("Two-layer cache: semantic EXACT HIT")
@@ -512,6 +527,7 @@ async def set_cached_with_semantic(
 
     # Store in semantic cache (may be unavailable)
     sem_cache = get_semantic_cache_instance()
+    tenant_id = get_current_tenant_id()
     if sem_cache:
         try:
             await sem_cache.set(
@@ -521,6 +537,7 @@ async def set_cached_with_semantic(
                 temperature=temperature,
                 max_tokens=max_tokens,
                 ttl=ttl,
+                tenant_id=tenant_id,
             )
             logger.debug("Stored response in semantic cache")
         except Exception as e:

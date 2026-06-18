@@ -1,5 +1,7 @@
 """Security API Router"""
 from typing import Optional
+import os
+import structlog
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from app.security import (
@@ -14,6 +16,8 @@ from app.security import (
     create_access_token,
 )
 from app.exceptions import NotFoundError, AuthenticationError
+
+logger = structlog.get_logger(__name__)
 
 router = APIRouter(tags=["Security"])
 
@@ -47,9 +51,21 @@ async def sso_login(req: LoginRequest):
     """
     from app.config import settings
 
-    # 开发模式：接受任意合法邮箱 + 密码
+    # 开发模式：接受任意合法邮箱 + 密码（仅非生产平台）
+    _is_prod_platform = (
+        os.environ.get("RAILWAY_ENVIRONMENT") == "production"
+        or os.environ.get("ENV") == "production"
+    )
     if settings.auth.environment == "dev" and not settings.api_auth_key:
-        token = create_access_token({"sub": req.email, "role": "ADMIN"})
+        if _is_prod_platform:
+            logger.critical("security.dev_login_blocked_in_production")
+            raise AuthenticationError("Authentication service unavailable")
+        token = create_access_token({
+            "sub": req.email,
+            "role": "ADMIN",
+            "dev_only": True,
+        })
+        logger.warning("security.dev_login_used", email=req.email)
         return LoginResponse(
             access_token=token,
             token_type="bearer",

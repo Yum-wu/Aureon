@@ -187,9 +187,9 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
 
                     config_matches = True
 
-    except Exception:
+    except Exception as e:
 
-        pass
+        logger.debug("collection_config_check_failed", error=str(e))
 
 
 
@@ -231,8 +231,8 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
 
             try:
                 client.delete_collection(collection_name)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("delete_collection_failed", collection=collection_name, error=str(e))
         except Exception as e:
             logger.error("Failed to rebuild collection '%s': %s", collection_name, e)
             # 释放锁
@@ -242,8 +242,8 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
                     r = get_sync_redis()
                     if r is not None:
                         r.delete(lock_key)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug("redis_lock_release_failed", error=str(e))
             raise
 
     # 根据是否启用 sparse 向量选择 vectors_config
@@ -388,9 +388,9 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
 
                 )
 
-            except Exception:
+            except Exception as e:
 
-                pass  # ���������Ѵ���
+                logger.debug("payload_index_already_exists", field=field_name, error=str(e))
 
 
 
@@ -559,8 +559,8 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
             r = get_sync_redis()
             if r is not None:
                 r.delete(lock_key)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("redis_lock_release_failed", error=str(e))
 
 
 
@@ -656,7 +656,8 @@ def hybrid_search_qdrant(
 
         logger.warning("hybrid_search_qdrant embedding failed, falling back to BM25-only: %s", e)
 
-        return retrieve_keyword(query, top_k=top_k, lang_filter=lang_filter)
+        # TODO(E19): 迁移到 Qdrant 稀疏向量后移除此 BM25 调用
+        return retrieve_keyword(query, top_k=top_k, lang_filter=lang_filter, tenant_id=tenant_id)
 
 
 
@@ -873,8 +874,8 @@ def retrieve_qdrant(query: str, top_k: int = 3, collection_name: str = "aureon",
                 _has_tenant_id = "tenant_id" in _sample_meta
             _tenant_id_cache["value"] = _has_tenant_id
             _tenant_id_cache["updated_at"] = now
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("tenant_id_cache_check_failed", error=str(e))
 
 
 
@@ -1024,9 +1025,9 @@ def retrieve_qdrant(query: str, top_k: int = 3, collection_name: str = "aureon",
 
                     item["_embedding"] = emb
 
-        except Exception:
+        except Exception as e:
 
-            pass
+            logger.debug("embedding_attach_failed", error=str(e))
 
         # ���� query embedding���� compress_context ���ã����Ⲣ����̬��
 

@@ -1,9 +1,52 @@
-node_modules/
-dist/
+# ── 版本控制 ──
 .git/
-*.md
-.env
-**/.env
-.env.local
-**/.env.local
 .gitignore
+.github/
+
+# ── IDE ──
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# ── 环境文件（安全关键）──
+.env
+.env.*
+**/.env
+**/.env.local
+*.pem
+*.key
+
+# ── Python ──
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.Python
+venv/
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ── Node.js ──
+node_modules/
+.vite/
+*.log
+
+# ── 测试 & 数据 ──
+backend/tests/
+backend/data/
+backend/offloads/
+*.db
+*.sqlite3
+
+# ── Docker 自身 ──
+Dockerfile*
+docker-compose*.yml
+
+# ── 文档 ──
+*.md
+docs/
+LICENSE

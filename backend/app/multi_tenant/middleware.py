@@ -1,19 +1,17 @@
 """Tenant context middleware - extracts tenant_id from request.
 
 Uses contextvars for async-safe storage of tenant context.
-Supports multiple tenant_id extraction methods:
-- X-Tenant-ID header (highest priority)
-- JWT token tenant_id claim
-- Default "default" tenant
+Supports tenant_id extraction from verified JWT claims only.
+
+Security: JWT signature is verified before extracting tenant_id.
+X-Tenant-ID header is NOT trusted (removable only by internal gateway).
 """
 
 from contextvars import ContextVar
 from typing import Optional
 
 import structlog
-from fastapi import Request
-from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
-from starlette.responses import Response
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 logger = structlog.get_logger(__name__)
 
@@ -26,20 +24,12 @@ class TenantContext:
 
     @staticmethod
     def get_current_tenant_id() -> str:
-        """Get the current tenant ID from context.
-
-        Returns:
-            Current tenant ID, defaults to "default"
-        """
+        """Get the current tenant ID from context."""
         return _tenant_id_var.get("default")
 
     @staticmethod
     def set_tenant_id(tenant_id: str) -> None:
-        """Set the current tenant ID in context.
-
-        Args:
-            tenant_id: The tenant ID to set
-        """
+        """Set the current tenant ID in context."""
         _tenant_id_var.set(tenant_id)
 
     @staticmethod
@@ -49,121 +39,84 @@ class TenantContext:
 
 
 def get_current_tenant_id() -> str:
-    """Get the current tenant ID from context.
-
-    This is a convenience function that wraps TenantContext.get_current_tenant_id().
-
-    Returns:
-        Current tenant ID, defaults to "default"
-    """
+    """Get the current tenant ID from context."""
     return TenantContext.get_current_tenant_id()
 
 
-def _extract_tenant_from_jwt(token: str) -> Optional[str]:
-    """Extract tenant_id from JWT token without validation.
+def _extract_tenant_from_jwt_verified(token: str) -> Optional[str]:
+    """Extract tenant_id from JWT token WITH signature verification.
 
-    This is a lightweight extraction that doesn't verify the token signature.
-    Token validation should be handled separately if needed.
-
-    Args:
-        token: JWT token string
-
-    Returns:
-        tenant_id if found, None otherwise
+    Uses rbac.verify_token() to validate signature, expiration, and algorithm.
+    Returns None if token is invalid or tenant_id claim is missing.
     """
     try:
-        import base64
-        import json
+        from app.security.rbac import verify_token
 
-        # Split JWT parts
-        parts = token.split(".")
-        if len(parts) != 3:
-            return None
-
-        # Decode payload (second part)
-        payload = parts[1]
-        # Add padding if needed
-        padding = 4 - len(payload) % 4
-        if padding != 4:
-            payload += "=" * padding
-
-        # Decode base64
-        decoded = base64.urlsafe_b64decode(payload)
-        payload_data = json.loads(decoded)
-
-        # Extract tenant_id
-        return payload_data.get("tenant_id")
+        payload = verify_token(token)
+        return payload.get("tenant_id")
     except Exception as e:
-        logger.debug("Failed to extract tenant from JWT: %s", e)
+        logger.debug("tenant.jwt_verification_failed", error=str(e))
         return None
 
 
-class TenantMiddleware(BaseHTTPMiddleware):
-    """FastAPI middleware for tenant isolation.
+class TenantMiddleware:
+    """Pure ASGI middleware for tenant isolation.
 
-    Extracts tenant_id from request and stores it in contextvars.
-    Extraction priority:
-    1. X-Tenant-ID header
-    2. JWT token tenant_id claim
-    3. Default "default" tenant
+    Extracts tenant_id from verified JWT claims and stores in contextvars.
+
+    Security model:
+    - Only JWT claims (verified via rbac.verify_token) are trusted
+    - X-Tenant-ID header is NOT used (client-forgeable)
+    - Default tenant "default" is used when no valid JWT is present
+
+    Why pure ASGI instead of BaseHTTPMiddleware:
+    - BaseHTTPMiddleware buffers StreamingResponse (breaks SSE/TTFT)
+    - BaseHTTPMiddleware disrupts contextvars propagation (Starlette limitation)
+    - Pure ASGI has zero overhead and correct ContextVar handling
     """
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
-        tenant_id = "default"  # Default tenant
-        source = "default"
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
 
-        # 1. Try X-Tenant-ID header (highest priority)
-        header_tenant = request.headers.get("X-Tenant-ID")
-        if header_tenant:
-            # Validate against allowlist if configured
-            from app.config import settings
-            if settings.tenant_allowlist:
-                allowed = {t.strip() for t in settings.tenant_allowlist.split(",") if t.strip()}
-                if allowed and header_tenant not in allowed:
-                    logger.warning(
-                        "tenant.header_rejected",
-                        tenant_id=header_tenant,
-                        path=request.url.path,
-                        client=request.client.host if request.client else "unknown",
-                    )
-                    header_tenant = None  # Reject invalid tenant
-            if header_tenant:
-                tenant_id = header_tenant
-                source = "header"
-                logger.debug("Tenant ID from header: %s", tenant_id)
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] not in ("http", "websocket"):
+            await self.app(scope, receive, send)
+            return
 
-        # 2. Try JWT token tenant_id claim
-        if tenant_id == "default":  # Only if not set from header
-            auth_header = request.headers.get("Authorization", "")
-            if auth_header.startswith("Bearer "):
-                token = auth_header[7:]  # Remove "Bearer " prefix
-                jwt_tenant = _extract_tenant_from_jwt(token)
-                if jwt_tenant:
-                    tenant_id = jwt_tenant
-                    source = "jwt"
-                    logger.debug("Tenant ID from JWT: %s", tenant_id)
-
-        # Set tenant context
-        TenantContext.set_tenant_id(tenant_id)
-
-        # Add tenant_id to request state for easy access
-        request.state.tenant_id = tenant_id
-
-        # Audit log for tenant context (only for non-default tenants)
-        if tenant_id != "default":
-            logger.info(
-                "tenant.context_set",
-                tenant_id=tenant_id,
-                source=source,
-                method=request.method,
-                path=request.url.path,
-            )
+        tenant_id = self._extract_tenant(scope)
+        token = _tenant_id_var.set(tenant_id)
 
         try:
-            response = await call_next(request)
-            return response
+            await self.app(scope, receive, send)
         finally:
-            # Clear tenant context after request completes
-            TenantContext.clear()
+            _tenant_id_var.reset(token)
+
+    @staticmethod
+    def _extract_tenant(scope: Scope) -> str:
+        """Extract tenant_id from ASGI scope (JWT only)."""
+        headers = dict(scope.get("headers", []))
+
+        # Extract tenant_id from verified JWT only
+        auth = headers.get(b"authorization", b"").decode("latin-1")
+        if auth.startswith("Bearer "):
+            jwt_tenant = _extract_tenant_from_jwt_verified(auth[7:])
+            if jwt_tenant:
+                # Validate against allowlist if configured
+                from app.config import settings
+
+                if settings.tenant_allowlist:
+                    allowed = {
+                        t.strip()
+                        for t in settings.tenant_allowlist.split(",")
+                        if t.strip()
+                    }
+                    if allowed and jwt_tenant not in allowed:
+                        logger.warning(
+                            "tenant.jwt_tenant_not_in_allowlist",
+                            tenant_id=jwt_tenant,
+                            path=scope.get("path", ""),
+                        )
+                        return "default"
+                return jwt_tenant
+
+        return "default"

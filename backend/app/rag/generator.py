@@ -51,7 +51,7 @@ def _check_unanswerable(response_text: str) -> bool:
 
 
 def _log_feedback(query: str, top_score: float, action: str, answer: str = ""):
-    """记录检索-生成反馈，供后续分析。"""
+    """记录检索-生成反馈，供后续分析（异步非阻塞）。"""
     entry = {
         "timestamp": time.time(),
         "query": query[:200],
@@ -59,6 +59,30 @@ def _log_feedback(query: str, top_score: float, action: str, answer: str = ""):
         "action": action,  # "retry" | "accepted" | "no_result"
         "answer_preview": answer[:100],
     }
+    # Fire-and-forget: 不阻塞流式响应的 TTFT
+    try:
+        loop = asyncio.get_running_loop()
+        task = loop.create_task(_async_log_feedback(entry))
+        _feedback_tasks.add(task)
+        task.add_done_callback(_feedback_tasks.discard)
+    except RuntimeError:
+        # 无事件循环（同步上下文）→ 降级同步写入
+        _sync_log_feedback(entry)
+
+
+_feedback_tasks: set = set()
+
+
+async def _async_log_feedback(entry: dict):
+    """异步写入反馈日志，失败不影响主流程。"""
+    try:
+        await asyncio.to_thread(_sync_log_feedback, entry)
+    except Exception as e:
+        logger.warning("feedback_log_write_failed", error=str(e))
+
+
+def _sync_log_feedback(entry: dict):
+    """同步写入反馈日志。"""
     _FEEDBACK_LOG.parent.mkdir(parents=True, exist_ok=True)
     with open(_FEEDBACK_LOG, "a", encoding="utf-8") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
@@ -415,11 +439,10 @@ async def rag_query_astream(
     if lang is None:
         lang = detect_language(query)
 
-    # 1. 根据查询复杂度路由检索策略
-    #    Wrapped in asyncio.to_thread to avoid blocking the event loop
-    from app.rag.query_classifier import route_retrieval
+    # 1. 根据查询复杂度路由检索策略（自适应混合分类器：规则 + LLM 兜底）
+    from app.rag.query_classifier import route_retrieval_adaptive
 
-    route = route_retrieval(query)
+    route = await route_retrieval_adaptive(query)
     if route == "simple":
         # 简单查询：hybrid retrieve（dense+sparse + title boost + rerank）
         # 不再只用 sparse/keyword，因为语义匹配对很多查询至关重要
@@ -627,8 +650,8 @@ async def rag_query_with_cache(
                 redis = get_redis()
                 if redis:
                     await redis.incr(f"{STATS_PREFIX}:cache_hits")
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("cache_hit_stats_increment_failed", error=str(e))
             return RAGQueryResponse(answer=answer, sources=sources)
 
     # Cache miss: run RAG pipeline（避免阻塞事件循环）
@@ -653,7 +676,7 @@ async def rag_query_with_cache(
         redis = get_redis()
         if redis:
             await redis.incr(f"{STATS_PREFIX}:cache_misses")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("cache_miss_stats_increment_failed", error=str(e))
 
     return result

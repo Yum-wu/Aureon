@@ -12,6 +12,7 @@ Embedding model: BAAI/bge-large-zh-v1.5 (lazy-loaded).
 
 import hashlib
 import json
+import random
 import re
 import time
 import uuid
@@ -248,6 +249,7 @@ class SemanticLLMCache:
         model: str,
         temperature: float,
         max_tokens: int,
+        tenant_id: str = "default",
     ) -> str:
         """Generate deterministic cache key for exact matching.
 
@@ -256,6 +258,7 @@ class SemanticLLMCache:
             model: LLM model name
             temperature: Sampling temperature
             max_tokens: Maximum tokens
+            tenant_id: 租户 ID，防止跨租户缓存污染
 
         Returns:
             Hash string for cache key
@@ -263,8 +266,9 @@ class SemanticLLMCache:
         # Normalize query: lowercase, remove extra whitespace
         normalized_query = re.sub(r'\s+', ' ', query.strip().lower())
 
-        # Create composite key
+        # Create composite key (tenant_id included for isolation)
         key_parts = [
+            f"tenant:{tenant_id}",
             f"model:{model}",
             f"temp:{temperature}",
             f"max_tokens:{max_tokens}",
@@ -305,6 +309,7 @@ class SemanticLLMCache:
         model: str,
         temperature: float,
         max_tokens: int,
+        tenant_id: str = "default",
     ) -> Optional[str]:
         """Fast exact match cache lookup.
 
@@ -313,11 +318,12 @@ class SemanticLLMCache:
             model: LLM model name
             temperature: Sampling temperature
             max_tokens: Maximum tokens
+            tenant_id: 租户 ID，防止跨租户缓存污染
 
         Returns:
             Cached response or None
         """
-        cache_key = self._exact_cache_key(query, model, temperature, max_tokens)
+        cache_key = self._exact_cache_key(query, model, temperature, max_tokens, tenant_id)
 
         # Try in-memory first (fastest)
         if cache_key in self._mem_exact_cache:
@@ -339,10 +345,11 @@ class SemanticLLMCache:
                 if cached is not None:
                     self._stats["exact_hits"] += 1
                     logger.debug("Exact cache HIT (Redis)")
-                    # Populate in-memory cache
+                    # Populate in-memory cache (with TTL jitter)
+                    jittered_ttl = self.default_ttl + (random.randint(0, 300) if self.default_ttl > 0 else 0)
                     self._mem_exact_cache[cache_key] = {
                         "response": cached,
-                        "expires_at": time.monotonic() + self.default_ttl,
+                        "expires_at": time.monotonic() + jittered_ttl,
                     }
                     return cached
             except Exception as e:
@@ -477,8 +484,12 @@ class SemanticLLMCache:
         temperature: float,
         max_tokens: int,
         ttl: Optional[int] = None,
+        tenant_id: str = "default",
     ) -> bool:
         """Store response in cache (both exact and semantic).
+
+        TTL 加随机抖动（0~300s）防止缓存雪崩：同一时刻大量缓存同时过期，
+        导致请求全部穿透到后端。抖动使过期时间分散，避免集中失效。
 
         Args:
             query: User query
@@ -487,15 +498,18 @@ class SemanticLLMCache:
             temperature: Sampling temperature
             max_tokens: Maximum tokens
             ttl: Time-to-live in seconds (uses default if None)
+            tenant_id: 租户 ID，防止跨租户缓存污染
 
         Returns:
             True if successfully cached
         """
         ttl = ttl if ttl is not None else self.default_ttl
-        expires_at = time.monotonic() + ttl
+        # TTL 随机抖动：0~300 秒，防止缓存雪崩
+        jittered_ttl = ttl + (random.randint(0, 300) if ttl > 0 else 0)
+        expires_at = time.monotonic() + jittered_ttl
 
-        # Store in exact cache
-        exact_key = self._exact_cache_key(query, model, temperature, max_tokens)
+        # Store in exact cache (tenant-isolated)
+        exact_key = self._exact_cache_key(query, model, temperature, max_tokens, tenant_id)
 
         # In-memory exact cache
         self._mem_exact_cache[exact_key] = {
@@ -507,11 +521,11 @@ class SemanticLLMCache:
         while len(self._mem_exact_cache) > self.max_cache_size:
             self._mem_exact_cache.popitem(last=False)
 
-        # Redis exact cache
+        # Redis exact cache (with TTL jitter)
         r = self._get_redis()
         if r:
             try:
-                await r.setex(exact_key, ttl, response)
+                await r.setex(exact_key, jittered_ttl, response)
             except Exception as e:
                 logger.debug("Redis exact set error: %s", e)
 
@@ -542,7 +556,7 @@ class SemanticLLMCache:
             # Qdrant semantic store (primary) / Redis fallback
             if self._qdrant_ready:
                 self._qdrant_upsert(
-                    embedding, response, model, temperature, max_tokens, query, ttl
+                    embedding, response, model, temperature, max_tokens, query, jittered_ttl
                 )
             elif r:
                 try:
@@ -554,7 +568,7 @@ class SemanticLLMCache:
                         "max_tokens": max_tokens,
                         "query": query[:100],
                     }
-                    await r.setex(semantic_key, ttl, json.dumps(redis_data))
+                    await r.setex(semantic_key, jittered_ttl, json.dumps(redis_data))
                 except Exception as e:
                     logger.debug("Redis semantic set error: %s", e)
 
@@ -661,8 +675,8 @@ class SemanticLLMCache:
         if _redis:
             try:
                 await _redis.close()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("semantic_cache_redis_close_failed", error=str(e))
             _redis = None
 
 

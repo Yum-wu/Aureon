@@ -13,3 +13,36 @@ markers = [
 
 [tool.pytest-xdist]
 # Worker isolation settings
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = ["E402", "W293"]
+
+[tool.ruff.lint.per-file-ignores]
+"app/benchmark/__init__.py" = ["F401"]
+"app/evaluation/__init__.py" = ["F401"]
+"app/features/__init__.py" = ["F401"]
+"app/observability/__init__.py" = ["F401"]
+"app/rag/__init__.py" = ["F401"]
+"app/rag/qa_chain.py" = ["F821"]
+"app/reliability/__init__.py" = ["F401"]
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["tests/*", "*/__pycache__/*"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 0
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+no_error_summary = false
+warn_return_any = false
+warn_unused_configs = true
+# Gradual enablement: start permissive, tighten over time
+disable_error_code = ["misc", "assignment"]

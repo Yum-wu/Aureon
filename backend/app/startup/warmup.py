@@ -150,9 +150,10 @@ def warmup_bm25():
 
             _build_kw_index()
 
-            from app.rag.vector_store import _kw_docs
+            from app.rag.vector_store import _kw_indexes
 
-            logger.info("BM25 index built: %d docs", len(_kw_docs))
+            default_docs = _kw_indexes.get("default", {}).get("docs", [])
+            logger.info("BM25 index built: %d docs", len(default_docs))
 
         except Exception as e:
 

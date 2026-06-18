@@ -72,8 +72,8 @@ def get_recent_scenarios(session_id: str = "", n: int = 3):
     for fp, _ in files[:n]:
         try:
             results.append(fp.read_text(encoding="utf-8"))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("scenario_file_read_failed", path=str(fp), error=str(e))
     return results
 
 
@@ -88,8 +88,8 @@ def _cleanup_old_scenarios():
         try:
             fp.unlink()
             logger.debug(f"Removed old scenario: {fp.name}")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("scenario_file_delete_failed", path=str(fp), error=str(e))
     # Invalidate cache after cleanup
     global _scenario_cache, _scenario_cache_ts
     _scenario_cache = None

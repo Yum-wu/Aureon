@@ -72,8 +72,8 @@ class WebSocketManager:
             try:
                 await ws.send_json({"type": "error", "message": "Connection evicted: server at capacity"})
                 await ws.close(code=1013, reason="Server full")
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("websocket_evict_close_failed", client_id=client_id, error=str(e))
         self.active_connections.pop(client_id, None)
         self.connection_metadata.pop(client_id, None)
         logger.info("Client evicted", client_id=client_id)

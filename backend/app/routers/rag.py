@@ -13,7 +13,6 @@ Routes:
   GET  /benchmark       -- Benchmark results
 """
 
-import asyncio
 import json
 import os
 import time
@@ -28,7 +27,7 @@ from app.api.models import StatusResponse
 from app.api.rag_stats import record_query
 from app.config import settings
 from app.dependencies import get_redis_or_none
-from app.common import SSE_HEADERS, sse_event
+from app.common import SSE_HEADERS, sse_event, fire_and_forget
 from app.exceptions import (
     LLMServiceError,
     AuthenticationError,
@@ -62,10 +61,47 @@ limiter = Limiter(key_func=get_remote_address)
 
 
 def _validate_filename(filename: str) -> str:
-    """Validate filename for path traversal attacks."""
-    if ".." in filename or "/" in filename or "\\" in filename:
+    """Validate filename against path traversal attacks.
+
+    Defense chain (OWASP File Upload Cheat Sheet):
+    1. basename strips path separators
+    2. Character whitelist check
+    3. Length limit
+    4. No leading dots (hidden files) or double dots
+    """
+    if not filename or len(filename) > 255:
+        raise AureonException(status_code=400, detail="Invalid filename length")
+
+    # Step 1: basename (strip any path)
+    safe_name = os.path.basename(filename)
+    if safe_name != filename:
+        raise AureonException(status_code=400, detail="Filename must not contain path separators")
+
+    # Step 2: no leading dots or double dots
+    if safe_name.startswith(".") or ".." in safe_name:
         raise AureonException(status_code=400, detail="Invalid filename")
-    return filename
+
+    # Step 3: character whitelist (alphanumeric + hyphens + underscores + dots + CJK + spaces)
+    import re
+    if not re.match(r"^[a-zA-Z0-9\-_.\u4e00-\u9fa5 ]+$", safe_name):
+        raise AureonException(status_code=400, detail="Filename contains invalid characters")
+
+    return safe_name
+
+
+def _safe_storage_path(filename: str) -> str:
+    """Generate safe storage path with resolve() + prefix check.
+
+    Per FASTAPI-FILES-001: must not pass user-controlled paths
+    to filesystem without strict validation and safe base directories.
+    """
+    safe_name = _validate_filename(filename)
+    from pathlib import Path
+    uploads_resolved = Path(UPLOADS_DIR).resolve()
+    target = (uploads_resolved / safe_name).resolve()
+    if not str(target).startswith(str(uploads_resolved) + os.sep):
+        raise AureonException(status_code=400, detail="Path traversal detected")
+    return str(target)
 
 # Module constants for data paths
 BASE_DATA_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -125,25 +161,16 @@ async def rag_query_endpoint(req: RAGQueryRequest, request: Request):
         )
     except AureonException:
         latency_ms = int((time.time() - start_time) * 1000)
-        try:
-            asyncio.create_task(record_query(req.query, 0, latency_ms))
-        except Exception:
-            pass
+        fire_and_forget(record_query(req.query, 0, latency_ms), name="record_query_error")
         raise
     except Exception as e:
         latency_ms = int((time.time() - start_time) * 1000)
-        try:
-            asyncio.create_task(record_query(req.query, 0, latency_ms))
-        except Exception:
-            pass
+        fire_and_forget(record_query(req.query, 0, latency_ms), name="record_query_error")
         logger.error("rag_query_with_cache failed: %s", e)
         raise AureonException(status_code=500, detail=f"Query processing error: {str(e)[:100]}")
     latency_ms = int((time.time() - start_time) * 1000)
-    # Record query for Dashboard stats (fire-and-forget with error handling)
-    try:
-        asyncio.create_task(record_query(req.query, len(result.sources), latency_ms))
-    except Exception as e:
-        logger.warning("Failed to record query stats: %s", e)
+    # Record query for Dashboard stats (fire-and-forget)
+    fire_and_forget(record_query(req.query, len(result.sources), latency_ms), name="record_query")
     return result
 
 
@@ -184,10 +211,7 @@ async def rag_query_async_endpoint(req: RAGQueryRequest, request: Request):
         raise AureonException(status_code=500, detail=f"Query processing error: {str(e)[:100]}")
 
     latency_ms = int((time.time() - start_time) * 1000)
-    try:
-        asyncio.create_task(record_query(req.query, len(result.sources), latency_ms))
-    except Exception:
-        pass
+    fire_and_forget(record_query(req.query, len(result.sources), latency_ms), name="record_query_async")
     return result
 
 
@@ -262,8 +286,8 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
                 redis = get_redis_or_none()
                 if redis:
                     await redis.incr("aureon:stats:cache_hits")
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("cache_hit_stats_increment_failed", error=str(e))
 
             try:
                 cached_data = json.loads(cached)
@@ -277,7 +301,7 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
             yield sse_event({'type': 'text', 'content': answer_text})
             yield sse_event({'type': 'cache_hit'})
             latency_ms = int((time.time() - start_time) * 1000)
-            asyncio.create_task(record_query(req.query, len(cached_sources), latency_ms))
+            fire_and_forget(record_query(req.query, len(cached_sources), latency_ms), name="record_query_stream_cached")
             return
 
         # Cache miss - record stats
@@ -285,8 +309,8 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
             redis = get_redis_or_none()
             if redis:
                 await redis.incr("aureon:stats:cache_misses")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("cache_miss_stats_increment_failed", error=str(e))
 
         # 2. Stream with buffering, auto-cache full answer on completion
         full_text = ""
@@ -315,17 +339,17 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
             yield sse_event({'type': 'done'})
         finally:
             # 3. Cache as JSON (answer + sources) for cross-endpoint compatibility
-            from app.rag.vector_store import _kw_docs as _bm25_docs
-            if full_text and len(_bm25_docs) > 0:
+            from app.rag.vector_store import _kw_indexes as _bm25_indexes
+            if full_text and len(_bm25_indexes.get("default", {}).get("docs", [])) > 0:
                 cache_payload = json.dumps({"answer": full_text, "sources": sources_data}, ensure_ascii=False)
-                asyncio.create_task(set_cached(req.query, cache_payload))
+                fire_and_forget(set_cached(req.query, cache_payload), name="set_cached")
             # 4. Record query for Dashboard stats
             latency_ms = int((time.time() - start_time) * 1000)
             input_tokens = len(req.query) + 500
-            asyncio.create_task(record_query(
+            fire_and_forget(record_query(
                 req.query, sources_count, latency_ms,
                 input_tokens=input_tokens, output_tokens=output_tokens
-            ))
+            ), name="record_query_stream")
 
     return StreamingResponse(
         event_stream(),

@@ -142,8 +142,8 @@ def create_span(name: str, attributes: dict | None = None):
                 for k, v in attributes.items():
                     try:
                         span.set_attribute(k, v)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.debug("span_set_attribute_failed", error=str(e))
             yield span
     except Exception:
         # If anything goes wrong, yield a no-op span
