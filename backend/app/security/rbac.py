@@ -114,11 +114,16 @@ def has_permission(role: UserRole, perm: Permission) -> bool:
     return perm in ROLE_PERMISSIONS.get(role, set())
 
 
-def require_role(min_role: UserRole):
-    """FastAPI dependency that enforces a minimum :class:`UserRole`."""
-    from fastapi import Request
-    from app.exceptions import AuthenticationError, AuthorizationError
-
+# 闭包注册表：require_role 每次创建 _role_checker 时注册，
+# 供测试 conftest.py 直接获取闭包引用，无需遍历 app.routes（FastAPI 0.137+ routes 为 tree 结构）
+_ROLE_CHECKERS: list = []
+
+
+def require_role(min_role: UserRole):
+    """FastAPI dependency that enforces a minimum :class:`UserRole`."""
+    from fastapi import Request
+    from app.exceptions import AuthenticationError, AuthorizationError
+
     async def _role_checker(request: Request) -> dict:
         from app.config import settings
 
@@ -150,7 +155,8 @@ def require_role(min_role: UserRole):
                 f"Insufficient permissions: requires {min_role.name}, got {user_role.name}"
             )
 
-        payload["_role"] = user_role
-        return payload
-
+        payload["_role"] = user_role
+        return payload
+
+    _ROLE_CHECKERS.append(_role_checker)
     return _role_checker
