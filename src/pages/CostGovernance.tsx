@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCostData } from '../hooks/useCostData';
 import { Card } from '../components/ui/Card';
@@ -139,19 +139,19 @@ export function CostGovernance() {
   const budgetUsed = data?.budgetUsed ?? 42.50;
   const budgetTotal = data?.budgetTotal ?? 100;
 
-  // 成本趋势折线图数据
-  const costTrendData = data?.costTrend ?? [
-    { id: t('cost.charts.daily_cost'), data: Array.from({ length: 14 }, (_, i) => ({ x: `${i + 1}`, y: 1.2 + Math.random() * 0.8 })) },
-    { id: t('cost.charts.burn_rate'), data: Array.from({ length: 14 }, (_, i) => ({ x: `${i + 1}`, y: 1.3 + Math.random() * 0.4 })) },
+  // 成本趋势折线图数据（useMemo 避免 Math.random 在 render 中调用）
+  const costTrendData = useMemo(() => data?.costTrend ?? [
+    { id: t('cost.charts.daily_cost'), data: Array.from({ length: 14 }, (_, i) => ({ x: `${i + 1}`, y: 1.2 + i * 0.06 })) },
+    { id: t('cost.charts.burn_rate'), data: Array.from({ length: 14 }, (_, i) => ({ x: `${i + 1}`, y: 1.3 + i * 0.03 })) },
     { id: t('cost.charts.forecast'), data: Array.from({ length: 14 }, (_, i) => ({ x: `${i + 1}`, y: 1.5 + i * 0.05 })) },
-  ];
+  ], [data?.costTrend, t]);
 
   // Token 用量柱状图数据
-  const tokenUsageData = data?.tokenUsage ?? Array.from({ length: 14 }, (_, i) => ({
+  const tokenUsageData = useMemo(() => data?.tokenUsage ?? Array.from({ length: 14 }, (_, i) => ({
     label: `${i + 1}`,
-    input: 50000 + Math.floor(Math.random() * 30000),
-    output: 20000 + Math.floor(Math.random() * 15000),
-  }));
+    input: 50000 + i * 3000,
+    output: 20000 + i * 1500,
+  })), [data?.tokenUsage]);
 
   // 按模型分解饼图数据
   const modelBreakdownData = data?.modelBreakdown ?? [

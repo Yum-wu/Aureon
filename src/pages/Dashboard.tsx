@@ -1,4 +1,3 @@
-/* eslint-disable react-compiler/react-compiler */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDashboardStats } from '../hooks/useDashboardStats';

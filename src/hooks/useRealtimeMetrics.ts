@@ -3,7 +3,7 @@
  * 连接 /ws/dashboard，解析 metrics.tick 消息
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useWebSocket } from './useWebSocket';
 
 /** 实时指标数据 */
@@ -62,7 +62,9 @@ export function useRealtimeMetrics(): UseRealtimeMetricsReturn {
   const [alerts, setAlerts] = useState<MetricAlert[]>([]);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const alertsRef = useRef(alerts);
-  alertsRef.current = alerts;
+
+  // 在 effect 中同步 ref，避免 render 中更新
+  useEffect(() => { alertsRef.current = alerts; }, [alerts]);
 
   const handleMessage = useCallback((data: unknown) => {
     if (!data || typeof data !== 'object') return;
