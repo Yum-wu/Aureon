@@ -3,13 +3,13 @@
  * 支持多系列、响应式、统一主题
  */
 
-import { ResponsiveLine, type LineSvgProps, type Serie as LineSerie } from '@nivo/line';
+import { Line, type LineSvgProps, type LineSeries } from '@nivo/line';
 import { ChartContainer } from './ChartContainer';
 import { chartTheme, CHART_COLORS, DEFAULT_MARGIN, CHART_DEFAULTS, type TimeRange } from './chartTheme';
 
 interface LineChartProps {
   /** 图表数据（Nivo Line Serie 格式） */
-  data: LineSerie[];
+  data: LineSeries[];
   /** 图表标题 */
   title: string;
   /** 副标题 */
@@ -31,9 +31,9 @@ interface LineChartProps {
   /** 加载状态 */
   loading?: boolean;
   /** X 轴格式化 */
-  xFormat?: LineSvgProps['xFormat'];
+  xFormat?: LineSvgProps<LineSeries>['xFormat'];
   /** Y 轴格式化 */
-  yFormat?: LineSvgProps['yFormat'];
+  yFormat?: LineSvgProps<LineSeries>['yFormat'];
   /** X 轴标签 */
   xAxisLabel?: string;
   /** Y 轴标签 */
@@ -71,7 +71,7 @@ export function LineChart({
       className={className}
     >
       {({ width, height: containerHeight }) => (
-        <ResponsiveLine
+        <Line<LineSeries>
           data={data}
           width={width}
           height={containerHeight}
@@ -113,18 +113,18 @@ export function LineChart({
             showLegend
               ? [
                   {
-                    anchor: 'bottom-right',
-                    direction: 'column',
+                    anchor: 'bottom-right' as const,
+                    direction: 'column' as const,
                     justify: false,
                     translateX: 0,
                     translateY: 0,
                     itemsSpacing: 4,
-                    itemDirection: 'left-to-right',
+                    itemDirection: 'left-to-right' as const,
                     itemWidth: 80,
                     itemHeight: 16,
                     itemOpacity: 0.85,
                     symbolSize: 10,
-                    symbolShape: 'circle',
+                    symbolShape: 'circle' as const,
                   },
                 ]
               : undefined

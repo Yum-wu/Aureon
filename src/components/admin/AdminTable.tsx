@@ -7,7 +7,7 @@ import { useState, useCallback, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 /** 列定义 */
-export interface AdminColumn<T = Record<string, unknown>> {
+export interface AdminColumn<T = object> {
   /** 数据字段名 */
   key: string;
   /** 列标题 */
@@ -37,7 +37,7 @@ export interface PaginationState {
   total: number;
 }
 
-interface AdminTableProps<T = Record<string, unknown>> {
+interface AdminTableProps<T = object> {
   /** 列定义 */
   columns: AdminColumn<T>[];
   /** 数据行 */
@@ -58,7 +58,7 @@ interface AdminTableProps<T = Record<string, unknown>> {
   className?: string;
 }
 
-export function AdminTable<T extends Record<string, unknown>>({
+export function AdminTable<T extends object>({
   columns,
   data,
   loading = false,
@@ -150,7 +150,7 @@ export function AdminTable<T extends Record<string, unknown>>({
               >
                 {columns.map((col) => (
                   <td key={col.key} className="px-4 py-3 text-[var(--text-primary)]">
-                    {col.render ? col.render(row, rowIndex) : String(row[col.key] ?? '')}
+                    {col.render ? col.render(row, rowIndex) : String((row as Record<string, unknown>)[col.key] ?? '')}
                   </td>
                 ))}
                 {actions && actions.length > 0 && (

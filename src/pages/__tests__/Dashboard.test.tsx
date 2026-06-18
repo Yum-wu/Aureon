@@ -47,10 +47,10 @@ vi.mock('../../components/charts/ChartContainer', () => ({
 
 // ── LineChart / BarChart mock ──
 vi.mock('../../components/charts/LineChart', () => ({
-  LineChart: () => <div data-testid="mock-line-chart-wrapper" />,
+  LineChart: ({ title }: { title: string }) => <div data-testid="mock-line-chart-wrapper">{title}</div>,
 }));
 vi.mock('../../components/charts/BarChart', () => ({
-  BarChart: () => <div data-testid="mock-bar-chart-wrapper" />,
+  BarChart: ({ title }: { title: string }) => <div data-testid="mock-bar-chart-wrapper">{title}</div>,
 }));
 
 // ── Card mock ──

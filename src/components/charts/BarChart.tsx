@@ -3,7 +3,7 @@
  * 支持分组/堆叠模式、水平/垂直布局
  */
 
-import { ResponsiveBar, type BarSvgProps, type BarDatum } from '@nivo/bar';
+import { Bar, type BarSvgProps, type BarDatum } from '@nivo/bar';
 import { ChartContainer } from './ChartContainer';
 import { chartTheme, CHART_COLORS, DEFAULT_MARGIN, CHART_DEFAULTS, type TimeRange } from './chartTheme';
 
@@ -74,7 +74,7 @@ export function BarChart<T extends BarDatum = BarDatum>({
       className={className}
     >
       {({ width, height: containerHeight }) => (
-        <ResponsiveBar
+        <Bar<T>
           data={data}
           keys={keys}
           indexBy={indexBy}
@@ -120,18 +120,19 @@ export function BarChart<T extends BarDatum = BarDatum>({
             showLegend
               ? [
                   {
-                    anchor: 'bottom-right',
-                    direction: 'column',
+                    anchor: 'bottom-right' as const,
+                    direction: 'column' as const,
                     justify: false,
                     translateX: 0,
                     translateY: 0,
                     itemsSpacing: 4,
-                    itemDirection: 'left-to-right',
+                    itemDirection: 'left-to-right' as const,
                     itemWidth: 80,
                     itemHeight: 16,
                     itemOpacity: 0.85,
                     symbolSize: 10,
-                    symbolShape: 'square',
+                    symbolShape: 'square' as const,
+                    dataFrom: 'keys' as const,
                   },
                 ]
               : undefined

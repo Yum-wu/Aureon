@@ -3,7 +3,7 @@
  * 将项目 Design Token CSS 变量映射为 Nivo 主题格式
  */
 
-import type { Theme } from '@nivo/core';
+import type { PartialTheme } from '@nivo/theming';
 
 /** 图表系列配色（8 色，基于 oklch 色阶 + 项目 accent 色） */
 export const CHART_COLORS = [
@@ -22,7 +22,7 @@ export const TIME_RANGES = ['1h', '6h', '24h', '7d', '30d'] as const;
 export type TimeRange = (typeof TIME_RANGES)[number];
 
 /** 亮色主题（当前项目为深色主题为主，亮色预留） */
-export const chartLightTheme: Theme = {
+export const chartLightTheme: PartialTheme = {
   background: 'transparent',
   text: {
     fontSize: 12,
@@ -51,7 +51,7 @@ export const chartLightTheme: Theme = {
 };
 
 /** 暗色主题（匹配项目 Design Token） */
-export const chartDarkTheme: Theme = {
+export const chartDarkTheme: PartialTheme = {
   background: 'transparent',
   text: {
     fontSize: 12,
