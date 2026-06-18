@@ -35,6 +35,9 @@ export default defineConfig({
           if (id.includes('node_modules/react-markdown') || id.includes('node_modules/remark-gfm') || id.includes('node_modules/react-syntax-highlighter') || id.includes('node_modules/unified') || id.includes('node_modules/remark-') || id.includes('node_modules/rehype-') || id.includes('node_modules/mdast-') || id.includes('node_modules/hast-')) {
             return 'vendor-md';
           }
+          if (id.includes('node_modules/@nivo')) {
+            return 'vendor-nivo';
+          }
         },
       },
     },

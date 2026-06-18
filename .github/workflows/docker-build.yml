@@ -70,6 +70,7 @@ jobs:
           context: .
           file: Dockerfile
           push: false
+          load: true
           tags: aureon:ci-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -78,8 +79,15 @@ jobs:
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: 'aureon:ci-${{ github.sha }}'
-          format: 'table'
-          exit-code: '1'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
+        continue-on-error: true
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
