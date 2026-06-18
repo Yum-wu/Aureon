@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { useDashboardStats } from '../hooks/useDashboardStats';
 import { useSystemHealth } from '../hooks/useSystemHealth';
 import { Card } from '../components/ui/Card';
-import { ChartContainer } from '../components/charts/ChartContainer';
 import { LineChart } from '../components/charts/LineChart';
 import { BarChart } from '../components/charts/BarChart';
 
@@ -249,7 +248,7 @@ export function Dashboard() {
   const [alerts, setAlerts] = useState<AlertMessage[]>([]);
   const [timeRange, setTimeRange] = useState<'1h' | '6h' | '24h' | '7d'>('24h');
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const connectRef = useRef<() => void>(() => {});
 
   // WebSocket 连接
@@ -440,12 +439,8 @@ export function Dashboard() {
 
             {/* ── 3. Charts row ── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <ChartContainer title={t('dashboard.charts.latency_trend')} timeRange={timeRange}>
-                <LineChart data={latencyChartData} />
-              </ChartContainer>
-              <ChartContainer title={t('dashboard.charts.query_volume')} timeRange={timeRange}>
-                <BarChart data={queryVolumeChartData} />
-              </ChartContainer>
+              <LineChart data={latencyChartData} title={t('dashboard.charts.latency_trend')} />
+              <BarChart data={queryVolumeChartData} keys={['value']} indexBy="label" title={t('dashboard.charts.query_volume')} />
             </div>
 
             {/* ── 4. Pipeline row ── */}
@@ -456,9 +451,7 @@ export function Dashboard() {
                 </h3>
                 <PipelineBreakdown stages={pipelineStages} />
               </Card>
-              <ChartContainer title={t('dashboard.charts.quality_trend')} timeRange={timeRange}>
-                <LineChart data={qualityChartData} />
-              </ChartContainer>
+              <LineChart data={qualityChartData} title={t('dashboard.charts.quality_trend')} />
             </div>
 
             {/* ── 5. Health row ── */}

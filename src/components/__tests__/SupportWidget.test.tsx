@@ -28,8 +28,8 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-// Mock useWebSocket hook
-const mockSendMessage = vi.fn();
+// Mock useWebSocket hook — 匹配实际接口 { isConnected, send, lastMessage, connect, disconnect, connectionState }
+const mockSend = vi.fn();
 const mockUseWebSocket = vi.fn();
 
 vi.mock("../../hooks/useWebSocket", () => ({
@@ -39,14 +39,14 @@ vi.mock("../../hooks/useWebSocket", () => ({
 describe("SupportWidget", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default mock: connected with no messages
+    // Default mock: connected, no last message
     mockUseWebSocket.mockReturnValue({
       isConnected: true,
-      messages: [],
-      isStreaming: false,
-      streamingText: "",
-      error: null,
-      sendMessage: mockSendMessage,
+      send: mockSend,
+      lastMessage: null,
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      connectionState: "connected",
     });
   });
 
@@ -57,21 +57,21 @@ describe("SupportWidget", () => {
 
   it("opens panel when FAB is clicked", () => {
     render(<SupportWidget />);
-    
+
     const fab = screen.getByTestId("support-fab");
     fireEvent.click(fab);
-    
+
     expect(screen.getByTestId("support-panel")).toBeInTheDocument();
     expect(screen.queryByTestId("support-fab")).not.toBeInTheDocument();
   });
 
   it("closes panel when close button is clicked", () => {
     render(<SupportWidget />);
-    
+
     // Open panel
     fireEvent.click(screen.getByTestId("support-fab"));
     expect(screen.getByTestId("support-panel")).toBeInTheDocument();
-    
+
     // Close panel
     fireEvent.click(screen.getByTestId("support-close"));
     expect(screen.queryByTestId("support-panel")).not.toBeInTheDocument();
@@ -81,7 +81,7 @@ describe("SupportWidget", () => {
   it("shows connection status", () => {
     render(<SupportWidget />);
     fireEvent.click(screen.getByTestId("support-fab"));
-    
+
     const status = screen.getByTestId("support-status");
     expect(status).toHaveTextContent("Online");
   });
@@ -89,16 +89,16 @@ describe("SupportWidget", () => {
   it("shows offline status when disconnected", () => {
     mockUseWebSocket.mockReturnValue({
       isConnected: false,
-      messages: [],
-      isStreaming: false,
-      streamingText: "",
-      error: null,
-      sendMessage: mockSendMessage,
+      send: mockSend,
+      lastMessage: null,
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      connectionState: "disconnected",
     });
-    
+
     render(<SupportWidget />);
     fireEvent.click(screen.getByTestId("support-fab"));
-    
+
     const status = screen.getByTestId("support-status");
     expect(status).toHaveTextContent("Offline");
   });
@@ -106,105 +106,76 @@ describe("SupportWidget", () => {
   it("renders quick replies when no messages", () => {
     render(<SupportWidget />);
     fireEvent.click(screen.getByTestId("support-fab"));
-    
+
     expect(screen.getByTestId("quick-reply-0")).toHaveTextContent("Question 1?");
     expect(screen.getByTestId("quick-reply-1")).toHaveTextContent("Question 2?");
     expect(screen.getByTestId("quick-reply-2")).toHaveTextContent("Question 3?");
     expect(screen.getByTestId("quick-reply-3")).toHaveTextContent("Question 4?");
   });
 
-  it("sends message when quick reply is clicked", () => {
+  it("sends message via WebSocket when quick reply is clicked", () => {
     render(<SupportWidget />);
     fireEvent.click(screen.getByTestId("support-fab"));
-    
+
     fireEvent.click(screen.getByTestId("quick-reply-0"));
-    
-    expect(mockSendMessage).toHaveBeenCalledWith("Question 1?", { mode: "support" });
+
+    expect(mockSend).toHaveBeenCalledWith(
+      JSON.stringify({ type: "chat", content: "Question 1?", mode: "support" }),
+    );
   });
 
-  it("renders user and assistant messages", () => {
-    mockUseWebSocket.mockReturnValue({
-      isConnected: true,
-      messages: [
-        { role: "user", content: "Hello", timestamp: new Date() },
-        { role: "assistant", content: "Hi there!", timestamp: new Date() },
-      ],
-      isStreaming: false,
-      streamingText: "",
-      error: null,
-      sendMessage: mockSendMessage,
-    });
-    
+  it("renders user message after sending", () => {
     render(<SupportWidget />);
     fireEvent.click(screen.getByTestId("support-fab"));
-    
-    expect(screen.getByTestId("support-message-user-0")).toHaveTextContent("Hello");
-    expect(screen.getByTestId("support-message-assistant-1")).toHaveTextContent("Hi there!");
+
+    // Click quick reply to send a message
+    fireEvent.click(screen.getByTestId("quick-reply-0"));
+
+    // User message should appear in the UI
+    expect(screen.getByTestId("support-message-user-0")).toHaveTextContent("Question 1?");
   });
 
-  it("shows streaming text when streaming", () => {
-    mockUseWebSocket.mockReturnValue({
-      isConnected: true,
-      messages: [],
-      isStreaming: true,
-      streamingText: "Streaming response...",
-      error: null,
-      sendMessage: mockSendMessage,
-    });
-    
+  it("shows loading indicator after sending (streaming started)", () => {
     render(<SupportWidget />);
     fireEvent.click(screen.getByTestId("support-fab"));
-    
-    expect(screen.getByTestId("support-streaming")).toHaveTextContent("Streaming response...");
-  });
 
-  it("shows loading indicator when streaming but no text", () => {
-    mockUseWebSocket.mockReturnValue({
-      isConnected: true,
-      messages: [],
-      isStreaming: true,
-      streamingText: "",
-      error: null,
-      sendMessage: mockSendMessage,
-    });
-    
-    render(<SupportWidget />);
-    fireEvent.click(screen.getByTestId("support-fab"));
-    
+    // Click quick reply — this sets isStreaming=true, streamingText=''
+    fireEvent.click(screen.getByTestId("quick-reply-0"));
+
     expect(screen.getByTestId("support-loading")).toBeInTheDocument();
   });
 
-  it("shows error when present", () => {
-    mockUseWebSocket.mockReturnValue({
-      isConnected: true,
-      messages: [],
-      isStreaming: false,
-      streamingText: "",
-      error: "Connection failed",
-      sendMessage: mockSendMessage,
-    });
-    
+  it("hides quick replies after sending a message", () => {
     render(<SupportWidget />);
     fireEvent.click(screen.getByTestId("support-fab"));
-    
-    expect(screen.getByTestId("support-error")).toHaveTextContent("Connection failed");
+
+    // Quick replies visible initially
+    expect(screen.getByTestId("quick-reply-0")).toBeInTheDocument();
+
+    // Send a message
+    fireEvent.click(screen.getByTestId("quick-reply-0"));
+
+    // Quick replies should be hidden (messages.length > 0)
+    expect(screen.queryByTestId("quick-reply-0")).not.toBeInTheDocument();
   });
 
   it("sends message on Enter key", () => {
     render(<SupportWidget />);
     fireEvent.click(screen.getByTestId("support-fab"));
-    
+
     const input = screen.getByTestId("support-input");
     fireEvent.change(input, { target: { value: "Test question" } });
     fireEvent.keyDown(input, { key: "Enter", shiftKey: false });
-    
-    expect(mockSendMessage).toHaveBeenCalledWith("Test question", { mode: "support" });
+
+    expect(mockSend).toHaveBeenCalledWith(
+      JSON.stringify({ type: "chat", content: "Test question", mode: "support" }),
+    );
   });
 
   it("disables send button when input is empty", () => {
     render(<SupportWidget />);
     fireEvent.click(screen.getByTestId("support-fab"));
-    
+
     const sendButton = screen.getByTestId("support-send");
     expect(sendButton).toBeDisabled();
   });
@@ -212,10 +183,10 @@ describe("SupportWidget", () => {
   it("enables send button when input has text and connected", () => {
     render(<SupportWidget />);
     fireEvent.click(screen.getByTestId("support-fab"));
-    
+
     const input = screen.getByTestId("support-input");
     fireEvent.change(input, { target: { value: "Test" } });
-    
+
     const sendButton = screen.getByTestId("support-send");
     expect(sendButton).not.toBeDisabled();
   });

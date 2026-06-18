@@ -239,7 +239,14 @@ function UsersTab() {
     {
       key: 'status',
       label: t('admin.users.columns.status'),
-      render: (user: UserRecord) => <StatusBadge status={user.status} />,
+      render: (user: UserRecord) => {
+        const userStatusMap: Record<string, import('../components/admin/StatusBadge').StatusType> = {
+          active: 'active',
+          suspended: 'suspended',
+          invited: 'disabled',
+        };
+        return <StatusBadge status={userStatusMap[user.status] ?? 'disabled'} />;
+      },
     },
     {
       key: 'last_login',
@@ -295,9 +302,7 @@ function UsersTab() {
       <AdminTable<UserRecord>
         data={filteredUsers}
         columns={columns}
-        keyField="id"
         loading={loading}
-        emptyMessage={t('admin.users.empty')}
       />
 
       {/* 邀请用户弹窗 */}
@@ -305,9 +310,9 @@ function UsersTab() {
         <AdminForm
           title={t('admin.users.invite')}
           fields={[
-            { key: 'email', label: t('admin.users.columns.email'), type: 'email', required: true },
-            { key: 'display_name', label: t('admin.users.columns.user'), type: 'text', required: true },
-            { key: 'role', label: t('admin.users.columns.role'), type: 'select', options: ROLES.map((r) => ({ value: r, label: t(`admin.roles.${r}`) })) },
+            { name: 'email', label: t('admin.users.columns.email'), type: 'email', required: true },
+            { name: 'display_name', label: t('admin.users.columns.user'), type: 'text', required: true },
+            { name: 'role', label: t('admin.users.columns.role'), type: 'select', options: ROLES.map((r) => ({ value: r, label: t(`admin.roles.${r}`) })) },
           ]}
           onSubmit={async (values) => {
             await authFetch('/api/security/users/invite', {
@@ -317,13 +322,13 @@ function UsersTab() {
             });
             setShowInviteForm(false);
           }}
-          onCancel={() => setShowInviteForm(false)}
         />
       )}
 
       {/* 确认弹窗 */}
       {confirmAction && (
         <ConfirmDialog
+          open={!!confirmAction}
           title={confirmAction.type === 'suspend' ? t('admin.users.confirm_suspend') : t('admin.users.confirm_delete')}
           message={t(
             confirmAction.type === 'suspend' ? 'admin.users.confirm_suspend_msg' : 'admin.users.confirm_delete_msg',
@@ -417,7 +422,13 @@ function WorkspacesTab() {
     {
       key: 'status',
       label: t('admin.workspaces.columns.status'),
-      render: (ws: WorkspaceRecord) => <StatusBadge status={ws.status} />,
+      render: (ws: WorkspaceRecord) => {
+        const wsStatusMap: Record<string, import('../components/admin/StatusBadge').StatusType> = {
+          active: 'active',
+          archived: 'disabled',
+        };
+        return <StatusBadge status={wsStatusMap[ws.status] ?? 'disabled'} />;
+      },
     },
     {
       key: 'actions',
@@ -432,9 +443,7 @@ function WorkspacesTab() {
     <AdminTable<WorkspaceRecord>
       data={workspaces}
       columns={columns}
-      keyField="id"
       loading={loading}
-      emptyMessage={t('admin.workspaces.empty')}
     />
   );
 }
@@ -501,7 +510,14 @@ function AuditTab() {
     {
       key: 'severity',
       label: t('admin.audit.columns.severity'),
-      render: (entry: AuditEntry) => <StatusBadge status={entry.severity} />,
+      render: (entry: AuditEntry) => {
+        const severityMap: Record<string, import('../components/admin/StatusBadge').StatusType> = {
+          critical: 'error',
+          warning: 'warning',
+          info: 'active',
+        };
+        return <StatusBadge status={severityMap[entry.severity] ?? 'active'} />;
+      },
     },
   ];
 
@@ -568,17 +584,8 @@ function AuditTab() {
       <AdminTable<AuditEntry>
         data={auditLogs}
         columns={columns}
-        keyField="id"
         loading={loading}
-        emptyMessage={t('admin.audit.empty')}
-        onRowClick={(entry) => setExpandedRow(expandedRow === entry.id ? null : entry.id)}
-        expandRow={(entry) =>
-          expandedRow === entry.id ? (
-            <div className="px-4 py-3 bg-[var(--bg-tertiary)] text-sm text-[var(--text-secondary)]">
-              <p><strong>{t('admin.audit.columns.details')}:</strong> {entry.details}</p>
-            </div>
-          ) : null
-        }
+        onRowClick={(entry: AuditEntry) => setExpandedRow(expandedRow === entry.id ? null : entry.id)}
       />
     </div>
   );
@@ -712,18 +719,7 @@ function SSOTab() {
 /* ── 主组件 ── */
 
 const Admin = () => {
-  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
-
-  const tabs: { id: AdminTab; label: string; icon: string }[] = [
-    { id: 'overview', label: t('admin.tabs.overview'), icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
-    { id: 'users', label: t('admin.tabs.users'), icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
-    { id: 'roles', label: t('admin.tabs.roles'), icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
-    { id: 'workspaces', label: t('admin.tabs.workspaces'), icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
-    { id: 'audit', label: t('admin.tabs.audit'), icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
-    { id: 'flags', label: t('admin.tabs.flags'), icon: 'M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12' },
-    { id: 'sso', label: t('admin.tabs.sso'), icon: 'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z' },
-  ];
 
   const renderTab = () => {
     switch (activeTab) {
@@ -739,9 +735,6 @@ const Admin = () => {
 
   return (
     <AdminLayout
-      title={t('admin.title')}
-      subtitle={t('admin.subtitle')}
-      tabs={tabs}
       activeTab={activeTab}
       onTabChange={setActiveTab}
     >

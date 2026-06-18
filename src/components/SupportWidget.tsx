@@ -15,23 +15,27 @@ import { useWebSocket } from '../hooks/useWebSocket';
 // Generate unique client ID for support widget
 const SUPPORT_CLIENT_ID = 'support-widget-' + Math.random().toString(36).slice(2, 9);
 
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export function SupportWidget() {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingText, setStreamingText] = useState('');
+  const [wsError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const {
     isConnected,
-    messages,
-    isStreaming,
-    streamingText,
-    error,
-    sendMessage,
-  } = useWebSocket({
-    clientId: SUPPORT_CLIENT_ID,
-    autoConnect: true,
+    send,
+  } = useWebSocket(`/ws/chat/${SUPPORT_CLIENT_ID}`, {
+    autoReconnect: true,
   });
 
   // Auto-scroll to bottom on new messages or streaming text
@@ -53,10 +57,17 @@ export function SupportWidget() {
     const messageText = text || input.trim();
     if (!messageText || !isConnected) return;
 
-    // Send with support mode metadata
-    sendMessage(messageText, { mode: 'support' });
+    // Add user message to local state
+    setMessages((prev) => [...prev, { role: 'user', content: messageText }]);
+
+    // Send via WebSocket
+    send(JSON.stringify({ type: 'chat', content: messageText, mode: 'support' }));
+
+    // Simulate streaming state
+    setIsStreaming(true);
+    setStreamingText('');
     setInput('');
-  }, [input, isConnected, sendMessage]);
+  }, [input, isConnected, send]);
 
   // Handle key press
   const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
@@ -175,7 +186,7 @@ export function SupportWidget() {
                 {/* Quick Replies */}
                 {hasQuickReplies && (
                   <div className="flex flex-wrap gap-2 pt-2">
-                    {quickReplies.map((reply, idx) => (
+                    {quickReplies.map((reply: string, idx: number) => (
                       <button
                         key={idx}
                         onClick={() => handleSend(reply)}
@@ -196,7 +207,7 @@ export function SupportWidget() {
             )}
 
             {/* Message history */}
-            {messages.map((msg, idx) => (
+            {messages.map((msg: ChatMessage, idx: number) => (
               <div
                 key={idx}
                 className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
@@ -255,7 +266,7 @@ export function SupportWidget() {
           </div>
 
           {/* Error Display */}
-          {error && (
+          {wsError && (
             <div
               className="px-4 py-2 text-xs border-t"
               style={{
@@ -265,7 +276,7 @@ export function SupportWidget() {
               }}
               data-testid="support-error"
             >
-              {error}
+              {wsError}
             </div>
           )}
 

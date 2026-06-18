@@ -14,10 +14,10 @@
     "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
-    "@nivo/bar": "^0.99.0",
-    "@nivo/core": "^0.99.0",
-    "@nivo/line": "^0.99.0",
-    "@nivo/pie": "^0.99.0",
+    "@nivo/bar": "0.99.0",
+    "@nivo/core": "0.99.0",
+    "@nivo/line": "0.99.0",
+    "@nivo/pie": "0.99.0",
     "@nivo/tooltip": "^0.99.0",
     "i18next": "^26.2.0",
     "i18next-browser-languagedetector": "^8.2.1",

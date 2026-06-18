@@ -3,12 +3,12 @@
  * 支持饼图/环形图模式
  */
 
-import { ResponsivePie, type PieSvgProps, type PieDatum } from '@nivo/pie';
+import { Pie, type PieSvgProps, type DefaultRawDatum } from '@nivo/pie';
 import { ChartContainer } from './ChartContainer';
 import { chartTheme, CHART_COLORS, CHART_DEFAULTS, type TimeRange } from './chartTheme';
 
-interface PieChartProps<T extends PieDatum = PieDatum> {
-  /** 图表数据（Nivo PieDatum 格式：{ id, value, label? }） */
+interface PieChartProps<T extends DefaultRawDatum = DefaultRawDatum> {
+  /** 图表数据（Nivo DefaultRawDatum 格式：{ id, value, label? }） */
   data: T[];
   /** 图表标题 */
   title: string;
@@ -36,7 +36,7 @@ interface PieChartProps<T extends PieDatum = PieDatum> {
   className?: string;
 }
 
-export function PieChart<T extends PieDatum = PieDatum>({
+export function PieChart<T extends DefaultRawDatum = DefaultRawDatum>({
   data,
   title,
   subtitle,
@@ -62,7 +62,7 @@ export function PieChart<T extends PieDatum = PieDatum>({
       className={className}
     >
       {({ width, height: containerHeight }) => (
-        <ResponsivePie
+        <Pie<T>
           data={data}
           width={width}
           height={containerHeight}
@@ -85,8 +85,8 @@ export function PieChart<T extends PieDatum = PieDatum>({
           isInteractive={CHART_DEFAULTS.isInteractive}
           legends={[
             {
-              anchor: 'right',
-              direction: 'column',
+              anchor: 'right' as const,
+              direction: 'column' as const,
               justify: false,
               translateX: 60,
               translateY: 0,
@@ -95,7 +95,7 @@ export function PieChart<T extends PieDatum = PieDatum>({
               itemHeight: 16,
               itemOpacity: 0.85,
               symbolSize: 10,
-              symbolShape: 'circle',
+              symbolShape: 'circle' as const,
             },
           ]}
         />
