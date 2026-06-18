@@ -4,34 +4,28 @@ import os
 
 from app.main import app
 from app.security import UserRole
+from app.security.rbac import _ROLE_CHECKERS
 
 
 @pytest.fixture(autouse=True)
 def _bypass_rbac():
     """Bypass all require_role RBAC checks during tests.
 
-    Iterates over every router on the FastAPI app, finds Depends() that
-    reference require_role(...) closures, and replaces them with a mock
-    that always returns an ADMIN user.
+    Uses _ROLE_CHECKERS registry from rbac.py to find all _role_checker
+    closures, instead of traversing app.routes (which became a tree in
+    FastAPI 0.137+ and no longer exposes all routes as a flat list).
 
     Uses dependency_overrides (FastAPI 官方推荐方式) 替代修改 settings，
     避免依赖生产代码中的 dev-mode 旁路逻辑。
     """
     mock_user = {"sub": "test-user", "role": "ADMIN", "_role": UserRole.ADMIN}
 
-    # 收集所有需要 override 的依赖
+    # 直接从注册表获取所有 _role_checker 闭包
     overrides = {}
-    for route in app.routes:
-        if not hasattr(route, "dependant"):
-            continue
-        for dep in route.dependant.dependencies:
-            call = dep.call
-            # require_role 返回名为 _role_checker 的闭包
-            if getattr(call, "__name__", "") == "_role_checker":
-                # default-arg 捕获循环变量，避免闭包延迟绑定问题
-                async def _mock_admin(_captured_call=call):
-                    return mock_user
-                overrides[call] = _mock_admin
+    for call in _ROLE_CHECKERS:
+        async def _mock_admin(_captured_call=call):
+            return mock_user
+        overrides[call] = _mock_admin
 
     # 防止闭包被重命名导致静默失败
     if not overrides:
