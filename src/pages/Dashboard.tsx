@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDashboardStats } from '../hooks/useDashboardStats';
 import { useSystemHealth } from '../hooks/useSystemHealth';
-import { useBenchmark } from '../hooks/useBenchmark';
 import { Card } from '../components/ui/Card';
 import { ChartContainer } from '../components/charts/ChartContainer';
 import { LineChart } from '../components/charts/LineChart';
@@ -241,7 +240,6 @@ export function Dashboard() {
   const { t } = useTranslation();
   const { stats, queryVolume, loading, error, refetch } = useDashboardStats();
   const { health } = useSystemHealth();
-  const { data: benchmark } = useBenchmark();
 
   // 实时指标状态
   const [realtimeData, setRealtimeData] = useState<RealtimeMetrics | null>(null);
@@ -291,10 +289,6 @@ export function Dashboard() {
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
     };
   }, [connectWebSocket]);
-
-  // 从 benchmark 数据提取指标
-  const findMetric = (pat: string): string | number | null =>
-    benchmark?.metrics?.find((m: { label: string; value: string | number }) => m.label.includes(pat))?.value ?? null;
 
   // 合并实时数据和 API 数据
   const metrics = realtimeData || (stats ? {
