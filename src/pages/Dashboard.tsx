@@ -250,6 +250,7 @@ export function Dashboard() {
   const [timeRange, setTimeRange] = useState<'1h' | '6h' | '24h' | '7d'>('24h');
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const connectRef = useRef<() => void>(() => {});
 
   // WebSocket 连接
   const connectWebSocket = useCallback(() => {
@@ -262,8 +263,8 @@ export function Dashboard() {
     socket.onopen = () => setWsConnected(true);
     socket.onclose = () => {
       setWsConnected(false);
-      // 自动重连
-      reconnectTimerRef.current = setTimeout(connectWebSocket, 5000);
+      // 自动重连（通过 ref 避免自引用）
+      reconnectTimerRef.current = setTimeout(() => connectRef.current(), 5000);
     };
     socket.onerror = () => { wsRef.current?.close(); };
 
@@ -283,6 +284,9 @@ export function Dashboard() {
       }
     };
   }, []);
+
+  // 保持 ref 指向最新的连接函数
+  useEffect(() => { connectRef.current = connectWebSocket; }, [connectWebSocket]);
 
   useEffect(() => {
     connectWebSocket();

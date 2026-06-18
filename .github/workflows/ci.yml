@@ -48,8 +48,8 @@ jobs:
       - name: Install dependencies
         run: |
           cd backend
-          pip install -r requirements.txt
           pip install -r requirements-dev.txt ruff pip-audit mypy
+          pip install -r requirements.txt
 
       - name: Lint backend code
         run: |
