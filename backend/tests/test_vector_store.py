@@ -58,24 +58,21 @@ class TestTokenize:
 
 class TestBM25Score:
     def test_matching_terms(self):
-        import app.rag.bm25 as bm25
-        bm25._kw_idf = {"hello": 2.0, "world": 1.5}
-        bm25._kw_avgdl = 10.0
-        score = _bm25_score(["hello", "world"], ["hello", "world", "foo"], bm25._kw_avgdl)
+        kw_idf = {"hello": 2.0, "world": 1.5}
+        avgdl = 10.0
+        score = _bm25_score(["hello", "world"], ["hello", "world", "foo"], kw_idf, avgdl)
         assert score > 0
 
     def test_no_matching_terms(self):
-        import app.rag.bm25 as bm25
-        bm25._kw_idf = {"foo": 1.0}
-        bm25._kw_avgdl = 10.0
-        score = _bm25_score(["hello"], ["world"], bm25._kw_avgdl)
+        kw_idf = {"foo": 1.0}
+        avgdl = 10.0
+        score = _bm25_score(["hello"], ["world"], kw_idf, avgdl)
         assert score == 0.0
 
     def test_empty_query(self):
-        import app.rag.bm25 as bm25
-        bm25._kw_idf = {"hello": 1.0}
-        bm25._kw_avgdl = 5.0
-        score = _bm25_score([], ["hello"], bm25._kw_avgdl)
+        kw_idf = {"hello": 1.0}
+        avgdl = 5.0
+        score = _bm25_score([], ["hello"], kw_idf, avgdl)
         assert score == 0.0
 
 
@@ -152,9 +149,11 @@ class TestFormatContext:
 class TestGetBM25Stats:
     def test_with_data(self):
         import app.rag.bm25 as bm25
-        bm25._kw_docs = [{"text": "a"}, {"text": "b"}]
-        bm25._kw_idf = {"a": 1.0, "b": 2.0, "c": 0.5}
-        bm25._kw_avgdl = 5.5
+        bm25._kw_indexes["default"] = {
+            "docs": [{"text": "a"}, {"text": "b"}],
+            "idf": {"a": 1.0, "b": 2.0, "c": 0.5},
+            "avgdl": 5.5,
+        }
 
         stats = get_bm25_stats()
         assert stats["docs"] == 2
@@ -163,9 +162,7 @@ class TestGetBM25Stats:
 
     def test_empty_index(self):
         import app.rag.bm25 as bm25
-        bm25._kw_docs = []
-        bm25._kw_idf = {}
-        bm25._kw_avgdl = 0.0
+        bm25._kw_indexes.pop("default", None)
 
         stats = get_bm25_stats()
         assert stats["docs"] == 0
@@ -179,9 +176,7 @@ class TestGetBM25Stats:
 class TestRetrieveKeyword:
     def test_empty_index_returns_empty(self):
         import app.rag.bm25 as bm25
-        bm25._kw_docs = []
-        bm25._kw_idf = {}
-        bm25._kw_avgdl = 0.0
+        bm25._kw_indexes.pop("default", None)
 
         with patch("app.rag.bm25._build_kw_index"):
             result = retrieve_keyword("test query")
@@ -189,12 +184,14 @@ class TestRetrieveKeyword:
 
     def test_returns_matching_docs(self):
         import app.rag.bm25 as bm25
-        bm25._kw_docs = [
-            {"text": "RAG retrieval augmented generation", "metadata": {"title": "RAG Guide"}},
-            {"text": "deploy to GitHub Pages", "metadata": {"title": "Deploy"}},
-        ]
-        bm25._kw_idf = {"rag": 2.0, "retrieval": 1.5, "deploy": 1.0, "github": 1.0}
-        bm25._kw_avgdl = 5.0
+        bm25._kw_indexes["default"] = {
+            "docs": [
+                {"text": "RAG retrieval augmented generation", "metadata": {"title": "RAG Guide"}},
+                {"text": "deploy to GitHub Pages", "metadata": {"title": "Deploy"}},
+            ],
+            "idf": {"rag": 2.0, "retrieval": 1.5, "deploy": 1.0, "github": 1.0},
+            "avgdl": 5.0,
+        }
 
         with patch("app.rag.bm25._build_kw_index"):
             result = retrieve_keyword("RAG retrieval", top_k=2)
@@ -204,11 +201,13 @@ class TestRetrieveKeyword:
 
     def test_no_match_returns_empty(self):
         import app.rag.bm25 as bm25
-        bm25._kw_docs = [
-            {"text": "completely unrelated content", "metadata": {"title": "Other"}},
-        ]
-        bm25._kw_idf = {"unrelated": 1.0, "content": 1.0}
-        bm25._kw_avgdl = 3.0
+        bm25._kw_indexes["default"] = {
+            "docs": [
+                {"text": "completely unrelated content", "metadata": {"title": "Other"}},
+            ],
+            "idf": {"unrelated": 1.0, "content": 1.0},
+            "avgdl": 3.0,
+        }
 
         with patch("app.rag.bm25._build_kw_index"):
             result = retrieve_keyword("RAG")

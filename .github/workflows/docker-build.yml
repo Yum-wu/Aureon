@@ -51,7 +51,6 @@ jobs:
         with:
           dockerfile: Dockerfile
           failure-threshold: warning
-        continue-on-error: true
 
   build:
     name: Build Docker Image
@@ -74,3 +73,13 @@ jobs:
           tags: aureon:ci-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: 'aureon:ci-${{ github.sha }}'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'

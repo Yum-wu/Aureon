@@ -71,8 +71,8 @@ class QdrantStore:
             try:
                 client.delete_collection(self.collection_name)
                 logger.info("Deleted existing collection: %s", self.collection_name)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("delete_collection_failed", collection=self.collection_name, error=str(e))
 
         try:
             client.create_collection(

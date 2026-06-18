@@ -59,7 +59,8 @@ class TestBuildAuditLog:
         log = self._call(kwargs={"request": request}, result=None)
         assert log.ip_address == "198.51.100.7"
 
-    def test_user_id_from_header_takes_precedence(self):
+    def test_user_id_from_jwt_or_anonymous(self):
+        """user_id is now extracted from verified JWT only, not from forgeable headers."""
         request = SimpleNamespace(
             headers={"x-user-id": "alice"},
             client=None,
@@ -67,9 +68,11 @@ class TestBuildAuditLog:
             state=SimpleNamespace(request_id=""),
         )
         log = self._call(kwargs={"request": request}, result=None)
-        assert log.user_id == "alice"
+        # x-user-id header is no longer trusted (security fix)
+        assert log.user_id == "anonymous"
 
-    def test_user_id_falls_back_to_query_param(self):
+    def test_user_id_falls_back_to_anonymous(self):
+        """Without a valid JWT, user_id defaults to 'anonymous'."""
         request = SimpleNamespace(
             headers={},
             client=None,
@@ -77,7 +80,8 @@ class TestBuildAuditLog:
             state=SimpleNamespace(request_id=""),
         )
         log = self._call(kwargs={"request": request}, result=None)
-        assert log.user_id == "carol"
+        # query param user_id is no longer trusted (security fix)
+        assert log.user_id == "anonymous"
 
     def test_resource_id_from_kwarg_param(self):
         log = self._call(

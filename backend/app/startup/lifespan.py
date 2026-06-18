@@ -1,4 +1,4 @@
-"""Application lifespan �� startup and shutdown logic.
+"""Application lifespan — startup and shutdown logic.
 
 Extracted from main.py to separate lifecycle management from HTTP routing.
 """
@@ -23,17 +23,29 @@ logger = structlog.get_logger()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan: startup and shutdown logic."""
-    # ���� Startup ����
+    # ── Security: block dev mode on production platforms ──
+    if os.environ.get("RAILWAY_ENVIRONMENT") == "production":
+        if settings.auth.environment == "dev":
+            raise RuntimeError(
+                "FATAL: AUTH__ENVIRONMENT=dev is forbidden in production. "
+                "Set AUTH__ENVIRONMENT=production and configure API_AUTH_KEY."
+            )
+        if not settings.api_auth_key:
+            raise RuntimeError(
+                "FATAL: API_AUTH_KEY must be set in production."
+            )
+
+    # ── Startup ──
     if not settings.llm_api_key and not settings.fallback_api_key:
-        logger.warning("LLM_API_KEY δ���ã�Agent ���ý�ʧ��")
-    # ��ʽ���� LangSmith����ֹ Railway ƽ̨���������Զ������ 403��
+        logger.warning("LLM_API_KEY not set; Agent creation will fail")
+    # Disable LangSmith to prevent Railway platform auto-tracing 403
     os.environ["LANGCHAIN_TRACING_V2"] = "false"
     init_db()
 
     # Initialise unified storage backend (SQLite or PostgreSQL)
     backend = get_backend()
     backend.init()
-    
+
     # ── Core modules (always initialized) ──
     from app.features import init_feature_flags_table
     from app.observability import init_query_traces_table
@@ -46,7 +58,7 @@ async def lifespan(app: FastAPI):
     init_sso_providers_table()
     init_audit_tables()
     await init_pg_tables()
-    
+
     # ── Experimental modules (conditional on EXPERIMENTAL_MODULES env var) ──
     # Default: enabled for backward compatibility.
     # Set EXPERIMENTAL_MODULES=false to skip init and reduce startup overhead.
@@ -92,7 +104,7 @@ async def lifespan(app: FastAPI):
 
     yield  # Application runs here
 
-    # ���� Shutdown ����
+    # ── Shutdown ──
     # Flush Langfuse traces
     try:
         from app.observability.langfuse_integration import shutdown_langfuse

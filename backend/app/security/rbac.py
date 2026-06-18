@@ -119,10 +119,17 @@ def require_role(min_role: UserRole):
     from fastapi import Request
     from app.exceptions import AuthenticationError, AuthorizationError
 
-    async def _role_checker(request: Request) -> dict:
-        # Skip RBAC only in explicit dev mode with no API key configured
-        from app.config import settings
-        if settings.auth.environment == "dev" and not settings.api_auth_key:
+    async def _role_checker(request: Request) -> dict:
+        from app.config import settings
+
+        # Hard block: dev bypass forbidden on production platforms
+        _is_prod_platform = os.environ.get("RAILWAY_ENVIRONMENT") == "production"
+        if settings.auth.environment == "dev" and _is_prod_platform:
+            logger.critical("security.rbac_dev_bypass_blocked_in_prod")
+            raise AuthenticationError("Authentication required")
+
+        # Dev bypass (only on non-production platforms)
+        if settings.auth.environment == "dev" and not settings.api_auth_key:
             return {"sub": "dev-user", "role": "ADMIN", "_role": UserRole.ADMIN}
 
         # Extract token directly from Authorization header

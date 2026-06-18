@@ -13,8 +13,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Create non-root user (UID/GID fixed for volume permission management)
+RUN groupadd -r -g 1001 appuser \
+    && useradd -r -u 1001 -g appuser -d /app -s /sbin/nologin appuser
+
 # Python dependencies (leverage Docker layer caching)
-COPY backend/requirements.txt .
+COPY --chown=appuser:appuser backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Optional: Gunicorn for multi-worker mode
@@ -22,7 +26,7 @@ ARG SERVER_MODE=uvicorn
 RUN if [ "$SERVER_MODE" = "gunicorn" ]; then pip install --no-cache-dir gunicorn; fi
 
 # Pre-download BGE embedding model (then remove torch to save ~2GB)
-COPY backend/requirements-build.txt .
+COPY --chown=appuser:appuser backend/requirements-build.txt .
 RUN pip install --no-cache-dir -r requirements-build.txt \
     && python3 -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-small-zh-v1.5')" \
         || HF_ENDPOINT=https://hf-mirror.com python3 -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-small-zh-v1.5')" \
@@ -30,10 +34,13 @@ RUN pip install --no-cache-dir -r requirements-build.txt \
        rm -rf /root/.cache/huggingface /root/.cache/torch
 
 # Copy backend code
-COPY backend/ .
+COPY --chown=appuser:appuser backend/ .
 
-# Vector data directory
-RUN mkdir -p /app/data/vectors
+# Data directory
+RUN mkdir -p /app/data/vectors && chown -R appuser:appuser /app/data
+
+# Switch to non-root user
+USER 1001:1001
 
 EXPOSE ${PORT:-8000}
 

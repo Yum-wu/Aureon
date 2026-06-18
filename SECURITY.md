@@ -56,9 +56,12 @@ We take security vulnerabilities seriously. If you discover a security issue, pl
 
 ### Container Security
 
-- The Dockerfile runs the application as a non-root user (`appuser`) via `gosu`.
+- The Dockerfile runs the application as a non-root user (appuser, UID 1001). The root Dockerfile uses gosu for nginx+uvicorn privilege separation; the backend Dockerfile uses the USER directive directly.
 - Resource limits are configured in `docker-compose.yml` to prevent runaway processes.
 - Do not run containers with `--privileged` or mount the Docker socket.
+- Health checks are configured for all services in `docker-compose.yml`.
+- Docker image vulnerability scanning is performed via Trivy in CI (see `.github/workflows/docker-build.yml`).
+- Python dependency vulnerabilities are checked via pip-audit in CI (see `.github/workflows/ci.yml`).
 
 ## Dependency Security
 

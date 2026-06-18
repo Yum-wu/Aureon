@@ -79,11 +79,20 @@ app.state.executor = executor
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+# CORS allowed headers whitelist (not ["*"] to prevent header forgery)
+_CORS_ALLOWED_HEADERS = [
+    "Authorization",
+    "Content-Type",
+    "X-Request-ID",
+    "X-API-Key",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[o.strip() for o in settings.cors_origins.split(",")],
+    allow_origins=[o.strip() for o in settings.cors_origins.split(",") if o.strip()],
     allow_methods=["GET", "POST", "DELETE"],
-    allow_headers=["*"],
+    allow_headers=_CORS_ALLOWED_HEADERS,
+    max_age=600,
 )
 app.add_middleware(TenantMiddleware)
 

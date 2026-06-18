@@ -14,7 +14,7 @@ Extracted from vector_store.py.
 
 from typing import List, Dict, Any, Optional
 
-
+import asyncio
 
 import structlog
 
@@ -377,21 +377,42 @@ async def _rerank_via_api_batched(
     return all_scored[:top_k]
 
 
-def rerank_batched(query: str, chunks: List[Dict[str, Any]], top_k: int = 3,
-                   batch_size: int = 18) -> List[Dict[str, Any]]:
-    """Batch parallel reranking (sync wrapper). Falls back to serial on failure."""
-    import asyncio
-
+async def rerank_batched_async(query: str, chunks: List[Dict[str, Any]], top_k: int = 3,
+                               batch_size: int = 18) -> List[Dict[str, Any]]:
+    """异步批量 rerank，供 async 路径调用。"""
     if not chunks or len(chunks) <= 1:
         return chunks
+    try:
+        result = await _rerank_via_api_batched(query, chunks, top_k=top_k, batch_size=batch_size)
+        if result:
+            return result
+    except Exception as e:
+        logger.warning("Batch parallel rerank failed, falling back to serial: %s", e)
+    return rerank(query, chunks, top_k=top_k)
 
+
+def rerank_batched(query: str, chunks: List[Dict[str, Any]], top_k: int = 3,
+                   batch_size: int = 18) -> List[Dict[str, Any]]:
+    """同步批量 rerank（仅在纯同步上下文中使用）。
+
+    如果从已运行的事件循环中调用，会降级到串行 rerank。
+    异步路径请使用 rerank_batched_async。
+    """
+    if not chunks or len(chunks) <= 1:
+        return chunks
+    # 检测是否已在事件循环中
+    try:
+        asyncio.get_running_loop()
+        logger.warning("rerank_batched called from running event loop, fallback to serial rerank")
+        return rerank(query, chunks, top_k=top_k)
+    except RuntimeError:
+        pass  # 无事件循环，asyncio.run 安全
     try:
         result = asyncio.run(_rerank_via_api_batched(query, chunks, top_k=top_k, batch_size=batch_size))
         if result:
             return result
     except Exception as e:
         logger.warning("Batch parallel rerank failed, falling back to serial: %s", e)
-
     return rerank(query, chunks, top_k=top_k)
 
 

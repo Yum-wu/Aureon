@@ -18,7 +18,7 @@ httpx>=0.28,<0.29
 pydantic-settings>=2.0,<3.0
 
 # RAG dependencies
-numpy>=2.0,<2.5
+numpy>=1.26,<2.0
 langchain-text-splitters>=0.3,<0.4
 # Vector store backends (Qdrant is primary; ChromaDB is optional fallback)
 # chromadb>=0.5,<0.6  # Optional: pip install chromadb if using VECTOR_BACKEND=chroma
