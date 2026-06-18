@@ -3,7 +3,7 @@
  * 连接 /ws/dashboard，解析 metrics.tick 消息
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useWebSocket } from './useWebSocket';
 
 /** 实时指标数据 */

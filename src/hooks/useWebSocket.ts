@@ -59,7 +59,6 @@ export function useWebSocket(
     };
 
     // 消息监听
-    const originalOnMessage = client.ws?.onmessage;
     const patchMessageHandler = () => {
       if (client.ws) {
         const wsRef = client.ws;
