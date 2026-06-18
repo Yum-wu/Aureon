@@ -1,5 +1,5 @@
 // Aureon — Enterprise AI Knowledge Base Platform
-import { lazy, Suspense, type ReactNode } from "react";
+import { lazy, Suspense, useState, useEffect, type ReactNode } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -45,6 +45,10 @@ function AppLayout() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // 路由变化时关闭移动端菜单
+  useEffect(() => { setMobileMenuOpen(false); }, [location.pathname]);
 
   const navItems = [
     { path: "/dashboard", key: "app.nav.dashboard" },
@@ -63,7 +67,8 @@ function AppLayout() {
   return (
     <div className="h-screen flex flex-col" style={{background:'var(--bg-primary)'}}>
       {!isLanding && !isLogin && (
-        <nav className="flex items-center border-b px-6 py-0 glass sticky top-0 z-40" style={{borderColor:'var(--border)'}} role="navigation">
+        <>
+        <nav className="flex items-center border-b px-6 py-0 glass sticky top-0 z-40" style={{borderColor:'var(--border)'}} role="navigation" aria-label={t('app.nav.menu')}>
           {/* Logo */}
           <button
             onClick={() => navigate("/")}
@@ -72,8 +77,8 @@ function AppLayout() {
             <span className="text-base font-extrabold tracking-tight" style={{color:'var(--accent)'}}>Aureon</span>
           </button>
 
-          {/* Nav links */}
-          <div className="flex items-center gap-1">
+          {/* Desktop Nav links */}
+          <div className="hidden md:flex items-center gap-1">
             {navItems.map((item) => {
               const isActive = location.pathname.startsWith(item.path);
               return (
@@ -85,12 +90,30 @@ function AppLayout() {
                     color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
                     background: isActive ? 'var(--accent-soft)' : 'transparent',
                   }}
+                  aria-current={isActive ? 'page' : undefined}
                 >
                   {t(item.key)}
                 </button>
               );
             })}
           </div>
+
+          {/* Mobile hamburger button */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden p-2 rounded-md"
+            style={{ color: 'var(--text-secondary)' }}
+            aria-label={t('app.nav.menu')}
+            aria-expanded={mobileMenuOpen}
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {mobileMenuOpen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              )}
+            </svg>
+          </button>
 
           {/* Right side */}
           <div className="ml-auto flex items-center gap-3">
@@ -103,6 +126,30 @@ function AppLayout() {
             </button>
           </div>
         </nav>
+
+        {/* Mobile dropdown menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden absolute top-full left-0 right-0 border-b z-50" style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
+            {navItems.map((item) => {
+              const isActive = location.pathname.startsWith(item.path);
+              return (
+                <button
+                  key={item.path}
+                  onClick={() => { navigate(item.path); setMobileMenuOpen(false); }}
+                  className="block w-full text-left px-6 py-3 text-sm font-medium transition-colors"
+                  style={{
+                    color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    background: isActive ? 'var(--accent-soft)' : 'transparent',
+                  }}
+                  aria-current={isActive ? 'page' : undefined}
+                >
+                  {t(item.key)}
+                </button>
+              );
+            })}
+          </div>
+        )}
+        </>
       )}
 
       <div className="flex-1 overflow-auto">

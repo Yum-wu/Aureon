@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { authFetch } from '../services/authFetch';
 import { AdminLayout } from '../components/admin/AdminLayout';
 import { AdminTable } from '../components/admin/AdminTable';
@@ -134,6 +135,14 @@ function OverviewTab() {
     );
   }
 
+  if (!overviewData) {
+    return (
+      <div className="text-center py-12 text-[var(--text-tertiary)]">
+        <p className="text-lg mb-2">{t('admin.overview.no_data')}</p>
+      </div>
+    );
+  }
+
   const cards = overviewData
     ? [
         { label: t('admin.overview.active_users'), value: overviewData.active_users },
@@ -187,35 +196,44 @@ function UsersTab() {
       });
       if (res.ok) {
         setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: newRole as UserRecord['role'] } : u)));
+        toast.success(t('admin.users.role_updated'));
+      } else {
+        toast.error(t('admin.users.role_update_failed'));
       }
     } catch {
-      // 角色更新失败
+      toast.error(t('admin.users.role_update_failed'));
     }
-  }, []);
+  }, [t]);
 
   const handleSuspend = useCallback(async (userId: string) => {
     try {
       const res = await authFetch(`/api/security/users/${userId}/suspend`, { method: 'POST' });
       if (res.ok) {
         setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, status: 'suspended' as const } : u)));
+        toast.success(t('admin.users.suspended'));
+      } else {
+        toast.error(t('admin.users.suspend_failed'));
       }
     } catch {
-      // 暂停失败
+      toast.error(t('admin.users.suspend_failed'));
     }
     setConfirmAction(null);
-  }, []);
+  }, [t]);
 
   const handleDelete = useCallback(async (userId: string) => {
     try {
       const res = await authFetch(`/api/security/users/${userId}`, { method: 'DELETE' });
       if (res.ok) {
         setUsers((prev) => prev.filter((u) => u.id !== userId));
+        toast.success(t('admin.users.deleted'));
+      } else {
+        toast.error(t('admin.users.delete_failed'));
       }
     } catch {
-      // 删除失败
+      toast.error(t('admin.users.delete_failed'));
     }
     setConfirmAction(null);
-  }, []);
+  }, [t]);
 
   const columns = [
     { key: 'email', label: t('admin.users.columns.email'), sortable: true },
@@ -305,6 +323,13 @@ function UsersTab() {
         loading={loading}
       />
 
+      {!loading && filteredUsers.length === 0 && (
+        <div className="text-center py-12 text-[var(--text-tertiary)]">
+          <p className="text-lg mb-2">{t('admin.users.no_users')}</p>
+          <p className="text-sm">{t('admin.users.no_users_desc')}</p>
+        </div>
+      )}
+
       {/* 邀请用户弹窗 */}
       {showInviteForm && (
         <AdminForm
@@ -315,12 +340,21 @@ function UsersTab() {
             { name: 'role', label: t('admin.users.columns.role'), type: 'select', options: ROLES.map((r) => ({ value: r, label: t(`admin.roles.${r}`) })) },
           ]}
           onSubmit={async (values) => {
-            await authFetch('/api/security/users/invite', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(values),
-            });
-            setShowInviteForm(false);
+            try {
+              const res = await authFetch('/api/security/users/invite', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(values),
+              });
+              if (res.ok) {
+                toast.success(t('admin.users.invite_sent'));
+                setShowInviteForm(false);
+              } else {
+                toast.error(t('admin.users.invite_failed'));
+              }
+            } catch {
+              toast.error(t('admin.users.invite_failed'));
+            }
           }}
         />
       )}
@@ -381,13 +415,18 @@ function RolesTab() {
                 <td key={role} className="text-center py-3 px-4">
                   <button
                     onClick={() => togglePermission(role, perm.key)}
-                    className={`inline-flex items-center justify-center w-6 h-6 rounded text-sm ${
-                      permissions[role]?.includes(perm.key)
-                        ? 'text-emerald-400'
-                        : 'text-[var(--text-tertiary)]'
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                      permissions[role]?.includes(perm.key) ? 'bg-[var(--accent)]' : 'bg-[var(--bg-tertiary)]'
                     }`}
+                    role="switch"
+                    aria-checked={permissions[role]?.includes(perm.key) ?? false}
+                    aria-label={`${perm.label} - ${t(`admin.roles.${role}`)}`}
                   >
-                    {permissions[role]?.includes(perm.key) ? '✅' : '❌'}
+                    <span
+                      className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                        permissions[role]?.includes(perm.key) ? 'translate-x-4' : 'translate-x-0.5'
+                      }`}
+                    />
                   </button>
                 </td>
               ))}
@@ -440,11 +479,19 @@ function WorkspacesTab() {
   ];
 
   return (
-    <AdminTable<WorkspaceRecord>
-      data={workspaces}
-      columns={columns}
-      loading={loading}
-    />
+    <div>
+      <AdminTable<WorkspaceRecord>
+        data={workspaces}
+        columns={columns}
+        loading={loading}
+      />
+      {!loading && workspaces.length === 0 && (
+        <div className="text-center py-12 text-[var(--text-tertiary)]">
+          <p className="text-lg mb-2">{t('admin.workspaces.empty')}</p>
+          <p className="text-sm">{t('admin.workspaces.empty_desc')}</p>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -490,8 +537,11 @@ function AuditTab() {
       link.download = `audit_logs.${format}`;
       link.click();
       URL.revokeObjectURL(link.href);
-    }).catch(() => {});
-  }, []);
+      toast.success(t('admin.audit.export_success'));
+    }).catch(() => {
+      toast.error(t('admin.audit.export_failed'));
+    });
+  }, [t]);
 
   const columns = [
     {
@@ -587,6 +637,12 @@ function AuditTab() {
         loading={loading}
         onRowClick={(entry: AuditEntry) => setExpandedRow(expandedRow === entry.id ? null : entry.id)}
       />
+      {!loading && auditLogs.length === 0 && (
+        <div className="text-center py-12 text-[var(--text-tertiary)]">
+          <p className="text-lg mb-2">{t('admin.audit.empty')}</p>
+          <p className="text-sm">{t('admin.audit.empty_desc')}</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -608,14 +664,16 @@ function FlagsTab() {
   }, []);
 
   const toggleFlag = useCallback(async (flagKey: string) => {
+    const prevEnabled = flags.find(f => f.key === flagKey)?.enabled ?? false;
     setFlags((prev) => prev.map((f) => (f.key === flagKey ? { ...f, enabled: !f.enabled } : f)));
     try {
       await authFetch(`/api/feature-flags/${flagKey}/toggle`, { method: 'POST' });
+      toast.success(t('admin.flags.toggled'));
     } catch {
-      // 回滚
-      setFlags((prev) => prev.map((f) => (f.key === flagKey ? { ...f, enabled: !f.enabled } : f)));
+      setFlags((prev) => prev.map((f) => (f.key === flagKey ? { ...f, enabled: prevEnabled } : f)));
+      toast.error(t('admin.flags.toggle_failed'));
     }
-  }, []);
+  }, [flags, t]);
 
   if (loading) {
     return (

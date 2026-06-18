@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Card } from '../ui/Card';
 import type { RecentQuery } from '../../types/dashboard';
 
@@ -6,26 +7,30 @@ interface RecentQueriesProps {
 }
 
 export function RecentQueries({ queries }: RecentQueriesProps) {
+  const { t } = useTranslation();
+
   return (
     <Card>
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-          Recent Queries
+          {t('dashboard.recent_queries.title')}
         </h3>
         <span className="text-xs text-[var(--text-tertiary)]">
-          {queries.length} total
+          {queries.length} {t('dashboard.recent_queries.total')}
         </span>
       </div>
       {queries.length === 0 ? (
         <p className="text-sm text-[var(--text-tertiary)] py-8 text-center">
-          No recent queries
+          {t('dashboard.recent_queries.empty')}
         </p>
       ) : (
-        <div className="space-y-1">
+        <div role="list" aria-label={t('dashboard.recent_queries.title')} className="space-y-1">
           {queries.map((q, i) => (
             <div
               key={`${q.timestamp}-${q.query}-${i}`}
-              className="flex items-center justify-between px-3 py-2.5 rounded-md hover:bg-white/[0.03] transition-colors"
+              role="button"
+              tabIndex={0}
+              className="flex items-center justify-between px-3 py-2.5 rounded-md hover:bg-white/[0.03] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2"
             >
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-[var(--text-primary)] truncate">
@@ -37,7 +42,7 @@ export function RecentQueries({ queries }: RecentQueriesProps) {
               </div>
               <div className="flex items-center gap-3 ml-4 shrink-0">
                 <span className="text-[11px] text-[var(--text-tertiary)]">
-                  {q.sources_count} sources
+                  {q.sources_count} {t('dashboard.recent_queries.sources')}
                 </span>
                 <span className="text-xs font-mono text-[var(--text-secondary)] tabular-nums">
                   {Math.round(q.latency_ms)}ms

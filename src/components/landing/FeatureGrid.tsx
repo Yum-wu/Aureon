@@ -18,44 +18,24 @@ export function FeatureGrid() {
   const latencyVal = findMetric('Retrieval Latency');
   const ttftVal = findMetric('TTFT');
 
-  const features = [
-    {
-      icon: '01',
-      title: t('landing.features.0.title'),
-      description: t('landing.features.0.desc'),
-      metric: `${fmtVal(recallVal, '96.5%')} recall`,
-    },
-    {
-      icon: '02',
-      title: t('landing.features.1.title'),
-      description: t('landing.features.1.desc'),
-      metric: `${fmtVal(ttftVal, '~310ms')} TTFT`,
-    },
-    {
-      icon: '03',
-      title: t('landing.features.2.title'),
-      description: t('landing.features.2.desc'),
-      metric: '100% detection',
-    },
-    {
-      icon: '04',
-      title: t('landing.features.3.title'),
-      description: t('landing.features.3.desc'),
-      metric: '192 QA pairs',
-    },
-    {
-      icon: '05',
-      title: t('landing.features.4.title'),
-      description: t('landing.features.5.desc'),
-      metric: '26 articles / 191 chunks',
-    },
-    {
-      icon: '06',
-      title: t('landing.features.5.title'),
-      description: t('landing.features.5.desc'),
-      metric: `${fmtVal(latencyVal, '156ms')} latency`,
-    },
+  // 从 i18n 获取完整的 features 数组，避免 title/desc 索引错位
+  const i18nFeatures = t('landing.features', { returnObjects: true }) as Array<{ title: string; desc: string }>;
+
+  const metrics = [
+    `${fmtVal(recallVal, '96.5%')} recall`,
+    `${fmtVal(ttftVal, '~310ms')} TTFT`,
+    '100% detection',
+    '192 QA pairs',
+    '26 articles / 191 chunks',
+    `${fmtVal(latencyVal, '156ms')} latency`,
   ];
+
+  const features = (i18nFeatures || []).map((f, idx) => ({
+    icon: String(idx + 1).padStart(2, '0'),
+    title: f.title,
+    description: f.desc,
+    metric: metrics[idx] || '',
+  }));
 
   return (
     <section className="section-alt relative py-20 px-6">

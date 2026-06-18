@@ -22,6 +22,10 @@ export interface CostSummary {
   budgetUsed: number;
   /** 总预算 */
   budgetTotal: number;
+  /** 成本变化百分比（环比） */
+  costChange?: number;
+  /** 燃烧速率趋势 */
+  burnTrend?: 'up' | 'down' | 'stable';
 }
 
 /** 成本趋势数据点 */

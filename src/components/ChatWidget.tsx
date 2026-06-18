@@ -9,6 +9,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useChat } from '../hooks/useChat';
 import { VoiceButton } from './VoiceButton';
 
@@ -18,6 +19,7 @@ interface ChatWidgetProps {
 }
 
 export function ChatWidget({ className = '' }: ChatWidgetProps) {
+  const { t } = useTranslation();
   const {
     messages,
     isLoading,
@@ -42,8 +44,8 @@ export function ChatWidget({ className = '' }: ChatWidgetProps) {
     setInput('');
   }, [input, isLoading, sendMessage]);
 
-  // Handle key press
-  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
+  // Handle key down
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -62,38 +64,40 @@ export function ChatWidget({ className = '' }: ChatWidgetProps) {
 
   return (
     <div
-      className={`chat-widget bg-white rounded-lg shadow-lg border border-gray-200 flex flex-col h-full ${className}`}
+      className={`chat-widget bg-[var(--bg-secondary)] rounded-lg shadow-lg border border-[var(--border)] flex flex-col h-full ${className}`}
       data-testid="chat-widget"
     >
       {/* Header */}
-      <div className="chat-header bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-3 rounded-t-lg flex items-center justify-between">
+      <div className="chat-header bg-[var(--bg-secondary)] border-b border-[var(--border)] text-[var(--text-primary)] px-4 py-3 rounded-t-lg flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h3 className="font-semibold text-lg">Aureon Chat</h3>
+          <h3 className="font-semibold text-lg">{t('chat.title')}</h3>
         </div>
         <div className="flex items-center gap-2">
           <span
             className={`status-indicator text-sm px-2 py-1 rounded-full ${
               !isLoading
-                ? 'bg-green-500/20 text-green-100'
-                : 'bg-yellow-500/20 text-yellow-100'
+                ? 'bg-emerald-500/20 text-emerald-400'
+                : 'bg-yellow-500/20 text-yellow-400'
             }`}
             data-testid="connection-status"
           >
-            {isLoading ? '● Thinking...' : '● Ready'}
+            {isLoading ? `● ${t('chat.streaming')}` : `● ${t('chat.ready')}`}
           </span>
         </div>
       </div>
 
       {/* Messages Area */}
       <div
-        className="chat-messages flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50"
+        className="chat-messages flex-1 overflow-y-auto p-4 space-y-4 bg-[var(--bg-primary)]"
         data-testid="chat-messages"
+        role="log"
+        aria-live="polite"
       >
         {/* Welcome message if no messages */}
         {messages.length === 0 && !isLoading && (
-          <div className="text-center text-gray-500 py-8">
-            <p className="text-lg font-medium mb-2">Welcome to Aureon</p>
-            <p className="text-sm">Start a conversation by typing a message below.</p>
+          <div className="text-center text-[var(--text-tertiary)] py-8">
+            <p className="text-lg font-medium mb-2">{t('chat.welcome')}</p>
+            <p className="text-sm">{t('chat.welcome_subtitle')}</p>
           </div>
         )}
 
@@ -107,22 +111,22 @@ export function ChatWidget({ className = '' }: ChatWidgetProps) {
             <div
               className={`message-content max-w-[75%] rounded-2xl px-4 py-3 ${
                 msg.role === 'user'
-                  ? 'bg-blue-600 text-white rounded-br-none'
-                  : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none shadow-sm'
+                  ? 'bg-[var(--accent)] text-white rounded-br-none'
+                  : 'bg-[var(--bg-tertiary)] text-[var(--text-primary)] rounded-bl-none'
               }`}
             >
               <div className="whitespace-pre-wrap break-words">{msg.content}</div>
 
               {/* Source citations for assistant messages */}
               {msg.role === 'assistant' && msg.sources && msg.sources.length > 0 && (
-                <div className="mt-3 pt-2 border-t border-gray-200">
-                  <p className="text-xs font-medium text-gray-500 mb-1">📚 Sources:</p>
+                <div className="mt-3 pt-2 border-t border-[var(--border)]">
+                  <p className="text-xs font-medium text-[var(--text-tertiary)] mb-1">📚 {t('chat.sources')}:</p>
                   <div className="space-y-1">
                     {msg.sources.map((source, sourceIdx) => (
                       <div key={sourceIdx} className="flex items-center gap-2 text-xs">
-                        <span className="text-blue-600 font-medium">{source.title}</span>
+                        <span className="text-[var(--accent)] font-medium">{source.title}</span>
                         {source.score !== undefined && (
-                          <span className="text-gray-400">
+                          <span className="text-[var(--text-tertiary)]">
                             ({(source.score * 100).toFixed(0)}%)
                           </span>
                         )}
@@ -138,9 +142,9 @@ export function ChatWidget({ className = '' }: ChatWidgetProps) {
         {/* Loading indicator */}
         {isLoading && (
           <div className="message assistant flex justify-start" data-testid="streaming-message">
-            <div className="message-content max-w-[75%] rounded-2xl px-4 py-3 bg-white text-gray-800 border border-gray-200 rounded-bl-none shadow-sm">
-              <div className="mt-2 flex items-center gap-1 text-xs text-gray-400">
-                <span className="animate-pulse">●</span> Streaming...
+            <div className="message-content max-w-[75%] rounded-2xl px-4 py-3 bg-[var(--bg-tertiary)] text-[var(--text-primary)] rounded-bl-none">
+              <div className="mt-2 flex items-center gap-1 text-xs text-[var(--text-tertiary)]">
+                <span className="animate-pulse">●</span> {t('chat.streaming')}
               </div>
             </div>
           </div>
@@ -152,7 +156,7 @@ export function ChatWidget({ className = '' }: ChatWidgetProps) {
       {/* Error Display */}
       {error && (
         <div
-          className="chat-error bg-red-50 text-red-700 border-t border-red-200 px-4 py-3 text-sm"
+          className="chat-error bg-red-500/10 text-red-400 border-t border-red-500/20 px-4 py-3 text-sm"
           data-testid="chat-error"
         >
           ⚠️ {error}
@@ -160,7 +164,7 @@ export function ChatWidget({ className = '' }: ChatWidgetProps) {
       )}
 
       {/* Input Area */}
-      <div className="chat-input bg-white border-t border-gray-200 p-4 rounded-b-lg">
+      <div className="chat-input bg-[var(--bg-secondary)] border-t border-[var(--border)] p-4 rounded-b-lg">
         <div className="flex items-end gap-3">
           {/* Voice Button */}
           <VoiceButton
@@ -174,10 +178,10 @@ export function ChatWidget({ className = '' }: ChatWidgetProps) {
             ref={inputRef}
             value={input}
             onChange={handleInputChange}
-            onKeyPress={handleKeyPress}
-            placeholder="Type your message... (Enter to send, Shift+Enter for new line)"
+            onKeyDown={handleKeyDown}
+            placeholder={t('chat.placeholder')}
             disabled={isLoading}
-            className="flex-1 resize-none rounded-lg border border-gray-300 px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed transition-all duration-200"
+            className="flex-1 resize-none rounded-lg border border-[var(--border)] px-4 py-3 text-[var(--text-primary)] bg-[var(--bg-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent disabled:bg-[var(--bg-tertiary)] disabled:cursor-not-allowed transition-all duration-200 placeholder:text-[var(--text-tertiary)]"
             data-testid="chat-input"
             rows={1}
             style={{ minHeight: '48px', maxHeight: '150px' }}
@@ -185,14 +189,15 @@ export function ChatWidget({ className = '' }: ChatWidgetProps) {
           <button
             onClick={handleSend}
             disabled={isLoading || !input.trim()}
-            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold px-6 py-3 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--bg-tertiary)] disabled:cursor-not-allowed text-white font-semibold px-6 py-3 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2"
             data-testid="send-button"
+            aria-label={t('chat.send')}
           >
-            Send
+            {t('chat.send')}
           </button>
         </div>
-        <p className="text-xs text-gray-400 mt-2">
-          {isLoading ? 'Processing...' : 'Ready to chat'}
+        <p className="text-xs text-[var(--text-tertiary)] mt-2">
+          {isLoading ? t('chat.processing') : t('chat.ready')}
         </p>
       </div>
     </div>

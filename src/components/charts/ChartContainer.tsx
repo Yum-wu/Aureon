@@ -79,6 +79,8 @@ export function ChartContainer({
 
   return (
     <div
+      role="img"
+      aria-label={title}
       className={`relative rounded-lg border bg-[var(--bg-secondary)] border-[var(--border)] ${className}`}
     >
       {/* 标题栏 */}

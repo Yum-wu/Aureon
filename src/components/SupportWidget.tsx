@@ -12,8 +12,17 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useWebSocket } from '../hooks/useWebSocket';
 
-// Generate unique client ID for support widget
-const SUPPORT_CLIENT_ID = 'support-widget-' + Math.random().toString(36).slice(2, 9);
+// Generate stable client ID for support widget (persisted in sessionStorage)
+const getSupportClientId = () => {
+  const key = 'aureon_support_client_id';
+  let id = sessionStorage.getItem(key);
+  if (!id) {
+    id = 'support-' + crypto.randomUUID().slice(0, 8);
+    sessionStorage.setItem(key, id);
+  }
+  return id;
+};
+const SUPPORT_CLIENT_ID = getSupportClientId();
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -27,7 +36,7 @@ export function SupportWidget() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState('');
-  const [wsError] = useState<string | null>(null);
+  const [wsError, setWsError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -36,6 +45,33 @@ export function SupportWidget() {
     send,
   } = useWebSocket(`/ws/chat/${SUPPORT_CLIENT_ID}`, {
     autoReconnect: true,
+    onMessage: (data) => {
+      if (data && typeof data === 'object' && 'type' in data) {
+        const msg = data as { type: string; content?: string; text?: string };
+        if (msg.type === 'text' || msg.type === 'session') {
+          const text = msg.content || msg.text || '';
+          if (text) {
+            setStreamingText((prev) => prev + text);
+          }
+        } else if (msg.type === 'done') {
+          // 流式结束，将 streamingText 追加到消息列表
+          setIsStreaming(false);
+          setStreamingText((prev) => {
+            if (prev) {
+              setMessages((msgs) => [...msgs, { role: 'assistant', content: prev }]);
+            }
+            return '';
+          });
+        } else if (msg.type === 'error') {
+          setWsError(msg.content || msg.text || '连接出错');
+          setIsStreaming(false);
+          setStreamingText('');
+        }
+      }
+    },
+    onError: () => {
+      setWsError('连接失败，请稍后重试');
+    },
   });
 
   // Auto-scroll to bottom on new messages or streaming text
@@ -98,6 +134,7 @@ export function SupportWidget() {
           className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-4 focus:ring-[var(--accent)]/30"
           style={{ background: 'var(--accent)' }}
           aria-label="Open support chat"
+          aria-expanded={isOpen}
           data-testid="support-fab"
         >
           {/* Chat bubble icon */}
@@ -112,7 +149,7 @@ export function SupportWidget() {
             <circle cx="16" cy="10" r="1" />
           </svg>
           {/* Pulse animation */}
-          <span className="absolute inset-0 rounded-full animate-ping opacity-20" style={{ background: 'var(--accent)' }} />
+          <span className="absolute inset-0 rounded-full opacity-0" style={{ background: 'var(--accent)' }} />
         </button>
       )}
 
@@ -127,6 +164,8 @@ export function SupportWidget() {
             borderColor: 'var(--border)',
             borderRadius: '1rem',
           }}
+          role="dialog"
+          aria-modal="true"
           data-testid="support-panel"
         >
           {/* Header */}

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useDashboardStats } from '../hooks/useDashboardStats';
 import { useSystemHealth } from '../hooks/useSystemHealth';
 import { Card } from '../components/ui/Card';
+import { Tooltip } from '../components/ui/Tooltip';
 import { LineChart } from '../components/charts/LineChart';
 import { BarChart } from '../components/charts/BarChart';
 
@@ -111,6 +112,7 @@ function GoldenSignalCard({
   unit,
   trend,
   sparklineData,
+  tooltip,
   children,
 }: {
   label: string;
@@ -118,13 +120,21 @@ function GoldenSignalCard({
   unit?: string;
   trend?: number;
   sparklineData?: number[];
+  tooltip?: string;
   children?: React.ReactNode;
 }) {
   return (
     <Card className="relative overflow-hidden">
       {/* 顶部装饰线 */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/5 h-px bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30" />
-      <p className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider mb-2">{label}</p>
+      <p className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider mb-2 inline-flex items-center gap-1">
+        {label}
+        {tooltip && (
+          <Tooltip content={tooltip}>
+            <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full text-[9px] cursor-help" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)' }}>?</span>
+          </Tooltip>
+        )}
+      </p>
       <div className="flex items-baseline gap-1.5">
         <span className="text-2xl font-bold text-[var(--text-primary)] tabular-nums tracking-tight">{value}</span>
         {unit && <span className="text-sm font-medium text-[var(--text-tertiary)]">{unit}</span>}
@@ -159,6 +169,7 @@ function GoldenSignalCard({
 
 /** 健康服务卡片 */
 function HealthServiceCard({ service }: { service: ServiceHealth }) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-white/[0.02] border border-[var(--border-subtle)]">
       <span className="relative flex h-2.5 w-2.5">
@@ -173,8 +184,8 @@ function HealthServiceCard({ service }: { service: ServiceHealth }) {
           {service.healthy ? `${service.responseTime}ms` : '—'}
         </p>
       </div>
-      <span className={`text-xs font-medium ${service.healthy ? 'text-emerald-400' : 'text-red-400'}`}>
-        {service.healthy ? '✅' : '❌'}
+      <span className={`text-xs font-medium ${service.healthy ? 'text-emerald-400' : 'text-red-400'}`} aria-label={service.healthy ? t('dashboard.health.healthy') : t('dashboard.health.unhealthy')}>
+        ●
       </span>
     </div>
   );
@@ -188,14 +199,14 @@ function AlertRow({ alert }: { alert: AlertMessage }) {
     info: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
   };
   const severityIcons: Record<string, string> = {
-    critical: '🔴',
-    warning: '🟡',
-    info: '🔵',
+    critical: '●',
+    warning: '●',
+    info: '●',
   };
 
   return (
     <div className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${severityStyles[alert.severity] || severityStyles.info}`}>
-      <span className="text-sm">{severityIcons[alert.severity] || '🔵'}</span>
+      <span className="text-sm">{severityIcons[alert.severity] || '●'}</span>
       <p className="flex-1 text-sm text-[var(--text-primary)]">{alert.message}</p>
       <span className="text-xs text-[var(--text-tertiary)] shrink-0">
         {new Date(alert.timestamp).toLocaleTimeString()}
@@ -247,6 +258,7 @@ export function Dashboard() {
   const [wsConnected, setWsConnected] = useState(false);
   const [alerts, setAlerts] = useState<AlertMessage[]>([]);
   const [timeRange, setTimeRange] = useState<'1h' | '6h' | '24h' | '7d'>('24h');
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const connectRef = useRef<() => void>(() => {});
@@ -272,6 +284,7 @@ export function Dashboard() {
         const data = JSON.parse(event.data);
         if (data.type === 'metrics') {
           setRealtimeData(data.payload as RealtimeMetrics);
+          setLastUpdated(new Date());
         } else if (data.type === 'alert.fire') {
           setAlerts((prev) => [
             { id: data.id || crypto.randomUUID(), severity: data.severity || 'info', message: data.message, timestamp: data.timestamp || new Date().toISOString() },
@@ -316,6 +329,7 @@ export function Dashboard() {
   ];
 
   // Pipeline 分解数据
+  // TODO: 等待后端 API 提供 pipeline 延迟数据
   const pipelineStages = [
     { name: t('dashboard.pipeline.retrieval'), ms: 85, color: '#5E6AD2' },
     { name: t('dashboard.pipeline.rerank'), ms: 120, color: '#818CF8' },
@@ -331,17 +345,13 @@ export function Dashboard() {
 
   // 延迟趋势折线图数据
   const latencyChartData = metrics ? [
-    { id: t('dashboard.latency.ttft'), data: (metrics.latency_trend.length > 0 ? metrics.latency_trend : [590, 620, 580, 610, 560, 590, 540]).map((v: number, i: number) => ({ x: `${i}`, y: v })) },
-    { id: t('dashboard.latency.tpot'), data: (metrics.tpot_trend.length > 0 ? metrics.tpot_trend : [55, 58, 52, 60, 50, 55, 48]).map((v: number, i: number) => ({ x: `${i}`, y: v })) },
-    { id: t('dashboard.latency.e2e'), data: (metrics.e2e_trend.length > 0 ? metrics.e2e_trend : [856, 900, 830, 880, 810, 856, 790]).map((v: number, i: number) => ({ x: `${i}`, y: v })) },
+    { id: t('dashboard.latency.ttft'), data: (metrics.latency_trend.length > 0 ? metrics.latency_trend : []).map((v: number, i: number) => ({ x: `${i}`, y: v })) },
+    { id: t('dashboard.latency.tpot'), data: (metrics.tpot_trend.length > 0 ? metrics.tpot_trend : []).map((v: number, i: number) => ({ x: `${i}`, y: v })) },
+    { id: t('dashboard.latency.e2e'), data: (metrics.e2e_trend.length > 0 ? metrics.e2e_trend : []).map((v: number, i: number) => ({ x: `${i}`, y: v })) },
   ] : [];
 
   // 检索质量趋势数据
-  const qualityChartData = [
-    { id: 'Recall@5', data: [{ x: '0', y: 100 }, { x: '1', y: 100 }, { x: '2', y: 98 }, { x: '3', y: 100 }, { x: '4', y: 100 }] },
-    { id: 'MRR', data: [{ x: '0', y: 0.97 }, { x: '1', y: 0.96 }, { x: '2', y: 0.98 }, { x: '3', y: 0.97 }, { x: '4', y: 0.97 }] },
-    { id: 'Faithfulness', data: [{ x: '0', y: 0.98 }, { x: '1', y: 0.97 }, { x: '2', y: 0.98 }, { x: '3', y: 0.96 }, { x: '4', y: 0.98 }] },
-  ];
+  const qualityChartData: { id: string; data: { x: string; y: number }[] }[] = []; // TODO: 等待后端 API 提供质量趋势数据
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)]">
@@ -355,13 +365,22 @@ export function Dashboard() {
             >
               {t('dashboard.golden_signals.title')}
             </h1>
-            <p className="text-sm text-[var(--text-tertiary)] mt-1">
+            <p className="text-sm text-[var(--text-tertiary)] mt-1 inline-flex items-center gap-1.5">
               {t('dashboard.subtitle')}
+              <Tooltip content={t('dashboard.golden_signals.tooltip')}>
+                <span className="inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] cursor-help" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)' }}>?</span>
+              </Tooltip>
             </p>
           </div>
           <div className="flex items-center gap-3">
             <LiveIndicator connected={wsConnected} />
+            {lastUpdated && (
+              <span className="text-xs text-[var(--text-tertiary)]" aria-label={t('dashboard.last_updated')}>
+                {lastUpdated.toLocaleTimeString()}
+              </span>
+            )}
             <select
+              aria-label={t('dashboard.time_range.label')}
               value={timeRange}
               onChange={(e) => setTimeRange(e.target.value as '1h' | '6h' | '24h' | '7d')}
               className="px-3 py-1.5 text-sm rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-[var(--text-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
@@ -379,33 +398,45 @@ export function Dashboard() {
 
         {!loading && !error && (
           <div className="space-y-6">
+            {/* ── 演示模式水印 ── */}
+            {!realtimeData && !loading && !error && (
+              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-center">
+                <p className="text-sm font-medium text-amber-400">
+                  ⚠ {t('dashboard.demo_mode')}
+                </p>
+              </div>
+            )}
             {/* ── 2. Golden Signals row ── */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               <GoldenSignalCard
                 label={t('dashboard.golden_signals.latency')}
                 value={metrics?.ttft_p50 ?? '—'}
                 unit="ms"
-                trend={-5}
-                sparklineData={metrics?.latency_trend?.length ? metrics.latency_trend : [620, 590, 610, 580, 560, 590, 540]}
+                trend={realtimeData ? -5 : undefined}
+                sparklineData={metrics?.latency_trend?.length ? metrics.latency_trend : undefined}
+                tooltip={t('dashboard.golden_signals.latency_tooltip')}
               />
               <GoldenSignalCard
                 label={t('dashboard.golden_signals.traffic')}
                 value={metrics?.qps?.toFixed(2) ?? '—'}
                 unit="QPS"
-                trend={3}
-                sparklineData={[1.2, 1.5, 1.3, 1.8, 1.6, 1.7, 1.9]}
+                trend={realtimeData ? 3 : undefined}
+                sparklineData={undefined}
+                tooltip={t('dashboard.golden_signals.traffic_tooltip')}
               />
               <GoldenSignalCard
                 label={t('dashboard.golden_signals.errors')}
                 value={metrics?.error_rate?.toFixed(1) ?? '—'}
                 unit="%"
-                trend={-2}
-                sparklineData={[0.8, 0.5, 0.6, 0.4, 0.5, 0.3, 0.5]}
+                trend={realtimeData ? -2 : undefined}
+                sparklineData={undefined}
+                tooltip={t('dashboard.golden_signals.errors_tooltip')}
               />
               <GoldenSignalCard
                 label={t('dashboard.golden_signals.saturation')}
                 value={metrics?.saturation ?? '—'}
                 unit="%"
+                tooltip={t('dashboard.golden_signals.saturation_tooltip')}
               >
                 {/* 饱和度进度条 */}
                 <div className="w-full h-1.5 bg-[var(--bg-tertiary)] rounded-full overflow-hidden mt-1">
@@ -446,9 +477,14 @@ export function Dashboard() {
             {/* ── 4. Pipeline row ── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <Card>
-                <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
-                  {t('dashboard.pipeline.title')}
-                </h3>
+                <div className="flex items-center gap-2 mb-4">
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+                    {t('dashboard.pipeline.title')}
+                  </h3>
+                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-400">
+                    {t('dashboard.demo_data')}
+                  </span>
+                </div>
                 <PipelineBreakdown stages={pipelineStages} />
               </Card>
               <LineChart data={qualityChartData} title={t('dashboard.charts.quality_trend')} />

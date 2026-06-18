@@ -10,7 +10,8 @@
       "architecture": "Architecture",
       "crew": "Content Studio",
       "portfolio": "Portfolio",
-      "cost": "Cost"
+      "cost": "Cost",
+      "menu": "Menu"
     },
     "badges": {
       "recall": "Recall",
@@ -85,11 +86,20 @@
       "desc": "All metrics measured in production",
       "link": "View full benchmark →"
     },
-    "features_subtitle": "Everything you need for enterprise knowledge management"
+    "features_subtitle": "Everything you need for enterprise knowledge management",
+    "trust": {
+      "title": "Enterprise Security & Reliability",
+      "badges": ["SOC 2 Compliance", "End-to-End Encryption", "99.9% Availability", "Multi-Tenant Isolation", "SSO Integration", "Audit Logging"],
+      "tests": "Tests",
+      "articles": "Articles",
+      "chunks": "Chunks Indexed",
+      "deploy": "Deploy Time"
+    }
   },
   "dashboard": {
     "title": "System Dashboard",
     "subtitle": "Real-time metrics and system health monitoring",
+    "last_updated": "Last updated",
     "loading": "Loading",
     "error_loading": "Failed to load",
     "retry": "Retry",
@@ -118,11 +128,15 @@
       "tracing": "Tracing",
       "redis": "Redis",
       "qdrant": "Qdrant",
-      "llm_api": "LLM API"
+      "llm_api": "LLM API",
+      "healthy": "Healthy",
+      "unhealthy": "Unhealthy"
     },
     "recent_queries": {
       "title": "Recent Queries",
-      "empty": "No queries yet"
+      "empty": "No recent queries",
+      "sources": "sources",
+      "total": "total"
     },
     "query_volume": "Queries Today",
     "stats": {
@@ -154,6 +168,7 @@
     "live": "Live",
     "offline": "Offline",
     "time_range": {
+      "label": "Time Range",
       "1h": "Last 1 hour",
       "6h": "Last 6 hours",
       "24h": "Last 24 hours",
@@ -166,7 +181,12 @@
       "errors": "Error Rate",
       "saturation": "Saturation",
       "alerts": "Alerts",
-      "critical": "critical"
+      "critical": "critical",
+      "tooltip": "System health indicators: latency, traffic, errors, saturation, and alerts",
+      "latency_tooltip": "Time to First Token — how fast the AI starts responding",
+      "traffic_tooltip": "Queries Per Second — how many requests the system handles",
+      "errors_tooltip": "Percentage of failed requests",
+      "saturation_tooltip": "How busy the system is (0-100%)"
     },
     "pipeline": {
       "title": "RAG Pipeline Breakdown",
@@ -188,7 +208,9 @@
     "alerts": {
       "title": "Recent Alerts",
       "empty": "No active alerts"
-    }
+    },
+    "demo_mode": "Currently showing demo data. Will auto-update when connected to a live data source.",
+    "demo_data": "Demo Data"
   },
   "search": {
     "title": "Enterprise AI Search",
@@ -224,7 +246,8 @@
       "active_users": "Active Users",
       "today_queries": "Today's Queries",
       "storage_usage": "Storage Usage",
-      "uptime": "Uptime"
+      "uptime": "Uptime",
+      "no_data": "No overview data available"
     },
     "workspaces": {
       "title": "Workspaces",
@@ -241,7 +264,8 @@
         "actions": "Actions"
       },
       "edit": "Edit",
-      "empty": "No workspaces found"
+      "empty": "No workspaces found",
+      "empty_desc": "Create a workspace to get started"
     },
     "users": {
       "title": "User Management",
@@ -255,6 +279,16 @@
       "confirm_suspend_msg": "Are you sure you want to suspend {{name}}?",
       "confirm_delete": "Delete User",
       "confirm_delete_msg": "Are you sure you want to delete {{name}}? This action cannot be undone.",
+      "role_updated": "Role updated successfully",
+      "role_update_failed": "Failed to update role",
+      "suspended": "User suspended successfully",
+      "suspend_failed": "Failed to suspend user",
+      "deleted": "User deleted successfully",
+      "delete_failed": "Failed to delete user",
+      "invite_sent": "Invitation sent successfully",
+      "invite_failed": "Failed to send invitation",
+      "no_users": "No users found",
+      "no_users_desc": "Invite a user to get started",
       "columns": {
         "user": "User",
         "email": "Email",
@@ -289,6 +323,9 @@
       "severity_warning": "Warning",
       "severity_critical": "Critical",
       "empty": "No audit logs found",
+      "empty_desc": "Audit logs will appear here as system activity occurs",
+      "export_success": "Export completed successfully",
+      "export_failed": "Export failed",
       "columns": {
         "timestamp": "Timestamp",
         "action": "Action",
@@ -299,7 +336,9 @@
       }
     },
     "flags": {
-      "empty": "No feature flags configured"
+      "empty": "No feature flags configured",
+      "toggled": "Feature flag toggled successfully",
+      "toggle_failed": "Failed to toggle feature flag"
     },
     "loading": "Loading...",
     "identity_providers": "SSO Identity Providers",
@@ -502,7 +541,7 @@
   }
 ,
   "chat": {
-    "title": "AI Assistant",
+    "title": "Aureon Chat",
     "clear": "Clear",
     "emptyTitle": "How can I help you today?",
     "emptySubtitle": "Ask me anything about your knowledge base",
@@ -521,6 +560,13 @@
     "unsupported_format": "Unsupported format: {{ext}}",
     "file_too_large": "File size exceeds 10MB limit",
     "remove_file": "Remove file",
+    "welcome": "Welcome to Aureon",
+    "welcome_subtitle": "Start a conversation by typing a message below.",
+    "placeholder": "Type your message... (Enter to send, Shift+Enter for new line)",
+    "streaming": "Streaming...",
+    "ready": "Ready to chat",
+    "processing": "Processing...",
+    "sources": "Sources",
     "quickStart": [
       "Search latest technical docs",
       "Analyze system performance metrics",
@@ -565,7 +611,9 @@
       "totalTokens": "Total Tokens",
       "budgetUsed": "Budget Used",
       "budgetTotal": "Budget Total",
-      "per_day": "/day"
+      "per_day": "/day",
+      "burn_rate_tooltip": "Average daily spending on AI processing",
+      "token_usage_tooltip": "AI processing units — more tokens means more usage"
     },
     "budget": {
       "title": "Budget Status",
@@ -616,6 +664,8 @@
       "7d": "Last 7 days",
       "30d": "Last 30 days",
       "90d": "Last 90 days"
-    }
+    },
+    "demo_mode": "Currently showing demo data. Will auto-update when connected to a live data source.",
+    "export_failed": "Export failed"
   }
 }
