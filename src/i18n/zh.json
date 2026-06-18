@@ -10,7 +10,8 @@
       "architecture": "架构",
       "crew": "内容工作室",
       "portfolio": "作品集",
-      "cost": "成本治理"
+      "cost": "成本治理",
+      "menu": "菜单"
     },
     "badges": {
       "recall": "召回率",
@@ -84,11 +85,20 @@
       "desc": "所有指标来自生产环境实测",
       "link": "查看完整性能数据 →"
     },
-    "features_subtitle": "企业知识管理所需的全部能力"
+    "features_subtitle": "企业知识管理所需的全部能力",
+    "trust": {
+      "title": "企业级安全与可靠性",
+      "badges": ["SOC 2 合规", "端到端加密", "99.9% 可用性", "多租户隔离", "SSO 集成", "审计日志"],
+      "tests": "测试用例",
+      "articles": "文章",
+      "chunks": "索引片段",
+      "deploy": "部署时间"
+    }
   },
   "dashboard": {
     "title": "系统总览",
     "subtitle": "实时指标与系统健康监控",
+    "last_updated": "最后更新",
     "loading": "加载中",
     "error_loading": "加载失败",
     "retry": "重试",
@@ -117,11 +127,15 @@
       "tracing": "链路追踪",
       "redis": "Redis",
       "qdrant": "Qdrant",
-      "llm_api": "LLM API"
+      "llm_api": "LLM API",
+      "healthy": "正常",
+      "unhealthy": "异常"
     },
     "recent_queries": {
       "title": "最近查询",
-      "empty": "暂无查询记录"
+      "empty": "暂无最近查询",
+      "sources": "来源",
+      "total": "总计"
     },
     "query_volume": "今日查询量",
     "stats": {
@@ -153,6 +167,7 @@
     "live": "实时",
     "offline": "离线",
     "time_range": {
+      "label": "时间范围",
       "1h": "最近 1 小时",
       "6h": "最近 6 小时",
       "24h": "最近 24 小时",
@@ -165,7 +180,12 @@
       "errors": "错误率",
       "saturation": "饱和度",
       "alerts": "告警",
-      "critical": "严重"
+      "critical": "严重",
+      "tooltip": "系统健康指标：延迟、流量、错误率、饱和度和告警",
+      "latency_tooltip": "首字响应时间 — AI 开始回复的速度",
+      "traffic_tooltip": "每秒查询数 — 系统每秒处理的请求数",
+      "errors_tooltip": "失败请求的百分比",
+      "saturation_tooltip": "系统繁忙程度（0-100%）"
     },
     "pipeline": {
       "title": "RAG 流水线分解",
@@ -187,7 +207,9 @@
     "alerts": {
       "title": "最近告警",
       "empty": "暂无活跃告警"
-    }
+    },
+    "demo_mode": "当前显示演示数据，连接实时数据源后自动更新",
+    "demo_data": "演示数据"
   },
   "search": {
     "title": "企业级 AI 搜索",
@@ -223,7 +245,8 @@
       "active_users": "活跃用户",
       "today_queries": "今日查询",
       "storage_usage": "存储用量",
-      "uptime": "运行时间"
+      "uptime": "运行时间",
+      "no_data": "暂无概览数据"
     },
     "workspaces": {
       "title": "工作空间",
@@ -240,7 +263,8 @@
         "actions": "操作"
       },
       "edit": "编辑",
-      "empty": "暂无工作空间"
+      "empty": "暂无工作空间",
+      "empty_desc": "创建一个工作空间开始使用"
     },
     "users": {
       "title": "用户管理",
@@ -254,6 +278,16 @@
       "confirm_suspend_msg": "确定要暂停 {{name}} 吗？",
       "confirm_delete": "删除用户",
       "confirm_delete_msg": "确定要删除 {{name}} 吗？此操作不可撤销。",
+      "role_updated": "角色更新成功",
+      "role_update_failed": "角色更新失败",
+      "suspended": "用户已暂停",
+      "suspend_failed": "暂停用户失败",
+      "deleted": "用户已删除",
+      "delete_failed": "删除用户失败",
+      "invite_sent": "邀请已发送",
+      "invite_failed": "发送邀请失败",
+      "no_users": "暂无用户",
+      "no_users_desc": "邀请一位用户开始使用",
       "columns": {
         "user": "用户",
         "email": "邮箱",
@@ -288,6 +322,9 @@
       "severity_warning": "警告",
       "severity_critical": "严重",
       "empty": "暂无审计日志",
+      "empty_desc": "系统活动后审计日志将显示在此处",
+      "export_success": "导出成功",
+      "export_failed": "导出失败",
       "columns": {
         "timestamp": "时间",
         "action": "操作",
@@ -298,7 +335,9 @@
       }
     },
     "flags": {
-      "empty": "暂无功能开关"
+      "empty": "暂无功能开关",
+      "toggled": "功能开关已切换",
+      "toggle_failed": "切换功能开关失败"
     },
     "loading": "加载中...",
     "identity_providers": "SSO 身份提供商",
@@ -501,7 +540,7 @@
   }
 ,
   "chat": {
-    "title": "AI 助手",
+    "title": "Aureon 对话",
     "clear": "清空",
     "emptyTitle": "今天有什么可以帮你的？",
     "emptySubtitle": "问我任何关于知识库的问题",
@@ -520,6 +559,13 @@
     "unsupported_format": "不支持的格式: {{ext}}",
     "file_too_large": "文件大小超过 10MB 限制",
     "remove_file": "移除文件",
+    "welcome": "欢迎使用 Aureon",
+    "welcome_subtitle": "在下方输入消息开始对话",
+    "placeholder": "输入消息...（Enter 发送，Shift+Enter 换行）",
+    "streaming": "思考中...",
+    "ready": "准备就绪",
+    "processing": "处理中...",
+    "sources": "来源",
     "quickStart": [
       "帮我搜索最新的技术文档",
       "分析当前系统的性能指标",
@@ -564,7 +610,9 @@
       "totalTokens": "总 Token 数",
       "budgetUsed": "已用预算",
       "budgetTotal": "总预算",
-      "per_day": "/天"
+      "per_day": "/天",
+      "burn_rate_tooltip": "AI 处理的日均花费",
+      "token_usage_tooltip": "AI 处理单位 — Token 越多表示使用量越大"
     },
     "budget": {
       "title": "预算状态",
@@ -615,6 +663,8 @@
       "7d": "最近 7 天",
       "30d": "最近 30 天",
       "90d": "最近 90 天"
-    }
+    },
+    "demo_mode": "当前显示演示数据，连接实时数据源后自动更新",
+    "export_failed": "导出失败"
   }
 }

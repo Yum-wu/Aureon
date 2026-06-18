@@ -544,7 +544,8 @@ input, textarea, select {
 input::placeholder, textarea::placeholder { color: #5C5C6A !important; }
 input:focus, textarea:focus, select:focus {
   border-color: #5E6AD2 !important;
-  outline: none !important;
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
   box-shadow: 0 0 0 2px rgba(94,106,210,0.15) !important;
 }
 

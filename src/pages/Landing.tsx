@@ -45,12 +45,12 @@ export function Landing() {
       <section className="py-16 px-6">
         <div className="max-w-5xl mx-auto text-center">
           <p className="text-xs text-[var(--text-tertiary)] uppercase tracking-widest mb-8">
-            {t('landing.trusted_by', { defaultValue: 'Built with industry-leading technology' })}
+            {t('landing.trust.title')}
           </p>
           <div className="flex items-center justify-center gap-10 flex-wrap opacity-40">
-            {['Python', 'LangChain', 'ChromaDB', 'FastAPI', 'React', 'Tailwind CSS'].map((name) => (
-              <span key={name} className="text-sm font-medium text-[var(--text-secondary)] tracking-wide">
-                {name}
+            {(t('landing.trust.badges', { returnObjects: true }) as string[]).map((badge) => (
+              <span key={badge} className="text-sm font-medium text-[var(--text-secondary)] tracking-wide">
+                {badge}
               </span>
             ))}
           </div>

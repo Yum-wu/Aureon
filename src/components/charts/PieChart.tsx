@@ -78,7 +78,7 @@ export function PieChart<T extends DefaultRawDatum = DefaultRawDatum>({
           borderWidth={1}
           borderColor={{ from: 'color', modifiers: [['darker', 0.2]] }}
           enableArcLabels={showLabels}
-          arcLabel={(d) => `${d.id}`}
+          arcLabel={(d) => `${d.label ?? d.id}`}
           arcLabelsSkipAngle={10}
           arcLabelsTextColor={{ from: 'color', modifiers: [['darker', 2]] }}
           valueFormat={valueFormat}
