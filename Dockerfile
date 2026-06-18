@@ -18,10 +18,11 @@ FROM python:3.12-slim
 WORKDIR /app
 
 # 系统依赖：nginx + sqlite（Chroma 需要）+ gosu（进程降权）
+# hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    nginx=1.24.0-2 \
-    sqlite3=3.45.1-1 \
-    gosu=1.17-1 \
+    nginx \
+    sqlite3 \
+    gosu \
     && rm -rf /var/lib/apt/lists/* \
     && ln -sf /dev/stdout /var/log/nginx/access.log \
     && ln -sf /dev/stderr /var/log/nginx/error.log
