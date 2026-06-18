@@ -8,6 +8,7 @@ Fallback LLM uses `settings.fallback_*` (Zhipu AI).
 import os
 import asyncio
 import threading
+from collections import OrderedDict
 
 from langchain_openai import ChatOpenAI
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
@@ -19,7 +20,6 @@ from app.config import settings
 logger = structlog.get_logger()
 
 # ── LLM instance pool (reuse connections across requests, LRU eviction) ──
-from collections import OrderedDict
 
 _LLM_POOL_MAXSIZE = 10
 _llm_pool: OrderedDict[str, ChatOpenAI] = OrderedDict()

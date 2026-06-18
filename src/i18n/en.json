@@ -9,7 +9,8 @@
       "admin": "Admin",
       "architecture": "Architecture",
       "crew": "Content Studio",
-      "portfolio": "Portfolio"
+      "portfolio": "Portfolio",
+      "cost": "Cost"
     },
     "badges": {
       "recall": "Recall",
@@ -114,7 +115,10 @@
       "vector_db": "Vector DB",
       "embedding": "Embedding",
       "cache": "Cache",
-      "tracing": "Tracing"
+      "tracing": "Tracing",
+      "redis": "Redis",
+      "qdrant": "Qdrant",
+      "llm_api": "LLM API"
     },
     "recent_queries": {
       "title": "Recent Queries",
@@ -125,6 +129,65 @@
       "indexed_docs": "Indexed Docs",
       "total_chunks": "Total Chunks",
       "avg_latency": "Avg Latency"
+    },
+    "sections": {
+      "latency": "Latency",
+      "traffic": "Traffic",
+      "errors": "Errors",
+      "saturation": "Saturation",
+      "alerts": "Alerts",
+      "pipeline": "Pipeline",
+      "health": "Health"
+    },
+    "realtime": {
+      "qps": "Queries/sec",
+      "ttft_p50": "TTFT P50",
+      "ttft_p95": "TTFT P95",
+      "tpot": "Time per Token",
+      "error_rate": "Error Rate",
+      "cache_hit_rate": "Cache Hit Rate",
+      "token_usage": "Token Usage",
+      "active_connections": "Active Connections",
+      "connected": "Live",
+      "disconnected": "Disconnected"
+    },
+    "live": "Live",
+    "offline": "Offline",
+    "time_range": {
+      "1h": "Last 1 hour",
+      "6h": "Last 6 hours",
+      "24h": "Last 24 hours",
+      "7d": "Last 7 days"
+    },
+    "golden_signals": {
+      "title": "System Dashboard",
+      "latency": "Latency",
+      "traffic": "Traffic",
+      "errors": "Error Rate",
+      "saturation": "Saturation",
+      "alerts": "Alerts",
+      "critical": "critical"
+    },
+    "pipeline": {
+      "title": "RAG Pipeline Breakdown",
+      "retrieval": "Retrieval",
+      "rerank": "Rerank",
+      "crag": "CRAG",
+      "generation": "Generation"
+    },
+    "latency": {
+      "ttft": "TTFT",
+      "tpot": "TPOT",
+      "e2e": "E2E"
+    },
+    "charts": {
+      "latency_trend": "Latency Trend",
+      "query_volume": "Query Volume",
+      "quality_trend": "Retrieval Quality Trend"
+    },
+    "alerts": {
+      "title": "Recent Alerts",
+      "empty": "No active alerts"
     }
   },
   "search": {
@@ -149,9 +212,19 @@
     "title": "Enterprise Admin",
     "subtitle": "Enterprise Management Console",
     "tabs": {
+      "overview": "Overview",
       "workspaces": "Workspaces",
       "users": "User Management",
-      "audit": "Audit Logs"
+      "roles": "Roles & Permissions",
+      "audit": "Audit Logs",
+      "flags": "Feature Flags",
+      "sso": "SSO"
+    },
+    "overview": {
+      "active_users": "Active Users",
+      "today_queries": "Today's Queries",
+      "storage_usage": "Storage Usage",
+      "uptime": "Uptime"
     },
     "workspaces": {
       "title": "Workspaces",
@@ -160,19 +233,33 @@
       "columns": {
         "name": "Name",
         "users": "Users",
+        "members": "Members",
         "docs": "Documents",
+        "quota": "Quota",
         "created": "Created",
+        "status": "Status",
         "actions": "Actions"
-      }
+      },
+      "edit": "Edit",
+      "empty": "No workspaces found"
     },
     "users": {
       "title": "User Management",
       "invite_button": "Invite User",
       "invite": "Invite User",
+      "search_placeholder": "Search users...",
+      "empty": "No users found",
+      "suspend": "Suspend",
+      "delete": "Delete",
+      "confirm_suspend": "Suspend User",
+      "confirm_suspend_msg": "Are you sure you want to suspend {{name}}?",
+      "confirm_delete": "Delete User",
+      "confirm_delete_msg": "Are you sure you want to delete {{name}}? This action cannot be undone.",
       "columns": {
         "user": "User",
         "email": "Email",
         "role": "Role",
+        "status": "Status",
         "last_active": "Last Active",
         "lastActive": "Last Active",
         "actions": "Actions"
@@ -181,18 +268,38 @@
     "roles": {
       "admin": "Admin",
       "editor": "Editor",
-      "viewer": "Viewer"
+      "viewer": "Viewer",
+      "super_admin": "Super Admin",
+      "permission": "Permission"
     },
     "audit": {
       "title": "Audit Logs",
       "export_button": "Export Logs",
       "export": "Export Logs",
+      "export_csv": "Export CSV",
+      "export_json": "Export JSON",
+      "filter_user": "Filter by user",
+      "all_actions": "All Actions",
+      "all_severity": "All Severity",
+      "action_login": "Login",
+      "action_query": "Query",
+      "action_upload": "Upload",
+      "action_config": "Config",
+      "severity_info": "Info",
+      "severity_warning": "Warning",
+      "severity_critical": "Critical",
+      "empty": "No audit logs found",
       "columns": {
         "timestamp": "Timestamp",
         "action": "Action",
         "user": "User",
+        "resource": "Resource",
+        "severity": "Severity",
         "details": "Details"
       }
+    },
+    "flags": {
+      "empty": "No feature flags configured"
     },
     "loading": "Loading...",
     "identity_providers": "SSO Identity Providers",
@@ -204,7 +311,17 @@
     "no_traces": "No query traces yet",
     "no_traces_desc": "Traces will appear here as users interact with the system",
     "configured": "configured",
-    "recent_traces": "recent traces"
+    "recent_traces": "recent traces",
+    "form": {
+      "required": "This field is required",
+      "submit_error": "Submission failed",
+      "submit": "Submit",
+      "select_placeholder": "Select..."
+    },
+    "confirm": {
+      "cancel": "Cancel",
+      "ok": "Confirm"
+    }
   },
   "documents": {
     "title": "Documents",
@@ -426,5 +543,79 @@
       "Which LLM models are supported?",
       "What are the performance metrics?"
     ]
+  },
+  "cost": {
+    "title": "Cost Governance",
+    "subtitle": "Track spending, manage budgets, optimize costs",
+    "error_loading": "Failed to load cost data",
+    "retry": "Retry",
+    "export": "Export CSV",
+    "other_models": "Other Models",
+    "summary": {
+      "total_cost": "Total Cost",
+      "burn_rate": "Burn Rate",
+      "token_usage": "Token Usage",
+      "budget_status": "Budget Status",
+      "vs_last_period": "vs last period",
+      "daily_avg": "daily average",
+      "input": "Input",
+      "output": "Output",
+      "totalCost": "Total Cost",
+      "burnRate": "Burn Rate",
+      "totalTokens": "Total Tokens",
+      "budgetUsed": "Budget Used",
+      "budgetTotal": "Budget Total",
+      "per_day": "/day"
+    },
+    "budget": {
+      "title": "Budget Status",
+      "used": "Used",
+      "remaining": "Remaining",
+      "over_budget": "Over Budget",
+      "on_track": "On Track",
+      "warning": "Budget usage exceeds 80%",
+      "critical": "Budget usage exceeds 95%!"
+    },
+    "trends": {
+      "title": "Cost Trends",
+      "cost": "Cost",
+      "tokens": "Tokens"
+    },
+    "charts": {
+      "cost_trend": "Cost Trend",
+      "token_usage": "Token Usage",
+      "model_breakdown": "Cost by Model",
+      "workspace_breakdown": "Cost by Workspace",
+      "daily_cost": "Daily Cost",
+      "burn_rate": "Burn Rate",
+      "forecast": "Forecast"
+    },
+    "breakdown": {
+      "title": "Cost Breakdown",
+      "category": "Category",
+      "cost": "Cost",
+      "percentage": "Percentage"
+    },
+    "topConsumers": {
+      "title": "Top Consumers",
+      "name": "Name",
+      "cost": "Cost",
+      "tokens": "Tokens",
+      "percentage": "Percentage"
+    },
+    "table": {
+      "title": "Top Consumers",
+      "user": "User",
+      "tokens": "Tokens",
+      "cost": "Cost",
+      "queries": "Queries",
+      "trend": "Trend",
+      "empty": "No cost data available"
+    },
+    "time_range": {
+      "7d": "Last 7 days",
+      "30d": "Last 30 days",
+      "90d": "Last 90 days"
+    }
   }
 }

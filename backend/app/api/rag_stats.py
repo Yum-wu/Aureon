@@ -1,7 +1,9 @@
 """RAG 系统统计 + 文档管理 API — Dashboard / Documents 数据源"""
+import json
 import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional, Dict, Any
 import structlog
 
@@ -324,9 +326,6 @@ def _get_documents_qdrant():
 
 
 # ── Benchmark API ──
-
-import json
-from pathlib import Path
 
 
 BENCHMARK_FILE = Path(__file__).parent.parent.parent / "data" / "benchmark_results.json"

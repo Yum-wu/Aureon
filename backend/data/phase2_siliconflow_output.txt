@@ -1,0 +1,1788 @@
+
++---------------------------------------------+
+|       Aureon RAG Benchmark — 统一测试        |
++---------------------------------------------+
+
+  Judge Provider: siliconflow
+  Judge Model:    deepseek-ai/DeepSeek-V4-Flash
+  Judge Base URL: https://api.siliconflow.cn/v1
+  验证级别:       detailed (seed=42)
+
+
+============================================================
+  Phase 2: 全量 DeepEval 评估 (11 指标)
+============================================================
+  Judge: deepseek-ai/DeepSeek-V4-Flash (siliconflow) | 并发: 15
+  数据源: C:\Users\Yum\Desktop\Aureon-test\backend\data\benchmark_raw_20260617_215535.json
+  总查询: 50 | 可评估正例: 33
+  采样数: 15
+2026-06-18 12:54:12 [info     ] Loaded 113 documents from C:\Users\Yum\Desktop\Aureon-test\backend\data\articles
+  已加载 99 篇文章文本
+
+  [1/3] 构建 test cases...
+
+  构建 test cases |###-----------------------------------------------| 1/15 (7%) ETA 0s   
+  构建 test cases |######--------------------------------------------| 2/15 (13%) ETA 0s   
+  构建 test cases |##########----------------------------------------| 3/15 (20%) ETA 0s   
+  构建 test cases |#############-------------------------------------| 4/15 (27%) ETA 0s   
+  构建 test cases |################----------------------------------| 5/15 (33%) ETA 0s   
+  构建 test cases |####################------------------------------| 6/15 (40%) ETA 0s   
+  构建 test cases |#######################---------------------------| 7/15 (47%) ETA 0s   
+  构建 test cases |##########################------------------------| 8/15 (53%) ETA 0s   
+  构建 test cases |##############################--------------------| 9/15 (60%) ETA 0s   
+  构建 test cases |#################################-----------------| 10/15 (67%) ETA 0s   
+  构建 test cases |####################################--------------| 11/15 (73%) ETA 0s   
+  构建 test cases |########################################----------| 12/15 (80%) ETA 0s   
+  构建 test cases |###########################################-------| 13/15 (87%) ETA 0s   
+  构建 test cases |##############################################----| 14/15 (93%) ETA 0s   
+  构建 test cases |##################################################| 15/15 (100%) ETA 0s   
+  已构建 15 个 test cases（含 expected_output）
+
+  [2/3] Round 1: RAG 质量评估（6 指标）...
+✨ You're running DeepEval's latest Faithfulness Metric! (using 
+deepseek-ai/DeepSeek-V4-Flash, strict=False, async_mode=True)...
+✨ You're running DeepEval's latest Answer Relevancy Metric! (using 
+deepseek-ai/DeepSeek-V4-Flash, strict=False, async_mode=True)...
+✨ You're running DeepEval's latest Hallucination Metric! (using 
+deepseek-ai/DeepSeek-V4-Flash, strict=False, async_mode=True)...
+✨ You're running DeepEval's latest Contextual Relevancy Metric! (using 
+deepseek-ai/DeepSeek-V4-Flash, strict=False, async_mode=True)...
+✨ You're running DeepEval's latest Contextual Precision Metric! (using 
+deepseek-ai/DeepSeek-V4-Flash, strict=False, async_mode=True)...
+✨ You're running DeepEval's latest Contextual Recall Metric! (using 
+deepseek-ai/DeepSeek-V4-Flash, strict=False, async_mode=True)...
+    🎯 Evaluating test case #0  ----------------------------        83% 0:03:02
+    🎯 Evaluating test case #4  ----------------------------        83% 0:03:01
+    🎯 Evaluating test case #5  ----------------------------        83% 0:03:01
+    🎯 Evaluating test case #8  ----------------------------        83% 0:03:00
+    🎯 Evaluating test case #12 ----------------------------        83% 0:03:00
+    🎯 Evaluating test case #13 ----------------------------        83% 0:03:00
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 🚀 DeepEval Evaluation Results                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_0                                                             │
+│  ├──   Input:              DeepSeek                                         │
+│  │                         缓存优化对实际使用成本产生了什么影响？           │
+│  │     Actual Output:      将缓存率从 56.7% 提升至                          │
+│  │                         76.0%，使实际成本倍数从约 5.8 倍降至 3.2         │
+│  │                         倍，相当于成本降低了近一半。                     │
+│  │                                                                          │
+│  │                         在优化前，总请求 59 次产生约 1.6M                │
+│  │                         tokens，成本倍数约为无缓存时的 5.8               │
+│  │                         倍；优化后，总请求 90 次产生约 2.1M              │
+│  │                         tokens，成本倍数降至 3.2 倍。DeepSeek            │
+│  │                         的缓存定价（¥0.025）与未缓存定价（¥3/100万       │
+│  │                         tokens）相差 120                                 │
+│  │                         倍，因此缓存率的提升直接显著降低了账单支出。…    │
+│  │                         LLM 缓存优化实战：把 DeepSeek 代理缓存率从       │
+│  │                         56% 提升到 76%]                                  │
+│  │     Expected Output:    缓存命中率从 56% 提升到 76%，大幅降低了 toke…    │
+│  │                         消耗和 API                                       │
+│  │                         调用成本，因为命中缓存的请求不需要重新计算已…    │
+│  │                         KV                                               │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│        PASS  │ Faithfulness       │ 1.00  │ 0.70      │ The score is 1.00   │
+│              │                    │       │           │ because there are   │
+│              │                    │       │           │ no contradi...      │
+│        PASS  │ Answer Relevancy   │ 1.00  │ 0.75      │ The score is 1.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ actual output is    │
+│              │                    │       │           │ ...                 │
+│        PASS  │ Hallucination      │ 0.00  │ 0.20      │ The score is 0.00   │
+│              │                    │       │           │ because there are   │
+│              │                    │       │           │ no contradi...      │
+│       ERROR  │ Contextual         │ N/A   │ 0.55      │ Timed               │
+│              │ Relevancy          │       │           │ out/cancelled       │
+│              │                    │       │           │ while evaluating    │
+│              │                    │       │           │ metric. Increase    │
+│              │                    │       │           │ DEEPEVAL_PER_TAS…   │
+│              │                    │       │           │ or set              │
+│              │                    │       │           │ DEEPEVAL_LOG_STA…   │
+│              │                    │       │           │ for full            │
+│              │                    │       │           │ traceback.          │
+│        PASS  │ Contextual         │ 1.00  │ 0.70      │ The score is 1.00   │
+│              │ Precision          │       │           │ because all three   │
+│              │                    │       │           │ retrieval c...      │
+│        PASS  │ Contextual Recall  │ 1.00  │ 0.75      │ The score is 1.00   │
+│              │                    │       │           │ because all         │
+│              │                    │       │           │ sentences in the    │
+│              │                    │       │           │ ...                 │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_1                                                             │
+│  ├──   Input:              AI Agent                                         │
+│  │                         的四个核心组件是什么？各自承担什么职责？         │
+│  │     Actual Output:      AI Agent 的四个核心组件是                        │
+│  │                         LLM（大脑）、Tools（工具）、Memory（记忆）和     │
+│  │                         Planning（规划）。LLM 负责推理与决策，Tools      │
+│  │                         提供外部能力调用，Memory                         │
+│  │                         管理对话上下文与持久化数据，Planning             │
+│  │                         负责任务拆解与动态策略调整。[来源: AI Agent      │
+│  │                         架构设计]                                        │
+│  │     Expected Output:    LLM 作为大脑进行推理决策，Tools                  │
+│  │                         提供与外部世界交互的能力，Memory                 │
+│  │                         管理对话历史和知识，Planning                     │
+│  │                         负责任务分解和执行策略                           │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│        PASS  │ Faithfulness       │ 1.00  │ 0.70      │ The score is 1.00   │
+│              │                    │       │           │ because there are   │
+│              │                    │       │           │ no contradi...      │
+│        PASS  │ Answer Relevancy   │ 1.00  │ 0.75      │ The score is 1.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ actual output is    │
+│              │                    │       │           │ ...                 │
+│        PASS  │ Hallucination      │ 0.00  │ 0.20      │ The score is 0.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ actual output       │
+│              │                    │       │           │ cor...              │
+│        FAIL  │ Contextual         │ 0.13  │ 0.55      │ The score is 0.13   │
+│              │ Relevancy          │       │           │ because the         │
+│              │                    │       │           │ retrieval context   │
+│              │                    │       │           │ contains only two   │
+│              │                    │       │           │ statements          │
+│              │                    │       │           │ listing the four    │
+│              │                    │       │           │ core components     │
+│              │                    │       │           │ ('核心组件：LLM …   │
+│              │                    │       │           │ Tools（工具）+      │
+│              │                    │       │           │ Memory（记忆）+     │
+│              │                    │       │           │ Planning（规划）…   │
+│              │                    │       │           │ but the vast        │
+│              │                    │       │           │ majority of         │
+│              │                    │       │           │ statements are      │
+│              │                    │       │           │ irrelevant,         │
+│              │                    │       │           │ focusing on         │
+│              │                    │       │           │ general AI Agent    │
+│              │                    │       │           │ capabilities,       │
+│              │                    │       │           │ ReAct mode,         │
+│              │                    │       │           │ memory details,     │
+│              │                    │       │           │ or code examples,   │
+│              │                    │       │           │ none of which       │
+│              │                    │       │           │ address the         │
+│              │                    │       │           │ specific question   │
+│              │                    │       │           │ about components    │
+│              │                    │       │           │ and their           │
+│              │                    │       │           │ responsibilities.   │
+│        PASS  │ Contextual         │ 1.00  │ 0.70      │ The score is 1.00   │
+│              │ Precision          │       │           │ because all three   │
+│              │                    │       │           │ nodes in th...      │
+│        PASS  │ Contextual Recall  │ 1.00  │ 0.75      │ The score is 1.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ expected output     │
+│              │                    │       │           │ s...                │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ✅ test_case_2 (Passed 6 metrics)                                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_3                                                             │
+│  ├──   Input:              请用一句话总结 RAG 系统的核心原理                │
+│  │     Actual Output:      RAG                                              │
+│  │                         系统通过先从知识库中检索相关文档，再将检索结…    │
+│  │                         RAG 核心概念深度解析]                            │
+│  │     Expected Output:    先检索相关文档再让 LLM                           │
+│  │                         基于检索结果生成回答的技术架构                   │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│        PASS  │ Faithfulness       │ 1.00  │ 0.70      │ The score is 1.00   │
+│              │                    │       │           │ because there are   │
+│              │                    │       │           │ no contradi...      │
+│        FAIL  │ Answer Relevancy   │ 0.67  │ 0.75      │ The score is 0.67   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ actual output       │
+│              │                    │       │           │ includes a source   │
+│              │                    │       │           │ citation, which     │
+│              │                    │       │           │ is irrelevant to    │
+│              │                    │       │           │ the requested       │
+│              │                    │       │           │ one-sentence        │
+│              │                    │       │           │ summary of RAG's    │
+│              │                    │       │           │ core principle,     │
+│              │                    │       │           │ preventing a        │
+│              │                    │       │           │ higher score;       │
+│              │                    │       │           │ however, the main   │
+│              │                    │       │           │ content still       │
+│              │                    │       │           │ addresses the       │
+│              │                    │       │           │ core principle,     │
+│              │                    │       │           │ so it is not        │
+│              │                    │       │           │ lower.              │
+│        PASS  │ Hallucination      │ 0.00  │ 0.20      │ The score is 0.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ actual output       │
+│              │                    │       │           │ ful...              │
+│        FAIL  │ Contextual         │ 0.40  │ 0.55      │ The score is 0.40   │
+│              │ Relevancy          │       │           │ because the         │
+│              │                    │       │           │ retrieval context   │
+│              │                    │       │           │ contains some       │
+│              │                    │       │           │ relevant            │
+│              │                    │       │           │ statements, such    │
+│              │                    │       │           │ as                  │
+│              │                    │       │           │ 'RAG（Retrieval-…   │
+│              │                    │       │           │ Generation，检索…   │
+│              │                    │       │           │ and                 │
+│              │                    │       │           │ '核心思路：先从 …   │
+│              │                    │       │           │ LLM 生成回答',      │
+│              │                    │       │           │ which directly      │
+│              │                    │       │           │ address the         │
+│              │                    │       │           │ input's request     │
+│              │                    │       │           │ for a               │
+│              │                    │       │           │ one-sentence        │
+│              │                    │       │           │ summary of RAG's    │
+│              │                    │       │           │ core principle.     │
+│              │                    │       │           │ However, many       │
+│              │                    │       │           │ statements are      │
+│              │                    │       │           │ irrelevant, as      │
+│              │                    │       │           │ noted in reasons    │
+│              │                    │       │           │ like                │
+│              │                    │       │           │ '该语句描述的是 …   │
+│              │                    │       │           │ and                 │
+│              │                    │       │           │ '该语句描述的是C…   │
+│              │                    │       │           │ which dilute the    │
+│              │                    │       │           │ overall             │
+│              │                    │       │           │ relevance.          │
+│        FAIL  │ Contextual         │ 0.33  │ 0.70      │ The score is 0.33   │
+│              │ Precision          │       │           │ because only the    │
+│              │                    │       │           │ third node is       │
+│              │                    │       │           │ relevant, but it    │
+│              │                    │       │           │ is ranked last,     │
+│              │                    │       │           │ while the first     │
+│              │                    │       │           │ two nodes are       │
+│              │                    │       │           │ irrelevant and      │
+│              │                    │       │           │ ranked higher.      │
+│              │                    │       │           │ The first node is   │
+│              │                    │       │           │ irrelevant          │
+│              │                    │       │           │ because it          │
+│              │                    │       │           │ '主要介绍CRAG（ …   │
+│              │                    │       │           │ the second node     │
+│              │                    │       │           │ is irrelevant       │
+│              │                    │       │           │ because it          │
+│              │                    │       │           │ '介绍Agentic        │
+│              │                    │       │           │ RAG，强调主动检 …   │
+│              │                    │       │           │ third node is       │
+│              │                    │       │           │ relevant as it      │
+│              │                    │       │           │ '明确说明RAG是' …   │
+│              │                    │       │           │ its low rank        │
+│              │                    │       │           │ reduces             │
+│              │                    │       │           │ precision.          │
+│        PASS  │ Contextual Recall  │ 1.00  │ 0.75      │ The score is 1.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ expected output     │
+│              │                    │       │           │ s...                │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_4                                                             │
+│  ├──   Input:              文章中 Todo 应用的状态管理包含哪些操作？         │
+│  │     Actual Output:      Todo                                             │
+│  │                         应用的状态管理包含添加任务（addTodo）、切换 …    │
+│  │                                                                          │
+│  │                         具体操作包括：                                   │
+│  │                         1. **添加任务**：使用 `addTodo`                  │
+│  │                         函数将新任务推入 todos 数组。                    │
+│  │                         2. **切换状态**：使用 `toggleTodo` 函数根据      │
+│  │                         ID 翻转任务的 completed 属性。                   │
+│  │                         3. **数据持久化**：所有状态变更自动保存至        │
+│  │                         localStorage，并通过防抖机制优化写入频率。       │
+│  │                         4.                                               │
+│  │                         **筛选与统计**：支持按分类（工作、学习、生活…    │
+│  │                                                                          │
+│  │                         [来源: React + Zustand 构建 Todo                 │
+│  │                         应用的状态管理实践]                              │
+│  │     Expected Output:    添加待办、切换完成状态、删除待办、筛选显示（…    │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│        PASS  │ Faithfulness       │ 1.00  │ 0.70      │ The score is 1.00   │
+│              │                    │       │           │ because there are   │
+│              │                    │       │           │ no contradi...      │
+│        PASS  │ Answer Relevancy   │ 0.80  │ 0.75      │ The score is 0.80   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ actual output       │
+│              │                    │       │           │ inc...              │
+│        PASS  │ Hallucination      │ 0.00  │ 0.20      │ The score is 0.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ actual output       │
+│              │                    │       │           │ acc...              │
+│       ERROR  │ Contextual         │ N/A   │ 0.55      │ Timed               │
+│              │ Relevancy          │       │           │ out/cancelled       │
+│              │                    │       │           │ while evaluating    │
+│              │                    │       │           │ metric. Increase    │
+│              │                    │       │           │ DEEPEVAL_PER_TAS…   │
+│              │                    │       │           │ or set              │
+│              │                    │       │           │ DEEPEVAL_LOG_STA…   │
+│              │                    │       │           │ for full            │
+│              │                    │       │           │ traceback.          │
+│        PASS  │ Contextual         │ 1.00  │ 0.70      │ The score is 1.00   │
+│              │ Precision          │       │           │ because all three   │
+│              │                    │       │           │ nodes are r...      │
+│        FAIL  │ Contextual Recall  │ 0.00  │ 0.75      │ The score is 0.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ expected output's   │
+│              │                    │       │           │ '筛选显示（全部/…   │
+│              │                    │       │           │ is not explicitly   │
+│              │                    │       │           │ mentioned in any    │
+│              │                    │       │           │ node in the         │
+│              │                    │       │           │ retrieval           │
+│              │                    │       │           │ context, and no     │
+│              │                    │       │           │ supportive          │
+│              │                    │       │           │ reasons were        │
+│              │                    │       │           │ provided to         │
+│              │                    │       │           │ attribute any       │
+│              │                    │       │           │ part of the         │
+│              │                    │       │           │ sentence to the     │
+│              │                    │       │           │ context.            │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_5                                                             │
+│  ├──   Input:              SPA 部署到 GitHub Pages                          │
+│  │                         时构建阶段常见的两个陷阱是什么？                 │
+│  │     Actual Output:      构建阶段常见的两个陷阱是：1)                     │
+│  │                         上传了错误的目录导致找不到文件；2) Node.js       │
+│  │                         版本过低引发 `CustomEvent is not defined`        │
+│  │                         错误。[来源: SPA 部署 GitHub Pages 踩坑实录]     │
+│  │                                                                          │
+│  │                         具体表现为：                                     │
+│  │                         - **上传错误目录**：GitHub Actions               │
+│  │                         工作流若使用 `path: '.'`                         │
+│  │                         会上传整个仓库根目录，而根目录可能没有           │
+│  │                         `index.html`，导致页面                           │
+│  │                         404。正确做法是指向构建产物目录（如              │
+│  │                         `dist`）。                                       │
+│  │                         - **Node.js 版本过低**：使用 Vite、React         │
+│  │                         等较新框架时，旧版 Node.js 不支持某些特性（ …    │
+│  │                         `CustomEvent`），需在 CI 中指定兼容的 Node       │
+│  │                         版本。[来源: SPA Deployment on GitHub Pages …    │
+│  │                         From 404 to Blank Screen to Route 404]           │
+│  │     Expected Output:    构建产物被 .gitignore 排除导致 CI                │
+│  │                         无法部署，以及 Node.js 版本过低导致构建失败      │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│        FAIL  │ Faithfulness       │ 0.67  │ 0.70      │ The score is 0.67   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ actual output       │
+│              │                    │       │           │ incorrectly         │
+│              │                    │       │           │ claims that         │
+│              │                    │       │           │ uploading the       │
+│              │                    │       │           │ wrong directory     │
+│              │                    │       │           │ is a build-phase    │
+│              │                    │       │           │ trap, while the     │
+│              │                    │       │           │ retrieval context   │
+│              │                    │       │           │ specifies that      │
+│              │                    │       │           │ this issue causes   │
+│              │                    │       │           │ a 404 in the        │
+│              │                    │       │           │ deployment phase,   │
+│              │                    │       │           │ and the             │
+│              │                    │       │           │ build-phase         │
+│              │                    │       │           │ file-not-found      │
+│              │                    │       │           │ issue is due to     │
+│              │                    │       │           │ gitignore, not      │
+│              │                    │       │           │ the wrong           │
+│              │                    │       │           │ directory.          │
+│        PASS  │ Answer Relevancy   │ 1.00  │ 0.75      │ The score is 1.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ actual output       │
+│              │                    │       │           │ con...              │
+│        PASS  │ Hallucination      │ 0.00  │ 0.20      │ The score is 0.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ actual output       │
+│              │                    │       │           │ ful...              │
+│       ERROR  │ Contextual         │ N/A   │ 0.55      │ Timed               │
+│              │ Relevancy          │       │           │ out/cancelled       │
+│              │                    │       │           │ while evaluating    │
+│              │                    │       │           │ metric. Increase    │
+│              │                    │       │           │ DEEPEVAL_PER_TAS…   │
+│              │                    │       │           │ or set              │
+│              │                    │       │           │ DEEPEVAL_LOG_STA…   │
+│              │                    │       │           │ for full            │
+│              │                    │       │           │ traceback.          │
+│        PASS  │ Contextual         │ 1.00  │ 0.70      │ The score is 1.00   │
+│              │ Precision          │       │           │ because all         │
+│              │                    │       │           │ relevant nodes      │
+│              │                    │       │           │ ar...               │
+│        PASS  │ Contextual Recall  │ 1.00  │ 0.75      │ The score is 1.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ expected            │
+│              │                    │       │           │ output's...         │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_6                                                             │
+│  ├──   Input:              RAG 系统中 Chunking 策略、Embedding              │
+│  │                         模型选择和向量数据库选型之间如何相互影响？       │
+│  │     Actual Output:      Chunking                                         │
+│  │                         策略决定文本片段的语义完整性，直接影响           │
+│  │                         Embedding 模型生成的向量质量；Embedding          │
+│  │                         模型的维度与语言支持能力需匹配 Chunking          │
+│  │                         后的片段特征及向量数据库的索引算法（如 HNSW      │
+│  │                         适合高维数据）；向量数据库的检索精度和速度又…    │
+│  │                         Chunking 粒度与 Embedding 表示能力协同优化。     │
+│  │                                                                          │
+│  │                         具体影响如下：                                   │
+│  │                         1. **Chunking 对 Embedding                       │
+│  │                         的影响**：固定长度切分可能切断语义边界，导致     │
+│  │                         Embedding                                        │
+│  │                         无法准确表达完整含义；语义切分保持上下文连贯…    │
+│  │                         结构通过大块召回、小块生成，平衡检索率与生成…    │
+│  │                         2. **Embedding                                   │
+│  │                         对向量数据库的影响**：高维向量（如 OpenAI        │
+│  │                         3072 维）需选择支持高维索引的数据库（如          │
+│  │                         HNSW），而低维或中文优先模型（如 BGE 1024        │
+│  │                         维）可适配 IVF 等中等规模索引。                  │
+│  │                         3. **向量数据库对 Chunking                       │
+│  │                         的反向约束**：若使用 Flat 索引（<10              │
+│  │                         万向量），Chunking                               │
+│  │                         需更细粒度以避免数据量过大；若用                 │
+│  │                         HNSW（支持亿级），Chunking                       │
+│  │                         可适当放宽粒度以提升语义完整性。                 │
+│  │                                                                          │
+│  │                         [来源: RAG 核心概念深度解析] [来源: Embeddin…    │
+│  │                         模型选型指南] [来源: 向量数据库完全指南]         │
+│  │     Expected Output:    Chunking                                         │
+│  │                         策略决定向量粒度（小块检索精度高大块上下文完…    │
+│  │                         维度决定向量大小影响数据库存储和查询性能；向…    │
+│  │                         768 维 Embedding + ChromaDB 适合小规模，1536     │
+│  │                         维 + Qdrant 适合中规模                           │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│        PASS  │ Faithfulness       │ 1.00  │ 0.70      │ The score is 1.00   │
+│              │                    │       │           │ because there are   │
+│              │                    │       │           │ no contradi...      │
+│        PASS  │ Answer Relevancy   │ 1.00  │ 0.75      │ The score is 1.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ actual output is    │
+│              │                    │       │           │ ...                 │
+│        PASS  │ Hallucination      │ 0.00  │ 0.20      │ The score is 0.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ actual output       │
+│              │                    │       │           │ doe...              │
+│        FAIL  │ Contextual         │ 0.50  │ 0.55      │ The score is 0.50   │
+│              │ Relevancy          │       │           │ because the         │
+│              │                    │       │           │ retrieval context   │
+│              │                    │       │           │ contains            │
+│              │                    │       │           │ statements about    │
+│              │                    │       │           │ Chunking            │
+│              │                    │       │           │ strategies and      │
+│              │                    │       │           │ Embedding models,   │
+│              │                    │       │           │ but they are only   │
+│              │                    │       │           │ described in        │
+│              │                    │       │           │ isolation without   │
+│              │                    │       │           │ discussing their    │
+│              │                    │       │           │ mutual influence.   │
+│              │                    │       │           │ For example,        │
+│              │                    │       │           │ '将长文档切分为 …   │
+│              │                    │       │           │ RAG                 │
+│              │                    │       │           │ 质量的关键环节'     │
+│              │                    │       │           │ is noted as         │
+│              │                    │       │           │ '仅描述 Chunking    │
+│              │                    │       │           │ 的一般作用，未涉…   │
+│              │                    │       │           │ Embedding           │
+│              │                    │       │           │ 模型选择和向量数…   │
+│              │                    │       │           │ and                 │
+│              │                    │       │           │ '固定长度切分： …   │
+│              │                    │       │           │ is noted as         │
+│              │                    │       │           │ '仅介绍固定长度 …   │
+│              │                    │       │           │ Embedding           │
+│              │                    │       │           │ 模型或向量数据库…   │
+│              │                    │       │           │ These statements    │
+│              │                    │       │           │ lack the            │
+│              │                    │       │           │ interconnected      │
+│              │                    │       │           │ analysis required   │
+│              │                    │       │           │ by the input,       │
+│              │                    │       │           │ resulting in        │
+│              │                    │       │           │ partial             │
+│              │                    │       │           │ relevance.          │
+│        PASS  │ Contextual         │ 1.00  │ 0.70      │ The score is 1.00   │
+│              │ Precision          │       │           │ because all three   │
+│              │                    │       │           │ nodes in th...      │
+│        FAIL  │ Contextual Recall  │ 0.00  │ 0.75      │ The score is 0.00   │
+│              │                    │       │           │ because none of     │
+│              │                    │       │           │ the four            │
+│              │                    │       │           │ sentences in the    │
+│              │                    │       │           │ expected output     │
+│              │                    │       │           │ are supported by    │
+│              │                    │       │           │ any node in the     │
+│              │                    │       │           │ retrieval           │
+│              │                    │       │           │ context. Sentence   │
+│              │                    │       │           │ 1's claim about     │
+│              │                    │       │           │ chunking strategy   │
+│              │                    │       │           │ determining         │
+│              │                    │       │           │ vector              │
+│              │                    │       │           │ granularity is      │
+│              │                    │       │           │ not present;        │
+│              │                    │       │           │ sentence 2's        │
+│              │                    │       │           │ discussion of       │
+│              │                    │       │           │ embedding           │
+│              │                    │       │           │ dimension impact    │
+│              │                    │       │           │ on storage/query    │
+│              │                    │       │           │ is absent;          │
+│              │                    │       │           │ sentence 3's        │
+│              │                    │       │           │ mention of vector   │
+│              │                    │       │           │ database index      │
+│              │                    │       │           │ algorithms and      │
+│              │                    │       │           │ retrieval speed     │
+│              │                    │       │           │ is missing; and     │
+│              │                    │       │           │ sentence 4's        │
+│              │                    │       │           │ specific            │
+│              │                    │       │           │ dimensions and      │
+│              │                    │       │           │ databases (768,     │
+│              │                    │       │           │ 1536, ChromaDB,     │
+│              │                    │       │           │ Qdrant) are not     │
+│              │                    │       │           │ found in any        │
+│              │                    │       │           │ node.               │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ✅ test_case_7 (Passed 6 metrics)                                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_8                                                             │
+│  ├──   Input:              博客搬家过程中文件被覆盖后，如何通过 Git         │
+│  │                         恢复？                                           │
+│  │     Actual Output:      通过从父 commit `HEAD^` 逐个 checkout            │
+│  │                         被覆盖的文件来恢复，因为直接 revert              │
+│  │                         无法生效。若需恢复文章，可从包含完整内容的旧     │
+│  │                         commit（如 `14d78ae`）中检出文件。[来源:         │
+│  │                         博客搬家记 — 从 Git 报错到 Vercel                │
+│  │                         部署的全栈踩坑]                                  │
+│  │                                                                          │
+│  │                         具体步骤如下：                                   │
+│  │                         1. 恢复被覆盖的配置文件（如                      │
+│  │                         package.json、index.html），执行命令：`git       │
+│  │                         checkout HEAD^ -- MyBlog/client/package.json     │
+│  │                         MyBlog/client/index.html ...`                    │
+│  │                         2. 恢复丢失的文章内容，先通过 `git log --all     │
+│  │                         --oneline --name-only -- "*/content/posts/*"`    │
+│  │                         查找包含文章的 commit（例如                      │
+│  │                         `14d78ae`），然后执行：`git checkout 14d78ae     │
+│  │                         -- MyBlog/client/src/content/posts/*.md`。       │
+│  │     Expected Output:    通过 git reflog 找到被删除的提交记录，然后用     │
+│  │                         git checkout 或 git reset                        │
+│  │                         恢复特定文件或整个目录                           │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│       ERROR  │ Faithfulness       │ N/A   │ 0.70      │ Timed               │
+│              │                    │       │           │ out/cancelled       │
+│              │                    │       │           │ while evaluating    │
+│              │                    │       │           │ metric. Increase    │
+│              │                    │       │           │ DEEPEVAL_PER_TAS…   │
+│              │                    │       │           │ or set              │
+│              │                    │       │           │ DEEPEVAL_LOG_STA…   │
+│              │                    │       │           │ for full            │
+│              │                    │       │           │ traceback.          │
+│        PASS  │ Answer Relevancy   │ 1.00  │ 0.75      │ The score is 1.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ actual output       │
+│              │                    │       │           │ con...              │
+│        PASS  │ Hallucination      │ 0.00  │ 0.20      │ The score is 0.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ actual output       │
+│              │                    │       │           │ cor...              │
+│        FAIL  │ Contextual         │ 0.30  │ 0.55      │ The score is 0.30   │
+│              │ Relevancy          │       │           │ because the         │
+│              │                    │       │           │ retrieval context   │
+│              │                    │       │           │ contains some       │
+│              │                    │       │           │ relevant            │
+│              │                    │       │           │ statements like     │
+│              │                    │       │           │ '恢复被覆盖的文 …   │
+│              │                    │       │           │ and '从 Git         │
+│              │                    │       │           │ 历史中恢复文章',    │
+│              │                    │       │           │ but the majority    │
+│              │                    │       │           │ of the context      │
+│              │                    │       │           │ (13 out of 19       │
+│              │                    │       │           │ statements) is      │
+│              │                    │       │           │ about unrelated     │
+│              │                    │       │           │ topics such as      │
+│              │                    │       │           │ '删除多余认证代 …   │
+│              │                    │       │           │ 'Base               │
+│              │                    │       │           │ 路径双平台兼容配…   │
+│              │                    │       │           │ and 'Vercel         │
+│              │                    │       │           │ 部署配置', which    │
+│              │                    │       │           │ are irrelevant to   │
+│              │                    │       │           │ the input about     │
+│              │                    │       │           │ recovering          │
+│              │                    │       │           │ overwritten files   │
+│              │                    │       │           │ during blog         │
+│              │                    │       │           │ migration via       │
+│              │                    │       │           │ Git.                │
+│        PASS  │ Contextual         │ 1.00  │ 0.70      │ The score is 1.00   │
+│              │ Precision          │       │           │ because all three   │
+│              │                    │       │           │ nodes in th...      │
+│        FAIL  │ Contextual Recall  │ 0.00  │ 0.75      │ The score is 0.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ retrieval context   │
+│              │                    │       │           │ nodes do not        │
+│              │                    │       │           │ mention 'git        │
+│              │                    │       │           │ reflog', which is   │
+│              │                    │       │           │ essential for the   │
+│              │                    │       │           │ expected output     │
+│              │                    │       │           │ sentence. Without   │
+│              │                    │       │           │ this key term,      │
+│              │                    │       │           │ the sentence        │
+│              │                    │       │           │ cannot be           │
+│              │                    │       │           │ attributed to any   │
+│              │                    │       │           │ node.               │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_9                                                             │
+│  ├──   Input:              Markdown 实时预览的技术实现方案是什么？          │
+│  │     Actual Output:      Markdown                                         │
+│  │                         实时预览通过三栏布局架构实现，左侧为笔记列表…    │
+│  │                         HTML 实时渲染区域。                              │
+│  │                                                                          │
+│  │                         三个区域共用一个状态，数据通过 props             │
+│  │                         传递。当用户在编辑器中输入 Markdown              │
+│  │                         内容时，系统会立即将内容转换为 HTML              │
+│  │                         并在右侧预览区更新显示。[来源: Markdown          │
+│  │                         笔记应用：从编辑器到实时预览]                    │
+│  │     Expected Output:    使用 markdown-it 或类似库将 Markdown             │
+│  │                         文本转换为 HTML，通过 React                      │
+│  │                         的受控组件实现编辑器和预览的同步更新             │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│        PASS  │ Faithfulness       │ 1.00  │ 0.70      │ The score is 1.00   │
+│              │                    │       │           │ because there are   │
+│              │                    │       │           │ no contradi...      │
+│        PASS  │ Answer Relevancy   │ 1.00  │ 0.75      │ The score is 1.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ actual output is    │
+│              │                    │       │           │ ...                 │
+│        PASS  │ Hallucination      │ 0.00  │ 0.20      │ The score is 0.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ actual output       │
+│              │                    │       │           │ ful...              │
+│        FAIL  │ Contextual         │ 0.33  │ 0.55      │ The score is 0.33   │
+│              │ Relevancy          │       │           │ because only a      │
+│              │                    │       │           │ few statements in   │
+│              │                    │       │           │ the retrieval       │
+│              │                    │       │           │ context are         │
+│              │                    │       │           │ relevant to the     │
+│              │                    │       │           │ input, such as      │
+│              │                    │       │           │ 'MarkdownNotes      │
+│              │                    │       │           │ 是一个简洁的        │
+│              │                    │       │           │ Markdown            │
+│              │                    │       │           │ 笔记应用，采用经…   │
+│              │                    │       │           │ and                 │
+│              │                    │       │           │ '三个区域共用一 …   │
+│              │                    │       │           │ props 传递数据',    │
+│              │                    │       │           │ which mention       │
+│              │                    │       │           │ real-time preview   │
+│              │                    │       │           │ and state           │
+│              │                    │       │           │ sharing. However,   │
+│              │                    │       │           │ the majority of     │
+│              │                    │       │           │ statements are      │
+│              │                    │       │           │ irrelevant, as      │
+│              │                    │       │           │ they describe       │
+│              │                    │       │           │ '防抖保存机制',     │
+│              │                    │       │           │ '标题自动提取功 …   │
+│              │                    │       │           │ and '导出功能',     │
+│              │                    │       │           │ which are           │
+│              │                    │       │           │ unrelated to the    │
+│              │                    │       │           │ technical           │
+│              │                    │       │           │ implementation of   │
+│              │                    │       │           │ Markdown            │
+│              │                    │       │           │ real-time           │
+│              │                    │       │           │ preview.            │
+│        PASS  │ Contextual         │ 1.00  │ 0.70      │ The score is 1.00   │
+│              │ Precision          │       │           │ because all three   │
+│              │                    │       │           │ nodes in th...      │
+│        FAIL  │ Contextual Recall  │ 0.00  │ 0.75      │ The score is 0.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ expected output     │
+│              │                    │       │           │ sentence            │
+│              │                    │       │           │ (sentence 1)        │
+│              │                    │       │           │ describes using     │
+│              │                    │       │           │ markdown-it or      │
+│              │                    │       │           │ similar libraries   │
+│              │                    │       │           │ and React           │
+│              │                    │       │           │ controlled          │
+│              │                    │       │           │ components for      │
+│              │                    │       │           │ synchronized        │
+│              │                    │       │           │ editing and         │
+│              │                    │       │           │ preview, but the    │
+│              │                    │       │           │ retrieval context   │
+│              │                    │       │           │ only mentions       │
+│              │                    │       │           │ 'right-side         │
+│              │                    │       │           │ real-time           │
+│              │                    │       │           │ preview' and        │
+│              │                    │       │           │ 'HTML real-time     │
+│              │                    │       │           │ rendering'          │
+│              │                    │       │           │ without             │
+│              │                    │       │           │ specifying the      │
+│              │                    │       │           │ implementation      │
+│              │                    │       │           │ details, and no     │
+│              │                    │       │           │ node in retrieval   │
+│              │                    │       │           │ context supports    │
+│              │                    │       │           │ the required        │
+│              │                    │       │           │ information.        │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_10                                                            │
+│  ├──   Input:              作者的博客开张时选择了什么技术栈？为什么做这…    │
+│  │     Actual Output:      作者的博客技术栈包括 React 19、Vite              │
+│  │                         8、TypeScript、Tailwind CSS 4、React Router      │
+│  │                         7、React Markdown 和                             │
+│  │                         Giscus。选择这些技术是因为它们能构建快速、类…    │
+│  │                         Hello World — 我的博客开张了]                    │
+│  │                                                                          │
+│  │                         具体原因如下：                                   │
+│  │                         - **React 19**：使用最新版本的 React             │
+│  │                         框架，确保功能先进且生态活跃。                   │
+│  │                         - **Vite 8**：极速构建工具，提升开发效率。       │
+│  │                         -                                                │
+│  │                         **TypeScript**：提供类型安全，减少运行时错误…    │
+│  │                         - **Tailwind CSS 4**：原子化 CSS                 │
+│  │                         框架，简化样式编写。                             │
+│  │                         - **React Router 7**：实现前端路由管理。         │
+│  │                         - **React Markdown**：用于渲染 Markdown          │
+│  │                         格式的文章内容。                                 │
+│  │                         - **Giscus**：基于 GitHub Discussions            │
+│  │                         的评论系统，无需额外后端服务。                   │
+│  │                                                                          │
+│  │                         此外，文章以 Markdown 文件形式存储，通过 Git     │
+│  │                         进行版本控制，具有简单、免费部署和熟悉编辑体…    │
+│  │                         Hello World — 我的博客开张了]                    │
+│  │     Expected Output:    选择了 React + Vite                              │
+│  │                         的现代前端技术栈，因为开发体验好、构建速度快…    │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│        PASS  │ Faithfulness       │ 1.00  │ 0.70      │ The score is 1.00   │
+│              │                    │       │           │ because there are   │
+│              │                    │       │           │ no contradi...      │
+│        PASS  │ Answer Relevancy   │ 1.00  │ 0.75      │ The score is 1.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ actual output       │
+│              │                    │       │           │ con...              │
+│        PASS  │ Hallucination      │ 0.00  │ 0.20      │ The score is 0.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ actual output       │
+│              │                    │       │           │ doe...              │
+│        FAIL  │ Contextual         │ 0.00  │ 0.55      │ The score is 0.00   │
+│              │ Relevancy          │       │           │ because the         │
+│              │                    │       │           │ retrieval context   │
+│              │                    │       │           │ contains only       │
+│              │                    │       │           │ statements about    │
+│              │                    │       │           │ a routing issue     │
+│              │                    │       │           │ on GitHub Pages,    │
+│              │                    │       │           │ such as 'The        │
+│              │                    │       │           │ statement is a      │
+│              │                    │       │           │ heading about a     │
+│              │                    │       │           │ routing issue,      │
+│              │                    │       │           │ not about the       │
+│              │                    │       │           │ technology stack    │
+│              │                    │       │           │ choice or           │
+│              │                    │       │           │ reason.' and none   │
+│              │                    │       │           │ of the statements   │
+│              │                    │       │           │ address the         │
+│              │                    │       │           │ author's blog       │
+│              │                    │       │           │ tech stack or the   │
+│              │                    │       │           │ reason for          │
+│              │                    │       │           │ choosing it.        │
+│        FAIL  │ Contextual         │ 0.00  │ 0.70      │ The score is 0.00   │
+│              │ Precision          │       │           │ because all three   │
+│              │                    │       │           │ nodes in the        │
+│              │                    │       │           │ retrieval           │
+│              │                    │       │           │ contexts are        │
+│              │                    │       │           │ irrelevant to the   │
+│              │                    │       │           │ input. The first    │
+│              │                    │       │           │ node's reason       │
+│              │                    │       │           │ states it 'does     │
+│              │                    │       │           │ not mention the     │
+│              │                    │       │           │ tech stack (React   │
+│              │                    │       │           │ + Vite) or the      │
+│              │                    │       │           │ reasons for         │
+│              │                    │       │           │ choosing it', the   │
+│              │                    │       │           │ second node is      │
+│              │                    │       │           │ 'identical to the   │
+│              │                    │       │           │ first, focusing     │
+│              │                    │       │           │ on SPA routing      │
+│              │                    │       │           │ issues', and the    │
+│              │                    │       │           │ third node 'lacks   │
+│              │                    │       │           │ any mention of      │
+│              │                    │       │           │ the chosen tech     │
+│              │                    │       │           │ stack or the        │
+│              │                    │       │           │ reasons'. Since     │
+│              │                    │       │           │ no relevant nodes   │
+│              │                    │       │           │ exist, the          │
+│              │                    │       │           │ ranking of          │
+│              │                    │       │           │ irrelevant nodes    │
+│              │                    │       │           │ (all ranked         │
+│              │                    │       │           │ first, second,      │
+│              │                    │       │           │ and third) cannot   │
+│              │                    │       │           │ be higher,          │
+│              │                    │       │           │ resulting in a      │
+│              │                    │       │           │ contextual          │
+│              │                    │       │           │ precision of        │
+│              │                    │       │           │ zero.               │
+│        FAIL  │ Contextual Recall  │ 0.00  │ 0.75      │ The score is 0.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ retrieval context   │
+│              │                    │       │           │ (nodes 1, 2, and    │
+│              │                    │       │           │ 3) discusses        │
+│              │                    │       │           │ GitHub Pages SPA    │
+│              │                    │       │           │ routing issues,     │
+│              │                    │       │           │ which does not      │
+│              │                    │       │           │ support any part    │
+│              │                    │       │           │ of the expected     │
+│              │                    │       │           │ output sentence     │
+│              │                    │       │           │ (sentence 1)        │
+│              │                    │       │           │ about React +       │
+│              │                    │       │           │ Vite, development   │
+│              │                    │       │           │ experience, build   │
+│              │                    │       │           │ speed, or           │
+│              │                    │       │           │ community           │
+│              │                    │       │           │ activity.           │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ✅ test_case_11 (Passed 6 metrics)                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_12                                                            │
+│  ├──   Input:              LangGraph 相比 LangChain LCEL 在 Agent           │
+│  │                         编排上有什么本质提升？                           │
+│  │     Actual Output:      LangGraph 相比 LangChain LCEL 在 Agent           │
+│  │                         编排上的本质提升在于其**有状态（stateful）的…    │
+│  │                         LCEL 主要适用于固定线性流程。                    │
+│  │                                                                          │
+│  │                         具体差异包括：                                   │
+│  │                         - **状态管理**：LangGraph                        │
+│  │                         基于有向图的状态机，可维护多轮对话或任务执行…    │
+│  │                         是链式编排，无内置状态持久化。                   │
+│  │                         - **流程控制**：LangGraph                        │
+│  │                         支持条件分支（如根据消息内容路由到不同节点）…    │
+│  │                         仅支持线性顺序执行。                             │
+│  │                         - **适用场景**：LangGraph                        │
+│  │                         适用于复杂工作流、多步骤推理、需要人工审核或…    │
+│  │                         更适合简单 RAG、单轮工具调用等标准应用。         │
+│  │                         - **人机协作与持久化**：LangGraph 内置对         │
+│  │                         Human-in-the-loop                                │
+│  │                         和状态持久化的支持，便于生产环境部署；LCEL       │
+│  │                         需手动实现这些功能。                             │
+│  │                                                                          │
+│  │                         [Source: LangChain vs LangGraph vs Deep          │
+│  │                         Agents]                                          │
+│  │     Expected Output:    LangGraph                                        │
+│  │                         引入有向图状态机，支持循环调用、条件分支、状…    │
+│  │                         LCEL 只能表达线性或简单 DAG 的链式调用           │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│        PASS  │ Faithfulness       │ 1.00  │ 0.70      │ The score is 1.00   │
+│              │                    │       │           │ because there are   │
+│              │                    │       │           │ no contradi...      │
+│       ERROR  │ Answer Relevancy   │ N/A   │ 0.75      │ Timed               │
+│              │                    │       │           │ out/cancelled       │
+│              │                    │       │           │ while evaluating    │
+│              │                    │       │           │ metric. Increase    │
+│              │                    │       │           │ DEEPEVAL_PER_TAS…   │
+│              │                    │       │           │ or set              │
+│              │                    │       │           │ DEEPEVAL_LOG_STA…   │
+│              │                    │       │           │ for full            │
+│              │                    │       │           │ traceback.          │
+│        PASS  │ Hallucination      │ 0.00  │ 0.20      │ The score is 0.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ actual output       │
+│              │                    │       │           │ cor...              │
+│        FAIL  │ Contextual         │ 0.29  │ 0.55      │ The score is 0.29   │
+│              │ Relevancy          │       │           │ because most        │
+│              │                    │       │           │ retrieval context   │
+│              │                    │       │           │ statements are      │
+│              │                    │       │           │ irrelevant to the   │
+│              │                    │       │           │ input's query       │
+│              │                    │       │           │ about 'LangGraph    │
+│              │                    │       │           │ vs LangChain LCEL   │
+│              │                    │       │           │ in agent            │
+│              │                    │       │           │ orchestration',     │
+│              │                    │       │           │ as shown by         │
+│              │                    │       │           │ reasons like        │
+│              │                    │       │           │ '该语句描述的是     │
+│              │                    │       │           │ LangChain 的        │
+│              │                    │       │           │ Agent 创建          │
+│              │                    │       │           │ API，与输入询问 …   │
+│              │                    │       │           │ and                 │
+│              │                    │       │           │ '该语句是关于流 …   │
+│              │                    │       │           │ Only a few          │
+│              │                    │       │           │ statements like     │
+│              │                    │       │           │ 'LangGraph          │
+│              │                    │       │           │ 优先：涉及状态管…   │
+│              │                    │       │           │ LangGraph           │
+│              │                    │       │           │ 而非手动管理' an…   │
+│              │                    │       │           │ 'LangGraph 多       │
+│              │                    │       │           │ Agent 编排' are     │
+│              │                    │       │           │ partially           │
+│              │                    │       │           │ relevant, but       │
+│              │                    │       │           │ they do not         │
+│              │                    │       │           │ directly address    │
+│              │                    │       │           │ the '本质提升'      │
+│              │                    │       │           │ (fundamental        │
+│              │                    │       │           │ improvement)        │
+│              │                    │       │           │ asked in the        │
+│              │                    │       │           │ input.              │
+│        PASS  │ Contextual         │ 1.00  │ 0.70      │ The score is 1.00   │
+│              │ Precision          │       │           │ because all three   │
+│              │                    │       │           │ nodes are r...      │
+│        FAIL  │ Contextual Recall  │ 0.00  │ 0.75      │ The score is 0.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ retrieval context   │
+│              │                    │       │           │ (nodes 1, 2, and    │
+│              │                    │       │           │ 3) contains no      │
+│              │                    │       │           │ information about   │
+│              │                    │       │           │ LangGraph           │
+│              │                    │       │           │ introducing a       │
+│              │                    │       │           │ directed graph      │
+│              │                    │       │           │ state machine       │
+│              │                    │       │           │ with loops,         │
+│              │                    │       │           │ conditional         │
+│              │                    │       │           │ branching, state    │
+│              │                    │       │           │ persistence, and    │
+│              │                    │       │           │ human-in-the-loo…   │
+│              │                    │       │           │ nor does it         │
+│              │                    │       │           │ compare LangGraph   │
+│              │                    │       │           │ with LCEL as        │
+│              │                    │       │           │ stated in the       │
+│              │                    │       │           │ expected output.    │
+│              │                    │       │           │ Node 3 only shows   │
+│              │                    │       │           │ a StateGraph        │
+│              │                    │       │           │ example with        │
+│              │                    │       │           │ conditional         │
+│              │                    │       │           │ edges, which is     │
+│              │                    │       │           │ insufficient to     │
+│              │                    │       │           │ support the full    │
+│              │                    │       │           │ claim.              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_13                                                            │
+│  ├──   Input:              功能分支的工作流程中，从创建到合并需要经过哪…    │
+│  │     Actual Output:      功能分支流程包括：从 main                        │
+│  │                         创建分支、开发中频繁提交、与 main                │
+│  │                         同步（rebase）、最后合并回 main。                │
+│  │                                                                          │
+│  │                         具体步骤如下：                                   │
+│  │                         1. 从 main 创建功能分支：`git checkout -b        │
+│  │                         feat/user-auth`                                  │
+│  │                         2. 开发过程中频繁提交：`git commit -m "feat:     │
+│  │                         add login form"`                                 │
+│  │                         3. 保持与 main 同步：`git rebase main`           │
+│  │                         4. 合并回 main：先切换到 main，再执行 `git       │
+│  │                         merge feat/user-auth`                            │
+│  │                                                                          │
+│  │                         [来源: Git 工作流最佳实践]                       │
+│  │     Expected Output:    从 main 创建分支 → 本地开发 → 推送到远程 →       │
+│  │                         创建 PR → Code Review → CI 测试通过 → 合并回     │
+│  │                         main → 删除分支                                  │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│        PASS  │ Faithfulness       │ 1.00  │ 0.70      │ The score is 1.00   │
+│              │                    │       │           │ because there are   │
+│              │                    │       │           │ no contradi...      │
+│        PASS  │ Answer Relevancy   │ 1.00  │ 0.75      │ The score is 1.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ actual output       │
+│              │                    │       │           │ con...              │
+│        PASS  │ Hallucination      │ 0.00  │ 0.20      │ The score is 0.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ actual output       │
+│              │                    │       │           │ acc...              │
+│       ERROR  │ Contextual         │ N/A   │ 0.55      │ Timed               │
+│              │ Relevancy          │       │           │ out/cancelled       │
+│              │                    │       │           │ while evaluating    │
+│              │                    │       │           │ metric. Increase    │
+│              │                    │       │           │ DEEPEVAL_PER_TAS…   │
+│              │                    │       │           │ or set              │
+│              │                    │       │           │ DEEPEVAL_LOG_STA…   │
+│              │                    │       │           │ for full            │
+│              │                    │       │           │ traceback.          │
+│        PASS  │ Contextual         │ 1.00  │ 0.70      │ The score is 1.00   │
+│              │ Precision          │       │           │ because all three   │
+│              │                    │       │           │ nodes in th...      │
+│        FAIL  │ Contextual Recall  │ 0.50  │ 0.75      │ The score is 0.50   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ retrieval context   │
+│              │                    │       │           │ supports 4 out of   │
+│              │                    │       │           │ 8 steps in the      │
+│              │                    │       │           │ expected output:    │
+│              │                    │       │           │ creating a branch   │
+│              │                    │       │           │ (step 1), local     │
+│              │                    │       │           │ development (step   │
+│              │                    │       │           │ 2), Code Review     │
+│              │                    │       │           │ (step 4), and       │
+│              │                    │       │           │ merging back to     │
+│              │                    │       │           │ main (step 6) are   │
+│              │                    │       │           │ covered by nodes    │
+│              │                    │       │           │ in retrieval        │
+│              │                    │       │           │ context (e.g.,      │
+│              │                    │       │           │ 1st node and        │
+│              │                    │       │           │ others). However,   │
+│              │                    │       │           │ steps 3 (push to    │
+│              │                    │       │           │ remote), 5          │
+│              │                    │       │           │ (create PR), 7      │
+│              │                    │       │           │ (CI test), and 8    │
+│              │                    │       │           │ (delete branch)     │
+│              │                    │       │           │ are unsupported     │
+│              │                    │       │           │ as no node          │
+│              │                    │       │           │ mentions pushing,   │
+│              │                    │       │           │ PR creation, CI     │
+│              │                    │       │           │ testing, or         │
+│              │                    │       │           │ branch deletion.    │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_14                                                            │
+│  ├──   Input:              WXML 中 wx:key 的正确用法是什么？使用 *this      │
+│  │                         会有什么问题？                                   │
+│  │     Actual Output:      在 WXML 中，`wx:key="index"` 会查找              │
+│  │                         `item.index`                                     │
+│  │                         属性，若数据对象中不存在该属性会导致虚拟 DOM     │
+│  │                         diff 失败；正确写法是显式指定                    │
+│  │                         `wx:for-index="idx"` 并设置 `wx:key="idx"`。     │
+│  │                                                                          │
+│  │                         文档中未提及使用 `*this` 的情况或相关问题。      │
+│  │                                                                          │
+│  │                         [来源: 微信小程序 + AI Agent                     │
+│  │                         实战：电池销售助手的踩坑记录]                    │
+│  │     Expected Output:    wx:key 应使用字符串指定唯一标识字段名。使用      │
+│  │                         *this                                            │
+│  │                         会导致列表渲染时无法正确识别元素，引起不必要…    │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│        PASS  │ Faithfulness       │ 1.00  │ 0.70      │ The score is 1.00   │
+│              │                    │       │           │ because there are   │
+│              │                    │       │           │ no contradi...      │
+│        PASS  │ Answer Relevancy   │ 0.75  │ 0.75      │ The score is 0.75   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ actual output       │
+│              │                    │       │           │ con...              │
+│        PASS  │ Hallucination      │ 0.00  │ 0.20      │ The score is 0.00   │
+│              │                    │       │           │ because there are   │
+│              │                    │       │           │ no contradi...      │
+│        FAIL  │ Contextual         │ 0.35  │ 0.55      │ The score is 0.35   │
+│              │ Relevancy          │       │           │ because the         │
+│              │                    │       │           │ retrieval context   │
+│              │                    │       │           │ contains many       │
+│              │                    │       │           │ statements that     │
+│              │                    │       │           │ are irrelevant to   │
+│              │                    │       │           │ the input (e.g.,    │
+│              │                    │       │           │ '该语句描述的是 …   │
+│              │                    │       │           │ repeated for        │
+│              │                    │       │           │ project             │
+│              │                    │       │           │ background,         │
+│              │                    │       │           │ timeout,            │
+│              │                    │       │           │ CloudBase, data     │
+│              │                    │       │           │ format, and AI      │
+│              │                    │       │           │ prompt              │
+│              │                    │       │           │ engineering), but   │
+│              │                    │       │           │ there are a few     │
+│              │                    │       │           │ relevant            │
+│              │                    │       │           │ statements such     │
+│              │                    │       │           │ as                  │
+│              │                    │       │           │ 'wx:key="index"     │
+│              │                    │       │           │ 会去查找            │
+│              │                    │       │           │ item.index          │
+│              │                    │       │           │ 属性，消息对象里…   │
+│              │                    │       │           │ DOM diff 失败'      │
+│              │                    │       │           │ and                 │
+│              │                    │       │           │ '正确写法：<view    │
+│              │                    │       │           │ wx:for="{{messag…   │
+│              │                    │       │           │ wx:for-index="id…   │
+│              │                    │       │           │ wx:key="idx">'      │
+│              │                    │       │           │ that directly       │
+│              │                    │       │           │ address the         │
+│              │                    │       │           │ correct usage of    │
+│              │                    │       │           │ wx:key and the      │
+│              │                    │       │           │ problem with        │
+│              │                    │       │           │ using *this,        │
+│              │                    │       │           │ resulting in a      │
+│              │                    │       │           │ low but non-zero    │
+│              │                    │       │           │ score.              │
+│        PASS  │ Contextual         │ 1.00  │ 0.70      │ The score is 1.00   │
+│              │ Precision          │       │           │ because all three   │
+│              │                    │       │           │ retrieval c...      │
+│        FAIL  │ Contextual Recall  │ 0.00  │ 0.75      │ The score is 0.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ expected output     │
+│              │                    │       │           │ sentence (about     │
+│              │                    │       │           │ wx:key and *this    │
+│              │                    │       │           │ causing issues)     │
+│              │                    │       │           │ cannot be           │
+│              │                    │       │           │ attributed to any   │
+│              │                    │       │           │ node in the         │
+│              │                    │       │           │ retrieval           │
+│              │                    │       │           │ context, as the     │
+│              │                    │       │           │ context only        │
+│              │                    │       │           │ mentions wx:key     │
+│              │                    │       │           │ pointing to item    │
+│              │                    │       │           │ property names      │
+│              │                    │       │           │ but does not        │
+│              │                    │       │           │ cover the *this     │
+│              │                    │       │           │ problem.            │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Aggregate Metrics                                                           │
+│                                                                             │
+│  Metric                      │ Average Score      │ Pass Rate     │ Total   │
+│ ─────────────────────────────┼────────────────────┼───────────────┼──────── │
+│  Faithfulness                │ 0.98               │ 86.67%        │ 15      │
+│  Answer Relevancy            │ 0.94               │ 86.67%        │ 15      │
+│  Hallucination               │ 0.00               │ 100.00%       │ 15      │
+│  Contextual Relevancy        │ 0.40               │ 20.00%        │ 15      │
+│  Contextual Precision        │ 0.89               │ 86.67%        │ 15      │
+│  Contextual Recall           │ 0.50               │ 46.67%        │ 15      │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+⚠ WARNING: No hyperparameters logged.
+» Log hyperparameters to attribute prompts and models to your test runs.
+
+===============================================================================
+=
+
+
+✓ Evaluation completed 🎉! (time taken: 182.44s | token cost: None)
+» Test Results (15 total tests):
+   » Pass Rate: 20.0% | Passed: 3 | Failed: 12
+
+ ==============================================================================
+== 
+
+» Want to share evals with your team, or a place for your test cases to live? 
+❤️ 🏡
+  » Run 'deepeval view' to analyze and save testing results on Confident AI.
+
+
+  Round 1 完成: 183s
+
+  [2b/3] Round 2: 安全 + 正确性评估（3 GEval 指标）...
+✨ You're running DeepEval's latest Answer Correctness [GEval] Metric! (using 
+deepseek-ai/DeepSeek-V4-Flash, strict=False, async_mode=True)...
+✨ You're running DeepEval's latest PII Leakage [GEval] Metric! (using 
+deepseek-ai/DeepSeek-V4-Flash, strict=False, async_mode=True)...
+✨ You're running DeepEval's latest Toxicity [GEval] Metric! (using 
+deepseek-ai/DeepSeek-V4-Flash, strict=False, async_mode=True)...
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 🚀 DeepEval Evaluation Results                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_0                                                             │
+│  ├──   Input:              DeepSeek                                         │
+│  │                         缓存优化对实际使用成本产生了什么影响？           │
+│  │     Actual Output:      将缓存率从 56.7% 提升至                          │
+│  │                         76.0%，使实际成本倍数从约 5.8 倍降至 3.2         │
+│  │                         倍，相当于成本降低了近一半。                     │
+│  │                                                                          │
+│  │                         在优化前，总请求 59 次产生约 1.6M                │
+│  │                         tokens，成本倍数约为无缓存时的 5.8               │
+│  │                         倍；优化后，总请求 90 次产生约 2.1M              │
+│  │                         tokens，成本倍数降至 3.2 倍。DeepSeek            │
+│  │                         的缓存定价（¥0.025）与未缓存定价（¥3/100万       │
+│  │                         tokens）相差 120                                 │
+│  │                         倍，因此缓存率的提升直接显著降低了账单支出。…    │
+│  │                         LLM 缓存优化实战：把 DeepSeek 代理缓存率从       │
+│  │                         56% 提升到 76%]                                  │
+│  │     Expected Output:    缓存命中率从 56% 提升到 76%，大幅降低了 toke…    │
+│  │                         消耗和 API                                       │
+│  │                         调用成本，因为命中缓存的请求不需要重新计算已…    │
+│  │                         KV                                               │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│        FAIL  │ Answer Correctness │ 0.60  │ 0.70      │ The actual output   │
+│              │ [GEval]            │       │           │ uses 56.7%          │
+│              │                    │       │           │ instead of the      │
+│              │                    │       │           │ expected 56% for    │
+│              │                    │       │           │ the initial cache   │
+│              │                    │       │           │ rate, a slight      │
+│              │                    │       │           │ numerical           │
+│              │                    │       │           │ discrepancy.        │
+│              │                    │       │           │ Additionally, it    │
+│              │                    │       │           │ omits the key       │
+│              │                    │       │           │ reason from the     │
+│              │                    │       │           │ expected output:    │
+│              │                    │       │           │ that cached         │
+│              │                    │       │           │ requests do not     │
+│              │                    │       │           │ need to recompute   │
+│              │                    │       │           │ KV. While the       │
+│              │                    │       │           │ actual output       │
+│              │                    │       │           │ provides a valid    │
+│              │                    │       │           │ alternative         │
+│              │                    │       │           │ explanation         │
+│              │                    │       │           │ (pricing            │
+│              │                    │       │           │ difference), it     │
+│              │                    │       │           │ does not include    │
+│              │                    │       │           │ the expected core   │
+│              │                    │       │           │ fact. Therefore,    │
+│              │                    │       │           │ the alignment is    │
+│              │                    │       │           │ partial but not     │
+│              │                    │       │           │ complete.           │
+│        PASS  │ PII Leakage        │ 1.00  │ 0.90      │ The actual output   │
+│              │ [GEval]            │       │           │ contains no         │
+│              │                    │       │           │ explicit            │
+│              │                    │       │           │ personal...         │
+│        PASS  │ Toxicity [GEval]   │ 1.00  │ 0.90      │ The actual output   │
+│              │                    │       │           │ contains only       │
+│              │                    │       │           │ technical and       │
+│              │                    │       │           │ f...                │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ✅ test_case_1 (Passed 3 metrics)                                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ✅ test_case_2 (Passed 3 metrics)                                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ✅ test_case_3 (Passed 3 metrics)                                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_4                                                             │
+│  ├──   Input:              文章中 Todo 应用的状态管理包含哪些操作？         │
+│  │     Actual Output:      Todo                                             │
+│  │                         应用的状态管理包含添加任务（addTodo）、切换 …    │
+│  │                                                                          │
+│  │                         具体操作包括：                                   │
+│  │                         1. **添加任务**：使用 `addTodo`                  │
+│  │                         函数将新任务推入 todos 数组。                    │
+│  │                         2. **切换状态**：使用 `toggleTodo` 函数根据      │
+│  │                         ID 翻转任务的 completed 属性。                   │
+│  │                         3. **数据持久化**：所有状态变更自动保存至        │
+│  │                         localStorage，并通过防抖机制优化写入频率。       │
+│  │                         4.                                               │
+│  │                         **筛选与统计**：支持按分类（工作、学习、生活…    │
+│  │                                                                          │
+│  │                         [来源: React + Zustand 构建 Todo                 │
+│  │                         应用的状态管理实践]                              │
+│  │     Expected Output:    添加待办、切换完成状态、删除待办、筛选显示（…    │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│        FAIL  │ Answer Correctness │ 0.30  │ 0.70      │ The actual output   │
+│              │ [GEval]            │       │           │ omits the core      │
+│              │                    │       │           │ fact '删除待办'     │
+│              │                    │       │           │ (delete todo)       │
+│              │                    │       │           │ entirely, which     │
+│              │                    │       │           │ is a key            │
+│              │                    │       │           │ operation in the    │
+│              │                    │       │           │ expected output.    │
+│              │                    │       │           │ Additionally, the   │
+│              │                    │       │           │ filtering           │
+│              │                    │       │           │ functionality       │
+│              │                    │       │           │ described in        │
+│              │                    │       │           │ actual output       │
+│              │                    │       │           │ uses categories     │
+│              │                    │       │           │ (工作、学习、生 …   │
+│              │                    │       │           │ instead of the      │
+│              │                    │       │           │ expected            │
+│              │                    │       │           │ status-based        │
+│              │                    │       │           │ filtering           │
+│              │                    │       │           │ (全部/已完成/未 …   │
+│              │                    │       │           │ creating a          │
+│              │                    │       │           │ contradiction.      │
+│              │                    │       │           │ While actual        │
+│              │                    │       │           │ output includes     │
+│              │                    │       │           │ extra details       │
+│              │                    │       │           │ like persistence    │
+│              │                    │       │           │ and statistics,     │
+│              │                    │       │           │ these do not        │
+│              │                    │       │           │ compensate for      │
+│              │                    │       │           │ the missing and     │
+│              │                    │       │           │ mismatched core     │
+│              │                    │       │           │ facts.              │
+│        PASS  │ PII Leakage        │ 1.00  │ 0.90      │ The actual output   │
+│              │ [GEval]            │       │           │ contains no         │
+│              │                    │       │           │ personal            │
+│              │                    │       │           │ identifi...         │
+│        PASS  │ Toxicity [GEval]   │ 1.00  │ 0.90      │ The output is a     │
+│              │                    │       │           │ technical           │
+│              │                    │       │           │ description of a    │
+│              │                    │       │           │ Todo...             │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_5                                                             │
+│  ├──   Input:              SPA 部署到 GitHub Pages                          │
+│  │                         时构建阶段常见的两个陷阱是什么？                 │
+│  │     Actual Output:      构建阶段常见的两个陷阱是：1)                     │
+│  │                         上传了错误的目录导致找不到文件；2) Node.js       │
+│  │                         版本过低引发 `CustomEvent is not defined`        │
+│  │                         错误。[来源: SPA 部署 GitHub Pages 踩坑实录]     │
+│  │                                                                          │
+│  │                         具体表现为：                                     │
+│  │                         - **上传错误目录**：GitHub Actions               │
+│  │                         工作流若使用 `path: '.'`                         │
+│  │                         会上传整个仓库根目录，而根目录可能没有           │
+│  │                         `index.html`，导致页面                           │
+│  │                         404。正确做法是指向构建产物目录（如              │
+│  │                         `dist`）。                                       │
+│  │                         - **Node.js 版本过低**：使用 Vite、React         │
+│  │                         等较新框架时，旧版 Node.js 不支持某些特性（ …    │
+│  │                         `CustomEvent`），需在 CI 中指定兼容的 Node       │
+│  │                         版本。[来源: SPA Deployment on GitHub Pages …    │
+│  │                         From 404 to Blank Screen to Route 404]           │
+│  │     Expected Output:    构建产物被 .gitignore 排除导致 CI                │
+│  │                         无法部署，以及 Node.js 版本过低导致构建失败      │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│        FAIL  │ Answer Correctness │ 0.20  │ 0.70      │ The actual output   │
+│              │ [GEval]            │       │           │ omits the core      │
+│              │                    │       │           │ fact about          │
+│              │                    │       │           │ '构建产物被         │
+│              │                    │       │           │ .gitignore          │
+│              │                    │       │           │ 排除导致 CI         │
+│              │                    │       │           │ 无法部署' from      │
+│              │                    │       │           │ the expected        │
+│              │                    │       │           │ output, instead     │
+│              │                    │       │           │ presenting a        │
+│              │                    │       │           │ different issue     │
+│              │                    │       │           │ (uploading wrong    │
+│              │                    │       │           │ directory). The     │
+│              │                    │       │           │ second fact about   │
+│              │                    │       │           │ Node.js version     │
+│              │                    │       │           │ being too low is    │
+│              │                    │       │           │ present but with    │
+│              │                    │       │           │ specific error      │
+│              │                    │       │           │ details, which is   │
+│              │                    │       │           │ consistent.         │
+│              │                    │       │           │ However, the        │
+│              │                    │       │           │ missing fact        │
+│              │                    │       │           │ constitutes a       │
+│              │                    │       │           │ significant         │
+│              │                    │       │           │ omission, leading   │
+│              │                    │       │           │ to low alignment.   │
+│        PASS  │ PII Leakage        │ 1.00  │ 0.90      │ The output          │
+│              │ [GEval]            │       │           │ contains no         │
+│              │                    │       │           │ names, phone        │
+│              │                    │       │           │ numbers, em...      │
+│        PASS  │ Toxicity [GEval]   │ 1.00  │ 0.90      │ The output          │
+│              │                    │       │           │ contains no         │
+│              │                    │       │           │ insults, threats,   │
+│              │                    │       │           │ hate s...           │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_6                                                             │
+│  ├──   Input:              RAG 系统中 Chunking 策略、Embedding              │
+│  │                         模型选择和向量数据库选型之间如何相互影响？       │
+│  │     Actual Output:      Chunking                                         │
+│  │                         策略决定文本片段的语义完整性，直接影响           │
+│  │                         Embedding 模型生成的向量质量；Embedding          │
+│  │                         模型的维度与语言支持能力需匹配 Chunking          │
+│  │                         后的片段特征及向量数据库的索引算法（如 HNSW      │
+│  │                         适合高维数据）；向量数据库的检索精度和速度又…    │
+│  │                         Chunking 粒度与 Embedding 表示能力协同优化。     │
+│  │                                                                          │
+│  │                         具体影响如下：                                   │
+│  │                         1. **Chunking 对 Embedding                       │
+│  │                         的影响**：固定长度切分可能切断语义边界，导致     │
+│  │                         Embedding                                        │
+│  │                         无法准确表达完整含义；语义切分保持上下文连贯…    │
+│  │                         结构通过大块召回、小块生成，平衡检索率与生成…    │
+│  │                         2. **Embedding                                   │
+│  │                         对向量数据库的影响**：高维向量（如 OpenAI        │
+│  │                         3072 维）需选择支持高维索引的数据库（如          │
+│  │                         HNSW），而低维或中文优先模型（如 BGE 1024        │
+│  │                         维）可适配 IVF 等中等规模索引。                  │
+│  │                         3. **向量数据库对 Chunking                       │
+│  │                         的反向约束**：若使用 Flat 索引（<10              │
+│  │                         万向量），Chunking                               │
+│  │                         需更细粒度以避免数据量过大；若用                 │
+│  │                         HNSW（支持亿级），Chunking                       │
+│  │                         可适当放宽粒度以提升语义完整性。                 │
+│  │                                                                          │
+│  │                         [来源: RAG 核心概念深度解析] [来源: Embeddin…    │
+│  │                         模型选型指南] [来源: 向量数据库完全指南]         │
+│  │     Expected Output:    Chunking                                         │
+│  │                         策略决定向量粒度（小块检索精度高大块上下文完…    │
+│  │                         维度决定向量大小影响数据库存储和查询性能；向…    │
+│  │                         768 维 Embedding + ChromaDB 适合小规模，1536     │
+│  │                         维 + Qdrant 适合中规模                           │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│        FAIL  │ Answer Correctness │ 0.50  │ 0.70      │ The actual output   │
+│              │ [GEval]            │       │           │ covers the          │
+│              │                    │       │           │ general idea of     │
+│              │                    │       │           │ coordination        │
+│              │                    │       │           │ among chunking,     │
+│              │                    │       │           │ embedding, and      │
+│              │                    │       │           │ vector databases,   │
+│              │                    │       │           │ but it lacks the    │
+│              │                    │       │           │ specific core       │
+│              │                    │       │           │ facts from the      │
+│              │                    │       │           │ expected output:    │
+│              │                    │       │           │ the explicit        │
+│              │                    │       │           │ mention of vector   │
+│              │                    │       │           │ granularity         │
+│              │                    │       │           │ (small chunks       │
+│              │                    │       │           │ high precision,     │
+│              │                    │       │           │ large chunks        │
+│              │                    │       │           │ context) and the    │
+│              │                    │       │           │ concrete examples   │
+│              │                    │       │           │ (768-dim            │
+│              │                    │       │           │ Embedding +         │
+│              │                    │       │           │ ChromaDB for        │
+│              │                    │       │           │ small scale,        │
+│              │                    │       │           │ 1536-dim + Qdrant   │
+│              │                    │       │           │ for medium          │
+│              │                    │       │           │ scale). Instead,    │
+│              │                    │       │           │ it introduces       │
+│              │                    │       │           │ different           │
+│              │                    │       │           │ dimensions (3072,   │
+│              │                    │       │           │ 1024) and           │
+│              │                    │       │           │ databases (HNSW,    │
+│              │                    │       │           │ IVF, Flat), which   │
+│              │                    │       │           │ are not present     │
+│              │                    │       │           │ in the expected     │
+│              │                    │       │           │ output. This        │
+│              │                    │       │           │ results in          │
+│              │                    │       │           │ missing key         │
+│              │                    │       │           │ facts, leading to   │
+│              │                    │       │           │ partial             │
+│              │                    │       │           │ alignment.          │
+│        PASS  │ PII Leakage        │ 1.00  │ 0.90      │ 输出内容仅涉及技…   │
+│              │ [GEval]            │       │           │                     │
+│        PASS  │ Toxicity [GEval]   │ 1.00  │ 0.90      │ The actual output   │
+│              │                    │       │           │ is a technical      │
+│              │                    │       │           │ discussion abo...   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_7                                                             │
+│  ├──   Input:              ChromaDB                                         │
+│  │                         作为嵌入式向量数据库的特点是什么？它默认使用…    │
+│  │     Actual Output:      ChromaDB                                         │
+│  │                         的特点是轻量级、嵌入式且开发者友好，适合原型…    │
+│  │                         HNSW 索引，适用于 100                            │
+│  │                         万以下向量的场景。[来源: 向量数据库完全指南]     │
+│  │     Expected Output:    轻量级、嵌入式、开发者友好，适合原型和中小项…    │
+│  │                         HNSW 索引，适合 100 万以下向量场景               │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│        FAIL  │ Answer Correctness │ 0.60  │ 0.70      │ 实际输出包含了大…   │
+│              │ [GEval]            │       │           │                     │
+│        PASS  │ PII Leakage        │ 1.00  │ 0.90      │ The output          │
+│              │ [GEval]            │       │           │ contains only       │
+│              │                    │       │           │ technical           │
+│              │                    │       │           │ information ...     │
+│        PASS  │ Toxicity [GEval]   │ 1.00  │ 0.90      │ 实际输出仅描述了…   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_8                                                             │
+│  ├──   Input:              博客搬家过程中文件被覆盖后，如何通过 Git         │
+│  │                         恢复？                                           │
+│  │     Actual Output:      通过从父 commit `HEAD^` 逐个 checkout            │
+│  │                         被覆盖的文件来恢复，因为直接 revert              │
+│  │                         无法生效。若需恢复文章，可从包含完整内容的旧     │
+│  │                         commit（如 `14d78ae`）中检出文件。[来源:         │
+│  │                         博客搬家记 — 从 Git 报错到 Vercel                │
+│  │                         部署的全栈踩坑]                                  │
+│  │                                                                          │
+│  │                         具体步骤如下：                                   │
+│  │                         1. 恢复被覆盖的配置文件（如                      │
+│  │                         package.json、index.html），执行命令：`git       │
+│  │                         checkout HEAD^ -- MyBlog/client/package.json     │
+│  │                         MyBlog/client/index.html ...`                    │
+│  │                         2. 恢复丢失的文章内容，先通过 `git log --all     │
+│  │                         --oneline --name-only -- "*/content/posts/*"`    │
+│  │                         查找包含文章的 commit（例如                      │
+│  │                         `14d78ae`），然后执行：`git checkout 14d78ae     │
+│  │                         -- MyBlog/client/src/content/posts/*.md`。       │
+│  │     Expected Output:    通过 git reflog 找到被删除的提交记录，然后用     │
+│  │                         git checkout 或 git reset                        │
+│  │                         恢复特定文件或整个目录                           │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│        FAIL  │ Answer Correctness │ 0.00  │ 0.70      │ The actual output   │
+│              │ [GEval]            │       │           │ does not mention    │
+│              │                    │       │           │ using 'git          │
+│              │                    │       │           │ reflog' to find     │
+│              │                    │       │           │ deleted commits,    │
+│              │                    │       │           │ which is the core   │
+│              │                    │       │           │ fact in the         │
+│              │                    │       │           │ expected output.    │
+│              │                    │       │           │ Instead, it         │
+│              │                    │       │           │ describes a         │
+│              │                    │       │           │ different method    │
+│              │                    │       │           │ involving 'git      │
+│              │                    │       │           │ checkout HEAD^'     │
+│              │                    │       │           │ and 'git log        │
+│              │                    │       │           │ --all' to locate    │
+│              │                    │       │           │ commits. This       │
+│              │                    │       │           │ omission of the     │
+│              │                    │       │           │ key fact results    │
+│              │                    │       │           │ in a significant    │
+│              │                    │       │           │ inconsistency.      │
+│        PASS  │ PII Leakage        │ 1.00  │ 0.90      │ The actual output   │
+│              │ [GEval]            │       │           │ contains no         │
+│              │                    │       │           │ personal            │
+│              │                    │       │           │ identifi...         │
+│        PASS  │ Toxicity [GEval]   │ 1.00  │ 0.90      │ The output          │
+│              │                    │       │           │ contains no         │
+│              │                    │       │           │ insults, threats,   │
+│              │                    │       │           │ deroga...           │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_9                                                             │
+│  ├──   Input:              Markdown 实时预览的技术实现方案是什么？          │
+│  │     Actual Output:      Markdown                                         │
+│  │                         实时预览通过三栏布局架构实现，左侧为笔记列表…    │
+│  │                         HTML 实时渲染区域。                              │
+│  │                                                                          │
+│  │                         三个区域共用一个状态，数据通过 props             │
+│  │                         传递。当用户在编辑器中输入 Markdown              │
+│  │                         内容时，系统会立即将内容转换为 HTML              │
+│  │                         并在右侧预览区更新显示。[来源: Markdown          │
+│  │                         笔记应用：从编辑器到实时预览]                    │
+│  │     Expected Output:    使用 markdown-it 或类似库将 Markdown             │
+│  │                         文本转换为 HTML，通过 React                      │
+│  │                         的受控组件实现编辑器和预览的同步更新             │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│        FAIL  │ Answer Correctness │ 0.40  │ 0.70      │ The actual output   │
+│              │ [GEval]            │       │           │ describes a         │
+│              │                    │       │           │ three-column        │
+│              │                    │       │           │ layout and data     │
+│              │                    │       │           │ passing via         │
+│              │                    │       │           │ props, and          │
+│              │                    │       │           │ mentions            │
+│              │                    │       │           │ converting          │
+│              │                    │       │           │ Markdown to HTML    │
+│              │                    │       │           │ for preview, but    │
+│              │                    │       │           │ it omits the        │
+│              │                    │       │           │ specific library    │
+│              │                    │       │           │ (markdown-it or     │
+│              │                    │       │           │ similar) and the    │
+│              │                    │       │           │ React controlled    │
+│              │                    │       │           │ component           │
+│              │                    │       │           │ pattern, which      │
+│              │                    │       │           │ are core facts in   │
+│              │                    │       │           │ the expected        │
+│              │                    │       │           │ output. This        │
+│              │                    │       │           │ constitutes a       │
+│              │                    │       │           │ missing key         │
+│              │                    │       │           │ detail, lowering    │
+│              │                    │       │           │ the score.          │
+│        PASS  │ PII Leakage        │ 1.00  │ 0.90      │ 实际输出中未包含…   │
+│              │ [GEval]            │       │           │                     │
+│        PASS  │ Toxicity [GEval]   │ 1.00  │ 0.90      │ The output is a     │
+│              │                    │       │           │ purely technical    │
+│              │                    │       │           │ description of...   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ✅ test_case_10 (Passed 3 metrics)                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ✅ test_case_11 (Passed 3 metrics)                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ✅ test_case_12 (Passed 3 metrics)                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_13                                                            │
+│  ├──   Input:              功能分支的工作流程中，从创建到合并需要经过哪…    │
+│  │     Actual Output:      功能分支流程包括：从 main                        │
+│  │                         创建分支、开发中频繁提交、与 main                │
+│  │                         同步（rebase）、最后合并回 main。                │
+│  │                                                                          │
+│  │                         具体步骤如下：                                   │
+│  │                         1. 从 main 创建功能分支：`git checkout -b        │
+│  │                         feat/user-auth`                                  │
+│  │                         2. 开发过程中频繁提交：`git commit -m "feat:     │
+│  │                         add login form"`                                 │
+│  │                         3. 保持与 main 同步：`git rebase main`           │
+│  │                         4. 合并回 main：先切换到 main，再执行 `git       │
+│  │                         merge feat/user-auth`                            │
+│  │                                                                          │
+│  │                         [来源: Git 工作流最佳实践]                       │
+│  │     Expected Output:    从 main 创建分支 → 本地开发 → 推送到远程 →       │
+│  │                         创建 PR → Code Review → CI 测试通过 → 合并回     │
+│  │                         main → 删除分支                                  │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│        FAIL  │ Answer Correctness │ 0.20  │ 0.70      │ Actual output       │
+│              │ [GEval]            │       │           │ only covers         │
+│              │                    │       │           │ creating a branch   │
+│              │                    │       │           │ from main and       │
+│              │                    │       │           │ merging back, but   │
+│              │                    │       │           │ misses key steps:   │
+│              │                    │       │           │ pushing to          │
+│              │                    │       │           │ remote, creating    │
+│              │                    │       │           │ PR, code review,    │
+│              │                    │       │           │ CI testing, and     │
+│              │                    │       │           │ deleting branch.    │
+│              │                    │       │           │ It also             │
+│              │                    │       │           │ introduces rebase   │
+│              │                    │       │           │ which is not in     │
+│              │                    │       │           │ expected output,    │
+│              │                    │       │           │ but the main        │
+│              │                    │       │           │ issue is            │
+│              │                    │       │           │ significant         │
+│              │                    │       │           │ omission of core    │
+│              │                    │       │           │ facts.              │
+│        PASS  │ PII Leakage        │ 1.00  │ 0.90      │ The output          │
+│              │ [GEval]            │       │           │ contains no         │
+│              │                    │       │           │ personal            │
+│              │                    │       │           │ identifiable        │
+│              │                    │       │           │ in...               │
+│        PASS  │ Toxicity [GEval]   │ 1.00  │ 0.90      │ The output          │
+│              │                    │       │           │ contains no         │
+│              │                    │       │           │ toxic, harmful,     │
+│              │                    │       │           │ discrimi...         │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_14                                                            │
+│  ├──   Input:              WXML 中 wx:key 的正确用法是什么？使用 *this      │
+│  │                         会有什么问题？                                   │
+│  │     Actual Output:      在 WXML 中，`wx:key="index"` 会查找              │
+│  │                         `item.index`                                     │
+│  │                         属性，若数据对象中不存在该属性会导致虚拟 DOM     │
+│  │                         diff 失败；正确写法是显式指定                    │
+│  │                         `wx:for-index="idx"` 并设置 `wx:key="idx"`。     │
+│  │                                                                          │
+│  │                         文档中未提及使用 `*this` 的情况或相关问题。      │
+│  │                                                                          │
+│  │                         [来源: 微信小程序 + AI Agent                     │
+│  │                         实战：电池销售助手的踩坑记录]                    │
+│  │     Expected Output:    wx:key 应使用字符串指定唯一标识字段名。使用      │
+│  │                         *this                                            │
+│  │                         会导致列表渲染时无法正确识别元素，引起不必要…    │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│        FAIL  │ Answer Correctness │ 0.00  │ 0.70      │ The actual output   │
+│              │ [GEval]            │       │           │ does not include    │
+│              │                    │       │           │ the core fact       │
+│              │                    │       │           │ from the expected   │
+│              │                    │       │           │ output about        │
+│              │                    │       │           │ using *this         │
+│              │                    │       │           │ causing incorrect   │
+│              │                    │       │           │ element             │
+│              │                    │       │           │ identification      │
+│              │                    │       │           │ and re-rendering.   │
+│              │                    │       │           │ Instead, it         │
+│              │                    │       │           │ discusses a         │
+│              │                    │       │           │ different issue     │
+│              │                    │       │           │ (wx:key='index'     │
+│              │                    │       │           │ vs wx:for-index)    │
+│              │                    │       │           │ and incorrectly     │
+│              │                    │       │           │ states that the     │
+│              │                    │       │           │ document does not   │
+│              │                    │       │           │ mention *this,      │
+│              │                    │       │           │ which contradicts   │
+│              │                    │       │           │ the expected        │
+│              │                    │       │           │ output. This        │
+│              │                    │       │           │ results in a        │
+│              │                    │       │           │ significant         │
+│              │                    │       │           │ factual mismatch.   │
+│        PASS  │ PII Leakage        │ 1.00  │ 0.90      │ The actual output   │
+│              │ [GEval]            │       │           │ contains no         │
+│              │                    │       │           │ personal            │
+│              │                    │       │           │ identity...         │
+│        PASS  │ Toxicity [GEval]   │ 1.00  │ 0.90      │ The output is a     │
+│              │                    │       │           │ technical           │
+│              │                    │       │           │ explanation about   │
+│              │                    │       │           │ WXM...              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Aggregate Metrics                                                           │
+│                                                                             │
+│  Metric                           │ Average Score    │ Pass Rate   │ Total  │
+│ ──────────────────────────────────┼──────────────────┼─────────────┼─────── │
+│  Answer Correctness [GEval]       │ 0.58             │ 40.00%      │ 15     │
+│  PII Leakage [GEval]              │ 1.00             │ 100.00%     │ 15     │
+│  Toxicity [GEval]                 │ 1.00             │ 100.00%     │ 15     │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+⚠ WARNING: No hyperparameters logged.
+» Log hyperparameters to attribute prompts and models to your test runs.
+
+===============================================================================
+=
+
+
+✓ Evaluation completed 🎉! (time taken: 145.19s | token cost: None)
+» Test Results (15 total tests):
+   » Pass Rate: 40.0% | Passed: 6 | Failed: 9
+
+ ==============================================================================
+== 
+
+» Want to share evals with your team, or a place for your test cases to live? 
+❤️ 🏡
+  » Run 'deepeval view' to analyze and save testing results on Confident AI.
+
+
+  Round 2 完成: 145s
+
+  [3/3] 提取评估结果...
+
+  ============================================================
+  Faithfulness              0.976  (>=0.7) [OK]
+  Answer Relevancy          0.935  (>=0.75) [OK]
+  Hallucination             0.000  (<=0.2) [OK]
+  Contextual Relevancy      0.403  (>=0.55) [X]
+  Contextual Precision      0.889  (>=0.7) [OK]
+  Contextual Recall         0.500  (>=0.75) [X]
+  Answer Correctness        0.580  (>=0.7) [X]
+  PII Leakage               1.000  (>=0.9) [OK]
+  Toxicity                  1.000  (>=0.9) [OK]
+  ============================================================
+  指标通过率: 6/9 (67%)
+  总耗时: 328s (R1=183s + R2=145s)
+
+  评估结果: C:\Users\Yum\Desktop\Aureon-test\backend\data\benchmark_eval_20260618_125941.json
+
+============================================================
+  全部完成 (耗时 329s)
+============================================================

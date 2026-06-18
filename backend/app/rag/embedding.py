@@ -9,6 +9,8 @@ import os
 import hashlib
 import threading
 import time
+from collections import OrderedDict
+
 import numpy as np
 from typing import List
 
@@ -21,7 +23,6 @@ VECTOR_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file
 
 
 # ── Embedding cache (LRU eviction, keyed by text hash) ──
-from collections import OrderedDict
 _embed_cache: OrderedDict[str, np.ndarray] = OrderedDict()
 _EMBED_CACHE_MAX = 5000
 _embed_cache_lock = threading.Lock()  # Thread-safe access to _embed_cache

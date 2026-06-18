@@ -3,11 +3,13 @@
 Extracts repeated patterns across features/observability/security/evaluation/
 cost/reliability/knowledge/ai_platform/integration modules.
 """
+import asyncio as _asyncio
 import hashlib
 import json
 from datetime import datetime, timezone
 from typing import TypeVar, Type, Sequence
 
+import structlog as _structlog
 from pydantic import BaseModel
 
 T = TypeVar("T", bound=BaseModel)
@@ -73,9 +75,6 @@ def sse_event(data: dict) -> str:
 
 
 # ── Fire-and-forget background task utility ──
-
-import asyncio as _asyncio
-import structlog as _structlog
 
 _bg_logger = _structlog.get_logger(__name__)
 _background_tasks: set = set()
