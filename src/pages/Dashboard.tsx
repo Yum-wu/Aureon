@@ -265,7 +265,7 @@ export function Dashboard() {
       // 自动重连
       reconnectTimerRef.current = setTimeout(connectWebSocket, 5000);
     };
-    socket.onerror = () => { socket.close(); };
+    socket.onerror = () => { wsRef.current?.close(); };
 
     socket.onmessage = (event) => {
       try {
