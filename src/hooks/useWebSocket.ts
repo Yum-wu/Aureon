@@ -1,235 +1,141 @@
-// src/hooks/useWebSocket.ts
+/**
+ * WebSocket React Hook
+ * 封装 createWebSocket，提供声明式 API 和自动清理
+ */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  AureonWebSocket,
-  getWebSocket,
-} from '../services/websocket';
-import type {
-  ChatMessage,
-  SourceItem,
-} from '../services/websocket';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { createWebSocket, type WSConnectionState } from '../services/ws';
 
 interface UseWebSocketOptions {
-  clientId?: string;
-  autoConnect?: boolean;
-  maxReconnectAttempts?: number;
+  /** 消息回调 */
+  onMessage?: (data: unknown) => void;
+  /** 连接打开回调 */
+  onOpen?: () => void;
+  /** 连接关闭回调 */
+  onClose?: () => void;
+  /** 错误回调 */
+  onError?: (error: Event) => void;
+  /** 是否自动重连，默认 true */
+  autoReconnect?: boolean;
 }
 
 interface UseWebSocketReturn {
+  /** 是否已连接 */
   isConnected: boolean;
-  messages: ChatMessage[];
-  isStreaming: boolean;
-  streamingText: string;
-  sources: SourceItem[];
-  error: string | null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  sendMessage: (query: string, metadata?: Record<string, any>) => void;
+  /** 发送消息 */
+  send: (data: string | object) => void;
+  /** 最后一条消息 */
+  lastMessage: unknown;
+  /** 手动连接 */
+  connect: () => void;
+  /** 手动断开 */
   disconnect: () => void;
+  /** 连接状态 */
+  connectionState: WSConnectionState;
 }
 
-/** Exponential backoff delay in ms: 1s, 2s, 4s, 8s, max 30s */
-function getReconnectDelay(attempt: number): number {
-  return Math.min(1000 * Math.pow(2, attempt), 30000);
-}
-
-export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketReturn {
-  const { clientId = 'default', autoConnect = true, maxReconnectAttempts = 5 } = options;
+export function useWebSocket(
+  path: string,
+  options: UseWebSocketOptions = {},
+): UseWebSocketReturn {
+  const { onMessage, onOpen, onClose, onError, autoReconnect = true } = options;
 
   const [isConnected, setIsConnected] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [streamingText, setStreamingText] = useState('');
-  const [sources, setSources] = useState<SourceItem[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [lastMessage, setLastMessage] = useState<unknown>(null);
+  const [connectionState, setConnectionState] = useState<WSConnectionState>('disconnected');
+  const clientRef = useRef<ReturnType<typeof createWebSocket> | null>(null);
 
-  const wsRef = useRef<AureonWebSocket | null>(null);
-  const streamingTextRef = useRef('');
-  const handlersRegisteredRef = useRef(false);
-  const reconnectAttemptRef = useRef(0);
-  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const intentionalDisconnectRef = useRef(false);
-  const maxReconnectAttemptsRef = useRef(maxReconnectAttempts);
-
-  // Keep ref in sync with prop changes
   useEffect(() => {
-    maxReconnectAttemptsRef.current = maxReconnectAttempts;
-  }, [maxReconnectAttempts]);
-
-  // Clear any pending reconnect timer
-  const clearReconnectTimer = useCallback(() => {
-    if (reconnectTimerRef.current) {
-      clearTimeout(reconnectTimerRef.current);
-      reconnectTimerRef.current = null;
-    }
-  }, []);
-
-  // Reconnect handler kept in a ref to avoid circular dependency
-  // (useCallback referencing itself inside its own body).
-  const reconnectHandlerRef = useRef<() => void>(() => {});
-
-  // Attempt reconnection with exponential backoff
-  const attemptReconnect = useCallback(() => {
-    if (intentionalDisconnectRef.current) return;
-    if (reconnectAttemptRef.current >= maxReconnectAttemptsRef.current) {
-      setError('Connection lost. Please refresh the page to reconnect.');
-      return;
-    }
-
-    const delay = getReconnectDelay(reconnectAttemptRef.current);
-    reconnectAttemptRef.current += 1;
-
-    reconnectTimerRef.current = setTimeout(() => {
-      if (!wsRef.current || intentionalDisconnectRef.current) return;
-      wsRef.current.connect().catch((err) => {
-        console.error('Reconnect attempt failed:', err);
-        reconnectHandlerRef.current();
-      });
-    }, delay);
-  }, []);
-
-  // Initialize WebSocket
-  useEffect(() => {
-    if (!autoConnect) return;
-
-    const ws = getWebSocket(clientId);
-    wsRef.current = ws;
-    reconnectHandlerRef.current = attemptReconnect;
-
-    // Only register handlers once to prevent duplicates
-    if (handlersRegisteredRef.current) {
-      // Still connect if not already connected
-      if (!ws.isConnected()) {
-        ws.connect().catch((err) => {
-          console.error('Failed to connect:', err);
-          setError('Failed to connect to server');
-          attemptReconnect();
-        });
-      }
-      return;
-    }
-    handlersRegisteredRef.current = true;
-
-    // Register message handlers
-    ws.onMessage('connected', () => {
-      reconnectAttemptRef.current = 0; // Reset on successful connect
+    const client = createWebSocket(path, {
+      maxReconnectAttempts: autoReconnect ? Infinity : 0,
     });
 
-    ws.onMessage('sources', (msg) => {
-      setSources((msg.sources as SourceItem[]) || []);
-    });
+    clientRef.current = client;
 
-    ws.onMessage('text', (msg) => {
-      setIsStreaming(true);
-      streamingTextRef.current += (msg.content as string) || '';
-      setStreamingText(streamingTextRef.current);
-    });
-
-    ws.onMessage('response_complete', (msg) => {
-      setIsStreaming(false);
-      setStreamingText('');
-
-      // Add assistant message to history
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: (msg.full_response as string) || '',
-          sources: [],
-          timestamp: new Date(),
-        },
-      ]);
-    });
-
-    ws.onMessage('error', (msg) => {
-      setError((msg.message as string) || 'Unknown error');
-      setIsStreaming(false);
-    });
-
-    ws.onMessage('heartbeat_ack', () => {
-      // Heartbeat acknowledged
-    });
-
-    // Register connection handler — auto-reconnect on disconnect
-    ws.onConnection((connected) => {
-      setIsConnected(connected);
-      if (connected) {
-        setError(null);
-        reconnectAttemptRef.current = 0;
-        clearReconnectTimer();
-      } else {
-        if (!intentionalDisconnectRef.current) {
-          setError('Disconnected from server');
-          attemptReconnect();
-        }
-      }
-    });
-
-    // Connect
-    intentionalDisconnectRef.current = false;
-    ws.connect().catch((err) => {
-      console.error('Failed to connect:', err);
-      setError('Failed to connect to server');
-      attemptReconnect();
-    });
-
-    // Cleanup
-    return () => {
-      intentionalDisconnectRef.current = true;
-      clearReconnectTimer();
-      ws.disconnect();
-      handlersRegisteredRef.current = false;
+    // 状态变更监听
+    client.onStateChange = (state) => {
+      setConnectionState(state);
+      setIsConnected(state === 'connected');
     };
-  }, [clientId, autoConnect, attemptReconnect, clearReconnectTimer]);
 
-  // Send user message
-  const sendMessage = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (query: string, metadata?: Record<string, any>) => {
-      if (!wsRef.current || !isConnected) {
-        setError('Not connected');
-        return;
+    // 消息监听
+    const originalOnMessage = client.ws?.onmessage;
+    const patchMessageHandler = () => {
+      if (client.ws) {
+        const wsRef = client.ws;
+        wsRef.onmessage = (event: MessageEvent) => {
+          try {
+            const data = JSON.parse(event.data);
+            // 忽略 pong 心跳响应
+            if (data.type === 'pong') return;
+            setLastMessage(data);
+            onMessage?.(data);
+          } catch {
+            // 非 JSON 消息直接传递
+            setLastMessage(event.data);
+            onMessage?.(event.data);
+          }
+        };
       }
+    };
 
-      // Add user message to history
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'user',
-          content: query,
-          timestamp: new Date(),
-        },
-      ]);
-
-      // Reset streaming state
-      streamingTextRef.current = '';
-      setStreamingText('');
-      setIsStreaming(true);
-      setError(null);
-
-      // Send message with optional metadata
-      wsRef.current.sendUserMessage(query, metadata);
-    },
-    [isConnected]
-  );
-
-  // Disconnect
-  const disconnect = useCallback(() => {
-    intentionalDisconnectRef.current = true;
-    clearReconnectTimer();
-    if (wsRef.current) {
-      wsRef.current.disconnect();
+    // 连接打开时绑定消息处理器和回调
+    const originalOnOpen = client.ws?.onopen;
+    if (client.ws) {
+      const wsRef = client.ws;
+      wsRef.onopen = (event) => {
+        patchMessageHandler();
+        originalOnOpen?.call(wsRef, event);
+        onOpen?.();
+      };
     }
-  }, [clearReconnectTimer]);
 
-  return {
-    isConnected,
-    messages,
-    isStreaming,
-    streamingText,
-    sources,
-    error,
-    sendMessage,
-    disconnect,
-  };
+    // 连接关闭回调
+    const originalOnClose = client.ws?.onclose;
+    if (client.ws) {
+      const wsRef = client.ws;
+      wsRef.onclose = (event) => {
+        originalOnClose?.call(wsRef, event);
+        onClose?.();
+      };
+    }
+
+    // 错误回调
+    if (client.ws) {
+      const wsRef = client.ws;
+      wsRef.onerror = (event) => {
+        onError?.(event);
+      };
+    }
+
+    // 自动连接
+    client.connect();
+
+    // 定期检查并重新绑定消息处理器（重连后 ws 实例会变化）
+    const intervalId = setInterval(() => {
+      if (client.ws && client.ws.readyState === WebSocket.OPEN) {
+        patchMessageHandler();
+      }
+    }, 2000);
+
+    return () => {
+      clearInterval(intervalId);
+      client.disconnect();
+      clientRef.current = null;
+    };
+  }, [path, autoReconnect, onMessage, onOpen, onClose, onError]);
+
+  const send = useCallback((data: string | object) => {
+    clientRef.current?.send(data);
+  }, []);
+
+  const connect = useCallback(() => {
+    clientRef.current?.connect();
+  }, []);
+
+  const disconnect = useCallback(() => {
+    clientRef.current?.disconnect();
+  }, []);
+
+  return { isConnected, send, lastMessage, connect, disconnect, connectionState };
 }

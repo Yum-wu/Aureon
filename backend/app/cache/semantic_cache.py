@@ -20,10 +20,11 @@ from collections import OrderedDict
 from typing import Optional, Dict, Any, Tuple, List
 import structlog
 
+from app.cache.redis_client import get_redis as _shared_get_redis
+
 logger = structlog.get_logger()
 
 # Redis connection delegated to redis_client module (single source of truth)
-from app.cache.redis_client import get_redis as _shared_get_redis
 
 # Qdrant semantic cache collection name
 _QDRANT_CACHE_COLLECTION = "semantic_cache"

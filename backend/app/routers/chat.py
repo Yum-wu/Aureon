@@ -8,6 +8,7 @@ Routes:
 """
 
 import asyncio
+import collections
 from typing import Any
 
 from fastapi import APIRouter, Request
@@ -28,7 +29,6 @@ from app.exceptions import AureonException
 logger = structlog.get_logger()
 
 # ── Agent cache (LRU-bounded) ──
-import collections
 
 _MAX_AGENTS = 32
 _agents: collections.OrderedDict[str, Any] = collections.OrderedDict()

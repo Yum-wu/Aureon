@@ -9,15 +9,15 @@
       "admin": "管理",
       "architecture": "架构",
       "crew": "内容工作室",
-      "portfolio": "作品集"
+      "portfolio": "作品集",
+      "cost": "成本治理"
     },
     "badges": {
       "recall": "召回率",
       "latency": "延迟",
       "ttft": "首字延迟"
     }
-  },
-  "landing": {
+  },  "landing": {
     "hero": {
       "badge": "生产就绪",
       "title": "企业 AI 知识库平台",
@@ -114,7 +114,10 @@
       "vector_db": "向量数据库",
       "embedding": "Embedding",
       "cache": "缓存",
-      "tracing": "链路追踪"
+      "tracing": "链路追踪",
+      "redis": "Redis",
+      "qdrant": "Qdrant",
+      "llm_api": "LLM API"
     },
     "recent_queries": {
       "title": "最近查询",
@@ -125,6 +128,65 @@
       "indexed_docs": "已索引文档",
       "total_chunks": "文档片段",
       "avg_latency": "平均延迟"
+    },
+    "sections": {
+      "latency": "延迟",
+      "traffic": "流量",
+      "errors": "错误",
+      "saturation": "饱和度",
+      "alerts": "告警",
+      "pipeline": "流水线",
+      "health": "健康"
+    },
+    "realtime": {
+      "qps": "查询/秒",
+      "ttft_p50": "首字延迟 P50",
+      "ttft_p95": "首字延迟 P95",
+      "tpot": "每 Token 延迟",
+      "error_rate": "错误率",
+      "cache_hit_rate": "缓存命中率",
+      "token_usage": "Token 用量",
+      "active_connections": "活跃连接",
+      "connected": "实时",
+      "disconnected": "已断开"
+    },
+    "live": "实时",
+    "offline": "离线",
+    "time_range": {
+      "1h": "最近 1 小时",
+      "6h": "最近 6 小时",
+      "24h": "最近 24 小时",
+      "7d": "最近 7 天"
+    },
+    "golden_signals": {
+      "title": "系统仪表盘",
+      "latency": "延迟",
+      "traffic": "流量",
+      "errors": "错误率",
+      "saturation": "饱和度",
+      "alerts": "告警",
+      "critical": "严重"
+    },
+    "pipeline": {
+      "title": "RAG 流水线分解",
+      "retrieval": "检索",
+      "rerank": "重排序",
+      "crag": "CRAG",
+      "generation": "生成"
+    },
+    "latency": {
+      "ttft": "首字延迟",
+      "tpot": "每 Token 延迟",
+      "e2e": "端到端"
+    },
+    "charts": {
+      "latency_trend": "延迟趋势",
+      "query_volume": "查询量",
+      "quality_trend": "检索质量趋势"
+    },
+    "alerts": {
+      "title": "最近告警",
+      "empty": "暂无活跃告警"
     }
   },
   "search": {
@@ -149,9 +211,19 @@
     "title": "企业管理",
     "subtitle": "企业管理控制台",
     "tabs": {
+      "overview": "总览",
       "workspaces": "工作空间",
       "users": "用户管理",
-      "audit": "审计日志"
+      "roles": "角色与权限",
+      "audit": "审计日志",
+      "flags": "功能开关",
+      "sso": "单点登录"
+    },
+    "overview": {
+      "active_users": "活跃用户",
+      "today_queries": "今日查询",
+      "storage_usage": "存储用量",
+      "uptime": "运行时间"
     },
     "workspaces": {
       "title": "工作空间",
@@ -160,19 +232,33 @@
       "columns": {
         "name": "名称",
         "users": "用户数",
+        "members": "成员数",
         "docs": "文档数",
+        "quota": "配额",
         "created": "创建时间",
+        "status": "状态",
         "actions": "操作"
-      }
+      },
+      "edit": "编辑",
+      "empty": "暂无工作空间"
     },
     "users": {
       "title": "用户管理",
       "invite_button": "邀请用户",
       "invite": "邀请用户",
+      "search_placeholder": "搜索用户...",
+      "empty": "暂无用户",
+      "suspend": "暂停",
+      "delete": "删除",
+      "confirm_suspend": "暂停用户",
+      "confirm_suspend_msg": "确定要暂停 {{name}} 吗？",
+      "confirm_delete": "删除用户",
+      "confirm_delete_msg": "确定要删除 {{name}} 吗？此操作不可撤销。",
       "columns": {
         "user": "用户",
         "email": "邮箱",
         "role": "角色",
+        "status": "状态",
         "last_active": "最后活跃",
         "lastActive": "最后活跃",
         "actions": "操作"
@@ -181,18 +267,38 @@
     "roles": {
       "admin": "管理员",
       "editor": "编辑者",
-      "viewer": "查看者"
+      "viewer": "查看者",
+      "super_admin": "超级管理员",
+      "permission": "权限"
     },
     "audit": {
       "title": "审计日志",
       "export_button": "导出日志",
       "export": "导出日志",
+      "export_csv": "导出 CSV",
+      "export_json": "导出 JSON",
+      "filter_user": "按用户筛选",
+      "all_actions": "所有操作",
+      "all_severity": "所有级别",
+      "action_login": "登录",
+      "action_query": "查询",
+      "action_upload": "上传",
+      "action_config": "配置",
+      "severity_info": "信息",
+      "severity_warning": "警告",
+      "severity_critical": "严重",
+      "empty": "暂无审计日志",
       "columns": {
         "timestamp": "时间",
         "action": "操作",
         "user": "用户",
+        "resource": "资源",
+        "severity": "级别",
         "details": "详情"
       }
+    },
+    "flags": {
+      "empty": "暂无功能开关"
     },
     "loading": "加载中...",
     "identity_providers": "SSO 身份提供商",
@@ -204,7 +310,17 @@
     "no_traces": "暂无查询记录",
     "no_traces_desc": "用户交互后记录将显示在此处",
     "configured": "已配置",
-    "recent_traces": "最近记录"
+    "recent_traces": "最近记录",
+    "form": {
+      "required": "此字段为必填项",
+      "submit_error": "提交失败",
+      "submit": "提交",
+      "select_placeholder": "请选择..."
+    },
+    "confirm": {
+      "cancel": "取消",
+      "ok": "确认"
+    }
   },
   "documents": {
     "title": "文档管理",
@@ -426,5 +542,79 @@
       "支持哪些 LLM 模型？",
       "性能指标怎么样？"
     ]
+  },
+  "cost": {
+    "title": "成本治理",
+    "subtitle": "追踪支出、管理预算、优化成本",
+    "error_loading": "加载成本数据失败",
+    "retry": "重试",
+    "export": "导出 CSV",
+    "other_models": "其他模型",
+    "summary": {
+      "total_cost": "总成本",
+      "burn_rate": "燃烧速率",
+      "token_usage": "Token 用量",
+      "budget_status": "预算状态",
+      "vs_last_period": "对比上期",
+      "daily_avg": "日均值",
+      "input": "输入",
+      "output": "输出",
+      "totalCost": "总成本",
+      "burnRate": "燃烧速率",
+      "totalTokens": "总 Token 数",
+      "budgetUsed": "已用预算",
+      "budgetTotal": "总预算",
+      "per_day": "/天"
+    },
+    "budget": {
+      "title": "预算状态",
+      "used": "已使用",
+      "remaining": "剩余",
+      "over_budget": "超预算",
+      "on_track": "正常",
+      "warning": "预算使用超过 80%",
+      "critical": "预算使用超过 95%！"
+    },
+    "trends": {
+      "title": "成本趋势",
+      "cost": "成本",
+      "tokens": "Token 数"
+    },
+    "charts": {
+      "cost_trend": "成本趋势",
+      "token_usage": "Token 用量",
+      "model_breakdown": "按模型分解",
+      "workspace_breakdown": "按工作区分解",
+      "daily_cost": "日成本",
+      "burn_rate": "燃烧速率",
+      "forecast": "预测"
+    },
+    "breakdown": {
+      "title": "成本分项",
+      "category": "类别",
+      "cost": "成本",
+      "percentage": "占比"
+    },
+    "topConsumers": {
+      "title": "Top 消费者",
+      "name": "名称",
+      "cost": "成本",
+      "tokens": "Token 数",
+      "percentage": "占比"
+    },
+    "table": {
+      "title": "Top 消费者",
+      "user": "用户",
+      "tokens": "Token 数",
+      "cost": "成本",
+      "queries": "查询数",
+      "trend": "趋势",
+      "empty": "暂无成本数据"
+    },
+    "time_range": {
+      "7d": "最近 7 天",
+      "30d": "最近 30 天",
+      "90d": "最近 90 天"
+    }
   }
 }

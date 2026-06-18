@@ -4,46 +4,49 @@ import sys
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 
-# ── CrossEncoder safety patch (MUST be first — patches sentence_transformers) ──
-import app.startup.cross_encoder  # noqa: F401
-
-# Suppress noisy telemetry
-logging.getLogger("urllib3").setLevel(logging.WARNING)
-
+import structlog
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from prometheus_fastapi_instrumentator import Instrumentator
+from pydantic import BaseModel, Field
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
-from pydantic import BaseModel, Field
-import structlog
 
-from app.api.rag_stats import router as stats_router
+# ── CrossEncoder safety patch (MUST be early — patches sentence_transformers) ──
+import app.startup.cross_encoder  # noqa: F401
+
 from app.api.analytics import router as analytics_router
-from app.features.router import router as feature_flags_router
-from app.observability.router import router as observability_router
-from app.security.router import router as security_router
-from app.evaluation.router import router as evaluation_router
+from app.api.rag_stats import router as stats_router
+from app.api.websocket_chat import router as websocket_chat_router
+from app.api.ws_dashboard import router as ws_dashboard_router
+from app.audit.router import router as audit_router
+from app.config import settings
 from app.cost.router import router as cost_router
-from app.reliability.router import router as reliability_router
+from app.evaluation.router import router as evaluation_router
+from app.exceptions import AureonException
+from app.features.router import router as feature_flags_router
+from app.integration.router import router as integration_router
 from app.knowledge.router import router as knowledge_router
 from app.ai_platform.router import router as ai_platform_router
-from app.integration.router import router as integration_router
-from app.audit.router import router as audit_router
-from app.api.websocket_chat import router as websocket_chat_router
-from app.exceptions import AureonException
-from app.routers import chat as chat_router
-from app.routers import rag as rag_router
-from app.routers import crew as crew_router
-from app.tools import ALL_TOOLS
-from app.config import settings
-from app.multi_tenant.middleware import TenantMiddleware
-from app.startup.lifespan import lifespan
-from app.startup import warmup
 from app.middleware.logging import logging_middleware
+from app.multi_tenant.middleware import TenantMiddleware
+from app.observability.router import router as observability_router
+from app.reliability.router import router as reliability_router
+from app.routers import chat as chat_router
+from app.routers import crew as crew_router
+from app.routers import rag as rag_router
+from app.security.roles_router import router as roles_router
+from app.security.router import router as security_router
+from app.security.users_router import router as users_router
+from app.startup import warmup
+from app.startup.lifespan import lifespan
+from app.tools import ALL_TOOLS
+
+# Suppress noisy telemetry
+logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 # ── Structured logging (replaces stdlib logging) ──
 structlog.configure(
@@ -173,6 +176,9 @@ app.include_router(observability_router, prefix="/api/observability")
 app.include_router(security_router, prefix="/api/security")
 app.include_router(audit_router, prefix="/api/audit")
 app.include_router(websocket_chat_router, tags=["websocket"])
+app.include_router(ws_dashboard_router, tags=["websocket"])
+app.include_router(users_router)
+app.include_router(roles_router)
 
 # ── Experimental routes (conditional on EXPERIMENTAL_MODULES env var) ──
 if os.environ.get("EXPERIMENTAL_MODULES", "true").lower() != "false":

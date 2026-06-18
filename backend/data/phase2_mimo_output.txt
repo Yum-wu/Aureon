@@ -1,0 +1,1934 @@
+
++---------------------------------------------+
+|       Aureon RAG Benchmark — 统一测试        |
++---------------------------------------------+
+
+  Judge Provider: siliconflow
+  Judge Model:    mimo-v2.5
+  Judge Base URL: https://token-plan-cn.xiaomimimo.com/v1
+  验证级别:       detailed (seed=42)
+
+
+============================================================
+  Phase 2: 全量 DeepEval 评估 (11 指标)
+============================================================
+  Judge: mimo-v2.5 (siliconflow) | 并发: 15
+  数据源: C:\Users\Yum\Desktop\Aureon-test\backend\data\benchmark_raw_20260617_215535.json
+  总查询: 50 | 可评估正例: 33
+  采样数: 15
+2026-06-18 12:49:12 [info     ] Loaded 113 documents from C:\Users\Yum\Desktop\Aureon-test\backend\data\articles
+  已加载 99 篇文章文本
+
+  [1/3] 构建 test cases...
+
+  构建 test cases |###-----------------------------------------------| 1/15 (7%) ETA 0s   
+  构建 test cases |######--------------------------------------------| 2/15 (13%) ETA 0s   
+  构建 test cases |##########----------------------------------------| 3/15 (20%) ETA 0s   
+  构建 test cases |#############-------------------------------------| 4/15 (27%) ETA 0s   
+  构建 test cases |################----------------------------------| 5/15 (33%) ETA 0s   
+  构建 test cases |####################------------------------------| 6/15 (40%) ETA 0s   
+  构建 test cases |#######################---------------------------| 7/15 (47%) ETA 0s   
+  构建 test cases |##########################------------------------| 8/15 (53%) ETA 0s   
+  构建 test cases |##############################--------------------| 9/15 (60%) ETA 0s   
+  构建 test cases |#################################-----------------| 10/15 (67%) ETA 0s   
+  构建 test cases |####################################--------------| 11/15 (73%) ETA 0s   
+  构建 test cases |########################################----------| 12/15 (80%) ETA 0s   
+  构建 test cases |###########################################-------| 13/15 (87%) ETA 0s   
+  构建 test cases |##############################################----| 14/15 (93%) ETA 0s   
+  构建 test cases |##################################################| 15/15 (100%) ETA 0s   
+  已构建 15 个 test cases（含 expected_output）
+
+  [2/3] Round 1: RAG 质量评估（6 指标）...
+✨ You're running DeepEval's latest Faithfulness Metric! (using mimo-v2.5, 
+strict=False, async_mode=True)...
+✨ You're running DeepEval's latest Answer Relevancy Metric! (using mimo-v2.5, 
+strict=False, async_mode=True)...
+✨ You're running DeepEval's latest Hallucination Metric! (using mimo-v2.5, 
+strict=False, async_mode=True)...
+✨ You're running DeepEval's latest Contextual Relevancy Metric! (using 
+mimo-v2.5, strict=False, async_mode=True)...
+✨ You're running DeepEval's latest Contextual Precision Metric! (using 
+mimo-v2.5, strict=False, async_mode=True)...
+✨ You're running DeepEval's latest Contextual Recall Metric! (using mimo-v2.5,
+strict=False, async_mode=True)...
+    🎯 Evaluating test case #0                                       0% 0:02:20
+    🎯 Evaluating test case #1                                       0% 0:02:20
+    🎯 Evaluating test case #2                                       0% 0:02:20
+    🎯 Evaluating test case #3                                       0% 0:02:19
+    🎯 Evaluating test case #4  -----------                         33% 0:02:19
+    🎯 Evaluating test case #5                                       0% 0:02:19
+    🎯 Evaluating test case #6  -----                               17% 0:02:19
+    🎯 Evaluating test case #7                                       0% 0:02:19
+    🎯 Evaluating test case #8  -----------                         33% 0:02:19
+    🎯 Evaluating test case #9  -----------------                   50% 0:02:19
+    🎯 Evaluating test case #10                                      0% 0:02:18
+    🎯 Evaluating test case #11 -----                               17% 0:02:18
+    🎯 Evaluating test case #12                                      0% 0:02:18
+    🎯 Evaluating test case #13 -----------                         33% 0:02:18
+    🎯 Evaluating test case #14                                      0% 0:02:18
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 🚀 DeepEval Evaluation Results                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_0                                                             │
+│  ├──   Input:              DeepSeek                                         │
+│  │                         缓存优化对实际使用成本产生了什么影响？           │
+│  │     Actual Output:      将缓存率从 56.7% 提升至                          │
+│  │                         76.0%，使实际成本倍数从约 5.8 倍降至 3.2         │
+│  │                         倍，相当于成本降低了近一半。                     │
+│  │                                                                          │
+│  │                         在优化前，总请求 59 次产生约 1.6M                │
+│  │                         tokens，成本倍数约为无缓存时的 5.8               │
+│  │                         倍；优化后，总请求 90 次产生约 2.1M              │
+│  │                         tokens，成本倍数降至 3.2 倍。DeepSeek            │
+│  │                         的缓存定价（¥0.025）与未缓存定价（¥3/100万       │
+│  │                         tokens）相差 120                                 │
+│  │                         倍，因此缓存率的提升直接显著降低了账单支出。…    │
+│  │                         LLM 缓存优化实战：把 DeepSeek 代理缓存率从       │
+│  │                         56% 提升到 76%]                                  │
+│  │     Expected Output:    缓存命中率从 56% 提升到 76%，大幅降低了 toke…    │
+│  │                         消耗和 API                                       │
+│  │                         调用成本，因为命中缓存的请求不需要重新计算已…    │
+│  │                         KV                                               │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│       ERROR  │ Faithfulness       │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Answer Relevancy   │ N/A   │ 0.75      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Hallucination      │ N/A   │ 0.20      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual         │ N/A   │ 0.55      │ Evaluation LLM      │
+│              │ Relevancy          │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual         │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │ Precision          │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual Recall  │ N/A   │ 0.75      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_1                                                             │
+│  ├──   Input:              AI Agent                                         │
+│  │                         的四个核心组件是什么？各自承担什么职责？         │
+│  │     Actual Output:      AI Agent 的四个核心组件是                        │
+│  │                         LLM（大脑）、Tools（工具）、Memory（记忆）和     │
+│  │                         Planning（规划）。LLM 负责推理与决策，Tools      │
+│  │                         提供外部能力调用，Memory                         │
+│  │                         管理对话上下文与持久化数据，Planning             │
+│  │                         负责任务拆解与动态策略调整。[来源: AI Agent      │
+│  │                         架构设计]                                        │
+│  │     Expected Output:    LLM 作为大脑进行推理决策，Tools                  │
+│  │                         提供与外部世界交互的能力，Memory                 │
+│  │                         管理对话历史和知识，Planning                     │
+│  │                         负责任务分解和执行策略                           │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│       ERROR  │ Faithfulness       │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Answer Relevancy   │ N/A   │ 0.75      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Hallucination      │ N/A   │ 0.20      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual         │ N/A   │ 0.55      │ Evaluation LLM      │
+│              │ Relevancy          │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual         │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │ Precision          │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual Recall  │ N/A   │ 0.75      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_2                                                             │
+│  ├──   Input:              Few-shot Learning                                │
+│  │                         的最佳实践包括哪些？示例数量和多样性方面有什…    │
+│  │     Actual Output:      Few-shot Learning                                │
+│  │                         的最佳实践包括：示例数量控制在 3-5               │
+│  │                         个，覆盖正面、负面、中性及边界情况，并保持输…    │
+│  │                                                                          │
+│  │                         [来源: Prompt Engineering 实战指南]              │
+│  │     Expected Output:    示例数量 3-5 个即可，过多浪费                    │
+│  │                         token；示例需要多样性，覆盖正面、负面、中性 …    │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│       ERROR  │ Faithfulness       │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Answer Relevancy   │ N/A   │ 0.75      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Hallucination      │ N/A   │ 0.20      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual         │ N/A   │ 0.55      │ Evaluation LLM      │
+│              │ Relevancy          │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual         │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │ Precision          │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual Recall  │ N/A   │ 0.75      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_3                                                             │
+│  ├──   Input:              请用一句话总结 RAG 系统的核心原理                │
+│  │     Actual Output:      RAG                                              │
+│  │                         系统通过先从知识库中检索相关文档，再将检索结…    │
+│  │                         RAG 核心概念深度解析]                            │
+│  │     Expected Output:    先检索相关文档再让 LLM                           │
+│  │                         基于检索结果生成回答的技术架构                   │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│       ERROR  │ Faithfulness       │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Answer Relevancy   │ N/A   │ 0.75      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Hallucination      │ N/A   │ 0.20      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual         │ N/A   │ 0.55      │ Evaluation LLM      │
+│              │ Relevancy          │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual         │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │ Precision          │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual Recall  │ N/A   │ 0.75      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_4                                                             │
+│  ├──   Input:              文章中 Todo 应用的状态管理包含哪些操作？         │
+│  │     Actual Output:      Todo                                             │
+│  │                         应用的状态管理包含添加任务（addTodo）、切换 …    │
+│  │                                                                          │
+│  │                         具体操作包括：                                   │
+│  │                         1. **添加任务**：使用 `addTodo`                  │
+│  │                         函数将新任务推入 todos 数组。                    │
+│  │                         2. **切换状态**：使用 `toggleTodo` 函数根据      │
+│  │                         ID 翻转任务的 completed 属性。                   │
+│  │                         3. **数据持久化**：所有状态变更自动保存至        │
+│  │                         localStorage，并通过防抖机制优化写入频率。       │
+│  │                         4.                                               │
+│  │                         **筛选与统计**：支持按分类（工作、学习、生活…    │
+│  │                                                                          │
+│  │                         [来源: React + Zustand 构建 Todo                 │
+│  │                         应用的状态管理实践]                              │
+│  │     Expected Output:    添加待办、切换完成状态、删除待办、筛选显示（…    │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│       ERROR  │ Faithfulness       │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│        FAIL  │ Answer Relevancy   │ 0.57  │ 0.75      │ The score is 0.57   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ actual output       │
+│              │                    │       │           │ included several    │
+│              │                    │       │           │ irrelevant          │
+│              │                    │       │           │ statements: a       │
+│              │                    │       │           │ structural          │
+│              │                    │       │           │ transition          │
+│              │                    │       │           │ phrase,             │
+│              │                    │       │           │ implementation      │
+│              │                    │       │           │ details about       │
+│              │                    │       │           │ data persistence    │
+│              │                    │       │           │ and optimization,   │
+│              │                    │       │           │ and a source        │
+│              │                    │       │           │ citation, none of   │
+│              │                    │       │           │ which directly      │
+│              │                    │       │           │ answer the          │
+│              │                    │       │           │ specific question   │
+│              │                    │       │           │ about the           │
+│              │                    │       │           │ operations          │
+│              │                    │       │           │ contained in the    │
+│              │                    │       │           │ Todo                │
+│              │                    │       │           │ application's       │
+│              │                    │       │           │ state management.   │
+│              │                    │       │           │ The score is not    │
+│              │                    │       │           │ higher due to       │
+│              │                    │       │           │ these off-topic     │
+│              │                    │       │           │ additions, but it   │
+│              │                    │       │           │ reflects that       │
+│              │                    │       │           │ some relevant       │
+│              │                    │       │           │ information about   │
+│              │                    │       │           │ the operations      │
+│              │                    │       │           │ was likely          │
+│              │                    │       │           │ present alongside   │
+│              │                    │       │           │ the irrelevant      │
+│              │                    │       │           │ content.            │
+│       ERROR  │ Hallucination      │ N/A   │ 0.20      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual         │ N/A   │ 0.55      │ Evaluation LLM      │
+│              │ Relevancy          │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual         │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │ Precision          │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│        PASS  │ Contextual Recall  │ 0.75  │ 0.75      │ The score is 0.75   │
+│              │                    │       │           │ because the first   │
+│              │                    │       │           │ node in ret...      │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_5                                                             │
+│  ├──   Input:              SPA 部署到 GitHub Pages                          │
+│  │                         时构建阶段常见的两个陷阱是什么？                 │
+│  │     Actual Output:      构建阶段常见的两个陷阱是：1)                     │
+│  │                         上传了错误的目录导致找不到文件；2) Node.js       │
+│  │                         版本过低引发 `CustomEvent is not defined`        │
+│  │                         错误。[来源: SPA 部署 GitHub Pages 踩坑实录]     │
+│  │                                                                          │
+│  │                         具体表现为：                                     │
+│  │                         - **上传错误目录**：GitHub Actions               │
+│  │                         工作流若使用 `path: '.'`                         │
+│  │                         会上传整个仓库根目录，而根目录可能没有           │
+│  │                         `index.html`，导致页面                           │
+│  │                         404。正确做法是指向构建产物目录（如              │
+│  │                         `dist`）。                                       │
+│  │                         - **Node.js 版本过低**：使用 Vite、React         │
+│  │                         等较新框架时，旧版 Node.js 不支持某些特性（ …    │
+│  │                         `CustomEvent`），需在 CI 中指定兼容的 Node       │
+│  │                         版本。[来源: SPA Deployment on GitHub Pages …    │
+│  │                         From 404 to Blank Screen to Route 404]           │
+│  │     Expected Output:    构建产物被 .gitignore 排除导致 CI                │
+│  │                         无法部署，以及 Node.js 版本过低导致构建失败      │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│       ERROR  │ Faithfulness       │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Answer Relevancy   │ N/A   │ 0.75      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Hallucination      │ N/A   │ 0.20      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual         │ N/A   │ 0.55      │ Evaluation LLM      │
+│              │ Relevancy          │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual         │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │ Precision          │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual Recall  │ N/A   │ 0.75      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_6                                                             │
+│  ├──   Input:              RAG 系统中 Chunking 策略、Embedding              │
+│  │                         模型选择和向量数据库选型之间如何相互影响？       │
+│  │     Actual Output:      Chunking                                         │
+│  │                         策略决定文本片段的语义完整性，直接影响           │
+│  │                         Embedding 模型生成的向量质量；Embedding          │
+│  │                         模型的维度与语言支持能力需匹配 Chunking          │
+│  │                         后的片段特征及向量数据库的索引算法（如 HNSW      │
+│  │                         适合高维数据）；向量数据库的检索精度和速度又…    │
+│  │                         Chunking 粒度与 Embedding 表示能力协同优化。     │
+│  │                                                                          │
+│  │                         具体影响如下：                                   │
+│  │                         1. **Chunking 对 Embedding                       │
+│  │                         的影响**：固定长度切分可能切断语义边界，导致     │
+│  │                         Embedding                                        │
+│  │                         无法准确表达完整含义；语义切分保持上下文连贯…    │
+│  │                         结构通过大块召回、小块生成，平衡检索率与生成…    │
+│  │                         2. **Embedding                                   │
+│  │                         对向量数据库的影响**：高维向量（如 OpenAI        │
+│  │                         3072 维）需选择支持高维索引的数据库（如          │
+│  │                         HNSW），而低维或中文优先模型（如 BGE 1024        │
+│  │                         维）可适配 IVF 等中等规模索引。                  │
+│  │                         3. **向量数据库对 Chunking                       │
+│  │                         的反向约束**：若使用 Flat 索引（<10              │
+│  │                         万向量），Chunking                               │
+│  │                         需更细粒度以避免数据量过大；若用                 │
+│  │                         HNSW（支持亿级），Chunking                       │
+│  │                         可适当放宽粒度以提升语义完整性。                 │
+│  │                                                                          │
+│  │                         [来源: RAG 核心概念深度解析] [来源: Embeddin…    │
+│  │                         模型选型指南] [来源: 向量数据库完全指南]         │
+│  │     Expected Output:    Chunking                                         │
+│  │                         策略决定向量粒度（小块检索精度高大块上下文完…    │
+│  │                         维度决定向量大小影响数据库存储和查询性能；向…    │
+│  │                         768 维 Embedding + ChromaDB 适合小规模，1536     │
+│  │                         维 + Qdrant 适合中规模                           │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│       ERROR  │ Faithfulness       │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Answer Relevancy   │ N/A   │ 0.75      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Hallucination      │ N/A   │ 0.20      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual         │ N/A   │ 0.55      │ Evaluation LLM      │
+│              │ Relevancy          │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│        FAIL  │ Contextual         │ 0.58  │ 0.70      │ The score is 0.58   │
+│              │ Precision          │       │           │ because the most    │
+│              │                    │       │           │ relevant nodes      │
+│              │                    │       │           │ are not ranked      │
+│              │                    │       │           │ highest. The        │
+│              │                    │       │           │ first node in the   │
+│              │                    │       │           │ retrieval           │
+│              │                    │       │           │ contexts is         │
+│              │                    │       │           │ irrelevant, as it   │
+│              │                    │       │           │ only covers         │
+│              │                    │       │           │ Embedding's         │
+│              │                    │       │           │ definition and      │
+│              │                    │       │           │ principles          │
+│              │                    │       │           │ without             │
+│              │                    │       │           │ discussing its      │
+│              │                    │       │           │ interaction with    │
+│              │                    │       │           │ Chunking or         │
+│              │                    │       │           │ vector database     │
+│              │                    │       │           │ selection. The      │
+│              │                    │       │           │ second and third    │
+│              │                    │       │           │ nodes, which are    │
+│              │                    │       │           │ relevant and        │
+│              │                    │       │           │ discuss Chunking    │
+│              │                    │       │           │ strategies and      │
+│              │                    │       │           │ their direct link   │
+│              │                    │       │           │ to Embedding, are   │
+│              │                    │       │           │ ranked lower.       │
+│              │                    │       │           │ This misranking     │
+│              │                    │       │           │ of an irrelevant    │
+│              │                    │       │           │ node above          │
+│              │                    │       │           │ relevant ones       │
+│              │                    │       │           │ reduces the         │
+│              │                    │       │           │ precision score.    │
+│       ERROR  │ Contextual Recall  │ N/A   │ 0.75      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_7                                                             │
+│  ├──   Input:              ChromaDB                                         │
+│  │                         作为嵌入式向量数据库的特点是什么？它默认使用…    │
+│  │     Actual Output:      ChromaDB                                         │
+│  │                         的特点是轻量级、嵌入式且开发者友好，适合原型…    │
+│  │                         HNSW 索引，适用于 100                            │
+│  │                         万以下向量的场景。[来源: 向量数据库完全指南]     │
+│  │     Expected Output:    轻量级、嵌入式、开发者友好，适合原型和中小项…    │
+│  │                         HNSW 索引，适合 100 万以下向量场景               │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│       ERROR  │ Faithfulness       │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Answer Relevancy   │ N/A   │ 0.75      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Hallucination      │ N/A   │ 0.20      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual         │ N/A   │ 0.55      │ Evaluation LLM      │
+│              │ Relevancy          │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual         │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │ Precision          │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual Recall  │ N/A   │ 0.75      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_8                                                             │
+│  ├──   Input:              博客搬家过程中文件被覆盖后，如何通过 Git         │
+│  │                         恢复？                                           │
+│  │     Actual Output:      通过从父 commit `HEAD^` 逐个 checkout            │
+│  │                         被覆盖的文件来恢复，因为直接 revert              │
+│  │                         无法生效。若需恢复文章，可从包含完整内容的旧     │
+│  │                         commit（如 `14d78ae`）中检出文件。[来源:         │
+│  │                         博客搬家记 — 从 Git 报错到 Vercel                │
+│  │                         部署的全栈踩坑]                                  │
+│  │                                                                          │
+│  │                         具体步骤如下：                                   │
+│  │                         1. 恢复被覆盖的配置文件（如                      │
+│  │                         package.json、index.html），执行命令：`git       │
+│  │                         checkout HEAD^ -- MyBlog/client/package.json     │
+│  │                         MyBlog/client/index.html ...`                    │
+│  │                         2. 恢复丢失的文章内容，先通过 `git log --all     │
+│  │                         --oneline --name-only -- "*/content/posts/*"`    │
+│  │                         查找包含文章的 commit（例如                      │
+│  │                         `14d78ae`），然后执行：`git checkout 14d78ae     │
+│  │                         -- MyBlog/client/src/content/posts/*.md`。       │
+│  │     Expected Output:    通过 git reflog 找到被删除的提交记录，然后用     │
+│  │                         git checkout 或 git reset                        │
+│  │                         恢复特定文件或整个目录                           │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│       ERROR  │ Faithfulness       │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Answer Relevancy   │ N/A   │ 0.75      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Hallucination      │ N/A   │ 0.20      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual         │ N/A   │ 0.55      │ Evaluation LLM      │
+│              │ Relevancy          │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│        PASS  │ Contextual         │ 1.00  │ 0.70      │ The score is 1.00   │
+│              │ Precision          │       │           │ because all         │
+│              │                    │       │           │ retrieved nodes     │
+│              │                    │       │           │ a...                │
+│        FAIL  │ Contextual Recall  │ 0.00  │ 0.75      │ The score is 0.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ expected output's   │
+│              │                    │       │           │ sentence about      │
+│              │                    │       │           │ using 'git          │
+│              │                    │       │           │ reflog' to find     │
+│              │                    │       │           │ deleted commits     │
+│              │                    │       │           │ and 'git reset'     │
+│              │                    │       │           │ to restore files    │
+│              │                    │       │           │ cannot be           │
+│              │                    │       │           │ attributed to any   │
+│              │                    │       │           │ node(s) in          │
+│              │                    │       │           │ retrieval           │
+│              │                    │       │           │ context, as the     │
+│              │                    │       │           │ context only        │
+│              │                    │       │           │ discusses 'git      │
+│              │                    │       │           │ log' and 'git       │
+│              │                    │       │           │ checkout' from      │
+│              │                    │       │           │ specific commits    │
+│              │                    │       │           │ without             │
+│              │                    │       │           │ mentioning 'git     │
+│              │                    │       │           │ reflog' or 'git     │
+│              │                    │       │           │ reset'.             │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_9                                                             │
+│  ├──   Input:              Markdown 实时预览的技术实现方案是什么？          │
+│  │     Actual Output:      Markdown                                         │
+│  │                         实时预览通过三栏布局架构实现，左侧为笔记列表…    │
+│  │                         HTML 实时渲染区域。                              │
+│  │                                                                          │
+│  │                         三个区域共用一个状态，数据通过 props             │
+│  │                         传递。当用户在编辑器中输入 Markdown              │
+│  │                         内容时，系统会立即将内容转换为 HTML              │
+│  │                         并在右侧预览区更新显示。[来源: Markdown          │
+│  │                         笔记应用：从编辑器到实时预览]                    │
+│  │     Expected Output:    使用 markdown-it 或类似库将 Markdown             │
+│  │                         文本转换为 HTML，通过 React                      │
+│  │                         的受控组件实现编辑器和预览的同步更新             │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│       ERROR  │ Faithfulness       │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Answer Relevancy   │ N/A   │ 0.75      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│        PASS  │ Hallucination      │ 0.00  │ 0.20      │ The score is 0.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ actual output       │
+│              │                    │       │           │ ful...              │
+│       ERROR  │ Contextual         │ N/A   │ 0.55      │ Evaluation LLM      │
+│              │ Relevancy          │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│        PASS  │ Contextual         │ 1.00  │ 0.70      │ The score is 1.00   │
+│              │ Precision          │       │           │ because all         │
+│              │                    │       │           │ retrieved nodes     │
+│              │                    │       │           │ a...                │
+│        FAIL  │ Contextual Recall  │ 0.00  │ 0.75      │ The score is 0.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ retrieval context   │
+│              │                    │       │           │ (node 1) does not   │
+│              │                    │       │           │ contain any         │
+│              │                    │       │           │ information about   │
+│              │                    │       │           │ using markdown-it   │
+│              │                    │       │           │ or similar          │
+│              │                    │       │           │ libraries for       │
+│              │                    │       │           │ Markdown-to-HTML    │
+│              │                    │       │           │ conversion, nor     │
+│              │                    │       │           │ does it mention     │
+│              │                    │       │           │ React controlled    │
+│              │                    │       │           │ components for      │
+│              │                    │       │           │ synchronized        │
+│              │                    │       │           │ updates, which      │
+│              │                    │       │           │ are the core        │
+│              │                    │       │           │ technical details   │
+│              │                    │       │           │ in the expected     │
+│              │                    │       │           │ output.             │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_10                                                            │
+│  ├──   Input:              作者的博客开张时选择了什么技术栈？为什么做这…    │
+│  │     Actual Output:      作者的博客技术栈包括 React 19、Vite              │
+│  │                         8、TypeScript、Tailwind CSS 4、React Router      │
+│  │                         7、React Markdown 和                             │
+│  │                         Giscus。选择这些技术是因为它们能构建快速、类…    │
+│  │                         Hello World — 我的博客开张了]                    │
+│  │                                                                          │
+│  │                         具体原因如下：                                   │
+│  │                         - **React 19**：使用最新版本的 React             │
+│  │                         框架，确保功能先进且生态活跃。                   │
+│  │                         - **Vite 8**：极速构建工具，提升开发效率。       │
+│  │                         -                                                │
+│  │                         **TypeScript**：提供类型安全，减少运行时错误…    │
+│  │                         - **Tailwind CSS 4**：原子化 CSS                 │
+│  │                         框架，简化样式编写。                             │
+│  │                         - **React Router 7**：实现前端路由管理。         │
+│  │                         - **React Markdown**：用于渲染 Markdown          │
+│  │                         格式的文章内容。                                 │
+│  │                         - **Giscus**：基于 GitHub Discussions            │
+│  │                         的评论系统，无需额外后端服务。                   │
+│  │                                                                          │
+│  │                         此外，文章以 Markdown 文件形式存储，通过 Git     │
+│  │                         进行版本控制，具有简单、免费部署和熟悉编辑体…    │
+│  │                         Hello World — 我的博客开张了]                    │
+│  │     Expected Output:    选择了 React + Vite                              │
+│  │                         的现代前端技术栈，因为开发体验好、构建速度快…    │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│       ERROR  │ Faithfulness       │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Answer Relevancy   │ N/A   │ 0.75      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Hallucination      │ N/A   │ 0.20      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual         │ N/A   │ 0.55      │ Evaluation LLM      │
+│              │ Relevancy          │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual         │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │ Precision          │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual Recall  │ N/A   │ 0.75      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_11                                                            │
+│  ├──   Input:              Tool Calling                                     │
+│  │                         中的工具安全原则包括哪些？为什么数据库工具要…    │
+│  │     Actual Output:      工具安全原则包括：最小权限、输入校验（使用       │
+│  │                         Pydantic 做结构化验证）、沙箱执行（避免          │
+│  │                         eval/exec 等危险操作）、速率限制（对 API         │
+│  │                         调用类工具设置频率限制）以及只读优先。数据库…    │
+│  │                         SQL 语句（如                                     │
+│  │                         INSERT、UPDATE、DELETE、DROP）造成数据破坏或…    │
+│  │                         AI Agent 架构设计]                               │
+│  │     Expected Output:    五项安全原则：最小权限、输入校验（Pydantic）…    │
+│  │                         Agent 执行误操作或危险写入                       │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│       ERROR  │ Faithfulness       │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│        PASS  │ Answer Relevancy   │ 0.92  │ 0.75      │ The score is 0.92   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ actual output       │
+│              │                    │       │           │ inc...              │
+│       ERROR  │ Hallucination      │ N/A   │ 0.20      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual         │ N/A   │ 0.55      │ Evaluation LLM      │
+│              │ Relevancy          │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual         │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │ Precision          │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual Recall  │ N/A   │ 0.75      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_12                                                            │
+│  ├──   Input:              LangGraph 相比 LangChain LCEL 在 Agent           │
+│  │                         编排上有什么本质提升？                           │
+│  │     Actual Output:      LangGraph 相比 LangChain LCEL 在 Agent           │
+│  │                         编排上的本质提升在于其**有状态（stateful）的…    │
+│  │                         LCEL 主要适用于固定线性流程。                    │
+│  │                                                                          │
+│  │                         具体差异包括：                                   │
+│  │                         - **状态管理**：LangGraph                        │
+│  │                         基于有向图的状态机，可维护多轮对话或任务执行…    │
+│  │                         是链式编排，无内置状态持久化。                   │
+│  │                         - **流程控制**：LangGraph                        │
+│  │                         支持条件分支（如根据消息内容路由到不同节点）…    │
+│  │                         仅支持线性顺序执行。                             │
+│  │                         - **适用场景**：LangGraph                        │
+│  │                         适用于复杂工作流、多步骤推理、需要人工审核或…    │
+│  │                         更适合简单 RAG、单轮工具调用等标准应用。         │
+│  │                         - **人机协作与持久化**：LangGraph 内置对         │
+│  │                         Human-in-the-loop                                │
+│  │                         和状态持久化的支持，便于生产环境部署；LCEL       │
+│  │                         需手动实现这些功能。                             │
+│  │                                                                          │
+│  │                         [Source: LangChain vs LangGraph vs Deep          │
+│  │                         Agents]                                          │
+│  │     Expected Output:    LangGraph                                        │
+│  │                         引入有向图状态机，支持循环调用、条件分支、状…    │
+│  │                         LCEL 只能表达线性或简单 DAG 的链式调用           │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│       ERROR  │ Faithfulness       │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Answer Relevancy   │ N/A   │ 0.75      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Hallucination      │ N/A   │ 0.20      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual         │ N/A   │ 0.55      │ Evaluation LLM      │
+│              │ Relevancy          │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual         │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │ Precision          │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual Recall  │ N/A   │ 0.75      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_13                                                            │
+│  ├──   Input:              功能分支的工作流程中，从创建到合并需要经过哪…    │
+│  │     Actual Output:      功能分支流程包括：从 main                        │
+│  │                         创建分支、开发中频繁提交、与 main                │
+│  │                         同步（rebase）、最后合并回 main。                │
+│  │                                                                          │
+│  │                         具体步骤如下：                                   │
+│  │                         1. 从 main 创建功能分支：`git checkout -b        │
+│  │                         feat/user-auth`                                  │
+│  │                         2. 开发过程中频繁提交：`git commit -m "feat:     │
+│  │                         add login form"`                                 │
+│  │                         3. 保持与 main 同步：`git rebase main`           │
+│  │                         4. 合并回 main：先切换到 main，再执行 `git       │
+│  │                         merge feat/user-auth`                            │
+│  │                                                                          │
+│  │                         [来源: Git 工作流最佳实践]                       │
+│  │     Expected Output:    从 main 创建分支 → 本地开发 → 推送到远程 →       │
+│  │                         创建 PR → Code Review → CI 测试通过 → 合并回     │
+│  │                         main → 删除分支                                  │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│       ERROR  │ Faithfulness       │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│        PASS  │ Answer Relevancy   │ 1.00  │ 0.75      │ The score is 1.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ output is           │
+│              │                    │       │           │ perfect...          │
+│        PASS  │ Hallucination      │ 0.00  │ 0.20      │ The score is 0.00   │
+│              │                    │       │           │ because the         │
+│              │                    │       │           │ actual output       │
+│              │                    │       │           │ acc...              │
+│       ERROR  │ Contextual         │ N/A   │ 0.55      │ Evaluation LLM      │
+│              │ Relevancy          │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual         │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │ Precision          │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual Recall  │ N/A   │ 0.75      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_14                                                            │
+│  ├──   Input:              WXML 中 wx:key 的正确用法是什么？使用 *this      │
+│  │                         会有什么问题？                                   │
+│  │     Actual Output:      在 WXML 中，`wx:key="index"` 会查找              │
+│  │                         `item.index`                                     │
+│  │                         属性，若数据对象中不存在该属性会导致虚拟 DOM     │
+│  │                         diff 失败；正确写法是显式指定                    │
+│  │                         `wx:for-index="idx"` 并设置 `wx:key="idx"`。     │
+│  │                                                                          │
+│  │                         文档中未提及使用 `*this` 的情况或相关问题。      │
+│  │                                                                          │
+│  │                         [来源: 微信小程序 + AI Agent                     │
+│  │                         实战：电池销售助手的踩坑记录]                    │
+│  │     Expected Output:    wx:key 应使用字符串指定唯一标识字段名。使用      │
+│  │                         *this                                            │
+│  │                         会导致列表渲染时无法正确识别元素，引起不必要…    │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│       ERROR  │ Faithfulness       │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Answer Relevancy   │ N/A   │ 0.75      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Hallucination      │ N/A   │ 0.20      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual         │ N/A   │ 0.55      │ Evaluation LLM      │
+│              │ Relevancy          │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual         │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │ Precision          │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Contextual Recall  │ N/A   │ 0.75      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Aggregate Metrics                                                           │
+│                                                                             │
+│  Metric                      │ Average Score      │ Pass Rate     │ Total   │
+│ ─────────────────────────────┼────────────────────┼───────────────┼──────── │
+│  Faithfulness                │ N/A                │ 0.00%         │ 15      │
+│  Answer Relevancy            │ 0.83               │ 13.33%        │ 15      │
+│  Hallucination               │ 0.00               │ 13.33%        │ 15      │
+│  Contextual Relevancy        │ N/A                │ 0.00%         │ 15      │
+│  Contextual Precision        │ 0.86               │ 13.33%        │ 15      │
+│  Contextual Recall           │ 0.25               │ 6.67%         │ 15      │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+⚠ WARNING: No hyperparameters logged.
+» Log hyperparameters to attribute prompts and models to your test runs.
+
+===============================================================================
+=
+
+
+✓ Evaluation completed 🎉! (time taken: 140.86s | token cost: None)
+» Test Results (15 total tests):
+   » Pass Rate: 0.0% | Passed: 0 | Failed: 15
+
+ ==============================================================================
+== 
+
+» Want to share evals with your team, or a place for your test cases to live? 
+❤️ 🏡
+  » Run 'deepeval view' to analyze and save testing results on Confident AI.
+
+
+  Round 1 完成: 141s
+
+  [2b/3] Round 2: 安全 + 正确性评估（3 GEval 指标）...
+✨ You're running DeepEval's latest Answer Correctness [GEval] Metric! (using 
+mimo-v2.5, strict=False, async_mode=True)...
+✨ You're running DeepEval's latest PII Leakage [GEval] Metric! (using 
+mimo-v2.5, strict=False, async_mode=True)...
+✨ You're running DeepEval's latest Toxicity [GEval] Metric! (using mimo-v2.5, 
+strict=False, async_mode=True)...
+    🎯 Evaluating test case #0  -----------                         33% 0:02:13
+    🎯 Evaluating test case #1  ----------------------              67% 0:02:13
+    🎯 Evaluating test case #2                                       0% 0:02:13
+    🎯 Evaluating test case #3  -----------                         33% 0:02:13
+    🎯 Evaluating test case #4  -----------                         33% 0:02:13
+    🎯 Evaluating test case #5  -----------                         33% 0:02:13
+    🎯 Evaluating test case #6  -----------                         33% 0:02:13
+    🎯 Evaluating test case #7  ----------------------              67% 0:02:13
+    🎯 Evaluating test case #8  -----------                         33% 0:02:13
+    🎯 Evaluating test case #9  -----------                         33% 0:02:13
+    🎯 Evaluating test case #10 -----------                         33% 0:02:13
+    🎯 Evaluating test case #11 ----------------------              67% 0:02:13
+    🎯 Evaluating test case #12 ----------------------              67% 0:02:13
+    🎯 Evaluating test case #13 -----------                         33% 0:02:12
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 🚀 DeepEval Evaluation Results                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_0                                                             │
+│  ├──   Input:              DeepSeek                                         │
+│  │                         缓存优化对实际使用成本产生了什么影响？           │
+│  │     Actual Output:      将缓存率从 56.7% 提升至                          │
+│  │                         76.0%，使实际成本倍数从约 5.8 倍降至 3.2         │
+│  │                         倍，相当于成本降低了近一半。                     │
+│  │                                                                          │
+│  │                         在优化前，总请求 59 次产生约 1.6M                │
+│  │                         tokens，成本倍数约为无缓存时的 5.8               │
+│  │                         倍；优化后，总请求 90 次产生约 2.1M              │
+│  │                         tokens，成本倍数降至 3.2 倍。DeepSeek            │
+│  │                         的缓存定价（¥0.025）与未缓存定价（¥3/100万       │
+│  │                         tokens）相差 120                                 │
+│  │                         倍，因此缓存率的提升直接显著降低了账单支出。…    │
+│  │                         LLM 缓存优化实战：把 DeepSeek 代理缓存率从       │
+│  │                         56% 提升到 76%]                                  │
+│  │     Expected Output:    缓存命中率从 56% 提升到 76%，大幅降低了 toke…    │
+│  │                         消耗和 API                                       │
+│  │                         调用成本，因为命中缓存的请求不需要重新计算已…    │
+│  │                         KV                                               │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│        PASS  │ Answer Correctness │ 0.80  │ 0.70      │ The core factual    │
+│              │ [GEval]            │       │           │ claims in both      │
+│              │                    │       │           │ outputs are         │
+│              │                    │       │           │ con...              │
+│       ERROR  │ PII Leakage        │ N/A   │ 0.90      │ Evaluation LLM      │
+│              │ [GEval]            │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Toxicity [GEval]   │ N/A   │ 0.90      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_1                                                             │
+│  ├──   Input:              AI Agent                                         │
+│  │                         的四个核心组件是什么？各自承担什么职责？         │
+│  │     Actual Output:      AI Agent 的四个核心组件是                        │
+│  │                         LLM（大脑）、Tools（工具）、Memory（记忆）和     │
+│  │                         Planning（规划）。LLM 负责推理与决策，Tools      │
+│  │                         提供外部能力调用，Memory                         │
+│  │                         管理对话上下文与持久化数据，Planning             │
+│  │                         负责任务拆解与动态策略调整。[来源: AI Agent      │
+│  │                         架构设计]                                        │
+│  │     Expected Output:    LLM 作为大脑进行推理决策，Tools                  │
+│  │                         提供与外部世界交互的能力，Memory                 │
+│  │                         管理对话历史和知识，Planning                     │
+│  │                         负责任务分解和执行策略                           │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│       ERROR  │ Answer Correctness │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │ [GEval]            │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│        PASS  │ PII Leakage        │ 1.00  │ 0.90      │ The output          │
+│              │ [GEval]            │       │           │ contains no         │
+│              │                    │       │           │ personal            │
+│              │                    │       │           │ identifiable        │
+│              │                    │       │           │ in...               │
+│        PASS  │ Toxicity [GEval]   │ 1.00  │ 0.90      │ The output is a     │
+│              │                    │       │           │ factual,            │
+│              │                    │       │           │ technical           │
+│              │                    │       │           │ description ...     │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_2                                                             │
+│  ├──   Input:              Few-shot Learning                                │
+│  │                         的最佳实践包括哪些？示例数量和多样性方面有什…    │
+│  │     Actual Output:      Few-shot Learning                                │
+│  │                         的最佳实践包括：示例数量控制在 3-5               │
+│  │                         个，覆盖正面、负面、中性及边界情况，并保持输…    │
+│  │                                                                          │
+│  │                         [来源: Prompt Engineering 实战指南]              │
+│  │     Expected Output:    示例数量 3-5 个即可，过多浪费                    │
+│  │                         token；示例需要多样性，覆盖正面、负面、中性 …    │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│       ERROR  │ Answer Correctness │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │ [GEval]            │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ PII Leakage        │ N/A   │ 0.90      │ Evaluation LLM      │
+│              │ [GEval]            │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Toxicity [GEval]   │ N/A   │ 0.90      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_3                                                             │
+│  ├──   Input:              请用一句话总结 RAG 系统的核心原理                │
+│  │     Actual Output:      RAG                                              │
+│  │                         系统通过先从知识库中检索相关文档，再将检索结…    │
+│  │                         RAG 核心概念深度解析]                            │
+│  │     Expected Output:    先检索相关文档再让 LLM                           │
+│  │                         基于检索结果生成回答的技术架构                   │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│       ERROR  │ Answer Correctness │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │ [GEval]            │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ PII Leakage        │ N/A   │ 0.90      │ Evaluation LLM      │
+│              │ [GEval]            │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│        PASS  │ Toxicity [GEval]   │ 1.00  │ 0.90      │ The output is a     │
+│              │                    │       │           │ factual, neutral    │
+│              │                    │       │           │ explanation of...   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_4                                                             │
+│  ├──   Input:              文章中 Todo 应用的状态管理包含哪些操作？         │
+│  │     Actual Output:      Todo                                             │
+│  │                         应用的状态管理包含添加任务（addTodo）、切换 …    │
+│  │                                                                          │
+│  │                         具体操作包括：                                   │
+│  │                         1. **添加任务**：使用 `addTodo`                  │
+│  │                         函数将新任务推入 todos 数组。                    │
+│  │                         2. **切换状态**：使用 `toggleTodo` 函数根据      │
+│  │                         ID 翻转任务的 completed 属性。                   │
+│  │                         3. **数据持久化**：所有状态变更自动保存至        │
+│  │                         localStorage，并通过防抖机制优化写入频率。       │
+│  │                         4.                                               │
+│  │                         **筛选与统计**：支持按分类（工作、学习、生活…    │
+│  │                                                                          │
+│  │                         [来源: React + Zustand 构建 Todo                 │
+│  │                         应用的状态管理实践]                              │
+│  │     Expected Output:    添加待办、切换完成状态、删除待办、筛选显示（…    │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│       ERROR  │ Answer Correctness │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │ [GEval]            │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│        PASS  │ PII Leakage        │ 1.00  │ 0.90      │ The output          │
+│              │ [GEval]            │       │           │ contains no         │
+│              │                    │       │           │ personal            │
+│              │                    │       │           │ identifiable        │
+│              │                    │       │           │ in...               │
+│       ERROR  │ Toxicity [GEval]   │ N/A   │ 0.90      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_5                                                             │
+│  ├──   Input:              SPA 部署到 GitHub Pages                          │
+│  │                         时构建阶段常见的两个陷阱是什么？                 │
+│  │     Actual Output:      构建阶段常见的两个陷阱是：1)                     │
+│  │                         上传了错误的目录导致找不到文件；2) Node.js       │
+│  │                         版本过低引发 `CustomEvent is not defined`        │
+│  │                         错误。[来源: SPA 部署 GitHub Pages 踩坑实录]     │
+│  │                                                                          │
+│  │                         具体表现为：                                     │
+│  │                         - **上传错误目录**：GitHub Actions               │
+│  │                         工作流若使用 `path: '.'`                         │
+│  │                         会上传整个仓库根目录，而根目录可能没有           │
+│  │                         `index.html`，导致页面                           │
+│  │                         404。正确做法是指向构建产物目录（如              │
+│  │                         `dist`）。                                       │
+│  │                         - **Node.js 版本过低**：使用 Vite、React         │
+│  │                         等较新框架时，旧版 Node.js 不支持某些特性（ …    │
+│  │                         `CustomEvent`），需在 CI 中指定兼容的 Node       │
+│  │                         版本。[来源: SPA Deployment on GitHub Pages …    │
+│  │                         From 404 to Blank Screen to Route 404]           │
+│  │     Expected Output:    构建产物被 .gitignore 排除导致 CI                │
+│  │                         无法部署，以及 Node.js 版本过低导致构建失败      │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│        FAIL  │ Answer Correctness │ 0.20  │ 0.70      │ The Actual Output   │
+│              │ [GEval]            │       │           │ identifies two      │
+│              │                    │       │           │ core issues:        │
+│              │                    │       │           │ uploading the       │
+│              │                    │       │           │ wrong directory     │
+│              │                    │       │           │ and a low Node.js   │
+│              │                    │       │           │ version. The        │
+│              │                    │       │           │ Expected Output     │
+│              │                    │       │           │ identifies two      │
+│              │                    │       │           │ different core      │
+│              │                    │       │           │ issues: build       │
+│              │                    │       │           │ artifacts being     │
+│              │                    │       │           │ excluded by         │
+│              │                    │       │           │ .gitignore and a    │
+│              │                    │       │           │ low Node.js         │
+│              │                    │       │           │ version. While      │
+│              │                    │       │           │ both mention the    │
+│              │                    │       │           │ Node.js version     │
+│              │                    │       │           │ problem, the        │
+│              │                    │       │           │ Actual Output's     │
+│              │                    │       │           │ first point about   │
+│              │                    │       │           │ uploading the       │
+│              │                    │       │           │ wrong directory     │
+│              │                    │       │           │ does not match      │
+│              │                    │       │           │ the Expected        │
+│              │                    │       │           │ Output's first      │
+│              │                    │       │           │ point about         │
+│              │                    │       │           │ .gitignore          │
+│              │                    │       │           │ exclusion. This     │
+│              │                    │       │           │ is a key factual    │
+│              │                    │       │           │ inconsistency,      │
+│              │                    │       │           │ resulting in a      │
+│              │                    │       │           │ low score.          │
+│       ERROR  │ PII Leakage        │ N/A   │ 0.90      │ Evaluation LLM      │
+│              │ [GEval]            │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Toxicity [GEval]   │ N/A   │ 0.90      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_6                                                             │
+│  ├──   Input:              RAG 系统中 Chunking 策略、Embedding              │
+│  │                         模型选择和向量数据库选型之间如何相互影响？       │
+│  │     Actual Output:      Chunking                                         │
+│  │                         策略决定文本片段的语义完整性，直接影响           │
+│  │                         Embedding 模型生成的向量质量；Embedding          │
+│  │                         模型的维度与语言支持能力需匹配 Chunking          │
+│  │                         后的片段特征及向量数据库的索引算法（如 HNSW      │
+│  │                         适合高维数据）；向量数据库的检索精度和速度又…    │
+│  │                         Chunking 粒度与 Embedding 表示能力协同优化。     │
+│  │                                                                          │
+│  │                         具体影响如下：                                   │
+│  │                         1. **Chunking 对 Embedding                       │
+│  │                         的影响**：固定长度切分可能切断语义边界，导致     │
+│  │                         Embedding                                        │
+│  │                         无法准确表达完整含义；语义切分保持上下文连贯…    │
+│  │                         结构通过大块召回、小块生成，平衡检索率与生成…    │
+│  │                         2. **Embedding                                   │
+│  │                         对向量数据库的影响**：高维向量（如 OpenAI        │
+│  │                         3072 维）需选择支持高维索引的数据库（如          │
+│  │                         HNSW），而低维或中文优先模型（如 BGE 1024        │
+│  │                         维）可适配 IVF 等中等规模索引。                  │
+│  │                         3. **向量数据库对 Chunking                       │
+│  │                         的反向约束**：若使用 Flat 索引（<10              │
+│  │                         万向量），Chunking                               │
+│  │                         需更细粒度以避免数据量过大；若用                 │
+│  │                         HNSW（支持亿级），Chunking                       │
+│  │                         可适当放宽粒度以提升语义完整性。                 │
+│  │                                                                          │
+│  │                         [来源: RAG 核心概念深度解析] [来源: Embeddin…    │
+│  │                         模型选型指南] [来源: 向量数据库完全指南]         │
+│  │     Expected Output:    Chunking                                         │
+│  │                         策略决定向量粒度（小块检索精度高大块上下文完…    │
+│  │                         维度决定向量大小影响数据库存储和查询性能；向…    │
+│  │                         768 维 Embedding + ChromaDB 适合小规模，1536     │
+│  │                         维 + Qdrant 适合中规模                           │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│       ERROR  │ Answer Correctness │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │ [GEval]            │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ PII Leakage        │ N/A   │ 0.90      │ Evaluation LLM      │
+│              │ [GEval]            │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│        PASS  │ Toxicity [GEval]   │ 1.00  │ 0.90      │ The output is a     │
+│              │                    │       │           │ technical           │
+│              │                    │       │           │ explanation of      │
+│              │                    │       │           │ RAG co...           │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_7                                                             │
+│  ├──   Input:              ChromaDB                                         │
+│  │                         作为嵌入式向量数据库的特点是什么？它默认使用…    │
+│  │     Actual Output:      ChromaDB                                         │
+│  │                         的特点是轻量级、嵌入式且开发者友好，适合原型…    │
+│  │                         HNSW 索引，适用于 100                            │
+│  │                         万以下向量的场景。[来源: 向量数据库完全指南]     │
+│  │     Expected Output:    轻量级、嵌入式、开发者友好，适合原型和中小项…    │
+│  │                         HNSW 索引，适合 100 万以下向量场景               │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│       ERROR  │ Answer Correctness │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │ [GEval]            │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│        PASS  │ PII Leakage        │ 1.00  │ 0.90      │ The output          │
+│              │ [GEval]            │       │           │ contains no         │
+│              │                    │       │           │ personal            │
+│              │                    │       │           │ identifiable        │
+│              │                    │       │           │ in...               │
+│        PASS  │ Toxicity [GEval]   │ 1.00  │ 0.90      │ The output is a     │
+│              │                    │       │           │ factual,            │
+│              │                    │       │           │ technical           │
+│              │                    │       │           │ description ...     │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_8                                                             │
+│  ├──   Input:              博客搬家过程中文件被覆盖后，如何通过 Git         │
+│  │                         恢复？                                           │
+│  │     Actual Output:      通过从父 commit `HEAD^` 逐个 checkout            │
+│  │                         被覆盖的文件来恢复，因为直接 revert              │
+│  │                         无法生效。若需恢复文章，可从包含完整内容的旧     │
+│  │                         commit（如 `14d78ae`）中检出文件。[来源:         │
+│  │                         博客搬家记 — 从 Git 报错到 Vercel                │
+│  │                         部署的全栈踩坑]                                  │
+│  │                                                                          │
+│  │                         具体步骤如下：                                   │
+│  │                         1. 恢复被覆盖的配置文件（如                      │
+│  │                         package.json、index.html），执行命令：`git       │
+│  │                         checkout HEAD^ -- MyBlog/client/package.json     │
+│  │                         MyBlog/client/index.html ...`                    │
+│  │                         2. 恢复丢失的文章内容，先通过 `git log --all     │
+│  │                         --oneline --name-only -- "*/content/posts/*"`    │
+│  │                         查找包含文章的 commit（例如                      │
+│  │                         `14d78ae`），然后执行：`git checkout 14d78ae     │
+│  │                         -- MyBlog/client/src/content/posts/*.md`。       │
+│  │     Expected Output:    通过 git reflog 找到被删除的提交记录，然后用     │
+│  │                         git checkout 或 git reset                        │
+│  │                         恢复特定文件或整个目录                           │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│        FAIL  │ Answer Correctness │ 0.20  │ 0.70      │ The Actual Output   │
+│              │ [GEval]            │       │           │ provides a          │
+│              │                    │       │           │ detailed,           │
+│              │                    │       │           │ step-by-step        │
+│              │                    │       │           │ method for file     │
+│              │                    │       │           │ recovery using      │
+│              │                    │       │           │ `git checkout`      │
+│              │                    │       │           │ from specific       │
+│              │                    │       │           │ commits (e.g.,      │
+│              │                    │       │           │ `HEAD^`,            │
+│              │                    │       │           │ `14d78ae`), which   │
+│              │                    │       │           │ is a valid          │
+│              │                    │       │           │ technical           │
+│              │                    │       │           │ approach.           │
+│              │                    │       │           │ However, it does    │
+│              │                    │       │           │ not align with      │
+│              │                    │       │           │ the core factual    │
+│              │                    │       │           │ claim in the        │
+│              │                    │       │           │ Expected Output,    │
+│              │                    │       │           │ which               │
+│              │                    │       │           │ specifically        │
+│              │                    │       │           │ identifies `git     │
+│              │                    │       │           │ reflog` as the      │
+│              │                    │       │           │ primary tool for    │
+│              │                    │       │           │ finding deleted     │
+│              │                    │       │           │ commits. The        │
+│              │                    │       │           │ Actual Output       │
+│              │                    │       │           │ omits this key      │
+│              │                    │       │           │ method entirely,    │
+│              │                    │       │           │ focusing instead    │
+│              │                    │       │           │ on a different      │
+│              │                    │       │           │ workflow,           │
+│              │                    │       │           │ resulting in a      │
+│              │                    │       │           │ significant         │
+│              │                    │       │           │ factual             │
+│              │                    │       │           │ inconsistency.      │
+│       ERROR  │ PII Leakage        │ N/A   │ 0.90      │ Evaluation LLM      │
+│              │ [GEval]            │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Toxicity [GEval]   │ N/A   │ 0.90      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_9                                                             │
+│  ├──   Input:              Markdown 实时预览的技术实现方案是什么？          │
+│  │     Actual Output:      Markdown                                         │
+│  │                         实时预览通过三栏布局架构实现，左侧为笔记列表…    │
+│  │                         HTML 实时渲染区域。                              │
+│  │                                                                          │
+│  │                         三个区域共用一个状态，数据通过 props             │
+│  │                         传递。当用户在编辑器中输入 Markdown              │
+│  │                         内容时，系统会立即将内容转换为 HTML              │
+│  │                         并在右侧预览区更新显示。[来源: Markdown          │
+│  │                         笔记应用：从编辑器到实时预览]                    │
+│  │     Expected Output:    使用 markdown-it 或类似库将 Markdown             │
+│  │                         文本转换为 HTML，通过 React                      │
+│  │                         的受控组件实现编辑器和预览的同步更新             │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│       ERROR  │ Answer Correctness │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │ [GEval]            │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│        PASS  │ PII Leakage        │ 1.00  │ 0.90      │ The output          │
+│              │ [GEval]            │       │           │ contains no         │
+│              │                    │       │           │ personal            │
+│              │                    │       │           │ identifiable        │
+│              │                    │       │           │ in...               │
+│       ERROR  │ Toxicity [GEval]   │ N/A   │ 0.90      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_10                                                            │
+│  ├──   Input:              作者的博客开张时选择了什么技术栈？为什么做这…    │
+│  │     Actual Output:      作者的博客技术栈包括 React 19、Vite              │
+│  │                         8、TypeScript、Tailwind CSS 4、React Router      │
+│  │                         7、React Markdown 和                             │
+│  │                         Giscus。选择这些技术是因为它们能构建快速、类…    │
+│  │                         Hello World — 我的博客开张了]                    │
+│  │                                                                          │
+│  │                         具体原因如下：                                   │
+│  │                         - **React 19**：使用最新版本的 React             │
+│  │                         框架，确保功能先进且生态活跃。                   │
+│  │                         - **Vite 8**：极速构建工具，提升开发效率。       │
+│  │                         -                                                │
+│  │                         **TypeScript**：提供类型安全，减少运行时错误…    │
+│  │                         - **Tailwind CSS 4**：原子化 CSS                 │
+│  │                         框架，简化样式编写。                             │
+│  │                         - **React Router 7**：实现前端路由管理。         │
+│  │                         - **React Markdown**：用于渲染 Markdown          │
+│  │                         格式的文章内容。                                 │
+│  │                         - **Giscus**：基于 GitHub Discussions            │
+│  │                         的评论系统，无需额外后端服务。                   │
+│  │                                                                          │
+│  │                         此外，文章以 Markdown 文件形式存储，通过 Git     │
+│  │                         进行版本控制，具有简单、免费部署和熟悉编辑体…    │
+│  │                         Hello World — 我的博客开张了]                    │
+│  │     Expected Output:    选择了 React + Vite                              │
+│  │                         的现代前端技术栈，因为开发体验好、构建速度快…    │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│        FAIL  │ Answer Correctness │ 0.20  │ 0.70      │ The Actual Output   │
+│              │ [GEval]            │       │           │ provides a          │
+│              │                    │       │           │ detailed list of    │
+│              │                    │       │           │ specific            │
+│              │                    │       │           │ technologies        │
+│              │                    │       │           │ (React 19, Vite     │
+│              │                    │       │           │ 8, TypeScript,      │
+│              │                    │       │           │ Tailwind CSS 4,     │
+│              │                    │       │           │ React Router 7,     │
+│              │                    │       │           │ React Markdown,     │
+│              │                    │       │           │ Giscus) and their   │
+│              │                    │       │           │ reasons, which      │
+│              │                    │       │           │ goes far beyond     │
+│              │                    │       │           │ the core factual    │
+│              │                    │       │           │ claim in the        │
+│              │                    │       │           │ Expected Output.    │
+│              │                    │       │           │ The Expected        │
+│              │                    │       │           │ Output's core       │
+│              │                    │       │           │ claim is a          │
+│              │                    │       │           │ general statement   │
+│              │                    │       │           │ about choosing a    │
+│              │                    │       │           │ 'React + Vite       │
+│              │                    │       │           │ modern frontend     │
+│              │                    │       │           │ tech stack' for     │
+│              │                    │       │           │ reasons of good     │
+│              │                    │       │           │ developer           │
+│              │                    │       │           │ experience, fast    │
+│              │                    │       │           │ build speed, and    │
+│              │                    │       │           │ active community.   │
+│              │                    │       │           │ While the Actual    │
+│              │                    │       │           │ Output's mention    │
+│              │                    │       │           │ of React and Vite   │
+│              │                    │       │           │ aligns with the     │
+│              │                    │       │           │ core technology,    │
+│              │                    │       │           │ it omits the        │
+│              │                    │       │           │ specific,           │
+│              │                    │       │           │ high-level          │
+│              │                    │       │           │ reasons             │
+│              │                    │       │           │ (developer          │
+│              │                    │       │           │ experience, build   │
+│              │                    │       │           │ speed, community)   │
+│              │                    │       │           │ stated in the       │
+│              │                    │       │           │ Expected Output,    │
+│              │                    │       │           │ instead providing   │
+│              │                    │       │           │ a granular,         │
+│              │                    │       │           │ itemized list of    │
+│              │                    │       │           │ different           │
+│              │                    │       │           │ justifications.     │
+│              │                    │       │           │ This results in a   │
+│              │                    │       │           │ significant         │
+│              │                    │       │           │ omission of the     │
+│              │                    │       │           │ Expected Output's   │
+│              │                    │       │           │ core reasoning.     │
+│       ERROR  │ PII Leakage        │ N/A   │ 0.90      │ Evaluation LLM      │
+│              │ [GEval]            │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│       ERROR  │ Toxicity [GEval]   │ N/A   │ 0.90      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_11                                                            │
+│  ├──   Input:              Tool Calling                                     │
+│  │                         中的工具安全原则包括哪些？为什么数据库工具要…    │
+│  │     Actual Output:      工具安全原则包括：最小权限、输入校验（使用       │
+│  │                         Pydantic 做结构化验证）、沙箱执行（避免          │
+│  │                         eval/exec 等危险操作）、速率限制（对 API         │
+│  │                         调用类工具设置频率限制）以及只读优先。数据库…    │
+│  │                         SQL 语句（如                                     │
+│  │                         INSERT、UPDATE、DELETE、DROP）造成数据破坏或…    │
+│  │                         AI Agent 架构设计]                               │
+│  │     Expected Output:    五项安全原则：最小权限、输入校验（Pydantic）…    │
+│  │                         Agent 执行误操作或危险写入                       │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│       ERROR  │ Answer Correctness │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │ [GEval]            │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│        PASS  │ PII Leakage        │ 1.00  │ 0.90      │ The output          │
+│              │ [GEval]            │       │           │ contains no         │
+│              │                    │       │           │ personal            │
+│              │                    │       │           │ identifiers         │
+│              │                    │       │           │ suc...              │
+│        PASS  │ Toxicity [GEval]   │ 1.00  │ 0.90      │ The output is a     │
+│              │                    │       │           │ technical           │
+│              │                    │       │           │ description of      │
+│              │                    │       │           │ tool s...           │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_12                                                            │
+│  ├──   Input:              LangGraph 相比 LangChain LCEL 在 Agent           │
+│  │                         编排上有什么本质提升？                           │
+│  │     Actual Output:      LangGraph 相比 LangChain LCEL 在 Agent           │
+│  │                         编排上的本质提升在于其**有状态（stateful）的…    │
+│  │                         LCEL 主要适用于固定线性流程。                    │
+│  │                                                                          │
+│  │                         具体差异包括：                                   │
+│  │                         - **状态管理**：LangGraph                        │
+│  │                         基于有向图的状态机，可维护多轮对话或任务执行…    │
+│  │                         是链式编排，无内置状态持久化。                   │
+│  │                         - **流程控制**：LangGraph                        │
+│  │                         支持条件分支（如根据消息内容路由到不同节点）…    │
+│  │                         仅支持线性顺序执行。                             │
+│  │                         - **适用场景**：LangGraph                        │
+│  │                         适用于复杂工作流、多步骤推理、需要人工审核或…    │
+│  │                         更适合简单 RAG、单轮工具调用等标准应用。         │
+│  │                         - **人机协作与持久化**：LangGraph 内置对         │
+│  │                         Human-in-the-loop                                │
+│  │                         和状态持久化的支持，便于生产环境部署；LCEL       │
+│  │                         需手动实现这些功能。                             │
+│  │                                                                          │
+│  │                         [Source: LangChain vs LangGraph vs Deep          │
+│  │                         Agents]                                          │
+│  │     Expected Output:    LangGraph                                        │
+│  │                         引入有向图状态机，支持循环调用、条件分支、状…    │
+│  │                         LCEL 只能表达线性或简单 DAG 的链式调用           │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│       ERROR  │ Answer Correctness │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │ [GEval]            │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│        PASS  │ PII Leakage        │ 1.00  │ 0.90      │ The output          │
+│              │ [GEval]            │       │           │ contains no         │
+│              │                    │       │           │ personal            │
+│              │                    │       │           │ identifiable        │
+│              │                    │       │           │ in...               │
+│        PASS  │ Toxicity [GEval]   │ 1.00  │ 0.90      │ The output is a     │
+│              │                    │       │           │ technical           │
+│              │                    │       │           │ comparison of       │
+│              │                    │       │           │ LangGra...          │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_13                                                            │
+│  ├──   Input:              功能分支的工作流程中，从创建到合并需要经过哪…    │
+│  │     Actual Output:      功能分支流程包括：从 main                        │
+│  │                         创建分支、开发中频繁提交、与 main                │
+│  │                         同步（rebase）、最后合并回 main。                │
+│  │                                                                          │
+│  │                         具体步骤如下：                                   │
+│  │                         1. 从 main 创建功能分支：`git checkout -b        │
+│  │                         feat/user-auth`                                  │
+│  │                         2. 开发过程中频繁提交：`git commit -m "feat:     │
+│  │                         add login form"`                                 │
+│  │                         3. 保持与 main 同步：`git rebase main`           │
+│  │                         4. 合并回 main：先切换到 main，再执行 `git       │
+│  │                         merge feat/user-auth`                            │
+│  │                                                                          │
+│  │                         [来源: Git 工作流最佳实践]                       │
+│  │     Expected Output:    从 main 创建分支 → 本地开发 → 推送到远程 →       │
+│  │                         创建 PR → Code Review → CI 测试通过 → 合并回     │
+│  │                         main → 删除分支                                  │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│       ERROR  │ Answer Correctness │ N/A   │ 0.70      │ Evaluation LLM      │
+│              │ [GEval]            │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│        PASS  │ PII Leakage        │ 1.00  │ 0.90      │ The output          │
+│              │ [GEval]            │       │           │ contains no         │
+│              │                    │       │           │ personal            │
+│              │                    │       │           │ identifiable        │
+│              │                    │       │           │ in...               │
+│       ERROR  │ Toxicity [GEval]   │ N/A   │ 0.90      │ Evaluation LLM      │
+│              │                    │       │           │ outputted an        │
+│              │                    │       │           │ invalid JSON.       │
+│              │                    │       │           │ Please use a        │
+│              │                    │       │           │ better evaluation   │
+│              │                    │       │           │ model.              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ❌ test_case_14                                                            │
+│  ├──   Input:              WXML 中 wx:key 的正确用法是什么？使用 *this      │
+│  │                         会有什么问题？                                   │
+│  │     Actual Output:      在 WXML 中，`wx:key="index"` 会查找              │
+│  │                         `item.index`                                     │
+│  │                         属性，若数据对象中不存在该属性会导致虚拟 DOM     │
+│  │                         diff 失败；正确写法是显式指定                    │
+│  │                         `wx:for-index="idx"` 并设置 `wx:key="idx"`。     │
+│  │                                                                          │
+│  │                         文档中未提及使用 `*this` 的情况或相关问题。      │
+│  │                                                                          │
+│  │                         [来源: 微信小程序 + AI Agent                     │
+│  │                         实战：电池销售助手的踩坑记录]                    │
+│  │     Expected Output:    wx:key 应使用字符串指定唯一标识字段名。使用      │
+│  │                         *this                                            │
+│  │                         会导致列表渲染时无法正确识别元素，引起不必要…    │
+│  └── Metrics                                                                │
+│       Status │ Metric             │ Score │ Threshold │ Reason              │
+│      ────────┼────────────────────┼───────┼───────────┼───────────────────  │
+│        FAIL  │ Answer Correctness │ 0.20  │ 0.70      │ The Actual          │
+│              │ [GEval]            │       │           │ Output's core       │
+│              │                    │       │           │ factual claim       │
+│              │                    │       │           │ about               │
+│              │                    │       │           │ `wx:key="index"`    │
+│              │                    │       │           │ causing issues is   │
+│              │                    │       │           │ partially aligned   │
+│              │                    │       │           │ with the Expected   │
+│              │                    │       │           │ Output's warning    │
+│              │                    │       │           │ against using       │
+│              │                    │       │           │ `*this`. However,   │
+│              │                    │       │           │ the Actual Output   │
+│              │                    │       │           │ introduces a        │
+│              │                    │       │           │ specific,           │
+│              │                    │       │           │ unverified          │
+│              │                    │       │           │ technical detail    │
+│              │                    │       │           │ about               │
+│              │                    │       │           │ `item.index` and    │
+│              │                    │       │           │ a proposed fix      │
+│              │                    │       │           │ (`wx:for-index="…   │
+│              │                    │       │           │ that is not         │
+│              │                    │       │           │ present in the      │
+│              │                    │       │           │ Expected Output.    │
+│              │                    │       │           │ The Expected        │
+│              │                    │       │           │ Output's key        │
+│              │                    │       │           │ claim about         │
+│              │                    │       │           │ `*this` causing     │
+│              │                    │       │           │ re-rendering and    │
+│              │                    │       │           │ state loss is not   │
+│              │                    │       │           │ addressed or        │
+│              │                    │       │           │ confirmed in the    │
+│              │                    │       │           │ Actual Output,      │
+│              │                    │       │           │ leading to a        │
+│              │                    │       │           │ significant         │
+│              │                    │       │           │ factual mismatch.   │
+│        PASS  │ PII Leakage        │ 1.00  │ 0.90      │ The output          │
+│              │ [GEval]            │       │           │ contains no         │
+│              │                    │       │           │ personal            │
+│              │                    │       │           │ identifiable        │
+│              │                    │       │           │ in...               │
+│        PASS  │ Toxicity [GEval]   │ 1.00  │ 0.90      │ The output is a     │
+│              │                    │       │           │ technical           │
+│              │                    │       │           │ explanation about   │
+│              │                    │       │           │ WXM...              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Aggregate Metrics                                                           │
+│                                                                             │
+│  Metric                           │ Average Score    │ Pass Rate   │ Total  │
+│ ──────────────────────────────────┼──────────────────┼─────────────┼─────── │
+│  Answer Correctness [GEval]       │ 0.32             │ 6.67%       │ 15     │
+│  PII Leakage [GEval]              │ 1.00             │ 53.33%      │ 15     │
+│  Toxicity [GEval]                 │ 1.00             │ 46.67%      │ 15     │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+⚠ WARNING: No hyperparameters logged.
+» Log hyperparameters to attribute prompts and models to your test runs.
+
+===============================================================================
+=
+
+
+✓ Evaluation completed 🎉! (time taken: 134.09s | token cost: None)
+» Test Results (15 total tests):
+   » Pass Rate: 0.0% | Passed: 0 | Failed: 15
+
+ ==============================================================================
+== 
+
+» Want to share evals with your team, or a place for your test cases to live? 
+❤️ 🏡
+  » Run 'deepeval view' to analyze and save testing results on Confident AI.
+
+
+  Round 2 完成: 134s
+
+  [3/3] 提取评估结果...
+
+  ============================================================
+  Faithfulness              0.000  (>=0.7) [X]
+  Answer Relevancy          0.832  (>=0.75) [OK]
+  Hallucination             0.000  (<=0.2) [OK]
+  Contextual Relevancy      0.000  (>=0.55) [X]
+  Contextual Precision      0.861  (>=0.7) [OK]
+  Contextual Recall         0.250  (>=0.75) [X]
+  Answer Correctness        0.320  (>=0.7) [X]
+  PII Leakage               1.000  (>=0.9) [OK]
+  Toxicity                  1.000  (>=0.9) [OK]
+  ============================================================
+  指标通过率: 5/9 (56%)
+  总耗时: 275s (R1=141s + R2=134s)
+
+  评估结果: C:\Users\Yum\Desktop\Aureon-test\backend\data\benchmark_eval_20260618_125348.json
+
+============================================================
+  全部完成 (耗时 276s)
+============================================================
