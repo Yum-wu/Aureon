@@ -1,5 +1,5 @@
 // Aureon — Enterprise AI Knowledge Base Platform
-import { lazy, Suspense, useState, useEffect, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, type ReactNode } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -7,6 +7,8 @@ import { Toaster } from "sonner";
 import { LanguageSwitcher } from "./i18n/LanguageSwitcher";
 import { AuthProvider } from "./hooks/AuthProvider";
 import { useAuth } from "./hooks/AuthContext";
+import { AdminGate } from "./components/AdminGate";
+import { useUIStore } from "./stores/useUIStore";
 
 // Route-level code splitting — each page is a separate chunk
 const Landing = lazy(() => import("./pages/Landing").then(m => ({ default: m.Landing })));
@@ -45,20 +47,30 @@ function AppLayout() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { mobileMenuOpen, setMobileMenuOpen } = useUIStore();
 
   // 路由变化时关闭移动端菜单
-  useEffect(() => { setMobileMenuOpen(false); }, [location.pathname]);
+  useEffect(() => { setMobileMenuOpen(false); }, [location.pathname, setMobileMenuOpen]);
 
-  const navItems = [
-    { path: "/dashboard", key: "app.nav.dashboard" },
-    { path: "/search", key: "app.nav.search" },
-    { path: "/documents", key: "app.nav.documents" },
-    { path: "/analytics", key: "app.nav.analytics" },
-    { path: "/architecture", key: "app.nav.architecture" },
-    { path: "/portfolio", key: "app.nav.portfolio" },
-    { path: "/admin", key: "app.nav.admin" },
-    { path: "/cost", key: "app.nav.cost" },
+  const navGroups = [
+    {
+      label: t('app.nav.group_core'),
+      items: [
+        { path: "/dashboard", key: "app.nav.dashboard" },
+        { path: "/search", key: "app.nav.search" },
+        { path: "/documents", key: "app.nav.documents" },
+        { path: "/analytics", key: "app.nav.analytics" },
+      ]
+    },
+    {
+      label: t('app.nav.group_admin'),
+      items: [
+        { path: "/architecture", key: "app.nav.architecture" },
+        { path: "/portfolio", key: "app.nav.portfolio" },
+        { path: "/admin", key: "app.nav.admin" },
+        { path: "/cost", key: "app.nav.cost" },
+      ]
+    }
   ];
 
   const isLanding = location.pathname === "/";
@@ -79,7 +91,25 @@ function AppLayout() {
 
           {/* Desktop Nav links */}
           <div className="hidden md:flex items-center gap-1">
-            {navItems.map((item) => {
+            {navGroups[0].items.map((item) => {
+              const isActive = location.pathname.startsWith(item.path);
+              return (
+                <button
+                  key={item.path}
+                  onClick={() => navigate(item.path)}
+                  className="relative px-4 py-3 text-sm font-medium transition-colors rounded-md"
+                  style={{
+                    color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    background: isActive ? 'var(--accent-soft)' : 'transparent',
+                  }}
+                  aria-current={isActive ? 'page' : undefined}
+                >
+                  {t(item.key)}
+                </button>
+              );
+            })}
+            <div className="w-px h-6 bg-[var(--border)] mx-2" />
+            {navGroups[1].items.map((item) => {
               const isActive = location.pathname.startsWith(item.path);
               return (
                 <button
@@ -130,7 +160,31 @@ function AppLayout() {
         {/* Mobile dropdown menu */}
         {mobileMenuOpen && (
           <div className="md:hidden absolute top-full left-0 right-0 border-b z-50" style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
-            {navItems.map((item) => {
+            <div className="px-6 py-2 text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
+              {navGroups[0].label}
+            </div>
+            {navGroups[0].items.map((item) => {
+              const isActive = location.pathname.startsWith(item.path);
+              return (
+                <button
+                  key={item.path}
+                  onClick={() => { navigate(item.path); setMobileMenuOpen(false); }}
+                  className="block w-full text-left px-6 py-3 text-sm font-medium transition-colors"
+                  style={{
+                    color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    background: isActive ? 'var(--accent-soft)' : 'transparent',
+                  }}
+                  aria-current={isActive ? 'page' : undefined}
+                >
+                  {t(item.key)}
+                </button>
+              );
+            })}
+            <div className="h-px bg-[var(--border)] mx-4 my-1" />
+            <div className="px-6 py-2 text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
+              {navGroups[1].label}
+            </div>
+            {navGroups[1].items.map((item) => {
               const isActive = location.pathname.startsWith(item.path);
               return (
                 <button
@@ -160,13 +214,14 @@ function AppLayout() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/search" element={<Search />} />
             <Route path="/documents" element={<Documents />} />
-            <Route path="/architecture" element={<Architecture />} />
-            <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/crew" element={<CrewGenerator />} />
             {/* Protected routes — require auth */}
             <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-            <Route path="/cost" element={<ProtectedRoute><CostGovernance /></ProtectedRoute>} />
+            {/* Admin routes — require auth + admin gate */}
+            <Route path="/architecture" element={<AdminGate><Architecture /></AdminGate>} />
+            <Route path="/portfolio" element={<AdminGate><Portfolio /></AdminGate>} />
+            <Route path="/admin" element={<AdminGate><Admin /></AdminGate>} />
+            <Route path="/cost" element={<AdminGate><CostGovernance /></AdminGate>} />
             {/* Catch-all 404 route */}
             <Route path="*" element={<NotFound />} />
           </Routes>

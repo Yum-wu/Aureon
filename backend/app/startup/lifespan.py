@@ -16,6 +16,7 @@ from app.memory.manager import manager as memory_manager
 from app.memory.storage import get_backend
 from app.cache.redis_client import close_redis, close_sync_redis
 from app.startup.warmup import warmup_bm25
+from app.database import init_db as init_pg_db, close_db_pool
 
 logger = structlog.get_logger()
 
@@ -56,6 +57,9 @@ async def lifespan(app: FastAPI):
     init_sso_providers_table()
     init_audit_tables()
     await init_pg_tables()
+
+    # ── PostgreSQL asyncpg pool (parallel to existing SQLite/SQLAlchemy) ──
+    await init_pg_db()
 
     # ── Experimental modules (conditional on EXPERIMENTAL_MODULES env var) ──
     # Default: enabled for backward compatibility.
@@ -98,6 +102,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning("Langfuse init failed (non-fatal): %s", e)
 
+    # LangFuse Prompt Management: 预加载提示词到内存
+    try:
+        from app.observability.prompt_manager import init_prompt_manager
+        await init_prompt_manager()
+    except Exception as e:
+        logger.warning("Prompt manager init failed (non-fatal): %s", e)
+
     logger.info("Startup complete")
 
     yield  # Application runs here
@@ -112,5 +123,6 @@ async def lifespan(app: FastAPI):
     memory_manager.flush_all_scenarios()
     backend.close()
     close_db()
+    await close_db_pool()
     await close_redis()
     close_sync_redis()

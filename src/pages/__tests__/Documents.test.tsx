@@ -2,10 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-// Mock useDocuments hook
-const mockUseDocuments = vi.fn();
-vi.mock('../../hooks/useDocuments', () => ({
-  useDocuments: () => mockUseDocuments(),
+// Mock useDocumentsStore
+const mockUseDocumentsStore = vi.fn();
+vi.mock('../../stores/useDocumentsStore', () => ({
+  useDocumentsStore: () => mockUseDocumentsStore(),
 }));
 
 // Mock useBlogConfig hook (async fetch causes act() warnings)
@@ -43,13 +43,15 @@ describe('Documents', () => {
   });
 
   it('renders loading state', () => {
-    mockUseDocuments.mockReturnValue({
+    mockUseDocumentsStore.mockReturnValue({
       documents: [],
       totalDocs: 0,
       totalChunks: 0,
       loading: true,
       error: null,
+      filter: '',
       refetch: vi.fn(),
+      setFilter: vi.fn(),
     });
 
     act(() => {
@@ -62,13 +64,15 @@ describe('Documents', () => {
 
   it('renders error state with retry button', () => {
     const mockRefetch = vi.fn();
-    mockUseDocuments.mockReturnValue({
+    mockUseDocumentsStore.mockReturnValue({
       documents: [],
       totalDocs: 0,
       totalChunks: 0,
       loading: false,
       error: 'Network error',
+      filter: '',
       refetch: mockRefetch,
+      setFilter: vi.fn(),
     });
 
     act(() => {
@@ -83,13 +87,15 @@ describe('Documents', () => {
   });
 
   it('renders empty state', () => {
-    mockUseDocuments.mockReturnValue({
+    mockUseDocumentsStore.mockReturnValue({
       documents: [],
       totalDocs: 0,
       totalChunks: 0,
       loading: false,
       error: null,
+      filter: '',
       refetch: vi.fn(),
+      setFilter: vi.fn(),
     });
 
     act(() => {
@@ -99,13 +105,15 @@ describe('Documents', () => {
   });
 
   it('renders document list with table headers', () => {
-    mockUseDocuments.mockReturnValue({
+    mockUseDocumentsStore.mockReturnValue({
       documents: mockDocuments,
       totalDocs: 3,
       totalChunks: 45,
       loading: false,
       error: null,
+      filter: '',
       refetch: vi.fn(),
+      setFilter: vi.fn(),
     });
 
     act(() => {
@@ -126,18 +134,39 @@ describe('Documents', () => {
 
   it('filters documents by title', async () => {
     const user = userEvent.setup();
-    mockUseDocuments.mockReturnValue({
+    let currentFilter = '';
+    const mockSetFilter = vi.fn((newFilter: string) => {
+      currentFilter = newFilter;
+      // 重新渲染组件以反映新的 filter 值
+      mockUseDocumentsStore.mockReturnValue({
+        documents: mockDocuments,
+        totalDocs: 3,
+        totalChunks: 45,
+        loading: false,
+        error: null,
+        filter: currentFilter,
+        refetch: vi.fn(),
+        setFilter: mockSetFilter,
+      });
+    });
+
+    mockUseDocumentsStore.mockReturnValue({
       documents: mockDocuments,
       totalDocs: 3,
       totalChunks: 45,
       loading: false,
       error: null,
+      filter: currentFilter,
       refetch: vi.fn(),
+      setFilter: mockSetFilter,
     });
 
-    render(<Documents />);
+    const { rerender } = render(<Documents />);
     const searchInput = screen.getByPlaceholderText('documents.search_placeholder');
     await user.type(searchInput, 'RAG');
+
+    // 重新渲染组件以反映新的 filter 值
+    rerender(<Documents />);
 
     // RAG Guide appears in both desktop table and mobile cards
     const ragElements = screen.getAllByText('RAG Guide');
@@ -148,13 +177,15 @@ describe('Documents', () => {
 
   it('shows upload area when button clicked', async () => {
     const user = userEvent.setup();
-    mockUseDocuments.mockReturnValue({
+    mockUseDocumentsStore.mockReturnValue({
       documents: mockDocuments,
       totalDocs: 3,
       totalChunks: 45,
       loading: false,
       error: null,
+      filter: '',
       refetch: vi.fn(),
+      setFilter: vi.fn(),
     });
 
     render(<Documents />);
@@ -165,13 +196,15 @@ describe('Documents', () => {
   });
 
   it('renders table with file type badges', () => {
-    mockUseDocuments.mockReturnValue({
+    mockUseDocumentsStore.mockReturnValue({
       documents: mockDocuments,
       totalDocs: 3,
       totalChunks: 45,
       loading: false,
       error: null,
+      filter: '',
       refetch: vi.fn(),
+      setFilter: vi.fn(),
     });
 
     act(() => {

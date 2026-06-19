@@ -361,7 +361,7 @@ def run_deepeval_metrics(
     neg_total = sum(1 for qa in (qa_pairs or []) if qa.get("is_negative", False))
     neg_correct = 0
     if neg_total > 0 and qa_pairs:
-        from app.rag.qa_chain import _is_negative_by_keywords
+        from app.rag.classifier import _is_negative_by_keywords
         for qa in qa_pairs:
             if not qa.get("is_negative", False):
                 continue

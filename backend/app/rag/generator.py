@@ -23,6 +23,7 @@ from app.rag.classifier import (
 from app.rag.retriever import multi_query_retrieve, hybrid_retrieve
 from app.utils.lang_detect import detect_language, lang_instruction
 from app.config import settings
+from app.observability.prompt_manager import register_prompt, get_prompt
 
 import structlog
 
@@ -205,6 +206,10 @@ Reference documents:
 """
 
 
+# 注册到 Prompt Manager（LangFuse 可用时会覆盖）
+register_prompt("qa_system_prompt_zh", QA_SYSTEM_PROMPT, "RAG 中文系统提示词")
+register_prompt("qa_system_prompt_en", QA_SYSTEM_PROMPT_EN, "RAG 英文系统提示词")
+
 # ── Query type adaptive instructions ──
 _QUERY_TYPE_INSTRUCTIONS = {
     "factual": {
@@ -236,7 +241,10 @@ def generate_answer(
 ) -> str:
     """Call LLM with context and query. Return generated answer."""
     if system_prompt is None:
-        system_prompt = QA_SYSTEM_PROMPT_EN if lang == "en" else QA_SYSTEM_PROMPT
+        if lang == "en":
+            system_prompt = get_prompt("qa_system_prompt_en", QA_SYSTEM_PROMPT_EN)
+        else:
+            system_prompt = get_prompt("qa_system_prompt_zh", QA_SYSTEM_PROMPT)
     lang_instr = lang_instruction(lang).strip()
 
     # Inject query type instruction if available
@@ -532,7 +540,10 @@ async def rag_query_astream(
     context = format_context(chunks)
 
     # 3. Build message
-    system_prompt = QA_SYSTEM_PROMPT_EN if lang == "en" else QA_SYSTEM_PROMPT
+    if lang == "en":
+        system_prompt = get_prompt("qa_system_prompt_en", QA_SYSTEM_PROMPT_EN)
+    else:
+        system_prompt = get_prompt("qa_system_prompt_zh", QA_SYSTEM_PROMPT)
     lang_instr = lang_instruction(lang).strip()
     prompt = system_prompt.format(context=context, lang_instruction=lang_instr)
 

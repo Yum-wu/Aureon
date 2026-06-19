@@ -8,10 +8,12 @@
  * - Connection status
  */
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useChat } from '../hooks/useChat';
+import { useChatStore } from '../stores/useChatStore';
+import { useDocumentsStore } from '../stores/useDocumentsStore';
 import { VoiceButton } from './VoiceButton';
+import { BookOpen, AlertTriangle } from 'lucide-react';
 
 interface ChatWidgetProps {
   clientId?: string;
@@ -25,11 +27,43 @@ export function ChatWidget({ className = '' }: ChatWidgetProps) {
     isLoading,
     error,
     sendMessage,
-  } = useChat();
+  } = useChatStore();
+  const { documents } = useDocumentsStore();
 
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // 构建快捷提问卡片：2 条静态 + 2 条动态（基于最近文档）
+  const suggestions = useMemo(() => {
+    const staticSuggestions: string[] = [
+      t('chat.suggestions.summarize_latest'),
+      t('chat.suggestions.key_risks'),
+    ];
+
+    if (documents.length >= 2) {
+      // 取最近 2 个文档生成动态提示
+      const recent = documents.slice(0, 2);
+      return [
+        ...staticSuggestions,
+        t('chat.suggestions.summarize_doc', { title: recent[0].title }),
+        t('chat.suggestions.about_doc', { title: recent[1].title }),
+      ];
+    }
+    if (documents.length === 1) {
+      return [
+        ...staticSuggestions,
+        t('chat.suggestions.summarize_doc', { title: documents[0].title }),
+        t('chat.suggestions.about_doc', { title: documents[0].title }),
+      ];
+    }
+    // 无文档时 fallback：额外 2 条通用提示
+    return [
+      ...staticSuggestions,
+      t('chat.emptyTitle'),
+      t('chat.emptyHint'),
+    ];
+  }, [documents, t]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -98,6 +132,17 @@ export function ChatWidget({ className = '' }: ChatWidgetProps) {
           <div className="text-center text-[var(--text-tertiary)] py-8">
             <p className="text-lg font-medium mb-2">{t('chat.welcome')}</p>
             <p className="text-sm">{t('chat.welcome_subtitle')}</p>
+            <div className="grid grid-cols-2 gap-3 max-w-md mx-auto mt-4">
+              {suggestions.map((text, i) => (
+                <button
+                  key={i}
+                  onClick={() => sendMessage(text)}
+                  className="text-left p-3 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] transition-colors text-sm text-[var(--text-secondary)]"
+                >
+                  {text}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -120,7 +165,7 @@ export function ChatWidget({ className = '' }: ChatWidgetProps) {
               {/* Source citations for assistant messages */}
               {msg.role === 'assistant' && msg.sources && msg.sources.length > 0 && (
                 <div className="mt-3 pt-2 border-t border-[var(--border)]">
-                  <p className="text-xs font-medium text-[var(--text-tertiary)] mb-1">📚 {t('chat.sources')}:</p>
+                  <p className="text-xs font-medium text-[var(--text-tertiary)] mb-1 inline-flex items-center gap-1"><BookOpen size={14} /> {t('chat.sources')}:</p>
                   <div className="space-y-1">
                     {msg.sources.map((source, sourceIdx) => (
                       <div key={sourceIdx} className="flex items-center gap-2 text-xs">
@@ -159,7 +204,7 @@ export function ChatWidget({ className = '' }: ChatWidgetProps) {
           className="chat-error bg-red-500/10 text-red-400 border-t border-red-500/20 px-4 py-3 text-sm"
           data-testid="chat-error"
         >
-          ⚠️ {error}
+          <span className="inline-flex items-center gap-1"><AlertTriangle size={14} /> {error}</span>
         </div>
       )}
 

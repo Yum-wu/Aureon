@@ -194,6 +194,26 @@ const Login = () => {
           </button>
         </div>
 
+        {/* Demo account */}
+        <div className="mt-6 space-y-2">
+          <button
+            type="button"
+            onClick={async () => {
+              const success = await loginWithJWT('admin', 'Aureon');
+              if (success) {
+                toast.success(t('login.success'));
+                navigate('/dashboard');
+              }
+            }}
+            className="w-full py-2.5 px-4 bg-[var(--accent-soft)] hover:bg-[var(--accent)]/20 border border-[var(--accent)]/30 text-[var(--accent)] rounded-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm"
+          >
+            {t('login.demo_account')}
+          </button>
+          <p className="text-center text-xs text-[var(--text-tertiary)]">
+            {t('login.demo_hint')}
+          </p>
+        </div>
+
         {/* Signup link */}
         <p className="mt-8 text-center text-sm text-[var(--text-secondary)]">
           {t('login.no_account')}{' '}

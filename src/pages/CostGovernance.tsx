@@ -8,6 +8,7 @@ import { LineChart } from '../components/charts/LineChart';
 import { BarChart } from '../components/charts/BarChart';
 import { PieChart } from '../components/charts/PieChart';
 import { AdminTable } from '../components/admin/AdminTable';
+import { AlertTriangle } from 'lucide-react';
 
 /* ── 类型定义 ── */
 
@@ -210,7 +211,7 @@ export function CostGovernance() {
         {!summary && !loading && !error && (
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-center mb-6">
             <p className="text-sm font-medium text-amber-400">
-              ⚠ {t('cost.demo_mode')}
+              <span className="inline-flex items-center gap-1"><AlertTriangle size={14} /> {t('cost.demo_mode')}</span>
             </p>
           </div>
         )}

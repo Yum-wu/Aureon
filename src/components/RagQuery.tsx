@@ -6,6 +6,7 @@ import { RagQueryForm } from "./rag/RagQueryForm";
 import { RagQueryResult } from "./rag/RagQueryResult";
 import { RagUploadPanel } from "./rag/RagUploadPanel";
 import type { Source } from "./rag/RagSourceList";
+import { BookOpen } from "lucide-react";
 
 const RAG_API_URL =
   (import.meta.env.VITE_API_RAG_URL as string) || "/api/rag/query";
@@ -112,7 +113,7 @@ export function RagQuery() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-lg font-semibold text-gray-800">
-              📚 {t("rag.title")}
+              <span className="inline-flex items-center gap-1"><BookOpen size={14} /> {t("rag.title")}</span>
             </h1>
             <p className="text-xs text-gray-500 mt-0.5">
               {t("rag.description")}

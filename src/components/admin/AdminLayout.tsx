@@ -5,6 +5,7 @@
 
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { LayoutDashboard, Users, Shield, Folder, ClipboardList, Flag, Key } from 'lucide-react';
 
 /** Admin 标签页类型 */
 export type AdminTab = 'overview' | 'users' | 'roles' | 'workspaces' | 'audit' | 'flags' | 'sso';
@@ -18,14 +19,14 @@ interface AdminLayoutProps {
 }
 
 /** 标签页配置 */
-const TAB_CONFIG: { key: AdminTab; icon: string }[] = [
-  { key: 'overview', icon: '◉' },
-  { key: 'users', icon: '👤' },
-  { key: 'roles', icon: '🛡' },
-  { key: 'workspaces', icon: '📁' },
-  { key: 'audit', icon: '📋' },
-  { key: 'flags', icon: '🚩' },
-  { key: 'sso', icon: '🔑' },
+const TAB_CONFIG: { key: AdminTab; icon: ReactNode }[] = [
+  { key: 'overview', icon: <LayoutDashboard size={16} /> },
+  { key: 'users', icon: <Users size={16} /> },
+  { key: 'roles', icon: <Shield size={16} /> },
+  { key: 'workspaces', icon: <Folder size={16} /> },
+  { key: 'audit', icon: <ClipboardList size={16} /> },
+  { key: 'flags', icon: <Flag size={16} /> },
+  { key: 'sso', icon: <Key size={16} /> },
 ];
 
 export function AdminLayout({ children, activeTab, onTabChange }: AdminLayoutProps) {
@@ -64,7 +65,7 @@ export function AdminLayout({ children, activeTab, onTabChange }: AdminLayoutPro
               }`}
               title={t(`admin.tabs.${key}`)}
             >
-              <span className="text-base leading-none shrink-0">{icon}</span>
+              <span className="leading-none shrink-0">{icon}</span>
               {!sidebarCollapsed && <span>{t(`admin.tabs.${key}`)}</span>}
             </button>
           ))}

@@ -1,6 +1,7 @@
-import { useState, useRef, useCallback, type DragEvent, type ChangeEvent } from "react";
+import { useState, useEffect, useRef, useCallback, type DragEvent, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { authFetch } from "../../services/authFetch";
+import { Upload, FileText, Check, X } from "lucide-react";
 
 type UploadStatus = "idle" | "uploading" | "success" | "error";
 
@@ -23,12 +24,20 @@ export function DocumentUpload({ onUploadSuccess }: DocumentUploadProps) {
   const [result, setResult] = useState<UploadResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [isDragging, setIsDragging] = useState(false);
+  const [uploadPhase, setUploadPhase] = useState<'uploading' | 'parsing' | 'indexing'>('uploading');
+  const [progress, setProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const progressTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const fileSizeRef = useRef<number>(0);
 
   const resetState = useCallback(() => {
     setStatus("idle");
     setResult(null);
     setErrorMsg("");
+    setUploadPhase("uploading");
+    setProgress(0);
+    progressTimersRef.current.forEach(clearTimeout);
+    progressTimersRef.current = [];
   }, []);
 
   const uploadFile = useCallback(
@@ -51,6 +60,11 @@ export function DocumentUpload({ onUploadSuccess }: DocumentUploadProps) {
       setStatus("uploading");
       setErrorMsg("");
       setResult(null);
+      setUploadPhase("uploading");
+      setProgress(0);
+      fileSizeRef.current = file.size;
+      progressTimersRef.current.forEach(clearTimeout);
+      progressTimersRef.current = [];
 
       try {
         const formData = new FormData();
@@ -67,6 +81,11 @@ export function DocumentUpload({ onUploadSuccess }: DocumentUploadProps) {
         }
 
         const data = await res.json();
+        setProgress(100);
+        progressTimersRef.current.forEach(clearTimeout);
+        progressTimersRef.current = [];
+        // 短暂延迟让用户看到 100% 完成
+        await new Promise(r => setTimeout(r, 300));
         setResult({
           filename: data.filename,
           chunks_created: data.chunks_created,
@@ -118,6 +137,44 @@ export function DocumentUpload({ onUploadSuccess }: DocumentUploadProps) {
     fileInputRef.current?.click();
   }, []);
 
+  // 三阶段进度模拟：根据文件大小决定总时长
+  useEffect(() => {
+    if (status !== "uploading") return;
+
+    const size = fileSizeRef.current;
+    const totalDuration = size < 1 * 1024 * 1024 ? 2000 : size < 5 * 1024 * 1024 ? 4000 : 6000;
+    const intervalMs = 50;
+    const totalTicks = totalDuration / intervalMs;
+    const increment = 90 / totalTicks;
+
+    const intervalId = setInterval(() => {
+      setProgress(prev => {
+        const next = prev + increment;
+        return next >= 90 ? 90 : next;
+      });
+    }, intervalMs);
+
+    return () => clearInterval(intervalId);
+  }, [status]);
+
+  // 根据进度自动切换阶段
+  useEffect(() => {
+    if (status !== "uploading") return;
+
+    if (progress >= 70) {
+      setUploadPhase("indexing");
+    } else if (progress >= 30) {
+      setUploadPhase("parsing");
+    }
+  }, [progress, status]);
+
+  // 组件卸载时清除所有 timer
+  useEffect(() => {
+    return () => {
+      progressTimersRef.current.forEach(clearTimeout);
+    };
+  }, []);
+
   return (
     <div className="space-y-3">
       {/* Drop zone */}
@@ -148,7 +205,7 @@ export function DocumentUpload({ onUploadSuccess }: DocumentUploadProps) {
         />
 
         <div className="text-3xl mb-3">
-          {isDragging ? "📥" : "📄"}
+          {isDragging ? <Upload size={24} /> : <FileText size={24} />}
         </div>
 
         <p className="text-sm font-medium text-gray-700">
@@ -159,29 +216,31 @@ export function DocumentUpload({ onUploadSuccess }: DocumentUploadProps) {
         </p>
       </div>
 
-      {/* Uploading state */}
+      {/* Uploading state - three-phase progress bar */}
       {status === "uploading" && (
         <div
           data-testid="upload-progress"
-          className="flex items-center gap-3 rounded-lg bg-blue-50 border border-blue-100 px-4 py-3"
+          className="rounded-lg bg-blue-50 border border-blue-100 px-4 py-3 space-y-2"
         >
-          <div className="flex space-x-1">
-            <span
-              className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"
-              style={{ animationDelay: "0ms" }}
-            />
-            <span
-              className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"
-              style={{ animationDelay: "150ms" }}
-            />
-            <span
-              className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"
-              style={{ animationDelay: "300ms" }}
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-blue-700 font-medium">
+              {t(`documents.upload.phase_${uploadPhase}`)}
+            </span>
+            <span className="text-xs text-blue-500">{Math.round(progress)}%</span>
+          </div>
+          {/* Progress bar */}
+          <div className="w-full bg-blue-100 rounded-full h-2 overflow-hidden">
+            <div
+              className="h-full bg-blue-500 rounded-full transition-all duration-300 ease-out"
+              style={{ width: `${progress}%` }}
             />
           </div>
-          <span className="text-sm text-blue-700">
-            {t("documents.upload.uploading")}
-          </span>
+          {/* Phase indicators */}
+          <div className="flex justify-between text-xs text-blue-400">
+            <span className={uploadPhase === 'uploading' ? 'text-blue-600 font-medium' : ''}>上传</span>
+            <span className={uploadPhase === 'parsing' ? 'text-blue-600 font-medium' : ''}>解析</span>
+            <span className={uploadPhase === 'indexing' ? 'text-blue-600 font-medium' : ''}>索引</span>
+          </div>
         </div>
       )}
 
@@ -192,7 +251,7 @@ export function DocumentUpload({ onUploadSuccess }: DocumentUploadProps) {
           className="flex items-center justify-between rounded-lg bg-green-50 border border-green-100 px-4 py-3"
         >
           <div className="flex items-center gap-2">
-            <span className="text-green-600">✓</span>
+            <span className="text-green-600"><Check size={14} /></span>
             <span className="text-sm text-green-700">
               {t("documents.upload.success", {
                 filename: result.filename,
@@ -216,7 +275,7 @@ export function DocumentUpload({ onUploadSuccess }: DocumentUploadProps) {
           className="flex items-center justify-between rounded-lg bg-red-50 border border-red-100 px-4 py-3"
         >
           <div className="flex items-center gap-2">
-            <span className="text-red-600">✕</span>
+            <span className="text-red-600"><X size={14} /></span>
             <span className="text-sm text-red-700">{errorMsg}</span>
           </div>
           <button

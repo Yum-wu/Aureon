@@ -1,6 +1,7 @@
 from langchain.agents import create_agent
 from app.tools import ALL_TOOLS
 from app.utils.lang_detect import lang_instruction
+from app.observability.prompt_manager import register_prompt, get_prompt
 
 
 DEFAULT_SYSTEM_PROMPT = """你是一个有帮助的 AI 助手，可以调用工具来完成任务。
@@ -48,6 +49,11 @@ Memory System:
 """
 
 
+# 注册到 Prompt Manager（LangFuse 可用时会覆盖）
+register_prompt("agent_system_prompt_zh", DEFAULT_SYSTEM_PROMPT, "Agent 中文系统提示词")
+register_prompt("agent_system_prompt_en", DEFAULT_SYSTEM_PROMPT_EN, "Agent 英文系统提示词")
+
+
 def create_chat_agent(llm, tools=None, system_prompt=None, lang="zh"):
     """Factory: create a LangChain agent graph (v1.x API).
 
@@ -59,7 +65,10 @@ def create_chat_agent(llm, tools=None, system_prompt=None, lang="zh"):
     """
     tools = tools or ALL_TOOLS
     if system_prompt is None:
-        system_prompt = DEFAULT_SYSTEM_PROMPT_EN if lang == "en" else DEFAULT_SYSTEM_PROMPT
+        if lang == "en":
+            system_prompt = get_prompt("agent_system_prompt_en", DEFAULT_SYSTEM_PROMPT_EN)
+        else:
+            system_prompt = get_prompt("agent_system_prompt_zh", DEFAULT_SYSTEM_PROMPT)
     prompt_text = system_prompt
     prompt_text += lang_instruction(lang)
 
