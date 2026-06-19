@@ -9,7 +9,7 @@ Read path:   analytics.py -> Redis first -> PG fallback when Redis empty
 """
 
 from datetime import datetime, timezone, timedelta
-from typing import Any, Optional
+from typing import Any
 
 import structlog
 
