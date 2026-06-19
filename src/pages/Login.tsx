@@ -199,14 +199,12 @@ const Login = () => {
           <button
             type="button"
             onClick={async () => {
-              // 先尝试 JWT 登录（开发模式），失败则尝试 API Key 登录（生产模式）
+              // 先尝试 JWT 登录（开发模式），失败则用 API Key 认证（生产模式）
               let success = await loginWithJWT('admin', 'Aureon');
               if (!success) {
-                // 生产模式：使用 demo API Key 认证
-                const demoKey = import.meta.env.VITE_DEMO_API_KEY || '';
-                if (demoKey) {
-                  success = await login(demoKey);
-                }
+                // 生产模式：使用内置 demo API Key
+                const DEMO_API_KEY = '7c249a3dd6b893e04ac5a42ef338f62c73d26bcb0b8ec6655ed6aedf6f07e129';
+                success = await login(DEMO_API_KEY);
               }
               if (success) {
                 toast.success(t('login.success'));
