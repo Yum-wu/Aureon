@@ -30,7 +30,7 @@ pii_detector = PIIDetector()
 class LoginRequest(BaseModel):
     """登录请求"""
     email: str = Field(..., description="邮箱地址")
-    password: str = Field(..., min_length=8, description="密码（至少 8 位）")
+    password: str = Field(..., min_length=6, description="密码（至少 6 位）")
 
 
 class LoginResponse(BaseModel):
