@@ -38,7 +38,9 @@ const record = (page, test, status, detail = '') =>
     record('Login', 'Demo account button', (await demoBtn.isVisible()) ? 'PASS' : 'FAIL');
     if (await demoBtn.isVisible()) {
       await demoBtn.click();
-      await page.waitForTimeout(5000);
+      // 等待 JWT 失败 + API Key 登录 + 页面重定向
+      await page.waitForURL(/\/(dashboard|search)/, { timeout: 15000 }).catch(() => {});
+      await page.waitForTimeout(2000);
       await page.screenshot({ path: '/tmp/aureon_02b_after_demo.png' });
       const url = page.url();
       record('Login', 'Demo redirects', (url.includes('/dashboard') || url.includes('/search')) ? 'PASS' : 'FAIL', `url=${url}`);
