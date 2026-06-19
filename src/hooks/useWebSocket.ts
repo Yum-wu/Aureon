@@ -1,6 +1,10 @@
 /**
  * WebSocket React Hook
  * 封装 createWebSocket，提供声明式 API 和自动清理
+ *
+ * 关键设计：回调通过 ref 持有，不进入 Effect 依赖，
+ * 避免内联回调每次 render 都触发 Effect 清理/重建连接。
+ * Effect 仅依赖 [path, autoReconnect]。
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -24,7 +28,7 @@ interface UseWebSocketReturn {
   isConnected: boolean;
   /** 发送消息 */
   send: (data: string | object) => void;
-  /** 最后一条消息 */
+  /** 最后一条消息（保留向后兼容） */
   lastMessage: unknown;
   /** 手动连接 */
   connect: () => void;
@@ -38,91 +42,63 @@ export function useWebSocket(
   path: string,
   options: UseWebSocketOptions = {},
 ): UseWebSocketReturn {
-  const { onMessage, onOpen, onClose, onError, autoReconnect = true } = options;
+  const { autoReconnect = true } = options;
+
+  // 回调通过 ref 持有，不触发 Effect 重建
+  const onMessageRef = useRef(options.onMessage);
+  const onOpenRef = useRef(options.onOpen);
+  const onCloseRef = useRef(options.onClose);
+  const onErrorRef = useRef(options.onError);
+
+  // 每次 render 更新 ref（不影响 Effect）
+  useEffect(() => { onMessageRef.current = options.onMessage; }, [options.onMessage]);
+  useEffect(() => { onOpenRef.current = options.onOpen; }, [options.onOpen]);
+  useEffect(() => { onCloseRef.current = options.onClose; }, [options.onClose]);
+  useEffect(() => { onErrorRef.current = options.onError; }, [options.onError]);
 
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState<unknown>(null);
   const [connectionState, setConnectionState] = useState<WSConnectionState>('disconnected');
   const clientRef = useRef<ReturnType<typeof createWebSocket> | null>(null);
 
+  // Effect 仅依赖 path 和 autoReconnect — 路径和重连策略不变时不重建连接
   useEffect(() => {
+    if (!path) return;  // 空路径 = 延迟挂载，跳过连接
+
     const client = createWebSocket(path, {
-      maxReconnectAttempts: autoReconnect ? Infinity : 0,
+      maxReconnectAttempts: autoReconnect ? 10 : 0,
+      reconnectJitter: true,
+      fatalCloseCodes: [4001, 1013],
     });
 
     clientRef.current = client;
 
-    // 状态变更监听
+    // 回调通过 ref 间接调用 — 不进入 Effect 依赖
+    client.onMessage = (data) => {
+      setLastMessage(data);
+      onMessageRef.current?.(data);
+    };
+
+    client.onOpen = () => {
+      onOpenRef.current?.();
+    };
+
+    client.onClose = () => {
+      onCloseRef.current?.();
+    };
+
     client.onStateChange = (state) => {
       setConnectionState(state);
       setIsConnected(state === 'connected');
     };
 
-    // 消息监听
-    const patchMessageHandler = () => {
-      if (client.ws) {
-        const wsRef = client.ws;
-        wsRef.onmessage = (event: MessageEvent) => {
-          try {
-            const data = JSON.parse(event.data);
-            // 忽略 pong 心跳响应
-            if (data.type === 'pong') return;
-            setLastMessage(data);
-            onMessage?.(data);
-          } catch {
-            // 非 JSON 消息直接传递
-            setLastMessage(event.data);
-            onMessage?.(event.data);
-          }
-        };
-      }
-    };
-
-    // 连接打开时绑定消息处理器和回调
-    const originalOnOpen = client.ws?.onopen;
-    if (client.ws) {
-      const wsRef = client.ws;
-      wsRef.onopen = (event) => {
-        patchMessageHandler();
-        originalOnOpen?.call(wsRef, event);
-        onOpen?.();
-      };
-    }
-
-    // 连接关闭回调
-    const originalOnClose = client.ws?.onclose;
-    if (client.ws) {
-      const wsRef = client.ws;
-      wsRef.onclose = (event) => {
-        originalOnClose?.call(wsRef, event);
-        onClose?.();
-      };
-    }
-
-    // 错误回调
-    if (client.ws) {
-      const wsRef = client.ws;
-      wsRef.onerror = (event) => {
-        onError?.(event);
-      };
-    }
-
-    // 自动连接
     client.connect();
 
-    // 定期检查并重新绑定消息处理器（重连后 ws 实例会变化）
-    const intervalId = setInterval(() => {
-      if (client.ws && client.ws.readyState === WebSocket.OPEN) {
-        patchMessageHandler();
-      }
-    }, 2000);
-
     return () => {
-      clearInterval(intervalId);
       client.disconnect();
       clientRef.current = null;
     };
-  }, [path, autoReconnect, onMessage, onOpen, onClose, onError]);
+  }, [path, autoReconnect]);
 
   const send = useCallback((data: string | object) => {
     clientRef.current?.send(data);
