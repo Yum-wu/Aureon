@@ -10,7 +10,7 @@ import time
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
 
-RAILWAY_URL = "https://aureon-production-1247.up.railway.app"
+RAILWAY_URL = "https://aureon-production-659a.up.railway.app"
 
 # Test queries covering different types
 TEST_QUERIES = [

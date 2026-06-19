@@ -355,7 +355,7 @@ thresholds:          # 性能阈值（调参只改 YAML，不改代码）
   smoke:             # 冒烟：health≤10s, rag_query≤30s
 
 endpoints:           # 端点配置
-  production: "https://aureon-production-1247.up.railway.app"
+  production: "https://aureon-production-659a.up.railway.app"
   local: "http://localhost:8000"
 
 concurrency:         # 并发测试参数
@@ -492,7 +492,7 @@ npx vite preview --port 5174 --host 127.0.0.1
 3. **CI 通过** → `gh run view` 确认前端 + 后端测试全部通过
 4. **Railway 自动部署** → 推送到 main 后自动触发
 5. **部署完成** → `railway status` 确认 deployment status = SUCCESS
-6. **生产验证** → `curl https://aureon-production-1247.up.railway.app/api/health` 确认 `status: ok`
+6. **生产验证** → `curl https://aureon-production-659a.up.railway.app/api/health` 确认 `status: ok`
 
 **关键点**：
 - 只推送 main 分支才会触发部署
@@ -520,7 +520,7 @@ npx vite preview --port 5174 --host 127.0.0.1
 - 全流程（push → 生产就绪）：~8-10 分钟
 
 **生产环境**：
-- URL: `https://aureon-production-1247.up.railway.app`
+- URL: `https://aureon-production-659a.up.railway.app`
 - 健康检查: `GET /api/health`
 - 服务: Aureon (Dockerfile) + Redis
 - 区域: Southeast Asia
@@ -536,5 +536,5 @@ railway status
 railway logs --latest
 
 # 生产端点验证
-curl -s https://aureon-production-1247.up.railway.app/api/health | jq .
+curl -s https://aureon-production-659a.up.railway.app/api/health | jq .
 ```

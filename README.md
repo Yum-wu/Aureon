@@ -11,7 +11,7 @@ Production-grade enterprise AI search and knowledge intelligence platform.
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![Tests](https://img.shields.io/badge/Tests-793%20passed-brightgreen)](https://github.com/Yum-wu/Aureon/actions)
 
-**Other languages**: [中文](README.zh-CN.md) | [Live Demo](https://aureon-production-1247.up.railway.app)
+**Other languages**: [中文](README.zh-CN.md) | [Live Demo](https://aureon-production-659a.up.railway.app)
 
 ---
 
