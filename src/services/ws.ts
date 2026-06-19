@@ -1,6 +1,7 @@
 /**
  * WebSocket 客户端
  * 支持指数退避重连、心跳检测、连接状态追踪
+ * 支持 Page Visibility API、回调 setter、jitter、fatal close codes
  */
 
 /** 连接状态 */
@@ -14,8 +15,12 @@ interface WSConfig {
   initialReconnectDelay?: number;
   /** 最大重连延迟（毫秒），默认 30000 */
   maxReconnectDelay?: number;
-  /** 最大重连次数，默认 Infinity */
+  /** 最大重连次数，默认 10 */
   maxReconnectAttempts?: number;
+  /** 重连延迟添加随机抖动（0-1000ms），默认 false */
+  reconnectJitter?: boolean;
+  /** 不重连的关闭码，默认 [4001, 1013] */
+  fatalCloseCodes?: number[];
 }
 
 /** 心跳消息 */
@@ -37,12 +42,17 @@ export function createWebSocket(
   disconnect: () => void;
   send: (data: string | object) => void;
   onStateChange?: (state: WSConnectionState) => void;
+  onMessage?: (data: unknown) => void;
+  onOpen?: () => void;
+  onClose?: () => void;
 } {
   const {
     heartbeatInterval = 30_000,
     initialReconnectDelay = 1_000,
     maxReconnectDelay = 30_000,
-    maxReconnectAttempts = Infinity,
+    maxReconnectAttempts = 10,
+    reconnectJitter = false,
+    fatalCloseCodes = [4001, 1013],
   } = config;
 
   let ws: WebSocket | null = null;
@@ -52,6 +62,10 @@ export function createWebSocket(
   let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   let intentionalClose = false;
   let onStateChange: ((state: WSConnectionState) => void) | undefined;
+  let onMessageHandler: ((data: unknown) => void) | undefined;
+  let onOpenHandler: (() => void) | undefined;
+  let onCloseHandler: (() => void) | undefined;
+  let visibilityHandler: (() => void) | null = null;
 
   /** 获取 WebSocket 完整 URL */
   function getWSUrl(): string {
@@ -84,10 +98,11 @@ export function createWebSocket(
     }
   }
 
-  /** 计算重连延迟（指数退避） */
+  /** 计算重连延迟（指数退避 + 可选 jitter） */
   function getReconnectDelay(): number {
-    const delay = initialReconnectDelay * Math.pow(2, reconnectAttempts);
-    return Math.min(delay, maxReconnectDelay);
+    const base = initialReconnectDelay * Math.pow(2, reconnectAttempts);
+    const jitter = reconnectJitter ? Math.random() * 1000 : 0;
+    return Math.min(base + jitter, maxReconnectDelay);
   }
 
   /** 尝试重连 */
@@ -111,6 +126,21 @@ export function createWebSocket(
     intentionalClose = false;
     setState('connecting');
 
+    // Page Visibility API — pause/resume reconnect on tab visibility
+    visibilityHandler = () => {
+      if (document.hidden) {
+        if (reconnectTimer) {
+          clearTimeout(reconnectTimer);
+          reconnectTimer = null;
+        }
+      } else if (!intentionalClose && ws?.readyState !== WebSocket.OPEN) {
+        if (reconnectAttempts < maxReconnectAttempts) {
+          connect();
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', visibilityHandler);
+
     try {
       ws = new WebSocket(getWSUrl());
 
@@ -118,11 +148,23 @@ export function createWebSocket(
         reconnectAttempts = 0;
         setState('connected');
         startHeartbeat();
+        onOpenHandler?.();
       };
 
-      ws.onclose = () => {
+      ws.onmessage = (event: MessageEvent) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'pong' || data.type === 'heartbeat_ack') return;
+          onMessageHandler?.(data);
+        } catch {
+          onMessageHandler?.(event.data);
+        }
+      };
+
+      ws.onclose = (event: CloseEvent) => {
         stopHeartbeat();
-        if (!intentionalClose) {
+        onCloseHandler?.();
+        if (!intentionalClose && !fatalCloseCodes.includes(event.code)) {
           setState('disconnected');
           tryReconnect();
         } else {
@@ -143,6 +185,10 @@ export function createWebSocket(
   function disconnect(): void {
     intentionalClose = true;
     stopHeartbeat();
+    if (visibilityHandler) {
+      document.removeEventListener('visibilitychange', visibilityHandler);
+      visibilityHandler = null;
+    }
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
@@ -174,6 +220,24 @@ export function createWebSocket(
     },
     set onStateChange(handler: ((state: WSConnectionState) => void) | undefined) {
       onStateChange = handler;
+    },
+    get onMessage() {
+      return onMessageHandler;
+    },
+    set onMessage(handler: ((data: unknown) => void) | undefined) {
+      onMessageHandler = handler;
+    },
+    get onOpen() {
+      return onOpenHandler;
+    },
+    set onOpen(handler: (() => void) | undefined) {
+      onOpenHandler = handler;
+    },
+    get onClose() {
+      return onCloseHandler;
+    },
+    set onClose(handler: (() => void) | undefined) {
+      onCloseHandler = handler;
     },
   };
 }
