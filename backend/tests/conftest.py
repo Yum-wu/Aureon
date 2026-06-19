@@ -46,6 +46,20 @@ def _bypass_rbac():
 
 
 @pytest.fixture(autouse=True)
+def _bypass_api_key_auth(monkeypatch):
+    """测试期间跳过 API Key 认证中间件。
+
+    本地 .env 可能配置了 API_AUTH_KEY，导致 TestClient 请求被
+    logging_middleware 拦截返回 401。通过清空该配置让中间件跳过检查，
+    同时仍可在 security 测试中显式验证认证逻辑。
+    """
+    from app.config import settings
+
+    monkeypatch.setattr(settings.auth, "api_auth_key", "")
+    yield
+
+
+@pytest.fixture(autouse=True)
 def isolate_test_environment(tmp_path):
     """Isolate test environment for parallel execution.
 

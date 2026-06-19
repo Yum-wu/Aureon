@@ -25,6 +25,7 @@ async def test_rag_query_returns_response():
          patch("app.config.settings") as mock_settings:
         mock_settings.llm_api_key = "test-key"
         mock_settings.fallback_api_key = None
+        mock_settings.api_auth_key = None  # 跳过 API Key 中间件
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             resp = await ac.post(
@@ -57,6 +58,7 @@ async def test_rag_query_stream_returns_sse():
          patch("app.config.settings") as mock_settings:
         mock_settings.llm_api_key = "test-key"
         mock_settings.fallback_api_key = None
+        mock_settings.api_auth_key = None  # 跳过 API Key 中间件
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             resp = await ac.post(

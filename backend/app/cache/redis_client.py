@@ -136,11 +136,15 @@ def get_sync_redis():
         return _sync_redis_pool
     if _sync_redis_fail_count >= _SYNC_RECONNECT_AFTER:
         return None
+    from app.config import settings
+    if not settings.redis_url:
+        # 未配置 Redis 时直接跳过，避免 fallback 到 localhost 导致连接阻塞
+        _sync_redis_fail_count += 1
+        return None
     try:
         import redis as redis_sync
-        from app.config import settings
         pool = redis_sync.ConnectionPool.from_url(
-            settings.redis_url or "redis://localhost:6379/0",
+            settings.redis_url,
             decode_responses=False,
             socket_connect_timeout=2,
             socket_timeout=2,
@@ -184,11 +188,16 @@ def _get_redis():
     # Reset sentinel to retry (fail_count preserved — only reset on success)
     if _redis is False:
         _redis = None
+    from app.config import settings
+    if not settings.redis_url:
+        # 未配置 Redis 时直接跳过，避免 fallback 到 localhost 导致连接阻塞
+        _redis = False
+        _redis_fail_count += 1
+        return False
     try:
         import redis.asyncio as aioredis
-        from app.config import settings
         _redis = aioredis.from_url(
-            settings.redis_url or "redis://localhost:6379/0",
+            settings.redis_url,
             decode_responses=True,
             socket_connect_timeout=2,
             socket_timeout=2,
