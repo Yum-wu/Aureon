@@ -7,22 +7,23 @@ import hmac
 import time
 import uuid
 
-import structlog
-from fastapi import Request
-from fastapi.responses import JSONResponse
-
-from app.config import settings
-
-logger = structlog.get_logger()
-
-
-async def logging_middleware(request: Request, call_next):
-    """Inject request_id + security headers + optional auth, log request completion."""
-    request_id = str(uuid.uuid4())[:8]
-    structlog.contextvars.clear_contextvars()
-    structlog.contextvars.bind_contextvars(request_id=request_id)
-
-    # API Key authentication (skip when API_AUTH_KEY is not configured)
+import structlog
+from fastapi import Request
+from fastapi.responses import JSONResponse
+
+logger = structlog.get_logger()
+
+
+async def logging_middleware(request: Request, call_next):
+    """Inject request_id + security headers + optional auth, log request completion."""
+    # 函数内导入 settings，确保 config 模块被 reload 后仍使用当前 settings
+    from app.config import settings
+
+    request_id = str(uuid.uuid4())[:8]
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(request_id=request_id)
+
+    # API Key authentication (skip when API_AUTH_KEY is not configured)
     if settings.api_auth_key and request.url.path.startswith("/api/"):
         # Public endpoints that don't require auth
         public_paths = {"/api/health", "/api/crew/health", "/metrics", "/api/security/sso/login"}
