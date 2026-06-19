@@ -21,7 +21,6 @@ const Analytics = lazy(() => import("./pages/Analytics"));
 const Admin = lazy(() => import("./pages/Admin"));
 const CostGovernance = lazy(() => import("./pages/CostGovernance").then(m => ({ default: m.CostGovernance })));
 const Architecture = lazy(() => import("./pages/Architecture").then(m => ({ default: m.Architecture })));
-const Portfolio = lazy(() => import("./pages/Portfolio").then(m => ({ default: m.Portfolio })));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const SupportWidget = lazy(() => import("./components/SupportWidget").then(m => ({ default: m.SupportWidget })));
 
@@ -67,7 +66,6 @@ function AppLayout() {
       label: t('app.nav.group_admin'),
       items: [
         { path: "/architecture", key: "app.nav.architecture" },
-        { path: "/portfolio", key: "app.nav.portfolio" },
         { path: "/admin", key: "app.nav.admin" },
         { path: "/cost", key: "app.nav.cost" },
       ]
@@ -220,7 +218,7 @@ function AppLayout() {
             <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
             {/* Admin routes — require auth + admin gate */}
             <Route path="/architecture" element={<AdminGate><Architecture /></AdminGate>} />
-            <Route path="/portfolio" element={<AdminGate><Portfolio /></AdminGate>} />
+            <Route path="/portfolio" element={<Navigate to="/architecture" replace />} />
             <Route path="/admin" element={<AdminGate><Admin /></AdminGate>} />
             <Route path="/cost" element={<AdminGate><CostGovernance /></AdminGate>} />
             {/* Catch-all 404 route */}

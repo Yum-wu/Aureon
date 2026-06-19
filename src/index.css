@@ -574,3 +574,19 @@ tr:hover { background-color: rgba(255,255,255,0.02) !important; }
 
 /* Ensure all white cards are dark */
 .rounded-xl.border { background-color: var(--bg-secondary) !important; }
+
+/* ── Prose (Markdown) dark theme ── */
+.prose { color: var(--text-primary); }
+.prose p { color: var(--text-primary); }
+.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 { color: var(--text-primary); }
+.prose strong { color: var(--text-primary); }
+.prose a { color: var(--accent); }
+.prose a:hover { color: var(--accent-hover); }
+.prose code { color: #B8B8C4; }
+.prose pre code { color: #B8B8C4; }
+.prose blockquote { color: var(--text-secondary); border-left-color: var(--border); }
+.prose ul li::marker { color: var(--text-tertiary); }
+.prose ol li::marker { color: var(--text-tertiary); }
+.prose hr { border-color: var(--border); }
+.prose table th { color: var(--text-secondary); }
+.prose table td { color: var(--text-primary); }

@@ -54,6 +54,10 @@ export function SupportWidget() {
     send,
   } = useWebSocket(wsPath, {
     autoReconnect: true,
+    onOpen: () => {
+      // 连接成功时清除之前的错误信息
+      setWsError(null);
+    },
     onMessage: (data) => {
       if (data && typeof data === 'object' && 'type' in data) {
         const msg = data as { type: string; content?: string; text?: string };
