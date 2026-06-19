@@ -63,6 +63,29 @@ export function BarChart<T extends BarDatum = BarDatum>({
   valueFormat,
   className,
 }: BarChartProps<T>) {
+  // 安全检查：如果数据为空，直接显示空状态，避免 Nivo 生成 d="null" SVG 路径导致浏览器崩溃
+  const hasData = data.length > 0;
+
+  if (!hasData && !loading) {
+    return (
+      <ChartContainer
+        title={title}
+        subtitle={subtitle}
+        timeRangeSelector={timeRangeSelector}
+        onTimeRangeChange={onTimeRangeChange}
+        loading={false}
+        height={height}
+        className={className}
+      >
+        {() => (
+          <div className="flex items-center justify-center h-full text-[var(--text-tertiary)] text-sm">
+            暂无数据
+          </div>
+        )}
+      </ChartContainer>
+    );
+  }
+
   return (
     <ChartContainer
       title={title}

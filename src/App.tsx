@@ -1,5 +1,5 @@
 // Aureon — Enterprise AI Knowledge Base Platform
-import { lazy, Suspense, useEffect, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useMemo, type ReactNode } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -47,12 +47,13 @@ function AppLayout() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const { mobileMenuOpen, setMobileMenuOpen } = useUIStore();
+  const mobileMenuOpen = useUIStore(s => s.mobileMenuOpen);
+  const setMobileMenuOpen = useUIStore(s => s.setMobileMenuOpen);
 
   // 路由变化时关闭移动端菜单
-  useEffect(() => { setMobileMenuOpen(false); }, [location.pathname, setMobileMenuOpen]);
+  useEffect(() => { setMobileMenuOpen(false); }, [location.pathname]);
 
-  const navGroups = [
+  const navGroups = useMemo(() => [
     {
       label: t('app.nav.group_core'),
       items: [
@@ -71,7 +72,7 @@ function AppLayout() {
         { path: "/cost", key: "app.nav.cost" },
       ]
     }
-  ];
+  ], [t]);
 
   const isLanding = location.pathname === "/";
   const isLogin = location.pathname === "/login";

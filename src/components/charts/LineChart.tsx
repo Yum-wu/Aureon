@@ -60,6 +60,29 @@ export function LineChart({
   yAxisLabel,
   className,
 }: LineChartProps) {
+  // 安全检查：如果所有系列都没有有效数据点，直接显示空状态，避免 Nivo 生成 d="null" SVG 路径导致浏览器崩溃
+  const hasData = data.some(series => series.data.length > 0);
+
+  if (!hasData && !loading) {
+    return (
+      <ChartContainer
+        title={title}
+        subtitle={subtitle}
+        timeRangeSelector={timeRangeSelector}
+        onTimeRangeChange={onTimeRangeChange}
+        loading={false}
+        height={height}
+        className={className}
+      >
+        {() => (
+          <div className="flex items-center justify-center h-full text-[var(--text-tertiary)] text-sm">
+            暂无数据
+          </div>
+        )}
+      </ChartContainer>
+    );
+  }
+
   return (
     <ChartContainer
       title={title}
