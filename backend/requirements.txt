@@ -16,6 +16,7 @@ pytest-asyncio>=1.0,<2.0
 pytest-xdist>=3.5.0
 httpx>=0.28,<0.29
 pydantic-settings>=2.0,<3.0
+email-validator>=2.0,<3.0
 
 # RAG dependencies
 numpy>=1.26,<2.0
