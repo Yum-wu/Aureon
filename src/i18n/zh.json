@@ -11,7 +11,9 @@
       "crew": "内容工作室",
       "portfolio": "作品集",
       "cost": "成本治理",
-      "menu": "菜单"
+      "menu": "菜单",
+      "group_core": "核心功能",
+      "group_admin": "管理"
     },
     "badges": {
       "recall": "召回率",
@@ -390,7 +392,11 @@
       "retry": "重试",
       "upload_failed": "上传失败",
       "unsupported_format": "不支持的格式: {{ext}}",
-      "file_too_large": "文件大小超过 10MB 限制"
+      "file_too_large": "文件大小超过 10MB 限制",
+      "phase_uploading": "上传文件中...",
+      "phase_parsing": "解析文档...",
+      "phase_indexing": "建立索引...",
+      "progress_label": "进度"
     },
     "open_blog": "打开博客",
     "sync_blog": "同步博客文档",
@@ -536,9 +542,16 @@
     "signup": "申请试用",
     "success": "登录成功",
     "invalid_credentials": "邮箱或密码错误",
-    "network_error": "网络错误，请检查网络连接"
-  }
-,
+    "network_error": "网络错误，请检查网络连接",
+    "demo_account": "使用演示账号登录",
+    "demo_hint": "体验完整管理功能"
+  },
+  "admin_required": {
+    "title": "需要管理员权限",
+    "desc": "此功能需要管理员权限才能访问。您可以使用演示账号体验完整功能。",
+    "login_demo": "使用演示账号登录",
+    "login": "去登录"
+  },
   "chat": {
     "title": "Aureon 对话",
     "clear": "清空",
@@ -566,12 +579,20 @@
     "ready": "准备就绪",
     "processing": "处理中...",
     "sources": "来源",
+    "disclaimer": "内容由 AI 生成，请核对引用来源",
     "quickStart": [
       "帮我搜索最新的技术文档",
       "分析当前系统的性能指标",
       "解释 RAG 检索的工作原理",
       "生成一份项目总结报告"
-    ]
+    ],
+    "suggestions": {
+      "title": "试试这样问",
+      "summarize_latest": "总结一下最新上传的文档",
+      "key_risks": "这份文档的关键风险点是什么？",
+      "summarize_doc": "总结一下《{{title}}》的关键点",
+      "about_doc": "《{{title}}》的主要内容是什么？"
+    }
   },
   "support": {
     "title": "Aureon 客服",

@@ -42,6 +42,13 @@
 11. Benchmark 前 health check 保活，服务就绪后才开始测试，避免冷启动污染延迟数据
 12. Benchmark 采样固定种子，确保可复现 A/B 对比；难度分布 6:3:1（简单:中等:困难）
 13. Benchmark 分级验证：快速验证（10 条 6:3:1）→ 详细验证（50 条 6:3:1）→ 全量测试（仅用户要求时）
+14. 前端状态管理统一使用 Zustand，替代散落的 useState + Context
+15. 数据库从 SQLite 迁移到 PostgreSQL（asyncpg 原生驱动），新数据走 PostgreSQL，旧数据不迁移
+16. 所有提示词迁移至 LangFuse Prompt Management，启动时预加载到内存，运行时零依赖
+17. 管理页面对所有用户显示导航，但无 admin 权限时页面内提示"需要管理员权限"
+18. AI 免责声明仅在 RAG 回答（有 sources）时显示，设置中提供开关
+19. 前端图标统一使用 Lucide，替代所有 emoji
+20. 演示账号 admin/Aureon，登录页提供一键登录按钮
 
 ## RAG 优化经验教训（R1-R19 迭代总结）
 

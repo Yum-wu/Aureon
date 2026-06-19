@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { authFetch } from "../services/authFetch";
-import { useDocuments } from "../hooks/useDocuments";
+import { useDocumentsStore } from "../stores/useDocumentsStore";
 import { useBlogConfig } from "../hooks/useBlogConfig";
 import { DocumentUpload } from "../components/documents/DocumentUpload";
+import { FileText, BookOpen, BarChart3 } from "lucide-react";
 
 const TYPE_BADGE: Record<string, string> = {
   md: "bg-green-100 text-green-700",
@@ -15,10 +16,14 @@ const TYPE_BADGE: Record<string, string> = {
 
 export function Documents() {
   const { t } = useTranslation();
-  const { documents, totalDocs, totalChunks, loading, error, refetch } = useDocuments();
+  const { documents, totalDocs, totalChunks, loading, error, refetch, filter, setFilter } = useDocumentsStore();
   const { config: blogConfig } = useBlogConfig();
-  const [filter, setFilter] = useState("");
   const [showUpload, setShowUpload] = useState(false);
+
+  // 组件挂载时获取文档
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
 
   const filtered = filter
     ? documents.filter(
@@ -175,7 +180,7 @@ export function Documents() {
                   >
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">{doc.file_type === "pdf" ? "📄" : doc.file_type === "docx" ? "📘" : doc.file_type === "xlsx" ? "📊" : "📝"}</span>
+                        <span className="text-lg">{doc.file_type === "pdf" ? <FileText size={18} /> : doc.file_type === "docx" ? <BookOpen size={18} /> : doc.file_type === "xlsx" ? <BarChart3 size={18} /> : <FileText size={18} />}</span>
                         <span className="text-sm font-medium text-gray-800 truncate max-w-[240px]">
                           {doc.title}
                         </span>
@@ -207,7 +212,7 @@ export function Documents() {
               <div key={`${doc.source}-${doc.title}-${i}`} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-lg shrink-0">{doc.file_type === "pdf" ? "📄" : doc.file_type === "docx" ? "📘" : doc.file_type === "xlsx" ? "📊" : "📝"}</span>
+                    <span className="text-lg shrink-0">{doc.file_type === "pdf" ? <FileText size={18} /> : doc.file_type === "docx" ? <BookOpen size={18} /> : doc.file_type === "xlsx" ? <BarChart3 size={18} /> : <FileText size={18} />}</span>
                     <span className="text-sm font-medium text-gray-800 truncate">{doc.title}</span>
                   </div>
                   <span className={`px-2 py-0.5 rounded text-xs font-medium shrink-0 ml-2 ${TYPE_BADGE[doc.file_type] || TYPE_BADGE.txt}`}>

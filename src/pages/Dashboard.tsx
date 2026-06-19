@@ -6,6 +6,7 @@ import { Card } from '../components/ui/Card';
 import { Tooltip } from '../components/ui/Tooltip';
 import { LineChart } from '../components/charts/LineChart';
 import { BarChart } from '../components/charts/BarChart';
+import { AlertTriangle } from 'lucide-react';
 
 /* ── 类型定义 ── */
 
@@ -402,7 +403,7 @@ export function Dashboard() {
             {!realtimeData && !loading && !error && (
               <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-center">
                 <p className="text-sm font-medium text-amber-400">
-                  ⚠ {t('dashboard.demo_mode')}
+                  <span className="inline-flex items-center gap-1"><AlertTriangle size={14} /> {t('dashboard.demo_mode')}</span>
                 </p>
               </div>
             )}
@@ -462,7 +463,7 @@ export function Dashboard() {
                 </div>
                 {alerts.length > 0 && (
                   <span className="inline-flex items-center gap-1 text-xs font-semibold text-yellow-400 bg-yellow-500/10 px-1.5 py-0.5 rounded-full mt-2">
-                    ⚠ {alerts.filter((a) => a.severity === 'critical').length} {t('dashboard.golden_signals.critical')}
+                    <span className="inline-flex items-center gap-1"><AlertTriangle size={14} /> {alerts.filter((a) => a.severity === 'critical').length} {t('dashboard.golden_signals.critical')}</span>
                   </span>
                 )}
               </Card>

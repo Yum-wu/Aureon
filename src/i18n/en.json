@@ -11,7 +11,9 @@
       "crew": "Content Studio",
       "portfolio": "Portfolio",
       "cost": "Cost",
-      "menu": "Menu"
+      "menu": "Menu",
+      "group_core": "Core",
+      "group_admin": "Admin"
     },
     "badges": {
       "recall": "Recall",
@@ -391,7 +393,11 @@
       "retry": "Retry",
       "upload_failed": "Upload failed",
       "unsupported_format": "Unsupported format: {{ext}}",
-      "file_too_large": "File size exceeds 10MB limit"
+      "file_too_large": "File size exceeds 10MB limit",
+      "phase_uploading": "Uploading file...",
+      "phase_parsing": "Parsing document...",
+      "phase_indexing": "Building index...",
+      "progress_label": "Progress"
     },
     "open_blog": "Open Blog",
     "sync_blog": "Sync Blog Docs",
@@ -537,9 +543,16 @@
     "signup": "Request trial",
     "success": "Login successful",
     "invalid_credentials": "Invalid email or password",
-    "network_error": "Network error, please check your connection"
-  }
-,
+    "network_error": "Network error, please check your connection",
+    "demo_account": "Sign in with Demo Account",
+    "demo_hint": "Experience full admin features"
+  },
+  "admin_required": {
+    "title": "Admin Access Required",
+    "desc": "This feature requires admin privileges. You can use the demo account to explore all features.",
+    "login_demo": "Sign in with Demo Account",
+    "login": "Go to Login"
+  },
   "chat": {
     "title": "Aureon Chat",
     "clear": "Clear",
@@ -572,7 +585,14 @@
       "Analyze system performance metrics",
       "Explain how RAG retrieval works",
       "Generate a project summary report"
-    ]
+    ],
+    "suggestions": {
+      "title": "Try asking",
+      "summarize_latest": "Summarize the latest uploaded document",
+      "key_risks": "What are the key risks in this document?",
+      "summarize_doc": "Summarize the key points of \"{{title}}\"",
+      "about_doc": "What are the main contents of \"{{title}}\"?"
+    }
   },
   "support": {
     "title": "Aureon Support",

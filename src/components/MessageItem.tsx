@@ -1,39 +1,14 @@
-import { useState, useMemo, lazy, Suspense, memo } from "react";
+import { useState, useMemo, memo } from "react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Message } from "../types/message";
-
-const Highlighter = lazy(() => import("./SyntaxHighlighterWrapper"));
+import { BookOpen, Link, Bot } from "lucide-react";
+import { markdownComponents } from "./markdown/MarkdownComponents";
 
 interface MessageItemProps {
   message: Message;
   onRegenerate?: () => void;
-}
-
-function SimpleCode({ language, code }: { language?: string; code: string }) {
-  return (
-    <div className="relative group rounded-lg overflow-hidden my-2">
-      <div className="flex items-center justify-between bg-[#1a1b26] px-4 py-1.5 text-xs text-[var(--text-tertiary)]">
-        <span>{language || "code"}</span>
-        <button
-          onClick={() => navigator.clipboard.writeText(code)}
-          className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
-        >
-          📋
-        </button>
-      </div>
-      <Suspense
-        fallback={
-          <pre className="bg-[#111118] text-[var(--text-secondary)] p-4 text-sm overflow-x-auto m-0">
-            <code>{code}</code>
-          </pre>
-        }
-      >
-        <Highlighter language={language || "text"} code={code} showLineNumbers={code.split("\n").length > 3} />
-      </Suspense>
-    </div>
-  );
 }
 
 /** Hover toolbar button */
@@ -75,39 +50,6 @@ export const MessageItem = memo(function MessageItem({ message, onRegenerate }: 
   };
 
   const remarkPlugins = useMemo(() => [remarkGfm], []);
-  const components = useMemo(
-    () => ({
-      code({
-        className,
-        children,
-        ...props
-      }: React.ClassAttributes<HTMLElement> &
-        React.HTMLAttributes<HTMLElement> & {
-          className?: string;
-          children?: React.ReactNode;
-        }) {
-        const match = /language-(\w+)/.exec(className || "");
-        const codeString = String(children).replace(/\n$/, "");
-        if (match) {
-          return <SimpleCode language={match[1]} code={codeString} />;
-        }
-        return (
-          <code
-            className={`px-1.5 py-0.5 rounded text-sm font-mono ${
-              isUser ? "bg-white/20 text-white" : "bg-[var(--accent-soft)] text-[var(--accent)]"
-            }`}
-            {...props}
-          >
-            {children}
-          </code>
-        );
-      },
-      pre({ children }: { children?: React.ReactNode }) {
-        return <div className="my-2">{children}</div>;
-      },
-    }),
-    [isUser],
-  );
 
   return (
     <div className={`group/msg flex ${isUser ? "justify-end" : "justify-start"} mb-4`}>
@@ -127,13 +69,13 @@ export const MessageItem = memo(function MessageItem({ message, onRegenerate }: 
             </div>
           ) : (
             <div className="prose prose-sm max-w-none break-words" translate="no">
-              <ReactMarkdown remarkPlugins={remarkPlugins} components={components}>
+              <ReactMarkdown remarkPlugins={remarkPlugins} components={markdownComponents}>
                 {message.content}
               </ReactMarkdown>
 
               {message.sources && message.sources.length > 0 && (
                 <div className="mt-3 pt-2 border-t border-[var(--border)]">
-                  <p className="text-xs text-[var(--text-tertiary)] mb-1.5">📚 参考来源</p>
+                  <p className="text-xs text-[var(--text-tertiary)] mb-1.5 inline-flex items-center gap-1"><BookOpen size={12} /> 参考来源</p>
                   <div className="space-y-1">
                     {message.sources.map((src, i) => (
                       <div key={i} className="flex items-center gap-2 text-xs">
@@ -152,7 +94,7 @@ export const MessageItem = memo(function MessageItem({ message, onRegenerate }: 
               {message.intent && message.intent !== "chat" && (
                 <div className="mt-2">
                   <span className="inline-block text-xs px-2 py-0.5 rounded-full bg-[var(--accent-soft)] text-[var(--accent)]">
-                    {message.intent === "rag" ? "📚 知识问答" : message.intent === "mixed" ? "🔗 混合" : "🤖 工具"}
+                    {message.intent === "rag" ? <span className="inline-flex items-center gap-1"><BookOpen size={12} /> 知识问答</span> : message.intent === "mixed" ? <span className="inline-flex items-center gap-1"><Link size={12} /> 混合</span> : <span className="inline-flex items-center gap-1"><Bot size={12} /> 工具</span>}
                   </span>
                 </div>
               )}

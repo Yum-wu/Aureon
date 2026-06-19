@@ -236,7 +236,7 @@ async def hyde_retrieve_async(
     Returns:
         List of retrieved document chunks
     """
-    from app.rag.qa_chain import hybrid_retrieve_async
+    from app.rag.indexer import hybrid_retrieve_async
 
     # 1. Generate hypothetical answer (async)
     prompt = _HYDE_PROMPT_EN if lang == "en" else _HYDE_PROMPT_ZH

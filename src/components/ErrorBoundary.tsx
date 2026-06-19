@@ -1,5 +1,6 @@
 import { Component, type ReactNode, type ErrorInfo } from "react";
 import i18n from "../i18n/config";
+import { AlertTriangle } from "lucide-react";
 
 interface Props {
   children: ReactNode;
@@ -35,7 +36,7 @@ export class ErrorBoundary extends Component<Props, State> {
       if (this.props.fallback) return this.props.fallback;
       return (
         <div className="flex flex-col items-center justify-center min-h-[200px] p-8 text-center">
-          <div className="text-4xl mb-4">⚠️</div>
+          <div className="text-4xl mb-4"><AlertTriangle size={24} /></div>
           <h2 className="text-lg font-semibold text-gray-800 mb-2">
             {i18n.t("errorBoundary.title", "Something went wrong")}
           </h2>

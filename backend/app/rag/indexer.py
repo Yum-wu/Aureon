@@ -35,6 +35,7 @@ from app.rag.generator import (
 )
 from app.utils.lang_detect import detect_language, lang_instruction
 from app.config import settings
+from app.observability.prompt_manager import register_prompt, get_prompt
 
 import structlog
 
@@ -144,6 +145,13 @@ Text chunk:
 {chunk}
 
 Context prefix:"""
+
+# 注册到 Prompt Manager（LangFuse 可用时会覆盖）
+register_prompt(
+    "contextual_prompt_template",
+    _CONTEXTUAL_PROMPT_TEMPLATE,
+    "Contextual Retrieval 上下文前缀生成模板",
+)
 
 
 async def _generate_context_prefixes_async(chunks_with_docs, llm_call_fn, max_concurrent=15):
@@ -347,7 +355,10 @@ async def generate_answer_async(
 ) -> str:
     """Async version of generate_answer. Call LLM with context and query."""
     if system_prompt is None:
-        system_prompt = QA_SYSTEM_PROMPT_EN if lang == "en" else QA_SYSTEM_PROMPT
+        if lang == "en":
+            system_prompt = get_prompt("qa_system_prompt_en", QA_SYSTEM_PROMPT_EN)
+        else:
+            system_prompt = get_prompt("qa_system_prompt_zh", QA_SYSTEM_PROMPT)
     lang_instr = lang_instruction(lang).strip()
     prompt = system_prompt.format(context=context, lang_instruction=lang_instr)
     messages = [

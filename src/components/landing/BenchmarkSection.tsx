@@ -1,20 +1,22 @@
+import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBenchmark } from '../../hooks/useBenchmark';
+import { Target, Check, Shield, Zap, Timer, Radio, Wifi, DollarSign, BarChart3 } from 'lucide-react';
 
 const fmtVal = (v: string | number | null, fallback: string) => {
   if (v === null) return fallback;
   return String(v);
 };
 
-const ICONS: Record<string, string> = {
-  Faithfulness: '🎯',
-  'Answer Relevancy': '✓',
-  'Negative Detection': '🛡️',
-  'E2E P50': '⚡',
-  'E2E P95': '⏱️',
-  'TTFT P50': '📡',
-  'TTFT P95': '📶',
-  'Cost per Query': '💰',
+const ICONS: Record<string, ReactNode> = {
+  Faithfulness: <Target size={20} />,
+  'Answer Relevancy': <Check size={20} />,
+  'Negative Detection': <Shield size={20} />,
+  'E2E P50': <Zap size={20} />,
+  'E2E P95': <Timer size={20} />,
+  'TTFT P50': <Radio size={20} />,
+  'TTFT P95': <Wifi size={20} />,
+  'Cost per Query': <DollarSign size={20} />,
 };
 
 export function BenchmarkSection() {
@@ -48,7 +50,7 @@ export function BenchmarkSection() {
               className="metric-card animate-slide-up text-center"
               style={{ animationDelay: `${idx * 0.08 + 0.2}s` }}
             >
-              <p className="text-2xl mb-2">{ICONS[m.label] ?? '📊'}</p>
+              <p className="text-2xl mb-2 inline-flex items-center justify-center">{ICONS[m.label] ?? <BarChart3 size={20} />}</p>
               <p className="text-xs text-[var(--text-tertiary)] uppercase tracking-wider mb-3">
                 {m.label}
                 {m.status === 'optimizing' && (
