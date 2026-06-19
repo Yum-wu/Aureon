@@ -40,7 +40,7 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BACKEND_DIR))
 
 # -- 加载 .env（必须在 pydantic_settings / DeepEval 读取环境变量之前）--
-from dotenv import load_dotenv
+from dotenv import load_dotenv  # noqa: E402
 load_dotenv(BACKEND_DIR / ".env", override=True)
 
 # -- 配置 DeepEval Judge 模型 --
@@ -209,7 +209,7 @@ def _get_judge():
     return _judge_instance
 
 
-from deepeval.models import DeepEvalBaseLLM as _DeepEvalBaseLLM
+from deepeval.models import DeepEvalBaseLLM as _DeepEvalBaseLLM  # noqa: E402
 
 
 class QwenDashScopeDeepEvalLLM(_DeepEvalBaseLLM):
@@ -813,7 +813,7 @@ def phase2_evaluate(raw_path: Path = None) -> Path:
     print(f"  已加载 {len(article_texts)} 篇文章文本")
 
     # -- 构建 test cases（含 expected_output + context）--
-    print(f"\n  [1/3] 构建 test cases...")
+    print("\n  [1/3] 构建 test cases...")
     _progress.start = time.time()
     test_cases = []
     id_map = []
@@ -846,7 +846,7 @@ def phase2_evaluate(raw_path: Path = None) -> Path:
     judge_llm = QwenDashScopeDeepEvalLLM()
     rag_metrics, safety_metrics = _build_metrics(judge_llm)
 
-    print(f"\n  [2/3] Round 1: RAG 质量评估（6 指标）...")
+    print("\n  [2/3] Round 1: RAG 质量评估（6 指标）...")
     _eval_start = time.time()
 
     result_r1 = evaluate(
@@ -860,7 +860,7 @@ def phase2_evaluate(raw_path: Path = None) -> Path:
     print(f"  Round 1 完成: {r1_elapsed:.0f}s")
 
     # -- Round 2: 安全 + 正确性指标 --
-    print(f"\n  [2b/3] Round 2: 安全 + 正确性评估（3 GEval 指标）...")
+    print("\n  [2b/3] Round 2: 安全 + 正确性评估（3 GEval 指标）...")
     r2_start = time.time()
 
     result_r2 = evaluate(
@@ -876,7 +876,7 @@ def phase2_evaluate(raw_path: Path = None) -> Path:
     eval_elapsed = r1_elapsed + r2_elapsed
 
     # -- 提取分数 --
-    print(f"\n  [3/3] 提取评估结果...")
+    print("\n  [3/3] 提取评估结果...")
     all_scores = {}  # metric_name -> list of scores
     all_reasons = {}  # metric_name -> {idx: reason}
 
@@ -949,7 +949,7 @@ def phase2_evaluate(raw_path: Path = None) -> Path:
 
     # 内部参考指标（仅自己看，不计入通过率）
     print(f"  {'-'*60}")
-    print(f"  [内部参考] (不展示给客户)")
+    print("  [内部参考] (不展示给客户)")
     for key, display, threshold, higher_better in internal_metrics:
         score = avg_scores.get(key, 0.0)
         if higher_better:
