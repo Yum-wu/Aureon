@@ -24,7 +24,9 @@ async def logging_middleware(request: Request, call_next):
     structlog.contextvars.bind_contextvars(request_id=request_id)
 
     # API Key authentication (skip when API_AUTH_KEY is not configured)
-    if settings.api_auth_key and request.url.path.startswith("/api/"):
+    # SSO login endpoint is public — skip API key check
+    _skip_auth_paths = ("/api/security/sso/login", "/api/health", "/health")
+    if settings.api_auth_key and request.url.path.startswith("/api/") and request.url.path not in _skip_auth_paths:
         # Public endpoints that don't require auth
         public_paths = {"/api/health", "/api/crew/health", "/metrics", "/api/security/sso/login"}
         if request.url.path not in public_paths:
