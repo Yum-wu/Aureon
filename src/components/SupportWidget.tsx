@@ -40,10 +40,19 @@ export function SupportWidget() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  // Deferred mount: delay WebSocket connection by 3s to reduce initial load pressure
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setMounted(true), 3000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const wsPath = mounted ? `/ws/chat/${SUPPORT_CLIENT_ID}` : '';
+
   const {
     isConnected,
     send,
-  } = useWebSocket(`/ws/chat/${SUPPORT_CLIENT_ID}`, {
+  } = useWebSocket(wsPath, {
     autoReconnect: true,
     onMessage: (data) => {
       if (data && typeof data === 'object' && 'type' in data) {
