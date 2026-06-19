@@ -20,6 +20,8 @@ interface ChartContainerProps {
   defaultTimeRange?: TimeRange;
   /** 加载状态 */
   loading?: boolean;
+  /** 数据是否为空 */
+  isEmpty?: boolean;
   /** 额外类名 */
   className?: string;
   /** 图表内容 */

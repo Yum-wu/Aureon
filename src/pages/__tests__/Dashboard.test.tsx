@@ -167,9 +167,13 @@ describe('Dashboard', () => {
     expect(screen.getByText('dashboard.golden_signals.saturation')).toBeInTheDocument();
     expect(screen.getByText('dashboard.golden_signals.alerts')).toBeInTheDocument();
 
-    // Chart containers
-    expect(screen.getByText('dashboard.charts.latency_trend')).toBeInTheDocument();
+    // Chart containers: latency chart shows empty state (no realtime trend data),
+    // query volume chart renders normally (has data)
     expect(screen.getByText('dashboard.charts.query_volume')).toBeInTheDocument();
+    // latency trend has no data (fallback empty arrays), so empty state is shown
+    expect(screen.queryByText('dashboard.charts.latency_trend')).not.toBeInTheDocument();
+    // 至少有 2 个空状态占位（latency 趋势 + 质量趋势）
+    expect(screen.getAllByText('dashboard.no_data').length).toBeGreaterThanOrEqual(2);
 
     // Pipeline section
     expect(screen.getByText('dashboard.pipeline.title')).toBeInTheDocument();
@@ -214,6 +218,7 @@ describe('Dashboard', () => {
         'dashboard.health.llm_api': 'LLM API',
         'dashboard.alerts.title': '告警',
         'dashboard.alerts.empty': '暂无告警',
+        'dashboard.no_data': '暂无数据',
         'dashboard.error_loading': '加载失败',
         'dashboard.retry': '重试',
         'dashboard.live': '实时',
@@ -253,8 +258,11 @@ describe('Dashboard', () => {
     expect(screen.getByText('饱和度')).toBeInTheDocument();
     // "告警" 出现两次：Golden Signals 卡片标签 + Alerts 区域标题
     expect(screen.getAllByText('告警').length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText('延迟趋势')).toBeInTheDocument();
-    expect(screen.getByText('查询量')).toBeInTheDocument();
+    // 图表无数据时显示空状态（queryVolume 为空，无 realtime 数据）
+    expect(screen.queryByText('延迟趋势')).not.toBeInTheDocument();
+    expect(screen.queryByText('查询量')).not.toBeInTheDocument();
+    // 至少有 2 个空状态占位（latency 趋势 + 质量趋势 + 查询量）
+    expect(screen.getAllByText('暂无数据').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('RAG Pipeline')).toBeInTheDocument();
     expect(screen.getByText('检索')).toBeInTheDocument();
     expect(screen.getByText('重排序')).toBeInTheDocument();
@@ -289,6 +297,7 @@ describe('Dashboard', () => {
         'dashboard.health.llm_api': 'LLM API',
         'dashboard.alerts.title': 'Alerts',
         'dashboard.alerts.empty': 'No alerts',
+        'dashboard.no_data': 'No data',
         'dashboard.error_loading': 'Failed to load',
         'dashboard.retry': 'Retry',
         'dashboard.live': 'Live',
@@ -328,8 +337,11 @@ describe('Dashboard', () => {
     expect(screen.getByText('Saturation')).toBeInTheDocument();
     // "Alerts" appears twice: Golden Signals card label + Alerts section title
     expect(screen.getAllByText('Alerts').length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText('Latency Trend')).toBeInTheDocument();
-    expect(screen.getByText('Query Volume')).toBeInTheDocument();
+    // 图表无数据时显示空状态（queryVolume 为空，无 realtime 数据）
+    expect(screen.queryByText('Latency Trend')).not.toBeInTheDocument();
+    expect(screen.queryByText('Query Volume')).not.toBeInTheDocument();
+    // 至少有 2 个空状态占位（latency 趋势 + 质量趋势 + 查询量）
+    expect(screen.getAllByText('No data').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('RAG Pipeline')).toBeInTheDocument();
     expect(screen.getByText('Retrieval')).toBeInTheDocument();
     expect(screen.getByText('Rerank')).toBeInTheDocument();

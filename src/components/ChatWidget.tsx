@@ -15,6 +15,9 @@ import { useDocumentsStore } from '../stores/useDocumentsStore';
 import { VoiceButton } from './VoiceButton';
 import { BookOpen, AlertTriangle } from 'lucide-react';
 
+// 消息列表最大渲染数量，防止大量历史消息导致渲染卡顿
+const MAX_VISIBLE_MESSAGES = 100;
+
 interface ChatWidgetProps {
   clientId?: string;
   className?: string;
@@ -22,13 +25,12 @@ interface ChatWidgetProps {
 
 export function ChatWidget({ className = '' }: ChatWidgetProps) {
   const { t } = useTranslation();
-  const {
-    messages,
-    isLoading,
-    error,
-    sendMessage,
-  } = useChatStore();
-  const { documents } = useDocumentsStore();
+  // 使用 Zustand selector 分别订阅，避免全量订阅导致无关字段变化触发重渲染
+  const messages = useChatStore((s) => s.messages);
+  const isLoading = useChatStore((s) => s.isLoading);
+  const error = useChatStore((s) => s.error);
+  const sendMessage = useChatStore((s) => s.sendMessage);
+  const documents = useDocumentsStore((s) => s.documents);
 
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -65,10 +67,58 @@ export function ChatWidget({ className = '' }: ChatWidgetProps) {
     ];
   }, [documents, t]);
 
-  // Auto-scroll to bottom on new messages
+  // 只渲染最近 N 条消息，防止大量历史消息导致渲染卡顿
+  const visibleMessages = useMemo(
+    () => messages.slice(-MAX_VISIBLE_MESSAGES),
+    [messages],
+  );
+
+  // 用 useMemo 缓存消息 React 元素，避免每次渲染都重建整个列表
+  const messageElements = useMemo(
+    () =>
+      visibleMessages.map((msg, idx) => (
+        <div
+          key={msg.id || idx}
+          className={`message ${msg.role} flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+          data-testid={`message-${msg.role}-${idx}`}
+        >
+          <div
+            className={`message-content max-w-[75%] rounded-2xl px-4 py-3 ${
+              msg.role === 'user'
+                ? 'bg-[var(--accent)] text-white rounded-br-none'
+                : 'bg-[var(--bg-tertiary)] text-[var(--text-primary)] rounded-bl-none'
+            }`}
+          >
+            <div className="whitespace-pre-wrap break-words">{msg.content}</div>
+
+            {/* Source citations for assistant messages */}
+            {msg.role === 'assistant' && msg.sources && msg.sources.length > 0 && (
+              <div className="mt-3 pt-2 border-t border-[var(--border)]">
+                <p className="text-xs font-medium text-[var(--text-tertiary)] mb-1 inline-flex items-center gap-1"><BookOpen size={14} /> {t('chat.sources')}:</p>
+                <div className="space-y-1">
+                  {msg.sources.map((source, sourceIdx) => (
+                    <div key={sourceIdx} className="flex items-center gap-2 text-xs">
+                      <span className="text-[var(--accent)] font-medium">{source.title}</span>
+                      {source.score !== undefined && (
+                        <span className="text-[var(--text-tertiary)]">
+                          ({(source.score * 100).toFixed(0)}%)
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )),
+    [visibleMessages, t],
+  );
+
+  // Auto-scroll to bottom only when message count changes, not on content updates
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages.length]);
 
   // Handle send
   const handleSend = useCallback(() => {
@@ -146,43 +196,8 @@ export function ChatWidget({ className = '' }: ChatWidgetProps) {
           </div>
         )}
 
-        {/* Message history */}
-        {messages.map((msg, idx) => (
-          <div
-            key={msg.id || idx}
-            className={`message ${msg.role} flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            data-testid={`message-${msg.role}-${idx}`}
-          >
-            <div
-              className={`message-content max-w-[75%] rounded-2xl px-4 py-3 ${
-                msg.role === 'user'
-                  ? 'bg-[var(--accent)] text-white rounded-br-none'
-                  : 'bg-[var(--bg-tertiary)] text-[var(--text-primary)] rounded-bl-none'
-              }`}
-            >
-              <div className="whitespace-pre-wrap break-words">{msg.content}</div>
-
-              {/* Source citations for assistant messages */}
-              {msg.role === 'assistant' && msg.sources && msg.sources.length > 0 && (
-                <div className="mt-3 pt-2 border-t border-[var(--border)]">
-                  <p className="text-xs font-medium text-[var(--text-tertiary)] mb-1 inline-flex items-center gap-1"><BookOpen size={14} /> {t('chat.sources')}:</p>
-                  <div className="space-y-1">
-                    {msg.sources.map((source, sourceIdx) => (
-                      <div key={sourceIdx} className="flex items-center gap-2 text-xs">
-                        <span className="text-[var(--accent)] font-medium">{source.title}</span>
-                        {source.score !== undefined && (
-                          <span className="text-[var(--text-tertiary)]">
-                            ({(source.score * 100).toFixed(0)}%)
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
+        {/* Message history — 使用 useMemo 缓存的元素列表，避免每帧重建 */}
+        {messageElements}
 
         {/* Loading indicator */}
         {isLoading && (

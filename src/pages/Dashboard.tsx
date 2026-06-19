@@ -338,17 +338,19 @@ export function Dashboard() {
     { name: t('dashboard.pipeline.generation'), ms: 350, color: '#EAB308' },
   ];
 
-  // 查询量柱状图数据
-  const queryVolumeChartData = (queryVolume || []).map((item: { date: string; count: number }) => ({
-    label: item.date,
-    value: item.count,
-  }));
+  // 查询量柱状图数据（过滤无效值，防止 Nivo 生成 d="null" SVG 路径导致浏览器崩溃）
+  const queryVolumeChartData = (queryVolume || [])
+    .filter((item): item is { date: string; count: number } => item != null && item.count > 0)
+    .map((item) => ({
+      label: item.date,
+      value: item.count,
+    }));
 
-  // 延迟趋势折线图数据
+  // 延迟趋势折线图数据（过滤 null/undefined 和非正值，防止 Nivo 生成 d="null" SVG 路径导致浏览器崩溃）
   const latencyChartData = metrics ? [
-    { id: t('dashboard.latency.ttft'), data: (metrics.latency_trend.length > 0 ? metrics.latency_trend : []).map((v: number, i: number) => ({ x: `${i}`, y: v })) },
-    { id: t('dashboard.latency.tpot'), data: (metrics.tpot_trend.length > 0 ? metrics.tpot_trend : []).map((v: number, i: number) => ({ x: `${i}`, y: v })) },
-    { id: t('dashboard.latency.e2e'), data: (metrics.e2e_trend.length > 0 ? metrics.e2e_trend : []).map((v: number, i: number) => ({ x: `${i}`, y: v })) },
+    { id: t('dashboard.latency.ttft'), data: metrics.latency_trend.filter((v): v is number => v != null && v > 0).map((v, i) => ({ x: `${i}`, y: v })) },
+    { id: t('dashboard.latency.tpot'), data: metrics.tpot_trend.filter((v): v is number => v != null && v > 0).map((v, i) => ({ x: `${i}`, y: v })) },
+    { id: t('dashboard.latency.e2e'), data: metrics.e2e_trend.filter((v): v is number => v != null && v > 0).map((v, i) => ({ x: `${i}`, y: v })) },
   ] : [];
 
   // 检索质量趋势数据
@@ -471,8 +473,20 @@ export function Dashboard() {
 
             {/* ── 3. Charts row ── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <LineChart data={latencyChartData} title={t('dashboard.charts.latency_trend')} />
-              <BarChart data={queryVolumeChartData} keys={['value']} indexBy="label" title={t('dashboard.charts.query_volume')} />
+              {latencyChartData.some(s => s.data.length > 0) ? (
+                <LineChart data={latencyChartData} title={t('dashboard.charts.latency_trend')} />
+              ) : (
+                <div className="rounded-lg border bg-[var(--bg-secondary)] border-[var(--border)] flex items-center justify-center h-[300px] text-[var(--text-tertiary)] text-sm">
+                  {t('dashboard.no_data', '暂无数据')}
+                </div>
+              )}
+              {queryVolumeChartData.length > 0 ? (
+                <BarChart data={queryVolumeChartData} keys={['value']} indexBy="label" title={t('dashboard.charts.query_volume')} />
+              ) : (
+                <div className="rounded-lg border bg-[var(--bg-secondary)] border-[var(--border)] flex items-center justify-center h-[300px] text-[var(--text-tertiary)] text-sm">
+                  {t('dashboard.no_data', '暂无数据')}
+                </div>
+              )}
             </div>
 
             {/* ── 4. Pipeline row ── */}
@@ -488,7 +502,13 @@ export function Dashboard() {
                 </div>
                 <PipelineBreakdown stages={pipelineStages} />
               </Card>
-              <LineChart data={qualityChartData} title={t('dashboard.charts.quality_trend')} />
+              {qualityChartData.some(s => s.data.length > 0) ? (
+                <LineChart data={qualityChartData} title={t('dashboard.charts.quality_trend')} />
+              ) : (
+                <div className="rounded-lg border bg-[var(--bg-secondary)] border-[var(--border)] flex items-center justify-center h-[300px] text-[var(--text-tertiary)] text-sm">
+                  {t('dashboard.no_data', '暂无数据')}
+                </div>
+              )}
             </div>
 
             {/* ── 5. Health row ── */}
