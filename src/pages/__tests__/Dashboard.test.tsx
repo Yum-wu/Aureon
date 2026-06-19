@@ -189,8 +189,8 @@ describe('Dashboard', () => {
     expect(screen.getByText('dashboard.alerts.title')).toBeInTheDocument();
     expect(screen.getByText('dashboard.alerts.empty')).toBeInTheDocument();
 
-    // Live indicator
-    expect(screen.getByText('dashboard.offline')).toBeInTheDocument();
+    // Live indicator — mock WS never fires onopen, so shows "connecting"
+    expect(screen.getByText('dashboard.connecting')).toBeInTheDocument();
   });
 
   it('renders Chinese translation', () => {

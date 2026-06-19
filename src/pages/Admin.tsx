@@ -105,20 +105,34 @@ function OverviewTab() {
 
   useEffect(() => {
     const controller = new AbortController();
-    authFetch('/api/rag/stats', { signal: controller.signal })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data) {
-          setOverviewData({
-            active_users: 12,
-            today_queries: data.query_count_24h || 0,
-            storage_usage: '2.4 GB',
-            uptime: '99.9%',
-          });
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+
+    async function fetchData() {
+      try {
+        const [statsRes, usersRes] = await Promise.all([
+          authFetch('/api/rag/stats', { signal: controller.signal }),
+          authFetch('/api/security/users', { signal: controller.signal }),
+        ]);
+
+        const statsData = statsRes.ok ? await statsRes.json() : null;
+        const usersData = usersRes.ok ? await usersRes.json() : [];
+        const activeUsers = Array.isArray(usersData)
+          ? usersData.filter((u: { status?: string }) => u.status === 'active').length
+          : 0;
+
+        setOverviewData({
+          active_users: activeUsers,
+          today_queries: statsData?.query_count_24h || 0,
+          storage_usage: '2.4 GB',
+          uptime: '99.9%',
+        });
+      } catch {
+        // 静默失败
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
     return () => controller.abort();
   }, []);
 

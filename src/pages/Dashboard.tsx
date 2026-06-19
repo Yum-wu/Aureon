@@ -66,18 +66,19 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
 }
 
 /** 实时状态指示灯 */
-function LiveIndicator({ connected }: { connected: boolean }) {
+function LiveIndicator({ connected, connectionState }: { connected: boolean; connectionState?: string }) {
   const { t } = useTranslation();
+  const isConnecting = connectionState === 'connecting' || connectionState === 'reconnecting';
   return (
     <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border border-[var(--border)]">
       <span className="relative flex h-2 w-2">
-        {connected && (
+        {(connected || isConnecting) && (
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
         )}
-        <span className={`relative inline-flex rounded-full h-2 w-2 ${connected ? 'bg-emerald-400' : 'bg-red-400'}`} />
+        <span className={`relative inline-flex rounded-full h-2 w-2 ${connected ? 'bg-emerald-400' : isConnecting ? 'bg-yellow-400' : 'bg-red-400'}`} />
       </span>
-      <span className={connected ? 'text-emerald-400' : 'text-[var(--text-tertiary)]'}>
-        {connected ? t('dashboard.live') : t('dashboard.offline')}
+      <span className={connected ? 'text-emerald-400' : isConnecting ? 'text-yellow-400' : 'text-[var(--text-tertiary)]'}>
+        {connected ? t('dashboard.live') : isConnecting ? t('dashboard.connecting', '连接中') : t('dashboard.offline')}
       </span>
     </span>
   );
@@ -247,6 +248,7 @@ export function Dashboard() {
     metrics: rtMetrics,
     alerts: rtAlerts,
     isConnected: rtIsConnected,
+    connectionState: rtConnectionState,
     lastUpdated: rtLastUpdated,
   } = useRealtimeMetrics();
 
@@ -338,7 +340,7 @@ export function Dashboard() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <LiveIndicator connected={rtIsConnected} />
+            <LiveIndicator connected={rtIsConnected} connectionState={rtConnectionState} />
             {rtLastUpdated && (
               <span className="text-xs text-[var(--text-tertiary)]" aria-label={t('dashboard.last_updated')}>
                 {new Date(rtLastUpdated).toLocaleTimeString()}

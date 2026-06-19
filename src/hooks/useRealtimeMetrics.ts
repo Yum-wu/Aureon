@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useWebSocket } from './useWebSocket';
+import type { WSConnectionState } from '../services/ws';
 
 /** 实时指标数据 */
 export interface RealtimeMetrics {
@@ -41,6 +42,8 @@ interface UseRealtimeMetricsReturn {
   alerts: MetricAlert[];
   /** 是否已连接 */
   isConnected: boolean;
+  /** 连接状态 */
+  connectionState: WSConnectionState;
   /** 最后更新时间 */
   lastUpdated: number | null;
 }
@@ -93,7 +96,7 @@ export function useRealtimeMetrics(): UseRealtimeMetricsReturn {
     }
   }, []);
 
-  const { isConnected } = useWebSocket('/ws/dashboard', {
+  const { isConnected, connectionState } = useWebSocket('/ws/dashboard', {
     onMessage: handleMessage,
     autoReconnect: true,
   });
@@ -102,6 +105,7 @@ export function useRealtimeMetrics(): UseRealtimeMetricsReturn {
     metrics: metrics ?? DEFAULT_METRICS,
     alerts,
     isConnected,
+    connectionState,
     lastUpdated,
   };
 }
