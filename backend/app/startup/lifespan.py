@@ -24,19 +24,14 @@ logger = structlog.get_logger()
 async def lifespan(app: FastAPI):
     """Application lifespan: startup and shutdown logic."""
     # ── Security: block dev mode on production platforms ──
-    # 临时禁用：API_AUTH_KEY 尚未配置，先让应用启动
-    # if os.environ.get("RAILWAY_ENVIRONMENT") == "production":
-    #     if settings.auth.environment == "dev":
-    #         raise RuntimeError(
-    #             "FATAL: AUTH__ENVIRONMENT=dev is forbidden in production. "
-    #             "Set AUTH__ENVIRONMENT=production and configure API_AUTH_KEY."
-    #         )
-    #     if not settings.api_auth_key:
-    #         raise RuntimeError(
-    #             "FATAL: API_AUTH_KEY must be set in production."
-    #         )
-    if settings.auth.environment == "dev":
-        logger.warning("AUTH__ENVIRONMENT=dev is forbidden in production, but temporarily allowed for debugging")
+    if os.environ.get("RAILWAY_ENVIRONMENT") == "production":
+        if settings.auth.environment == "dev":
+            raise RuntimeError(
+                "FATAL: AUTH__ENVIRONMENT=dev is forbidden in production. "
+                "Set AUTH__ENVIRONMENT=production and configure API_AUTH_KEY."
+            )
+        if not settings.api_auth_key:
+            logger.warning("API_AUTH_KEY not set in production — API endpoints unauthenticated")
 
     # ── Startup ──
     if not settings.llm_api_key and not settings.fallback_api_key:
