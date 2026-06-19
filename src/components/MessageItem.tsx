@@ -4,7 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Message } from "../types/message";
 import { BookOpen, Link, Bot } from "lucide-react";
-import { markdownComponents } from "./markdown/MarkdownComponents";
+import { markdownComponents } from "./markdown/markdownConfig";
 
 interface MessageItemProps {
   message: Message;
