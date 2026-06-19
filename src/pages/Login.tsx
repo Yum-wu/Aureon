@@ -7,7 +7,7 @@ import { useAuth } from '../hooks/AuthContext';
 
 const Login = () => {
   const { t } = useTranslation();
-  const { loginWithJWT } = useAuth();
+  const { loginWithJWT, login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -199,10 +199,20 @@ const Login = () => {
           <button
             type="button"
             onClick={async () => {
-              const success = await loginWithJWT('admin', 'Aureon');
+              // 先尝试 JWT 登录（开发模式），失败则尝试 API Key 登录（生产模式）
+              let success = await loginWithJWT('admin', 'Aureon');
+              if (!success) {
+                // 生产模式：使用 demo API Key 认证
+                const demoKey = import.meta.env.VITE_DEMO_API_KEY || '';
+                if (demoKey) {
+                  success = await login(demoKey);
+                }
+              }
               if (success) {
                 toast.success(t('login.success'));
                 navigate('/dashboard');
+              } else {
+                toast.error(t('login.invalid_credentials'));
               }
             }}
             className="w-full py-2.5 px-4 bg-[var(--accent-soft)] hover:bg-[var(--accent)]/20 border border-[var(--accent)]/30 text-[var(--accent)] rounded-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm"

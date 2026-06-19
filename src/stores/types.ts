@@ -10,6 +10,8 @@ export interface AuthState {
   token: string;
   /** 是否已认证 */
   isAuthenticated: boolean;
+  /** 用户角色 */
+  role: string | null;
   /** API Key 登录 */
   login: (key: string) => Promise<boolean>;
   /** JWT 登录 */
