@@ -83,6 +83,7 @@ backend/=*
 
 # 临时调试文件
 _*.py
+!__init__.py
 _*.bat
 _eslint_*
 process.exit*
