@@ -6,7 +6,7 @@
 import asyncio
 from typing import Any
 
-from langchain_core.messages import HumanMessage
+
 
 from app.reliability.circuit_breaker import (
     CircuitBreaker,
@@ -14,8 +14,6 @@ from app.reliability.circuit_breaker import (
     circuit_breaker,
     wrap_llm_call,
     llm_circuit_breaker,
-    embedding_circuit_breaker,
-    reranker_circuit_breaker,
 )
 from app.agent.llm import create_llm
 

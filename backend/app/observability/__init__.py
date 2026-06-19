@@ -2,7 +2,6 @@
 import asyncio
 import json
 import time
-import uuid
 from datetime import datetime, timezone
 from typing import Optional
 from pydantic import BaseModel, Field
@@ -144,8 +143,6 @@ class QueryTracer:
 
         # 2. Best-effort async PG write
         try:
-            from app.memory.pg import insert_query_trace  # noqa: WPS433
-
             pg_data: dict = {
                 "request_id": trace.request_id,
                 "session_id": trace.session_id,

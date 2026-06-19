@@ -4,7 +4,7 @@ These tests require external services (Qdrant, embedding API) and are
 marked as integration tests. Run with: pytest -m integration
 """
 import pytest
-from unittest.mock import patch, AsyncMock
+from unittest.mock import AsyncMock
 
 
 @pytest.mark.integration

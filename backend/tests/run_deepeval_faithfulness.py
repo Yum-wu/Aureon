@@ -37,7 +37,7 @@ def main():
         sys.exit(1)
 
     print(f"Judge model: {JUDGE_MODEL}")
-    print(f"Algorithm: DeepEval native FaithfulnessMetric (claim-level NLI)")
+    print("Algorithm: DeepEval native FaithfulnessMetric (claim-level NLI)")
     print()
 
     # Load golden dataset
@@ -66,7 +66,6 @@ def main():
 
     # Run DeepEval Faithfulness only
     from deepeval.metrics import FaithfulnessMetric
-    from deepeval.test_case import LLMTestCase
     from deepeval.evaluate import evaluate
     from deepeval.evaluate.configs import AsyncConfig, CacheConfig, ErrorConfig
 
@@ -106,9 +105,9 @@ def main():
     total = len(scores)
 
     print(f"\n{'='*60}")
-    print(f"  DeepEval FaithfulnessMetric Results")
+    print("  DeepEval FaithfulnessMetric Results")
     print(f"  Judge: {JUDGE_MODEL}")
-    print(f"  Algorithm: claim-level NLI (2-step)")
+    print("  Algorithm: claim-level NLI (2-step)")
     print(f"{'='*60}")
     print(f"  Faithfulness: {avg_score:.3f} (target: >=0.70) {'[OK]' if avg_score >= 0.7 else '[X]'}")
     print(f"  Passed: {passed}/{total} ({passed/total*100:.0f}%)")
@@ -129,14 +128,14 @@ def main():
             dist["0.3-0.5"] += 1
         else:
             dist["0.0-0.3"] += 1
-    print(f"\n  Score distribution:")
+    print("\n  Score distribution:")
     for bucket in ["0.9-1.0", "0.7-0.9", "0.5-0.7", "0.3-0.5", "0.0-0.3"]:
         count = dist.get(bucket, 0)
         print(f"    {bucket}: {count} ({count/total*100:.0f}%)")
 
     # Show worst 5
     worst = sorted(details, key=lambda d: d["score"])[:5]
-    print(f"\n  Worst 5:")
+    print("\n  Worst 5:")
     for d in worst:
         print(f"    [{d['index']}] score={d['score']:.2f} | {d['reason'][:100]}")
 

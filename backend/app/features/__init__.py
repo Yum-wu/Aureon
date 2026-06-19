@@ -3,7 +3,6 @@
 EXPERIMENTAL: Not connected to core paths. Models/Routes exist but unused by production flow.
 """
 import hashlib
-import sqlite3
 import json
 from datetime import datetime, timezone
 from enum import Enum
@@ -238,8 +237,6 @@ def delete_flag(name: str) -> bool:
 
 def evaluate_flag(name: str, user_id: Optional[str] = None, workspace_id: Optional[str] = None) -> bool:
     """评估 Feature Flag 是否启用"""
-    from app.memory.db import get_db
-
     flag = get_flag_by_name(name)
     if flag is None or flag.status != FlagStatus.ACTIVE.value:
         return False

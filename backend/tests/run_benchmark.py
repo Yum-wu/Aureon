@@ -551,7 +551,7 @@ async def run_railway_benchmark(args):
             "p99_ms": round(ttft_sorted[min(int(len(ttft_sorted) * 0.99), len(ttft_sorted) - 1)], 1),
             "samples": len(ttft_sorted),
         }
-        print(f"\n> Streaming Latency (TTFT)")
+        print("\n> Streaming Latency (TTFT)")
         print(f"  Samples:  {len(ttft_sorted)}")
         print(f"  Mean:     {latency_results['ttft']['mean_ms']}ms")
         print(f"  P50:      {latency_results['ttft']['p50_ms']}ms")
@@ -565,7 +565,7 @@ async def run_railway_benchmark(args):
             "p50_ms": round(tpot_sorted[len(tpot_sorted) // 2], 1),
             "samples": len(tpot_sorted),
         }
-        print(f"\n> Token Generation Speed (TPOT)")
+        print("\n> Token Generation Speed (TPOT)")
         print(f"  Samples:  {len(tpot_sorted)}")
         print(f"  Mean:     {latency_results['tpot']['mean_ms']}ms/token")
         print(f"  P50:      {latency_results['tpot']['p50_ms']}ms/token")

@@ -9,25 +9,28 @@ __all__ = [
 ]
 
 try:
-    from .http_client import RailwayBenchmarkClient
+    from .http_client import RailwayBenchmarkClient  # noqa: F401
     __all__.append("RailwayBenchmarkClient")
 except ImportError:
     pass
 
 try:
-    from .cost_tracker import CostTracker
+    from .cost_tracker import CostTracker  # noqa: F401
     __all__.append("CostTracker")
 except ImportError:
     pass
 
 try:
-    from .concurrency_test import ConcurrencyTestSuite
+    from .concurrency_test import ConcurrencyTestSuite  # noqa: F401
     __all__.append("ConcurrencyTestSuite")
 except ImportError:
     pass
 
 try:
-    from .report_generator import generate_markdown_report, generate_terminal_output
+    from .report_generator import (  # noqa: F401
+        generate_markdown_report,
+        generate_terminal_output,
+    )
     __all__.extend(["generate_markdown_report", "generate_terminal_output"])
 except ImportError:
     pass

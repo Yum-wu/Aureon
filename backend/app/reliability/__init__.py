@@ -2,7 +2,8 @@
 
 Provides backup management, incident tracking, SLO monitoring, and circuit breaker pattern.
 """
-from datetime import datetime, timezone, timedelta
+import warnings
+from datetime import datetime, timezone
 from typing import Optional
 from pydantic import BaseModel, Field
 import structlog
@@ -76,8 +77,6 @@ class SLOStatus(BaseModel):
 # ── Circuit Breaker ──
 # 使用 circuit_breaker 模块中的实现
 # 保留旧的 CircuitBreaker 类用于向后兼容
-
-import warnings
 
 class LegacyCircuitBreaker:
     """旧版熔断器（已弃用）
