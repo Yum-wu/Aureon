@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDashboardStats } from '../hooks/useDashboardStats';
 import { useSystemHealth } from '../hooks/useSystemHealth';
+import { useRealtimeMetrics } from '../hooks/useRealtimeMetrics';
 import { Card } from '../components/ui/Card';
 import { Tooltip } from '../components/ui/Tooltip';
 import { LineChart } from '../components/charts/LineChart';
@@ -9,19 +10,6 @@ import { BarChart } from '../components/charts/BarChart';
 import { AlertTriangle } from 'lucide-react';
 
 /* ── 类型定义 ── */
-
-/** WebSocket 实时指标数据 */
-interface RealtimeMetrics {
-  ttft_p50: number;
-  ttft_p95: number;
-  qps: number;
-  error_rate: number;
-  saturation: number;
-  alert_count: number;
-  latency_trend: number[];
-  tpot_trend: number[];
-  e2e_trend: number[];
-}
 
 /** 告警消息 */
 interface AlertMessage {
@@ -254,63 +242,29 @@ export function Dashboard() {
   const { stats, queryVolume, loading, error, refetch } = useDashboardStats();
   const { health } = useSystemHealth();
 
-  // 实时指标状态
-  const [realtimeData, setRealtimeData] = useState<RealtimeMetrics | null>(null);
-  const [wsConnected, setWsConnected] = useState(false);
-  const [alerts, setAlerts] = useState<AlertMessage[]>([]);
+  // 实时指标（通过 useRealtimeMetrics hook，统一 WebSocket 管理）
+  const {
+    metrics: rtMetrics,
+    alerts: rtAlerts,
+    isConnected: rtIsConnected,
+    lastUpdated: rtLastUpdated,
+  } = useRealtimeMetrics();
+
   const [timeRange, setTimeRange] = useState<'1h' | '6h' | '24h' | '7d'>('24h');
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const connectRef = useRef<() => void>(() => {});
-
-  // WebSocket 连接
-  const connectWebSocket = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) return;
-
-    const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/chat/dashboard`;
-    const socket = new WebSocket(wsUrl);
-    wsRef.current = socket;
-
-    socket.onopen = () => setWsConnected(true);
-    socket.onclose = () => {
-      setWsConnected(false);
-      // 自动重连（通过 ref 避免自引用）
-      reconnectTimerRef.current = setTimeout(() => connectRef.current(), 5000);
-    };
-    socket.onerror = () => { wsRef.current?.close(); };
-
-    socket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === 'metrics') {
-          setRealtimeData(data.payload as RealtimeMetrics);
-          setLastUpdated(new Date());
-        } else if (data.type === 'alert.fire') {
-          setAlerts((prev) => [
-            { id: data.id || crypto.randomUUID(), severity: data.severity || 'info', message: data.message, timestamp: data.timestamp || new Date().toISOString() },
-            ...prev.slice(0, 49),
-          ]);
-        }
-      } catch {
-        // 忽略非 JSON 消息
-      }
-    };
-  }, []);
-
-  // 保持 ref 指向最新的连接函数
-  useEffect(() => { connectRef.current = connectWebSocket; }, [connectWebSocket]);
-
-  useEffect(() => {
-    connectWebSocket();
-    return () => {
-      wsRef.current?.close();
-      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-    };
-  }, [connectWebSocket]);
+  const hasRealtimeData = rtLastUpdated !== null;
 
   // 合并实时数据和 API 数据
-  const metrics = realtimeData || (stats ? {
+  const metrics = (hasRealtimeData && rtMetrics) ? {
+    ttft_p50: rtMetrics.ttft_p50,
+    ttft_p95: rtMetrics.ttft_p95,
+    qps: rtMetrics.qps,
+    error_rate: rtMetrics.error_rate * 100, // 0-1 → 0-100%
+    saturation: 0,
+    alert_count: rtAlerts.length,
+    latency_trend: [] as number[],
+    tpot_trend: [] as number[],
+    e2e_trend: [] as number[],
+  } : (stats ? {
     ttft_p50: stats.avg_retrieval_latency_ms || 590,
     ttft_p95: 1677,
     qps: Math.round((stats.query_count_24h || 0) / 86400 * 100) / 100,
@@ -321,6 +275,14 @@ export function Dashboard() {
     tpot_trend: [],
     e2e_trend: [],
   } : null);
+
+  // 映射 hook 告警到 AlertMessage 格式
+  const alerts: AlertMessage[] = rtAlerts.map((a) => ({
+    id: a.id,
+    severity: a.level === 'critical' ? 'critical' as const : 'warning' as const,
+    message: a.message,
+    timestamp: new Date(a.timestamp).toISOString(),
+  }));
 
   // 健康服务列表
   const healthServices: ServiceHealth[] = [
@@ -376,10 +338,10 @@ export function Dashboard() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <LiveIndicator connected={wsConnected} />
-            {lastUpdated && (
+            <LiveIndicator connected={rtIsConnected} />
+            {rtLastUpdated && (
               <span className="text-xs text-[var(--text-tertiary)]" aria-label={t('dashboard.last_updated')}>
-                {lastUpdated.toLocaleTimeString()}
+                {new Date(rtLastUpdated).toLocaleTimeString()}
               </span>
             )}
             <select
@@ -402,7 +364,7 @@ export function Dashboard() {
         {!loading && !error && (
           <div className="space-y-6">
             {/* ── 演示模式水印 ── */}
-            {!realtimeData && !loading && !error && (
+            {!hasRealtimeData && !loading && !error && (
               <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-center">
                 <p className="text-sm font-medium text-amber-400">
                   <span className="inline-flex items-center gap-1"><AlertTriangle size={14} /> {t('dashboard.demo_mode')}</span>
@@ -415,7 +377,7 @@ export function Dashboard() {
                 label={t('dashboard.golden_signals.latency')}
                 value={metrics?.ttft_p50 ?? '—'}
                 unit="ms"
-                trend={realtimeData ? -5 : undefined}
+                trend={hasRealtimeData ? -5 : undefined}
                 sparklineData={metrics?.latency_trend?.length ? metrics.latency_trend : undefined}
                 tooltip={t('dashboard.golden_signals.latency_tooltip')}
               />
@@ -423,7 +385,7 @@ export function Dashboard() {
                 label={t('dashboard.golden_signals.traffic')}
                 value={metrics?.qps?.toFixed(2) ?? '—'}
                 unit="QPS"
-                trend={realtimeData ? 3 : undefined}
+                trend={hasRealtimeData ? 3 : undefined}
                 sparklineData={undefined}
                 tooltip={t('dashboard.golden_signals.traffic_tooltip')}
               />
@@ -431,7 +393,7 @@ export function Dashboard() {
                 label={t('dashboard.golden_signals.errors')}
                 value={metrics?.error_rate?.toFixed(1) ?? '—'}
                 unit="%"
-                trend={realtimeData ? -2 : undefined}
+                trend={hasRealtimeData ? -2 : undefined}
                 sparklineData={undefined}
                 tooltip={t('dashboard.golden_signals.errors_tooltip')}
               />
