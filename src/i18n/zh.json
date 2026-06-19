@@ -307,6 +307,22 @@
       "super_admin": "超级管理员",
       "permission": "权限"
     },
+    "permissions": {
+      "users.read": "查看用户",
+      "users.write": "编辑用户",
+      "users.delete": "删除用户",
+      "workspaces.read": "查看工作区",
+      "workspaces.write": "编辑工作区",
+      "workspaces.delete": "删除工作区",
+      "audit.read": "查看审计日志",
+      "audit.export": "导出审计日志",
+      "flags.read": "查看功能开关",
+      "flags.write": "编辑功能开关",
+      "sso.read": "查看 SSO 配置",
+      "sso.write": "编辑 SSO 配置",
+      "cost.read": "查看成本数据",
+      "cost.budget": "管理预算"
+    },
     "audit": {
       "title": "审计日志",
       "export_button": "导出日志",

@@ -60,14 +60,15 @@ export function SupportWidget() {
     },
     onMessage: (data) => {
       if (data && typeof data === 'object' && 'type' in data) {
-        const msg = data as { type: string; content?: string; text?: string };
+        const msg = data as { type: string; content?: string; text?: string; message?: string; full_response?: string };
         if (msg.type === 'text' || msg.type === 'session') {
+          // 后端发送 type=text, content 字段
           const text = msg.content || msg.text || '';
           if (text) {
             setStreamingText((prev) => prev + text);
           }
-        } else if (msg.type === 'done') {
-          // 流式结束，将 streamingText 追加到消息列表
+        } else if (msg.type === 'response_complete' || msg.type === 'done') {
+          // 流式结束 — 后端用 response_complete，兼容 done
           setIsStreaming(false);
           setStreamingText((prev) => {
             if (prev) {
@@ -76,9 +77,13 @@ export function SupportWidget() {
             return '';
           });
         } else if (msg.type === 'error') {
-          setWsError(msg.content || msg.text || '连接出错');
+          // 后端用 message 字段
+          setWsError(msg.message || msg.content || msg.text || '连接出错');
           setIsStreaming(false);
           setStreamingText('');
+        } else if (msg.type === 'connected') {
+          // 连接确认，清除错误
+          setWsError(null);
         }
       }
     },
@@ -109,8 +114,12 @@ export function SupportWidget() {
     // Add user message to local state
     setMessages((prev) => [...prev, { role: 'user', content: messageText }]);
 
-    // Send via WebSocket
-    send(JSON.stringify({ type: 'chat', content: messageText, mode: 'support' }));
+    // Send via WebSocket — 后端期望 type=user_message, query 字段, metadata.mode=support
+    send(JSON.stringify({
+      type: 'user_message',
+      query: messageText,
+      metadata: { mode: 'support' },
+    }));
 
     // Simulate streaming state
     setIsStreaming(true);

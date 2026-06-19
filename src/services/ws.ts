@@ -23,8 +23,8 @@ interface WSConfig {
   fatalCloseCodes?: number[];
 }
 
-/** 心跳消息 */
-const PING_MESSAGE = '{"type":"ping"}';
+/** 心跳消息（后端期望 type: "heartbeat"） */
+const HEARTBEAT_MESSAGE = '{"type":"heartbeat"}';
 
 /**
  * 创建带重连和心跳的 WebSocket 连接
@@ -67,11 +67,26 @@ export function createWebSocket(
   let onCloseHandler: (() => void) | undefined;
   let visibilityHandler: (() => void) | null = null;
 
-  /** 获取 WebSocket 完整 URL */
+  /** 获取 WebSocket 完整 URL（自动附加 API Key / JWT 认证） */
   function getWSUrl(): string {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.host;
-    return `${protocol}//${host}${path}`;
+    let url = `${protocol}//${host}${path}`;
+
+    // 自动附加认证 token（后端支持 ?token= 查询参数）
+    // 优先使用 JWT（SSO 登录），其次 API Key
+    try {
+      const jwt = sessionStorage.getItem('aureon_jwt_token') || '';
+      const apiKey = sessionStorage.getItem('aureon_api_key') || '';
+      const token = jwt || apiKey;
+      if (token) {
+        url += `${url.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}`;
+      }
+    } catch {
+      // sessionStorage 不可用时跳过
+    }
+
+    return url;
   }
 
   /** 更新连接状态 */
@@ -85,7 +100,7 @@ export function createWebSocket(
     stopHeartbeat();
     heartbeatTimer = setInterval(() => {
       if (ws?.readyState === WebSocket.OPEN) {
-        ws.send(PING_MESSAGE);
+        ws.send(HEARTBEAT_MESSAGE);
       }
     }, heartbeatInterval);
   }
@@ -154,6 +169,7 @@ export function createWebSocket(
       ws.onmessage = (event: MessageEvent) => {
         try {
           const data = JSON.parse(event.data);
+          // 后端心跳响应类型：pong (chat) / heartbeat_ack (dashboard)
           if (data.type === 'pong' || data.type === 'heartbeat_ack') return;
           onMessageHandler?.(data);
         } catch {

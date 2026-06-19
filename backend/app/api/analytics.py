@@ -13,6 +13,12 @@ router = APIRouter(prefix="/api/rag/analytics", tags=["analytics"])
 STATS_PREFIX = "aureon:stats"
 
 
+def _range_to_days(time_range: str) -> int:
+    """Convert time range string to days."""
+    mapping = {"24h": 1, "7d": 7, "30d": 30}
+    return mapping.get(time_range, 1)
+
+
 @router.get("/usage")
 async def get_usage_analytics(
     time_range: Optional[str] = Query("24h", description="Time range: 24h, 7d, 30d"),
@@ -27,21 +33,33 @@ async def get_usage_analytics(
         - Queries per hour
     """
     if not redis:
-        # In-memory fallback from rag_stats
-        from app.api.rag_stats import _mem_count
-        total = _mem_count
-        per_hour = round(total / 24, 1) if total > 0 else 0
+        # PostgreSQL fallback (survives redeployment)
+        from app.api.analytics_store import get_usage_from_pg
+        pg_data = await get_usage_from_pg(days=_range_to_days(time_range))
         return {
             "timeRange": time_range,
-            "total": total,
-            "perHour": per_hour,
-            "byIntent": {"general_qa": total},
+            "total": pg_data["total"],
+            "perHour": pg_data["perHour"],
+            "byIntent": pg_data["byIntent"],
             "trend": {"change": 0, "period": "vs previous period"},
         }
 
     try:
         # 总查询数
         total = int(await redis.get(f"{STATS_PREFIX}:count_24h") or 0)
+
+        # If Redis is empty (fresh deploy), seed from PostgreSQL
+        if total == 0:
+            from app.api.analytics_store import get_usage_from_pg
+            pg_data = await get_usage_from_pg(days=_range_to_days(time_range))
+            if pg_data["total"] > 0:
+                return {
+                    "timeRange": time_range,
+                    "total": pg_data["total"],
+                    "perHour": pg_data["perHour"],
+                    "byIntent": pg_data["byIntent"],
+                    "trend": {"change": 0, "period": "vs previous period"},
+                }
 
         # 按意图分类
         intents_raw = await redis.hgetall(f"{STATS_PREFIX}:intents")
@@ -88,20 +106,14 @@ async def get_latency_analytics(
     from statistics import mean, quantiles
 
     if not redis:
-        # In-memory fallback from rag_stats
-        from app.api.rag_stats import _mem_latencies
-        from statistics import mean, quantiles as _q
-        if _mem_latencies:
-            avg_lat = round(mean(_mem_latencies), 1)
-            p95 = round(_q(_mem_latencies, n=100)[94], 1) if len(_mem_latencies) >= 100 else round(max(_mem_latencies), 1)
-            p99 = round(_q(_mem_latencies, n=100)[98], 1) if len(_mem_latencies) >= 100 else round(max(_mem_latencies), 1)
-        else:
-            avg_lat = p95 = p99 = 0
+        # PostgreSQL fallback
+        from app.api.analytics_store import get_latency_from_pg
+        pg_data = await get_latency_from_pg(days=_range_to_days(time_range))
         return {
             "timeRange": time_range,
-            "avg": avg_lat,
-            "p95": p95,
-            "p99": p99,
+            "avg": pg_data["avg"],
+            "p95": pg_data["p95"],
+            "p99": pg_data["p99"],
             "breakdown": {
                 "retrieval": 0,
                 "llm_first_token": 0,
@@ -124,6 +136,18 @@ async def get_latency_analytics(
                 pass
 
         if not latencies:
+            # Redis empty — try PostgreSQL
+            from app.api.analytics_store import get_latency_from_pg
+            pg_data = await get_latency_from_pg(days=_range_to_days(time_range))
+            if pg_data["avg"] > 0:
+                return {
+                    "timeRange": time_range,
+                    "avg": pg_data["avg"],
+                    "p95": pg_data["p95"],
+                    "p99": pg_data["p99"],
+                    "breakdown": {"retrieval": 0, "llm_first_token": 0, "llm_generation": 0},
+                    "trend": {"avg_change": 0, "period": "vs previous period"},
+                }
             return {
                 "timeRange": time_range,
                 "avg": 0,
@@ -178,17 +202,16 @@ async def get_token_analytics(
         - Cost per query
     """
     if not redis:
-        # In-memory fallback — estimate from query count
-        from app.api.rag_stats import _mem_count
-        input_tokens = _mem_count * 500  # ~500 tokens per query input
-        output_tokens = _mem_count * 100  # ~100 tokens per query output
+        # PostgreSQL fallback
+        from app.api.analytics_store import get_tokens_from_pg
+        pg_data = await get_tokens_from_pg(days=_range_to_days(time_range))
         return {
             "timeRange": time_range,
-            "input": input_tokens,
-            "output": output_tokens,
-            "total": input_tokens + output_tokens,
-            "cost": round(input_tokens * 0.000001 + output_tokens * 0.000002, 4),
-            "costPerQuery": 0.001,
+            "input": pg_data["input"],
+            "output": pg_data["output"],
+            "total": pg_data["total"],
+            "cost": pg_data["cost"],
+            "costPerQuery": pg_data["costPerQuery"],
             "model": "qwen3.6-flash",
             "trend": {"input_change": 0, "output_change": 0, "period": "vs previous period"},
         }
@@ -201,6 +224,22 @@ async def get_token_analytics(
         input_tokens = int(token_data.get("input", 0)) if token_data else 0
         output_tokens = int(token_data.get("output", 0)) if token_data else 0
         queries = int(token_data.get("queries", 0)) if token_data else 0
+
+        # If Redis is empty, try PostgreSQL
+        if input_tokens == 0 and output_tokens == 0:
+            from app.api.analytics_store import get_tokens_from_pg
+            pg_data = await get_tokens_from_pg(days=_range_to_days(time_range))
+            if pg_data["total"] > 0:
+                return {
+                    "timeRange": time_range,
+                    "input": pg_data["input"],
+                    "output": pg_data["output"],
+                    "total": pg_data["total"],
+                    "cost": pg_data["cost"],
+                    "costPerQuery": pg_data["costPerQuery"],
+                    "model": "qwen3.6-flash",
+                    "trend": {"input_change": 0, "output_change": 0, "period": "vs previous period"},
+                }
 
         # GPT-4o-mini 定价：$0.15/1M input, $0.60/1M output
         cost_per_1k_input = 0.00015

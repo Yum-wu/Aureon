@@ -9,6 +9,20 @@ logger = structlog.get_logger()
 
 router = APIRouter()
 
+
+def _try_verify_jwt(token: str) -> bool:
+    """Try to verify a JWT token. Returns False on any failure (no exception)."""
+    try:
+        import os
+        jwt_secret = os.environ.get("JWT_SECRET")
+        if not jwt_secret:
+            return False
+        import jwt as pyjwt
+        pyjwt.decode(token, jwt_secret, algorithms=["HS256"])
+        return True
+    except Exception:
+        return False
+
 # ── Connection-level concurrency limiter ──
 _ws_semaphore: Optional[asyncio.Semaphore] = None
 
@@ -66,19 +80,38 @@ async def websocket_chat(
         return
 
     async with semaphore:
-        # ── 2. API key authentication (before accepting connection) ──
+        # ── 2. API key / JWT authentication (before accepting connection) ──
         authenticated = False
         if settings.api_auth_key:
-            # Try header first (preferred — not logged in access logs)
-            header_key = websocket.headers.get("x-api-key")
-            if header_key:
-                if header_key == settings.api_auth_key:
+            # Try query param first (browser WS can't send custom headers)
+            query_token = websocket.query_params.get("token", "")
+            if query_token:
+                if query_token == settings.api_auth_key:
                     authenticated = True
                 else:
-                    # Reject before accept — no connection established
-                    await websocket.close(code=4001, reason="Unauthorized")
-                    logger.warning("WS auth failed: bad X-API-Key header", client_id=client_id)
-                    return
+                    # Try JWT verification
+                    if _try_verify_jwt(query_token):
+                        authenticated = True
+
+            # Try X-API-Key header
+            if not authenticated:
+                header_key = websocket.headers.get("x-api-key")
+                if header_key and header_key == settings.api_auth_key:
+                    authenticated = True
+
+            # Try Authorization: Bearer <JWT> header
+            if not authenticated:
+                auth_header = websocket.headers.get("authorization", "")
+                if auth_header.startswith("Bearer "):
+                    jwt_token = auth_header[7:]
+                    if _try_verify_jwt(jwt_token):
+                        authenticated = True
+
+            # Reject if none of the above matched
+            if not authenticated:
+                await websocket.close(code=4001, reason="Unauthorized")
+                logger.warning("WS auth failed: no valid credentials", client_id=client_id)
+                return
         else:
             # No auth configured — skip
             authenticated = True

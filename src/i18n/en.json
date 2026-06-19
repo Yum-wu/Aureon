@@ -308,6 +308,22 @@
       "super_admin": "Super Admin",
       "permission": "Permission"
     },
+    "permissions": {
+      "users.read": "View Users",
+      "users.write": "Edit Users",
+      "users.delete": "Delete Users",
+      "workspaces.read": "View Workspaces",
+      "workspaces.write": "Edit Workspaces",
+      "workspaces.delete": "Delete Workspaces",
+      "audit.read": "View Audit Logs",
+      "audit.export": "Export Audit Logs",
+      "flags.read": "View Feature Flags",
+      "flags.write": "Edit Feature Flags",
+      "sso.read": "View SSO Config",
+      "sso.write": "Edit SSO Config",
+      "cost.read": "View Cost Data",
+      "cost.budget": "Manage Budget"
+    },
     "audit": {
       "title": "Audit Logs",
       "export_button": "Export Logs",

@@ -84,3 +84,42 @@ CREATE TABLE IF NOT EXISTS documents (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_documents_tenant ON documents(tenant_id);
+
+-- 分析事件持久化表（跨部署保留）
+-- 每次 RAG 查询记录一条，用于 Dashboard / Analytics 页面在 Redis 清空后恢复数据
+CREATE TABLE IF NOT EXISTS analytics_events (
+    id BIGSERIAL PRIMARY KEY,
+    tenant_id VARCHAR(64) DEFAULT 'default',
+    event_type VARCHAR(32) NOT NULL DEFAULT 'query',
+    query_text TEXT,
+    sources_count INT DEFAULT 0,
+    latency_ms REAL DEFAULT 0,
+    ttft_ms REAL DEFAULT 0,
+    tpot_ms REAL DEFAULT 0,
+    tokens_in INT DEFAULT 0,
+    tokens_out INT DEFAULT 0,
+    model VARCHAR(128),
+    intent VARCHAR(64) DEFAULT 'general_qa',
+    cache_hit BOOLEAN DEFAULT FALSE,
+    error BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_analytics_tenant_time ON analytics_events(tenant_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_analytics_type ON analytics_events(event_type, created_at DESC);
+
+-- 日聚合缓存（加速 Dashboard 图表查询）
+CREATE TABLE IF NOT EXISTS analytics_daily (
+    id BIGSERIAL PRIMARY KEY,
+    tenant_id VARCHAR(64) DEFAULT 'default',
+    date DATE NOT NULL,
+    total_queries INT DEFAULT 0,
+    errors INT DEFAULT 0,
+    cache_hits INT DEFAULT 0,
+    tokens_in BIGINT DEFAULT 0,
+    tokens_out BIGINT DEFAULT 0,
+    avg_latency_ms REAL DEFAULT 0,
+    p95_latency_ms REAL DEFAULT 0,
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(tenant_id, date)
+);
+CREATE INDEX IF NOT EXISTS idx_analytics_daily_tenant ON analytics_daily(tenant_id, date DESC);

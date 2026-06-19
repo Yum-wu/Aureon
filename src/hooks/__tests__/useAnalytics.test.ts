@@ -61,6 +61,6 @@ describe('useAnalytics', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.error).toBe('Failed to fetch analytics data');
+    expect(result.current.error).toBe('Failed to fetch analytics data (HTTP 500)');
   });
 });
