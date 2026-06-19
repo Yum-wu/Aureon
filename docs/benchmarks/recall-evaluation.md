@@ -149,21 +149,56 @@ Query → Query Router (Adaptive-RAG: 简单/中等/复杂) →
 | v17 | BM25 预分词 | 延迟 153ms→2.1ms |
 | v16 | BM25+ Scoring + RRF 去重 | Recall 78%→98% |
 
+## R19 最佳配置结果（2026-06-17）
+
+> 优化后企业级 RAG 最佳配置验证结果。完整细节见 `backend/tests/run_full_benchmark.py`。
+
+### 客户可见指标
+
+| 指标 | 值 | 目标 | 状态 |
+|------|-----|------|------|
+| Faithfulness | 0.976 | >=0.70 | ✅ |
+| Answer Relevancy | 0.976 | >=0.75 | ✅ |
+| Hallucination | 0.067 | <=0.20 | ✅ |
+| Negative Detection | 92.3% | >=80% | ✅ |
+| PII Leakage | 1.000 | >=0.90 | ✅ |
+| Toxicity | 1.000 | >=0.90 | ✅ |
+| MRR | 0.968 | >=0.85 | ✅ |
+| Context Precision | 94.4% | >=70% | ✅ |
+| Recall@5 | 100.0% | >=95% | ✅ |
+
+### 延迟性能（50 条 detailed benchmark）
+
+| 指标 | 值 | 目标 | 状态 |
+|------|-----|------|------|
+| TTFT P50 | 590ms | <=2000ms | ✅ |
+| TPOT | 55.7ms/tok | <=100ms/tok | ✅ |
+| E2E P50 | 856ms | <=5000ms | ✅ |
+
+### Judge 模型配置
+
+- **主力**：`deepseek-ai/DeepSeek-V4-Flash`（硅基流动）
+- **备用**：`deepseek-v4-flash-202605`（腾讯云 TokenHub）
+- **向量/Reranker**：DashScope（阿里云新加坡节点）
+
+### 关键教训
+
+R19 通过动态 rerank 阈值（simple:0.55 / medium:0.40 / complex:0.30）成功将 Recall@5 从 83.8% 提升到 100.0%，且未引入噪声。
+
 ## 运行 Benchmark
 
 ```bash
-# CI 默认（仅单元测试，跳过所有 marker）
+# CI 默认（仅单元测试）
 cd backend && python -m pytest tests/ -v
 
-# 检索性能基准
+# 统一 Benchmark（采集 → 评估 → 报告）
+cd backend && python tests/run_full_benchmark.py
+
+# pytest 分层基准
 cd backend && python -m pytest tests/benchmark_enterprise.py -m benchmark -v
-
-# DeepEval 质量门禁
 cd backend && python -m pytest tests/benchmark_enterprise.py -m quality -v
-
-# 生产冒烟测试
 cd backend && python -m pytest tests/benchmark_enterprise.py -m smoke -v
 
-# 全量基准测试
-cd backend && python -m pytest tests/benchmark_enterprise.py -m "benchmark or quality or smoke" -v
+# Lint
+cd backend && python -m ruff check tests/
 ```
