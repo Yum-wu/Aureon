@@ -12,7 +12,7 @@ Phase 3: 汇总 6 维报告 + 对比历史数据
   cd backend && python tests/run_full_benchmark.py --phase 3    # 仅汇总（需要先有 raw + eval 数据）
 
 环境变量:
-  BENCHMARK_BASE_URL — Railway 端点（默认 https://aureon-production-1247.up.railway.app）
+  BENCHMARK_BASE_URL — Railway 端点（默认 https://aureon-production-659a.up.railway.app）
   BENCHMARK_SAMPLE_N — LLM-as-Judge 采样数（默认 15，成本优化）
 """
 
@@ -241,7 +241,7 @@ class QwenDashScopeDeepEvalLLM(_DeepEvalBaseLLM):
 DATA_DIR = BACKEND_DIR / "data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-BASE_URL = "https://aureon-production-1247.up.railway.app"
+BASE_URL = "https://aureon-production-659a.up.railway.app"
 SAMPLE_N = 15  # 成本优化：30→15，减少 50% LLM 调用
 _API_AUTH_KEY = os.getenv("API_AUTH_KEY", "")  # 生产环境认证 Key
 

@@ -2210,7 +2210,7 @@ thresholds:
     rag_query_timeout_s: 30
 
 endpoints:
-  production: "https://aureon-production-1247.up.railway.app"
+  production: "https://aureon-production-659a.up.railway.app"
   local: "http://localhost:8000"
 
 concurrency:

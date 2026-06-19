@@ -11,7 +11,7 @@
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![Tests](https://img.shields.io/badge/Tests-793%20passed-brightgreen)](https://github.com/Yum-wu/Aureon/actions)
 
-**其他语言**: [English](README.md) | [在线演示](https://aureon-production-1247.up.railway.app)
+**其他语言**: [English](README.md) | [在线演示](https://aureon-production-659a.up.railway.app)
 
 ---
 
