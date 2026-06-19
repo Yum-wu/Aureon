@@ -27,6 +27,10 @@ on:
       - 'package-lock.json'
       - '.github/workflows/docker-build.yml'
 
+permissions:
+  security-events: write
+  contents: read
+
 jobs:
   validate:
     name: Validate Docker Configuration
