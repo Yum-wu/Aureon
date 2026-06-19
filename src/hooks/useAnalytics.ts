@@ -67,7 +67,13 @@ export function useAnalytics(timeRange: string = '24h'): AnalyticsHook {
       ]);
 
       if (!usageRes.ok || !latencyRes.ok || !tokensRes.ok || !cacheRes.ok) {
-        throw new Error('Failed to fetch analytics data');
+        const status = Math.max(usageRes.status, latencyRes.status, tokensRes.status, cacheRes.status);
+        if (status === 401 || status === 403) {
+          throw new Error(
+            `Authentication required (${status}). Please log in to view analytics data.`
+          );
+        }
+        throw new Error(`Failed to fetch analytics data (HTTP ${status})`);
       }
 
       const [usageData, latencyData, tokensData, cacheData] = await Promise.all([

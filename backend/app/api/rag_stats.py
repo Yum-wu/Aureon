@@ -88,6 +88,20 @@ async def record_query(
         if len(_mem_latencies) > _MEM_MAX:
             _mem_latencies = _mem_latencies[-_MEM_MAX:]
         return
+    # Fire-and-forget PostgreSQL persistence (non-blocking)
+    try:
+        import asyncio
+        asyncio.create_task(_persist_to_pg(
+            query=query,
+            sources_count=sources_count,
+            latency_ms=latency_ms,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            intent=_classify_intent(query),
+        ))
+    except Exception as pg_err:
+        logger.debug("PG persist skipped: %s", pg_err)
+
     member = f"{timestamp}:{uuid.uuid4().hex[:8]}"
 
     try:
@@ -138,6 +152,36 @@ async def record_query(
         _mem_latencies.append(latency_ms)
         if len(_mem_latencies) > _MEM_MAX:
             _mem_latencies = _mem_latencies[-_MEM_MAX:]
+
+
+async def _persist_to_pg(
+    *,
+    query: str,
+    sources_count: int,
+    latency_ms: float,
+    input_tokens: int,
+    output_tokens: int,
+    intent: str,
+) -> None:
+    """Background task: persist query event to PostgreSQL."""
+    try:
+        from app.api.analytics_store import persist_query_event, upsert_daily_aggregate
+
+        await persist_query_event(
+            query_text=query,
+            sources_count=sources_count,
+            latency_ms=latency_ms,
+            tokens_in=input_tokens,
+            tokens_out=output_tokens,
+            intent=intent,
+        )
+        await upsert_daily_aggregate(
+            latency_ms=latency_ms,
+            tokens_in=input_tokens,
+            tokens_out=output_tokens,
+        )
+    except Exception as exc:
+        logger.warning("pg_persist_failed: %s", exc)
 
 
 def _classify_intent(query: str) -> str:
@@ -361,7 +405,13 @@ async def get_query_volume(days: int = 7):
     redis = get_redis_or_none()
 
     if not redis:
-        # In-memory fallback: generate mock data for demo
+        # PostgreSQL fallback (survives redeployment)
+        from app.api.analytics_store import get_daily_volumes
+        pg_data = await get_daily_volumes(days=days)
+        if pg_data:
+            total = sum(d["count"] for d in pg_data)
+            return {"data": pg_data, "total": total}
+        # PG also empty — return zero-filled structure
         from datetime import timedelta
         now = datetime.now(timezone.utc)
         data = []

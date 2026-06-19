@@ -12,7 +12,6 @@ export function Architecture() {
     benchmark?.metrics?.find((m: { label: string; value: string | number }) => m.label.includes(pat))?.value ?? null;
 
   const recallVal = findMetric('Recall@3');
-  const latencyVal = findMetric('Retrieval Latency');
   const ttftVal = findMetric('TTFT');
 
   const fmtVal = (v: string | number | null, fallback: string) => {
@@ -23,8 +22,11 @@ export function Architecture() {
 
   const metrics = [
     { label: 'Recall@3 (Hybrid)', value: fmtVal(recallVal, '96.5%') },
-    { label: 'Retrieval Latency', value: fmtVal(latencyVal, '156ms') },
-    { label: 'TTFT', value: fmtVal(ttftVal, '~310ms') },
+    { label: 'MRR', value: fmtVal(findMetric('MRR'), '0.968') },
+    { label: 'Context Precision', value: fmtVal(findMetric('Context Precision'), '94.4%') },
+    { label: 'Faithfulness', value: fmtVal(findMetric('Faithfulness'), '0.976') },
+    { label: 'TTFT P50', value: fmtVal(ttftVal, '590ms') },
+    { label: 'E2E P50', value: fmtVal(findMetric('E2E'), '856ms') },
   ];
 
   return (

@@ -86,27 +86,54 @@ _TICK_INTERVAL = 5  # 秒
 
 
 def _validate_auth(websocket: WebSocket) -> bool:
-    """验证 WebSocket 连接的 API Key。
+    """验证 WebSocket 连接的认证凭据。
 
-    支持两种方式：
-    1. query param ``?token=<API_AUTH_KEY>``
+    支持三种认证方式（按优先级）：
+    1. query param ``?token=<API_AUTH_KEY>`` 或 ``?token=<JWT>``
     2. header ``X-API-Key``
+    3. header ``Authorization: Bearer <JWT>``
     未配置 API_AUTH_KEY 时跳过认证。
     """
     if not settings.api_auth_key:
         return True
 
-    # 优先检查 query param
+    # 1. 检查 query param（浏览器 WebSocket 不支持自定义 header）
     token = websocket.query_params.get("token")
-    if token and token == settings.api_auth_key:
-        return True
+    if token:
+        # 先尝试 API Key 直比
+        if token == settings.api_auth_key:
+            return True
+        # 再尝试 JWT 验证
+        if _try_verify_jwt(token):
+            return True
 
-    # 其次检查 header
+    # 2. 检查 X-API-Key header
     header_key = websocket.headers.get("x-api-key")
     if header_key and header_key == settings.api_auth_key:
         return True
 
+    # 3. 检查 Authorization: Bearer <JWT>
+    auth_header = websocket.headers.get("authorization", "")
+    if auth_header.startswith("Bearer "):
+        jwt_token = auth_header[7:]
+        if _try_verify_jwt(jwt_token):
+            return True
+
     return False
+
+
+def _try_verify_jwt(token: str) -> bool:
+    """尝试验证 JWT token，失败时返回 False（不抛异常）。"""
+    try:
+        import os
+        jwt_secret = os.environ.get("JWT_SECRET")
+        if not jwt_secret:
+            return False
+        import jwt as pyjwt
+        pyjwt.decode(token, jwt_secret, algorithms=["HS256"])
+        return True
+    except Exception:
+        return False
 
 
 def _check_alerts(metrics: dict[str, Any]) -> list[dict[str, Any]]:
@@ -164,7 +191,7 @@ async def _metrics_ticker(client_id: str) -> None:
             # 检查告警
             alerts = _check_alerts(metrics)
             for alert in alerts:
-                await dashboard_manager.send_to({
+                await dashboard_manager.send_to(client_id, {
                     "type": "alert.fire",
                     "data": {
                         **alert,

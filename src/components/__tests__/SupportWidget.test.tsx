@@ -120,7 +120,7 @@ describe("SupportWidget", () => {
     fireEvent.click(screen.getByTestId("quick-reply-0"));
 
     expect(mockSend).toHaveBeenCalledWith(
-      JSON.stringify({ type: "chat", content: "Question 1?", mode: "support" }),
+      JSON.stringify({ type: "user_message", query: "Question 1?", metadata: { mode: "support" } })
     );
   });
 
@@ -168,7 +168,7 @@ describe("SupportWidget", () => {
     fireEvent.keyDown(input, { key: "Enter", shiftKey: false });
 
     expect(mockSend).toHaveBeenCalledWith(
-      JSON.stringify({ type: "chat", content: "Test question", mode: "support" }),
+      JSON.stringify({ type: "user_message", query: "Test question", metadata: { mode: "support" } })
     );
   });
 

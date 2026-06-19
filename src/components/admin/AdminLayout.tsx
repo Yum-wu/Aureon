@@ -46,7 +46,7 @@ export function AdminLayout({ children, activeTab, onTabChange }: AdminLayoutPro
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
             className="p-1.5 rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-white/[0.05] transition-colors"
-            aria-label={sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
+            aria-label={sidebarCollapsed ? t('admin.sidebar.expand', '展开侧边栏') : t('admin.sidebar.collapse', '收起侧边栏')}
           >
             {sidebarCollapsed ? '→' : '←'}
           </button>

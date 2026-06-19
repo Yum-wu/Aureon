@@ -57,34 +57,40 @@ interface FeatureFlag {
 
 interface Permission {
   key: string;
-  label: string;
+  i18nKey: string;
 }
 
 /* ── 角色权限矩阵 ── */
 const ROLES = ['super_admin', 'admin', 'editor', 'viewer'] as const;
 type Role = (typeof ROLES)[number];
 
-const PERMISSIONS: Permission[] = [
-  { key: 'users.read', label: '查看用户' },
-  { key: 'users.write', label: '编辑用户' },
-  { key: 'users.delete', label: '删除用户' },
-  { key: 'workspaces.read', label: '查看工作区' },
-  { key: 'workspaces.write', label: '编辑工作区' },
-  { key: 'workspaces.delete', label: '删除工作区' },
-  { key: 'audit.read', label: '查看审计日志' },
-  { key: 'audit.export', label: '导出审计日志' },
-  { key: 'flags.read', label: '查看 Feature Flags' },
-  { key: 'flags.write', label: '编辑 Feature Flags' },
-  { key: 'sso.read', label: '查看 SSO 配置' },
-  { key: 'sso.write', label: '编辑 SSO 配置' },
-  { key: 'cost.read', label: '查看成本数据' },
-  { key: 'cost.budget', label: '管理预算' },
-];
+// i18n keys for permission labels — actual labels resolved via t() in RolesTab
+const PERMISSION_KEYS = [
+  'users.read', 'users.write', 'users.delete',
+  'workspaces.read', 'workspaces.write', 'workspaces.delete',
+  'audit.read', 'audit.export',
+  'flags.read', 'flags.write',
+  'sso.read', 'sso.write',
+  'cost.read', 'cost.budget',
+] as const;
+
+interface Permission {
+  key: string;
+  i18nKey: string;
+}
+
+function usePermissions(): Permission[] {
+  const { t } = useTranslation();
+  return PERMISSION_KEYS.map((key) => ({
+    key,
+    i18nKey: t(`admin.permissions.${key}`, { defaultValue: key }),
+  }));
+}
 
 // 默认权限映射
 const DEFAULT_PERMISSIONS: Record<Role, string[]> = {
-  super_admin: PERMISSIONS.map((p) => p.key),
-  admin: PERMISSIONS.filter((p) => !p.key.startsWith('sso.write')).map((p) => p.key),
+  super_admin: [...PERMISSION_KEYS],
+  admin: PERMISSION_KEYS.filter((k) => !k.startsWith('sso.write')),
   editor: ['workspaces.read', 'workspaces.write', 'audit.read', 'cost.read', 'flags.read'],
   viewer: ['workspaces.read', 'audit.read', 'cost.read', 'flags.read'],
 };
@@ -398,10 +404,11 @@ function UsersTab() {
 /* ── 角色权限 Tab ── */
 function RolesTab() {
   const { t } = useTranslation();
-  const [permissions, setPermissions] = useState<Record<Role, string[]>>(DEFAULT_PERMISSIONS);
+  const permissions = usePermissions();
+  const [permState, setPermState] = useState<Record<Role, string[]>>(DEFAULT_PERMISSIONS);
 
   const togglePermission = (role: Role, permKey: string) => {
-    setPermissions((prev) => {
+    setPermState((prev) => {
       const current = prev[role];
       const updated = current.includes(permKey) ? current.filter((k) => k !== permKey) : [...current, permKey];
       return { ...prev, [role]: updated };
@@ -422,23 +429,23 @@ function RolesTab() {
           </tr>
         </thead>
         <tbody>
-          {PERMISSIONS.map((perm) => (
+          {permissions.map((perm) => (
             <tr key={perm.key} className="border-b border-[var(--border-subtle)] hover:bg-white/[0.02]">
-              <td className="py-3 px-4 text-[var(--text-primary)]">{perm.label}</td>
+              <td className="py-3 px-4 text-[var(--text-primary)]">{perm.i18nKey}</td>
               {ROLES.map((role) => (
                 <td key={role} className="text-center py-3 px-4">
                   <button
                     onClick={() => togglePermission(role, perm.key)}
                     className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                      permissions[role]?.includes(perm.key) ? 'bg-[var(--accent)]' : 'bg-[var(--bg-tertiary)]'
+                      permState[role]?.includes(perm.key) ? 'bg-[var(--accent)]' : 'bg-[var(--bg-tertiary)]'
                     }`}
                     role="switch"
-                    aria-checked={permissions[role]?.includes(perm.key) ?? false}
-                    aria-label={`${perm.label} - ${t(`admin.roles.${role}`)}`}
+                    aria-checked={permState[role]?.includes(perm.key) ?? false}
+                    aria-label={`${perm.i18nKey} - ${t(`admin.roles.${role}`)}`}
                   >
                     <span
                       className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
-                        permissions[role]?.includes(perm.key) ? 'translate-x-4' : 'translate-x-0.5'
+                        permState[role]?.includes(perm.key) ? 'translate-x-4' : 'translate-x-0.5'
                       }`}
                     />
                   </button>
