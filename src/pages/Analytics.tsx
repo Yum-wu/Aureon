@@ -1,12 +1,12 @@
 import { useTranslation } from 'react-i18next';
-import { useAnalytics } from '../hooks/useAnalytics';
+import { useAnalyticsData } from '../hooks/useAnalyticsData';
 import { useViewStore } from '../stores/useViewStore';
 
 const Analytics = () => {
   const { t } = useTranslation();
   const timeRange = useViewStore((s) => s.analyticsTimeRange);
   const setAnalyticsTimeRange = useViewStore((s) => s.setAnalyticsTimeRange);
-  const { usage, latency, tokens, cache, loading, error, refresh } = useAnalytics(timeRange);
+  const { usage, latency, tokens, cache, isLoading: loading, error, refetch: refresh } = useAnalyticsData(timeRange);
 
   if (loading) {
     return (

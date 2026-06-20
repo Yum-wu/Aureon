@@ -2,10 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 
-// Mock useAnalytics before importing Analytics
-const mockUseAnalytics = vi.fn();
-vi.mock('../../hooks/useAnalytics', () => ({
-  useAnalytics: (...args: unknown[]) => mockUseAnalytics(...args),
+// Mock useAnalyticsData before importing Analytics
+const mockUseAnalyticsData = vi.fn();
+vi.mock('../../hooks/useAnalyticsData', () => ({
+  useAnalyticsData: (...args: unknown[]) => mockUseAnalyticsData(...args),
 }));
 
 // Default mock: return i18n key as-is
@@ -34,14 +34,14 @@ describe('Analytics Page', () => {
   });
 
   it('should show loading state initially', () => {
-    mockUseAnalytics.mockReturnValue({
+    mockUseAnalyticsData.mockReturnValue({
       usage: null,
       latency: null,
       tokens: null,
       cache: null,
-      loading: true,
+      isLoading: true,
       error: null,
-      refresh: vi.fn(),
+      refetch: vi.fn(),
     });
 
     render(
@@ -55,14 +55,14 @@ describe('Analytics Page', () => {
 
   it('should show error state when data load fails', () => {
     const mockRefresh = vi.fn();
-    mockUseAnalytics.mockReturnValue({
+    mockUseAnalyticsData.mockReturnValue({
       usage: null,
       latency: null,
       tokens: null,
       cache: null,
-      loading: false,
+      isLoading: false,
       error: 'Failed to fetch',
-      refresh: mockRefresh,
+      refetch: mockRefresh,
     });
 
     render(
@@ -76,14 +76,14 @@ describe('Analytics Page', () => {
   });
 
   it('should display data when loaded successfully', () => {
-    mockUseAnalytics.mockReturnValue({
+    mockUseAnalyticsData.mockReturnValue({
       usage: { total: 100, perHour: 5, byIntent: { general_qa: 60 }, trend: { change: 10, period: 'vs prev' } },
       latency: { avg: 15, p95: 30, p99: 50, breakdown: { retrieval: 10, llm_first_token: 300, llm_generation: 700 }, trend: { avg_change: -5, period: 'vs prev' } },
       tokens: { input: 50000, output: 30000, total: 80000, cost: 25, costPerQuery: 0.001, model: 'gpt-4o-mini', trend: { input_change: 5, output_change: 3, period: 'vs prev' } },
       cache: { hitRate: 75, saves: 200, latencyReduction: 40, memoryUsage: '128MB' },
-      loading: false,
+      isLoading: false,
       error: null,
-      refresh: vi.fn(),
+      refetch: vi.fn(),
     });
 
     render(
@@ -132,14 +132,14 @@ describe('Analytics Page', () => {
       return zhMap[key] ?? key;
     };
 
-    mockUseAnalytics.mockReturnValue({
+    mockUseAnalyticsData.mockReturnValue({
       usage: { total: 100, perHour: 5, byIntent: { general_qa: 60 } },
       latency: { avg: 15, p95: 30, p99: 50 },
       tokens: { input: 50000, output: 30000, total: 80000, cost: 25, costPerQuery: 0.001 },
       cache: { hitRate: 75, saves: 200 },
-      loading: false,
+      isLoading: false,
       error: null,
-      refresh: vi.fn(),
+      refetch: vi.fn(),
     });
 
     render(
@@ -198,14 +198,14 @@ describe('Analytics Page', () => {
       return enMap[key] ?? key;
     };
 
-    mockUseAnalytics.mockReturnValue({
+    mockUseAnalyticsData.mockReturnValue({
       usage: { total: 100, perHour: 5, byIntent: { general_qa: 60 } },
       latency: { avg: 15, p95: 30, p99: 50 },
       tokens: { input: 50000, output: 30000, total: 80000, cost: 25, costPerQuery: 0.001 },
       cache: { hitRate: 75, saves: 200 },
-      loading: false,
+      isLoading: false,
       error: null,
-      refresh: vi.fn(),
+      refetch: vi.fn(),
     });
 
     render(

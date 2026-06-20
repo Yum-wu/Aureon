@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { useCostData } from '../hooks/useCostData';
+import { useCostDataQuery } from '../hooks/useCostDataQuery';
 import { useViewStore } from '../stores/useViewStore';
 import { Card } from '../components/ui/Card';
 import { Tooltip } from '../components/ui/Tooltip';
@@ -71,7 +71,7 @@ export function CostGovernance() {
   const { t } = useTranslation();
   const timeRange = useViewStore((s) => s.costTimeRange);
   const setCostTimeRange = useViewStore((s) => s.setCostTimeRange);
-  const { summary, trends, breakdown, topConsumers: topConsumersData, loading, error, refetch } = useCostData(timeRange);
+  const { summary, trends, breakdown, topConsumers: topConsumersData, isLoading: loading, error, refetch } = useCostDataQuery(timeRange);
 
   // 导出 CSV
   const handleExport = useCallback(() => {
@@ -134,7 +134,7 @@ export function CostGovernance() {
       <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center">
         <div className="text-center">
           <p className="text-[var(--error)] text-lg mb-2">{t('cost.error_loading')}</p>
-          <p className="text-[var(--text-tertiary)] text-sm mb-4">{error}</p>
+          <p className="text-[var(--text-tertiary)] text-sm mb-4">{error instanceof Error ? error.message : String(error)}</p>
           <button
             onClick={refetch}
             className="px-4 py-2 bg-[var(--accent)] text-white rounded-lg hover:bg-[var(--accent-hover)] transition-colors text-sm font-medium"
