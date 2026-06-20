@@ -60,6 +60,43 @@ router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
 
+def _record_dashboard_metrics(
+    *,
+    latency_ms: float,
+    tokens_in: int = 0,
+    tokens_out: int = 0,
+    cache_hit: bool = False,
+    error: bool = False,
+) -> None:
+    """Fire-and-forget: 将查询指标写入 Dashboard 实时指标采集器。
+
+    TTFT 近似为总延迟（首 token 与最后 token 差异在流式中无法精确测量），
+    TPOT 近似为 latency / output_tokens。
+    """
+    try:
+        from app.observability.metrics_collector import get_metrics_collector
+        from app.multi_tenant.middleware import get_current_tenant_id
+
+        collector = get_metrics_collector()
+        tenant_id = get_current_tenant_id()
+        tpot_ms = (latency_ms / max(tokens_out, 1)) if tokens_out > 0 else latency_ms
+        fire_and_forget(
+            collector.record_query_metrics(
+                tenant_id=tenant_id,
+                ttft_ms=latency_ms,
+                tpot_ms=tpot_ms,
+                tokens_in=tokens_in,
+                tokens_out=tokens_out,
+                model=settings.llm_model,
+                cache_hit=cache_hit,
+                error=error,
+            ),
+            name="record_dashboard_metrics",
+        )
+    except Exception as exc:
+        logger.debug("dashboard_metrics_record_skipped", error=str(exc))
+
+
 def _validate_filename(filename: str) -> str:
     """Validate filename against path traversal attacks.
 
@@ -171,6 +208,7 @@ async def rag_query_endpoint(req: RAGQueryRequest, request: Request):
     latency_ms = int((time.time() - start_time) * 1000)
     # Record query for Dashboard stats (fire-and-forget)
     fire_and_forget(record_query(req.query, len(result.sources), latency_ms), name="record_query")
+    _record_dashboard_metrics(latency_ms=latency_ms, tokens_out=len(result.answer.split()) if hasattr(result, 'answer') else 0)
     return result
 
 
@@ -212,6 +250,7 @@ async def rag_query_async_endpoint(req: RAGQueryRequest, request: Request):
 
     latency_ms = int((time.time() - start_time) * 1000)
     fire_and_forget(record_query(req.query, len(result.sources), latency_ms), name="record_query_async")
+    _record_dashboard_metrics(latency_ms=latency_ms, tokens_out=len(result.answer.split()) if hasattr(result, 'answer') else 0)
     return result
 
 
@@ -302,6 +341,7 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
             yield sse_event({'type': 'cache_hit'})
             latency_ms = int((time.time() - start_time) * 1000)
             fire_and_forget(record_query(req.query, len(cached_sources), latency_ms), name="record_query_stream_cached")
+            _record_dashboard_metrics(latency_ms=latency_ms, cache_hit=True)
             return
 
         # Cache miss - record stats
@@ -350,6 +390,11 @@ async def rag_query_stream_endpoint(req: RAGQueryRequest, request: Request):
                 req.query, sources_count, latency_ms,
                 input_tokens=input_tokens, output_tokens=output_tokens
             ), name="record_query_stream")
+            _record_dashboard_metrics(
+                latency_ms=latency_ms,
+                tokens_in=input_tokens,
+                tokens_out=output_tokens,
+            )
 
     return StreamingResponse(
         event_stream(),

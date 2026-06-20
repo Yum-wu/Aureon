@@ -1,6 +1,12 @@
 /**
  * 成本治理数据 Hook
- * 从 API 获取成本数据，同时监听 cost.update WebSocket 消息
+ * 从多个独立 API 端点获取成本数据，同时监听 cost.update WebSocket 消息
+ *
+ * 端点映射:
+ *   /api/cost/summary       → CostSummary (snake_case → camelCase)
+ *   /api/cost/trend         → CostTrendPoint[]
+ *   /api/cost/breakdown     → CostBreakdown[]
+ *   /api/cost/top-consumers → TopConsumer[]
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -18,7 +24,7 @@ export interface CostSummary {
   burnRate: number;
   /** 总 Token 数 */
   totalTokens: number;
-  /** 已用预算 */
+  /** 已用预算百分比 */
   budgetUsed: number;
   /** 总预算 */
   budgetTotal: number;
@@ -80,7 +86,7 @@ export function useCostData(timeRange: CostTimeRange = '30d'): UseCostDataReturn
     setTrigger((prev) => prev + 1);
   }, []);
 
-  // 从 API 获取成本数据
+  // 从多个独立 API 端点获取成本数据
   useEffect(() => {
     let cancelled = false;
 
@@ -89,9 +95,18 @@ export function useCostData(timeRange: CostTimeRange = '30d'): UseCostDataReturn
         setLoading(true);
         setError(null);
 
-        const res = await authFetch(`/api/cost/summary?period=${timeRange}`);
-        if (res.status === 401) {
-          // 未认证 — 静默降级为演示模式，不显示错误
+        // 并行请求 4 个独立端点
+        const [summaryRes, trendRes, breakdownRes, consumersRes] = await Promise.all([
+          authFetch(`/api/cost/summary?period=${timeRange}`),
+          authFetch(`/api/cost/trend?days=${timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90}`),
+          authFetch(`/api/cost/breakdown?by=model&period=${timeRange}`),
+          authFetch(`/api/cost/top-consumers?limit=10`),
+        ]);
+
+        // 任一端点返回 401/403 → 静默降级为演示模式
+        const anyAuth = [summaryRes, trendRes, breakdownRes, consumersRes]
+          .some((r) => r.status === 401 || r.status === 403);
+        if (anyAuth) {
           if (!cancelled) {
             setSummary(null);
             setTrends([]);
@@ -100,16 +115,84 @@ export function useCostData(timeRange: CostTimeRange = '30d'): UseCostDataReturn
           }
           return;
         }
-        if (!res.ok) {
-          throw new Error(`请求失败: ${res.status}`);
+
+        // 任一关键端点失败 → 报错
+        if (!summaryRes.ok) {
+          throw new Error(`请求失败: ${summaryRes.status}`);
         }
-        const data = await res.json();
+
+        // ── 1. Summary: snake_case → camelCase ──
+        const summaryJson = await summaryRes.json();
+        const mappedSummary: CostSummary = {
+          totalCost: summaryJson.total_cost ?? 0,
+          burnRate: summaryJson.burn_rate ?? 0,
+          totalTokens: summaryJson.total_tokens ?? 0,
+          budgetUsed: summaryJson.budget_used_pct ?? 0,
+          budgetTotal: summaryJson.budget_total ?? 0,
+          burnTrend: summaryJson.trend_direction ?? 'stable',
+        };
+
+        // ── 2. Trend ──
+        let mappedTrends: CostTrendPoint[] = [];
+        if (trendRes.ok) {
+          const trendJson = await trendRes.json();
+          const rawTrends = Array.isArray(trendJson) ? trendJson : [];
+          mappedTrends = rawTrends.map((t: Record<string, unknown>) => ({
+            date: String(t.date ?? ''),
+            cost: Number(t.cost ?? 0),
+            tokens: Number(t.tokens ?? 0),
+          }));
+        }
+
+        // ── 3. Breakdown: { breakdown: [{model, cost}], period } → CostBreakdown[] ──
+        let mappedBreakdown: CostBreakdown[] = [];
+        if (breakdownRes.ok) {
+          const breakdownJson = await breakdownRes.json();
+          const rawBreakdown = breakdownJson.breakdown;
+          if (typeof rawBreakdown === 'object' && rawBreakdown !== null && !Array.isArray(rawBreakdown)) {
+            // Backend returns { model_name: cost_value } dict
+            const totalCost = Object.values(rawBreakdown as Record<string, number>).reduce(
+              (sum, v) => sum + (Number(v) || 0), 0,
+            );
+            mappedBreakdown = Object.entries(rawBreakdown as Record<string, number>).map(
+              ([category, cost]) => ({
+                category,
+                cost: Number(cost) || 0,
+                percentage: totalCost > 0 ? ((Number(cost) || 0) / totalCost) * 100 : 0,
+              }),
+            );
+          } else if (Array.isArray(rawBreakdown)) {
+            mappedBreakdown = rawBreakdown.map((b: Record<string, unknown>) => ({
+              category: String(b.category ?? b.model ?? ''),
+              cost: Number(b.cost ?? 0),
+              percentage: Number(b.percentage ?? 0),
+            }));
+          }
+        }
+
+        // ── 4. Top Consumers: [{workspace_id, cost_usd}] → TopConsumer[] ──
+        let mappedConsumers: TopConsumer[] = [];
+        if (consumersRes.ok) {
+          const consumersJson = await consumersRes.json();
+          const rawConsumers = Array.isArray(consumersJson) ? consumersJson : [];
+          const totalConsumerCost = rawConsumers.reduce(
+            (sum, c: Record<string, unknown>) => sum + (Number(c.cost_usd ?? 0)), 0,
+          );
+          mappedConsumers = rawConsumers.map((c: Record<string, unknown>) => ({
+            name: String(c.workspace_id ?? c.name ?? 'Unknown'),
+            cost: Number(c.cost_usd ?? c.cost ?? 0),
+            tokens: Number(c.tokens ?? 0),
+            percentage: totalConsumerCost > 0
+              ? (Number(c.cost_usd ?? 0) / totalConsumerCost) * 100
+              : 0,
+          }));
+        }
 
         if (!cancelled) {
-          setSummary(data.summary ?? null);
-          setTrends(data.trends ?? []);
-          setBreakdown(data.breakdown ?? []);
-          setTopConsumers(data.top_consumers ?? []);
+          setSummary(mappedSummary);
+          setTrends(mappedTrends);
+          setBreakdown(mappedBreakdown);
+          setTopConsumers(mappedConsumers);
         }
       } catch (err) {
         if (!cancelled) {
@@ -135,7 +218,6 @@ export function useCostData(timeRange: CostTimeRange = '30d'): UseCostDataReturn
 
     if (msg.type === 'cost.update' && msg.data) {
       const updateData = msg.data as Record<string, unknown>;
-      // 增量更新汇总数据
       if (updateData.summary) {
         setSummary(updateData.summary as CostSummary);
       }
