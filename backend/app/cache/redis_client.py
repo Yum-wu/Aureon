@@ -185,7 +185,6 @@ def _get_redis():
         return _redis
     from app.config import settings
     if not settings.redis_url:
-        logger.warning("redis_url_not_configured")
         return None
     try:
         import redis.asyncio as aioredis

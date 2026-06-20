@@ -111,9 +111,6 @@ def _record_dashboard_metrics(
                 (tokens_in / 1000 * 0.00015) + (tokens_out / 1000 * 0.0006),
                 6,
             )
-            logger.info("cost_record_firing", tenant_id=tenant_id, tokens_in=tokens_in, tokens_out=tokens_out, cost_usd=cost_usd)
-            # 直接用 get_redis_or_none 获取 Redis 客户端，避免 cost service 内部缓存问题
-            redis_client = get_redis_or_none()
             fire_and_forget(
                 cost_service.record_usage(TokenUsage(
                     tenant_id=tenant_id,
@@ -121,11 +118,11 @@ def _record_dashboard_metrics(
                     input_tokens=tokens_in,
                     output_tokens=tokens_out,
                     cost_usd=cost_usd,
-                ), redis_override=redis_client),
+                )),
                 name="record_cost_usage",
             )
         except Exception as exc:
-            logger.warning("cost_record_skipped", error=str(exc))
+            logger.debug("cost_record_skipped", error=str(exc))
 
 
 def _validate_filename(filename: str) -> str:

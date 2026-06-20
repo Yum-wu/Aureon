@@ -57,7 +57,6 @@ class CostService:
         """
         r = redis_override if redis_override is not None else self._get_redis()
         if r is None:
-            logger.warning("cost_record_no_redis", tenant_id=usage.tenant_id)
             return
 
         now = time.time()
@@ -89,7 +88,6 @@ class CostService:
                 ws_field = f"ws:{usage.workspace_id}"
                 await r.hincrbyfloat(daily_key, ws_field, usage.cost_usd)
             await r.expire(daily_key, _TTL_DAILY)
-            logger.info("cost_record_success", tenant_id=usage.tenant_id, cost_usd=usage.cost_usd, daily_key=daily_key)
         except Exception as exc:
             logger.warning("cost_record_failed", tenant_id=usage.tenant_id, error=str(exc))
 
