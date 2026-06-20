@@ -77,10 +77,16 @@ export function SupportWidget() {
             return '';
           });
         } else if (msg.type === 'error') {
-          // 后端用 message 字段
+          // 后端用 message 字段 — 同时结束流式状态避免永久卡住
           setWsError(msg.message || msg.content || msg.text || '连接出错');
           setIsStreaming(false);
-          setStreamingText('');
+          setStreamingText((prev) => {
+            // 如果已有部分流式内容，保留为助手消息
+            if (prev) {
+              setMessages((msgs) => [...msgs, { role: 'assistant', content: prev }]);
+            }
+            return '';
+          });
         } else if (msg.type === 'connected') {
           // 连接确认，清除错误
           setWsError(null);

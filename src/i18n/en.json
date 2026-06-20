@@ -212,7 +212,9 @@
       "empty": "No active alerts"
     },
     "demo_mode": "Currently showing demo data. Will auto-update when connected to a live data source.",
-    "demo_data": "Demo Data"
+    "demo_data": "Demo Data",
+    "connecting": "Connecting",
+    "no_data": "No data available"
   },
   "search": {
     "title": "Enterprise AI Search",
@@ -344,6 +346,8 @@
       "empty_desc": "Audit logs will appear here as system activity occurs",
       "export_success": "Export completed successfully",
       "export_failed": "Export failed",
+      "date_from": "Start date",
+      "date_to": "End date",
       "columns": {
         "timestamp": "Timestamp",
         "action": "Action",
