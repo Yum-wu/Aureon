@@ -38,7 +38,7 @@ export function BenchmarkSection() {
         <h2 className="text-2xl font-bold tracking-[-0.02em] mb-2 text-white animate-fade-up">
           {t('landing.benchmark.title')}
         </h2>
-        <p className="text-sm text-[var(--text-tertiary)] mb-12 animate-fade-up delay-100">
+        <p className="text-base text-[var(--text-secondary)] mb-12 animate-fade-up delay-100">
           {t('landing.benchmark.subtitle')}
         </p>
 
@@ -51,7 +51,7 @@ export function BenchmarkSection() {
               style={{ animationDelay: `${idx * 0.08 + 0.2}s` }}
             >
               <p className="text-2xl mb-2 inline-flex items-center justify-center">{ICONS[m.label] ?? <BarChart3 size={20} />}</p>
-              <p className="text-xs text-[var(--text-tertiary)] uppercase tracking-wider mb-3">
+              <p className="text-sm text-[var(--text-secondary)] uppercase tracking-wider mb-3">
                 {m.label}
                 {m.status === 'optimizing' && (
                   <span className="ml-2 text-amber-400 normal-case">优化中</span>
@@ -63,7 +63,7 @@ export function BenchmarkSection() {
         </div>
 
         {/* 测试规模说明 */}
-        <div className="text-center text-xs text-[var(--text-tertiary)] animate-fade-up delay-200">
+        <div className="text-center text-sm text-[var(--text-secondary)] animate-fade-up delay-200">
           {t('landing.benchmark.test_scale', '192 QA pairs · DeepEval LLM-as-Judge · 26 articles knowledge base')}
         </div>
       </div>
