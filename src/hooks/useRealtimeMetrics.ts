@@ -7,6 +7,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useWebSocket } from './useWebSocket';
 import type { WSConnectionState } from '../services/ws';
 
+/** WebSocket 指标数据过期阈值（毫秒）。超过此时间未收到新 tick 则视为数据不可用。 */
+export const REALTIME_STALE_THRESHOLD_MS = 15_000; // 15 秒 = 3 个 tick 周期
+
 /** 实时指标数据 */
 export interface RealtimeMetrics {
   /** 每秒查询数 */
@@ -65,9 +68,15 @@ export function useRealtimeMetrics(): UseRealtimeMetricsReturn {
   const [alerts, setAlerts] = useState<MetricAlert[]>([]);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const alertsRef = useRef(alerts);
+  const staleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 在 effect 中同步 ref，避免 render 中更新
   useEffect(() => { alertsRef.current = alerts; }, [alerts]);
+
+  /** 重置 lastUpdated — 将数据源标记为不可用 */
+  const resetLastUpdated = useCallback(() => {
+    setLastUpdated(null);
+  }, []);
 
   const handleMessage = useCallback((data: unknown) => {
     if (!data || typeof data !== 'object') return;
@@ -87,6 +96,10 @@ export function useRealtimeMetrics(): UseRealtimeMetricsReturn {
         active_connections: Number(tickData.active_connections ?? 0),
       });
       setLastUpdated(Date.now());
+
+      // 重置过期计时器：每次收到新 tick 都重新计时
+      if (staleTimerRef.current) clearTimeout(staleTimerRef.current);
+      staleTimerRef.current = setTimeout(resetLastUpdated, REALTIME_STALE_THRESHOLD_MS);
     }
 
     // 处理 alert 消息
@@ -94,12 +107,30 @@ export function useRealtimeMetrics(): UseRealtimeMetricsReturn {
       const alertData = msg.data as MetricAlert;
       setAlerts((prev) => [alertData, ...prev].slice(0, 50));
     }
-  }, []);
+  }, [resetLastUpdated]);
 
   const { isConnected, connectionState } = useWebSocket('/ws/dashboard', {
     onMessage: handleMessage,
     autoReconnect: true,
   });
+
+  // WebSocket 断开 → 立即将数据源标记为不可用
+  useEffect(() => {
+    if (!isConnected) {
+      resetLastUpdated();
+      if (staleTimerRef.current) {
+        clearTimeout(staleTimerRef.current);
+        staleTimerRef.current = null;
+      }
+    }
+  }, [isConnected, resetLastUpdated]);
+
+  // 组件卸载时清理计时器
+  useEffect(() => {
+    return () => {
+      if (staleTimerRef.current) clearTimeout(staleTimerRef.current);
+    };
+  }, []);
 
   return {
     metrics: metrics ?? DEFAULT_METRICS,
