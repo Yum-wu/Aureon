@@ -61,14 +61,15 @@ function parseSSELine(line: string): { type: string; content?: string; citations
     }
     // Individual citation chunk
     if (event.type === "citation") {
-      return {
-        type: "sources",
-        citations: [{
-          id: event.source?.index || 1,
-          title: event.source?.title || "",
-          snippet: event.source?.chunk || "",
-        }],
+      const src = event.source || {};
+      const citation: Citation = {
+        id: src.index || 1,
+        title: src.title || "",
+        snippet: src.chunk || "",
       };
+      if (src.slug) citation.url = `/search?ref=${src.slug}`;
+      if (typeof src.score === "number") citation.score = src.score;
+      return { type: "sources", citations: [citation] };
     }
     // Cache hit, done, error — pass through
     if (event.type === "cache_hit" || event.type === "done") {

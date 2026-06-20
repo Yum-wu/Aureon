@@ -75,7 +75,10 @@ export function CostGovernance() {
 
   // 导出 CSV
   const handleExport = useCallback(() => {
-    const url = `/api/cost/export?range=${timeRange}&format=csv`;
+    const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
+    const end = new Date().toISOString();
+    const start = new Date(Date.now() - days * 86400000).toISOString();
+    const url = `/api/cost/export?start=${start}&end=${end}&format=csv`;
     import('../services/authFetch').then(({ authFetch }) => {
       authFetch(url).then((r) => {
         if (r.ok) return r.blob();
