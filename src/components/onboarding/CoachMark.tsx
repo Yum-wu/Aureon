@@ -56,20 +56,41 @@ export function CoachMark({
   // 监听目标元素位置
   useEffect(() => {
     const el = document.querySelector(step.anchor);
-    if (!el) return;
 
-    // 滚动到目标元素可见
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-    // 等待滚动完成后计算位置
+    // 等待 DOM 渲染（目标元素可能延迟出现）
     const timer = setTimeout(() => {
-      const rect = el.getBoundingClientRect();
-      setTargetRect(rect);
-      refs.setReference({
-        getBoundingClientRect: () => rect,
-        contextElement: el as Element,
-      });
-    }, 300);
+      const found = document.querySelector(step.anchor);
+      if (found) {
+        found.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // 再等滚动完成后计算位置
+        setTimeout(() => {
+          const rect = found.getBoundingClientRect();
+          setTargetRect(rect);
+          refs.setReference({
+            getBoundingClientRect: () => rect,
+            contextElement: found as Element,
+          });
+        }, 300);
+      } else {
+        // 目标元素不存在（如后端不可用时的错误状态）→ 居中显示卡片
+        const fallback = {
+          top: window.innerHeight * 0.3,
+          left: window.innerWidth * 0.5,
+          width: 0,
+          height: 0,
+          right: window.innerWidth * 0.5,
+          bottom: window.innerHeight * 0.3,
+          x: window.innerWidth * 0.5,
+          y: window.innerHeight * 0.3,
+          toJSON: () => {},
+        } as DOMRect;
+        setTargetRect(fallback);
+        refs.setReference({
+          getBoundingClientRect: () => fallback,
+          contextElement: document.body,
+        });
+      }
+    }, 200);
 
     return () => clearTimeout(timer);
   }, [step.anchor, refs]);
@@ -100,15 +121,16 @@ export function CoachMark({
   if (!targetRect) return null;
 
   const spotlightPadding = 4;
+  const hasSpotlight = targetRect.width > 0;
 
   return createPortal(
     <div className="fixed inset-0 z-[9998]" style={{ pointerEvents: 'auto' }}>
-      {/* 遮罩层 — 使用 clip-path 挖出聚光灯孔 */}
+      {/* 遮罩层 */}
       <div
         className="absolute inset-0"
         style={{
           background: 'rgba(0,0,0,0.72)',
-          clipPath: `polygon(
+          clipPath: hasSpotlight ? `polygon(
             0% 0%, 100% 0%, 100% 100%, 0% 100%,
             0% ${targetRect.top - spotlightPadding}px,
             ${targetRect.left - spotlightPadding}px ${targetRect.top - spotlightPadding}px,
@@ -116,22 +138,24 @@ export function CoachMark({
             ${targetRect.right + spotlightPadding}px ${targetRect.bottom + spotlightPadding}px,
             ${targetRect.right + spotlightPadding}px ${targetRect.top - spotlightPadding}px,
             0% ${targetRect.top - spotlightPadding}px
-          )`,
+          )` : undefined,
         }}
       />
 
-      {/* 聚光灯高亮边框 */}
-      <div
-        className="absolute border-2 rounded-lg pointer-events-none"
-        style={{
-          top: targetRect.top - spotlightPadding,
-          left: targetRect.left - spotlightPadding,
-          width: targetRect.width + spotlightPadding * 2,
+      {/* 聚光灯高亮边框（仅目标元素存在时显示） */}
+      {hasSpotlight && (
+        <div
+          className="absolute border-2 rounded-lg pointer-events-none"
+          style={{
+            top: targetRect.top - spotlightPadding,
+            left: targetRect.left - spotlightPadding,
+            width: targetRect.width + spotlightPadding * 2,
           height: targetRect.height + spotlightPadding * 2,
           borderColor: 'var(--accent-500)',
           boxShadow: '0 0 0 4px rgba(94,106,210,0.2)',
         }}
       />
+      )}
 
       {/* 说明卡 */}
       <div
