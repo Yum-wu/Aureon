@@ -1,10 +1,11 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAnalytics } from '../hooks/useAnalytics';
+import { useViewStore } from '../stores/useViewStore';
 
 const Analytics = () => {
   const { t } = useTranslation();
-  const [timeRange, setTimeRange] = useState('24h');
+  const timeRange = useViewStore((s) => s.analyticsTimeRange);
+  const setAnalyticsTimeRange = useViewStore((s) => s.setAnalyticsTimeRange);
   const { usage, latency, tokens, cache, loading, error, refresh } = useAnalytics(timeRange);
 
   if (loading) {
@@ -65,7 +66,7 @@ const Analytics = () => {
           </button>
           <select
             value={timeRange}
-            onChange={(e) => setTimeRange(e.target.value)}
+            onChange={(e) => setAnalyticsTimeRange(e.target.value as '24h' | '7d' | '30d')}
             className="px-4 py-2 border border-[var(--border)] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="24h">{t('analytics.time_range.24h')}</option>
@@ -76,7 +77,7 @@ const Analytics = () => {
       </div>
 
       {/* Metrics Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div data-onboarding="analytics-overview" className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {/* Latency */}
         <div className="bg-[var(--bg-secondary)] rounded-xl border border-[var(--border)] p-5">
           <div className="text-[var(--text-tertiary)] text-sm mb-2">{t('analytics.avg_latency')}</div>
