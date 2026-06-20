@@ -50,6 +50,12 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
     const step = ONBOARDING_STEPS[currentStep];
     if (!step) return;
 
+    // 被重定向到登录页（受保护路由）→ 跳过当前步骤
+    if (location.pathname === '/login') {
+      setCurrentStep((prev) => prev + 1);
+      return;
+    }
+
     // 如果当前步骤在另一个页面，自动导航
     if (step.page !== location.pathname) {
       navigate(step.page);
@@ -64,19 +70,37 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
     setCurrentStep((prev) => Math.max(0, prev - 1));
   }, []);
 
-  const handleSkip = useCallback(() => {
+  const finishGuide = useCallback(() => {
     setIsActive(false);
     setCurrentStep(-1);
     completeOnboarding();
+    // 双重保险：直接写 localStorage（防止 zustand persist 异步时序问题）
+    try {
+      const key = Object.keys(localStorage).find((k) => k.startsWith('aureon:viewstate:'));
+      if (key) {
+        const data = JSON.parse(localStorage.getItem(key) || '{}');
+        data.state = { ...data.state, onboardingCompleted: true };
+        localStorage.setItem(key, JSON.stringify(data));
+      }
+    } catch { /* silent */ }
+  }, [completeOnboarding]);
+
+  const handleSkip = useCallback(() => {
+    finishGuide();
     toast.info(t('onboarding.toast_skip'));
-  }, [completeOnboarding, t]);
+  }, [finishGuide, t]);
 
   const handleFinish = useCallback(() => {
-    setIsActive(false);
-    setCurrentStep(-1);
-    completeOnboarding();
+    finishGuide();
     toast.success(t('onboarding.toast_finish'));
-  }, [completeOnboarding, t]);
+  }, [finishGuide, t]);
+
+  // 当 currentStep 越界（被跳过或自然走完）→ 自动完成引导
+  useEffect(() => {
+    if (isActive && currentStep >= ONBOARDING_STEPS.length) {
+      handleFinish();
+    }
+  }, [isActive, currentStep, handleFinish]);
 
   const start = useCallback(() => {
     resetOnboarding();
