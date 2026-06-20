@@ -57,8 +57,8 @@ export function Landing() {
           <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-6 max-w-2xl mx-auto">
             {[
               { value: '390+', label: t('landing.trust.tests', { defaultValue: 'Tests' }) },
-              { value: '26', label: t('landing.trust.articles', { defaultValue: 'Articles' }) },
-              { value: '476', label: t('landing.trust.chunks', { defaultValue: 'Chunks Indexed' }) },
+              { value: '99', label: t('landing.trust.articles', { defaultValue: 'Articles' }) },
+              { value: '1214', label: t('landing.trust.chunks', { defaultValue: 'Chunks Indexed' }) },
               { value: '24h', label: t('landing.trust.deploy', { defaultValue: 'Deploy Time' }) },
             ].map((item) => (
               <div key={item.label} className="text-center">
