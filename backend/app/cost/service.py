@@ -123,6 +123,7 @@ class CostService:
                 day = (since + timedelta(days=i)).strftime("%Y-%m-%d")
                 daily_key = _COST_DAILY_KEY.format(tenant_id=tenant_id, date=day)
                 daily_data = await r.hgetall(daily_key)
+                logger.info("cost_agg_read", daily_key=daily_key, has_data=bool(daily_data), data=str(daily_data)[:200] if daily_data else "empty")
                 if not daily_data:
                     trend.append({"date": day, "cost": 0.0, "tokens": 0})
                     continue
