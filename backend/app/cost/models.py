@@ -65,3 +65,4 @@ class CostSummary(BaseModel):
     budget_used_pct: float = Field(0.0, description="Budget 使用百分比")
     budget_total: Optional[float] = Field(None, description="Budget 总额")
     trend_direction: str = Field("stable", description="趋势方向: up/down/stable")
+    data_available: bool = Field(True, description="是否有实际数据（False 表示空数据源）")
