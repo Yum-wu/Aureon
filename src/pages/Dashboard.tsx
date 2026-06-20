@@ -269,8 +269,9 @@ export function Dashboard() {
     e2e_trend: [] as number[],
   } : null;
 
-  // 增强层：WebSocket 实时数据（可选叠加）
-  const realtimeOverlay = hasRealtimeData ? {
+  // 增强层：WebSocket 实时数据（仅当有实际数据时叠加，全零不覆盖 HTTP 基准）
+  const rtHasData = hasRealtimeData && (rtMetrics.qps > 0 || rtMetrics.ttft_p50 > 0 || rtMetrics.token_usage > 0);
+  const realtimeOverlay = rtHasData ? {
     ttft_p50: rtMetrics.ttft_p50,
     ttft_p95: rtMetrics.ttft_p95,
     qps: rtMetrics.qps,
