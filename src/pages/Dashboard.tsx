@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { useDashboardStats } from '../hooks/useDashboardStats';
+import { useDashboardData } from '../hooks/useDashboardData';
 import { useSystemHealth } from '../hooks/useSystemHealth';
 import { useRealtimeMetrics } from '../hooks/useRealtimeMetrics';
 import { useViewStore } from '../stores/useViewStore';
@@ -240,7 +240,7 @@ function PipelineBreakdown({ stages }: { stages: { name: string; ms: number; col
 
 export function Dashboard() {
   const { t } = useTranslation();
-  const { stats, queryVolume, loading, error, refetch } = useDashboardStats();
+  const { stats, queryVolume, isLoading: loading, error, refetch } = useDashboardData();
   const { health } = useSystemHealth();
 
   // 实时指标（通过 useRealtimeMetrics hook，统一 WebSocket 管理）
@@ -256,28 +256,32 @@ export function Dashboard() {
   const setDashboardTimeRange = useViewStore((s) => s.setDashboardTimeRange);
   const hasRealtimeData = rtLastUpdated !== null;
 
-  // 合并实时数据和 API 数据
-  const metrics = (hasRealtimeData && rtMetrics) ? {
+  // 基准层：始终使用 HTTP 轮询数据（兜底）
+  const baseMetrics = stats ? {
+    ttft_p50: stats.avg_retrieval_latency_ms || 0,
+    ttft_p95: 0,
+    qps: Math.round((stats.query_count_24h || 0) / 86400 * 100) / 100,
+    error_rate: 0,
+    saturation: 0,
+    alert_count: 0,
+    latency_trend: [] as number[],
+    tpot_trend: [] as number[],
+    e2e_trend: [] as number[],
+  } : null;
+
+  // 增强层：WebSocket 实时数据（可选叠加）
+  const realtimeOverlay = hasRealtimeData ? {
     ttft_p50: rtMetrics.ttft_p50,
     ttft_p95: rtMetrics.ttft_p95,
     qps: rtMetrics.qps,
     error_rate: rtMetrics.error_rate * 100, // 0-1 → 0-100%
-    saturation: 0,
     alert_count: rtAlerts.length,
-    latency_trend: [] as number[],
-    tpot_trend: [] as number[],
-    e2e_trend: [] as number[],
-  } : (stats ? {
-    ttft_p50: stats.avg_retrieval_latency_ms || 590,
-    ttft_p95: 1677,
-    qps: Math.round((stats.query_count_24h || 0) / 86400 * 100) / 100,
-    error_rate: 0.5,
-    saturation: 65,
-    alert_count: 0,
-    latency_trend: [],
-    tpot_trend: [],
-    e2e_trend: [],
-  } : null);
+  } : null;
+
+  // 融合：增强层覆盖基准层
+  const metrics = baseMetrics
+    ? { ...baseMetrics, ...realtimeOverlay }
+    : null;
 
   // 映射 hook 告警到 AlertMessage 格式
   const alerts: AlertMessage[] = rtAlerts.map((a) => ({
@@ -376,7 +380,7 @@ export function Dashboard() {
         </div>
 
         {loading && <LoadingSkeleton />}
-        {error && !loading && <ErrorState message={error} onRetry={refetch} />}
+        {error && !loading && <ErrorState message={error instanceof Error ? error.message : String(error)} onRetry={refetch} />}
 
         {!loading && !error && (
           <div className="space-y-6">

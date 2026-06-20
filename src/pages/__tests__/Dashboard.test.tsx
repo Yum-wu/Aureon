@@ -61,9 +61,9 @@ vi.mock('../../components/ui/Card', () => ({
 }));
 
 // ── Hooks mock ──
-const mockUseDashboardStats = vi.fn();
-vi.mock('../../hooks/useDashboardStats', () => ({
-  useDashboardStats: () => mockUseDashboardStats(),
+const mockUseDashboardData = vi.fn();
+vi.mock('../../hooks/useDashboardData', () => ({
+  useDashboardData: () => mockUseDashboardData(),
 }));
 
 vi.mock('../../hooks/useSystemHealth', () => ({
@@ -98,11 +98,11 @@ describe('Dashboard', () => {
   });
 
   it('renders loading state', () => {
-    mockUseDashboardStats.mockReturnValue({
+    mockUseDashboardData.mockReturnValue({
       stats: null,
       recentQueries: [],
       queryVolume: [],
-      loading: true,
+      isLoading: true,
       error: null,
       refetch: vi.fn(),
     });
@@ -115,12 +115,12 @@ describe('Dashboard', () => {
   });
 
   it('renders error state', () => {
-    mockUseDashboardStats.mockReturnValue({
+    mockUseDashboardData.mockReturnValue({
       stats: null,
       recentQueries: [],
       queryVolume: [],
-      loading: false,
-      error: 'Network error',
+      isLoading: false,
+      error: new Error('Network error'),
       refetch: vi.fn(),
     });
 
@@ -134,7 +134,7 @@ describe('Dashboard', () => {
   });
 
   it('renders Golden Signals and charts with real data', () => {
-    mockUseDashboardStats.mockReturnValue({
+    mockUseDashboardData.mockReturnValue({
       stats: {
         cache_hit_rate: 0.92,
         query_count_24h: 1234,
@@ -147,7 +147,7 @@ describe('Dashboard', () => {
         { date: '2026-06-17', count: 180 },
         { date: '2026-06-18', count: 210 },
       ],
-      loading: false,
+      isLoading: false,
       error: null,
       refetch: vi.fn(),
     });
@@ -231,7 +231,7 @@ describe('Dashboard', () => {
       return zhMap[key] ?? key;
     };
 
-    mockUseDashboardStats.mockReturnValue({
+    mockUseDashboardData.mockReturnValue({
       stats: {
         cache_hit_rate: 0.92,
         query_count_24h: 1234,
@@ -241,7 +241,7 @@ describe('Dashboard', () => {
       },
       recentQueries: [],
       queryVolume: [],
-      loading: false,
+      isLoading: false,
       error: null,
       refetch: vi.fn(),
     });
@@ -310,7 +310,7 @@ describe('Dashboard', () => {
       return enMap[key] ?? key;
     };
 
-    mockUseDashboardStats.mockReturnValue({
+    mockUseDashboardData.mockReturnValue({
       stats: {
         cache_hit_rate: 0.92,
         query_count_24h: 1234,
@@ -320,7 +320,7 @@ describe('Dashboard', () => {
       },
       recentQueries: [],
       queryVolume: [],
-      loading: false,
+      isLoading: false,
       error: null,
       refetch: vi.fn(),
     });
