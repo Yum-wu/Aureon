@@ -33,6 +33,18 @@ async def get_usage_analytics(
         - Queries per hour
     """
     if not redis:
+        # In-memory fallback (same as /api/rag/stats when Redis is down)
+        from app.api.rag_stats import _mem_count
+        if _mem_count > 0:
+            per_hour = round(_mem_count / 24, 1)
+            return {
+                "timeRange": time_range,
+                "total": _mem_count,
+                "perHour": per_hour,
+                "byIntent": {},
+                "trend": {"change": 0, "period": "vs previous period"},
+                "data_available": True,
+            }
         # PostgreSQL fallback (survives redeployment)
         from app.api.analytics_store import get_usage_from_pg
         pg_data = await get_usage_from_pg(days=_range_to_days(time_range))
@@ -110,6 +122,21 @@ async def get_latency_analytics(
     from statistics import mean, quantiles
 
     if not redis:
+        # In-memory fallback (same as /api/rag/stats when Redis is down)
+        from app.api.rag_stats import _mem_latencies
+        if _mem_latencies:
+            from statistics import mean as _mean
+            avg_lat = round(_mean(_mem_latencies), 1)
+            max_lat = round(max(_mem_latencies), 1)
+            return {
+                "timeRange": time_range,
+                "avg": avg_lat,
+                "p95": max_lat,
+                "p99": max_lat,
+                "breakdown": {"retrieval": 0, "llm_first_token": 0, "llm_generation": 0},
+                "trend": {"avg_change": 0, "period": "vs previous period"},
+                "data_available": True,
+            }
         # PostgreSQL fallback
         from app.api.analytics_store import get_latency_from_pg
         pg_data = await get_latency_from_pg(days=_range_to_days(time_range))
@@ -211,6 +238,20 @@ async def get_token_analytics(
         - Cost per query
     """
     if not redis:
+        # In-memory fallback (same as /api/rag/stats when Redis is down)
+        from app.api.rag_stats import _mem_count
+        if _mem_count > 0:
+            return {
+                "timeRange": time_range,
+                "input": 0,
+                "output": 0,
+                "total": 0,
+                "cost": 0,
+                "costPerQuery": 0,
+                "model": "qwen3.6-flash",
+                "trend": {"input_change": 0, "output_change": 0, "period": "vs previous period"},
+                "data_available": False,
+            }
         # PostgreSQL fallback
         from app.api.analytics_store import get_tokens_from_pg
         pg_data = await get_tokens_from_pg(days=_range_to_days(time_range))
