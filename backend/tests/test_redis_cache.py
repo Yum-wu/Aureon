@@ -148,13 +148,13 @@ async def test_set_cached_redis_exception_graceful():
 # ── get_redis / _get_redis ──
 
 
-def test_get_redis_returns_false_on_import_error():
-    """When redis package is missing, _get_redis returns False sentinel."""
+def test_get_redis_returns_none_on_import_error():
+    """When redis package is missing, _get_redis returns None."""
     redis_client._redis = None
     with patch.dict("sys.modules", {"redis.asyncio": None}):
         result = redis_client._get_redis()
-    # Either False (sentinel) or a valid client
-    assert result is False or result is not None
+    # None = unavailable, or a valid client
+    assert result is None or result is not False
 
 
 def test_get_redis_singleton():
