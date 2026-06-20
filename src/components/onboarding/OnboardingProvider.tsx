@@ -10,6 +10,8 @@ import {
   type ReactNode,
 } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { useViewStore } from '../../stores/useViewStore';
 import { CoachMark } from './CoachMark';
 import { ONBOARDING_STEPS } from './steps';
@@ -20,6 +22,7 @@ interface OnboardingProviderProps {
 }
 
 export function OnboardingProvider({ children }: OnboardingProviderProps) {
+  const { t } = useTranslation();
   const [currentStep, setCurrentStep] = useState(-1);
   const [isActive, setIsActive] = useState(false);
   const location = useLocation();
@@ -65,13 +68,15 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
     setIsActive(false);
     setCurrentStep(-1);
     completeOnboarding();
-  }, [completeOnboarding]);
+    toast.info(t('onboarding.toast_skip'));
+  }, [completeOnboarding, t]);
 
   const handleFinish = useCallback(() => {
     setIsActive(false);
     setCurrentStep(-1);
     completeOnboarding();
-  }, [completeOnboarding]);
+    toast.success(t('onboarding.toast_finish'));
+  }, [completeOnboarding, t]);
 
   const start = useCallback(() => {
     resetOnboarding();

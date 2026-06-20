@@ -715,6 +715,8 @@
     "finish": "Done ✓",
     "step_label": "Step {{current}}/{{total}} · {{title}}",
     "recall_menu": "Restart tour",
+    "toast_skip": "Tour skipped. Reopen via the \"?\" menu anytime.",
+    "toast_finish": "🎉 Tour complete! Explore more features.",
     "steps": {
       "dashboard-overview": {
         "title": "Overview: Live Health Metrics",
