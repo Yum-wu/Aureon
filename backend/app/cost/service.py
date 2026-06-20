@@ -272,13 +272,15 @@ class CostService:
                 elif ratio < 0.9:
                     trend_direction = "down"
 
+        total_tokens = agg.total_input_tokens + agg.total_output_tokens
         return CostSummary(
             total_cost=agg.total_cost,
             burn_rate=agg.burn_rate,
-            total_tokens=agg.total_input_tokens + agg.total_output_tokens,
+            total_tokens=total_tokens,
             budget_used_pct=round(budget_used_pct, 2),
             budget_total=budget_total,
             trend_direction=trend_direction,
+            data_available=agg.total_cost > 0 or total_tokens > 0,
         )
 
     async def export_csv(
