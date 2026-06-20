@@ -103,7 +103,6 @@ def _record_dashboard_metrics(
             from app.cost.service import get_cost_service
             from app.cost.models import TokenUsage
             from app.multi_tenant.middleware import get_current_tenant_id
-            from app.dependencies import get_redis_or_none
 
             cost_service = get_cost_service()
             tenant_id = get_current_tenant_id()
