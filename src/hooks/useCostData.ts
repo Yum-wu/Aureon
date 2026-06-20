@@ -89,7 +89,7 @@ export function useCostData(timeRange: CostTimeRange = '30d'): UseCostDataReturn
         setLoading(true);
         setError(null);
 
-        const res = await authFetch(`/api/cost/summary?range=${timeRange}`);
+        const res = await authFetch(`/api/cost/summary?period=${timeRange}`);
         if (res.status === 401) {
           // 未认证 — 静默降级为演示模式，不显示错误
           if (!cancelled) {

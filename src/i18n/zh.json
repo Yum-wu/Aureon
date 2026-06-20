@@ -211,7 +211,9 @@
       "empty": "暂无活跃告警"
     },
     "demo_mode": "当前显示演示数据，连接实时数据源后自动更新",
-    "demo_data": "演示数据"
+    "demo_data": "演示数据",
+    "connecting": "连接中",
+    "no_data": "暂无数据"
   },
   "search": {
     "title": "企业级 AI 搜索",
@@ -343,6 +345,8 @@
       "empty_desc": "系统活动后审计日志将显示在此处",
       "export_success": "导出成功",
       "export_failed": "导出失败",
+      "date_from": "起始日期",
+      "date_to": "结束日期",
       "columns": {
         "timestamp": "时间",
         "action": "操作",

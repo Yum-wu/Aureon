@@ -55,11 +55,6 @@ interface FeatureFlag {
   rules: string;
 }
 
-interface Permission {
-  key: string;
-  i18nKey: string;
-}
-
 /* ── 角色权限矩阵 ── */
 const ROLES = ['super_admin', 'admin', 'editor', 'viewer'] as const;
 type Role = (typeof ROLES)[number];
@@ -596,18 +591,34 @@ function AuditTab() {
     <div>
       {/* 筛选栏 */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        <input
-          type="date"
-          value={filters.dateFrom}
-          onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value }))}
-          className="px-3 py-1.5 text-xs rounded-lg border border-[var(--border)] bg-[var(--bg-tertiary)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-        />
-        <input
-          type="date"
-          value={filters.dateTo}
-          onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value }))}
-          className="px-3 py-1.5 text-xs rounded-lg border border-[var(--border)] bg-[var(--bg-tertiary)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-        />
+        <div className="relative">
+          <input
+            type="date"
+            value={filters.dateFrom}
+            onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value }))}
+            aria-label={t('admin.audit.date_from')}
+            className="px-3 py-1.5 text-xs rounded-lg border border-[var(--border)] bg-[var(--bg-tertiary)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] [color-scheme:dark]"
+          />
+          {!filters.dateFrom && (
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--text-tertiary)] pointer-events-none">
+              {t('admin.audit.date_from')}
+            </span>
+          )}
+        </div>
+        <div className="relative">
+          <input
+            type="date"
+            value={filters.dateTo}
+            onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value }))}
+            aria-label={t('admin.audit.date_to')}
+            className="px-3 py-1.5 text-xs rounded-lg border border-[var(--border)] bg-[var(--bg-tertiary)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] [color-scheme:dark]"
+          />
+          {!filters.dateTo && (
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--text-tertiary)] pointer-events-none">
+              {t('admin.audit.date_to')}
+            </span>
+          )}
+        </div>
         <input
           type="text"
           placeholder={t('admin.audit.filter_user')}

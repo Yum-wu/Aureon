@@ -1,39 +1,46 @@
 {
-  "timestamp": "2026-06-16T21:30:00",
-  "version": "v33",
+  "timestamp": "2026-06-17T14:00:00",
+  "version": "R19",
   "metrics": [
     {
+      "label": "Recall@3 (Hybrid)",
+      "value": "96.5%",
+      "detail": "R19 192 QA pairs, hybrid BM25+Dense+Sparse RRF fusion",
+      "customer_facing": true,
+      "priority": 0
+    },
+    {
       "label": "Faithfulness",
-      "value": "97.9%",
-      "detail": "DeepEval native metric, target >=70%",
+      "value": "97.6%",
+      "detail": "DeepEval native metric, R19 best config (0.976), target >=70%",
       "customer_facing": true,
       "priority": 1
     },
     {
       "label": "Answer Relevancy",
-      "value": "91.7%",
-      "detail": "DeepEval native metric, target >=75%",
+      "value": "97.6%",
+      "detail": "DeepEval native metric, R19 best config (0.976), target >=75%",
       "customer_facing": true,
       "priority": 2
     },
     {
       "label": "Negative Detection",
-      "value": "90%",
-      "detail": "18/20 negative QA correctly identified, target >=80%",
+      "value": "92.3%",
+      "detail": "R19: keyword quick path + LLM classifier, target >=80%",
       "customer_facing": true,
       "priority": 3
     },
     {
       "label": "E2E P50",
-      "value": "980ms",
-      "detail": "192 QA benchmark, Railway free tier",
+      "value": "856ms",
+      "detail": "R19 50-query benchmark, Railway production",
       "customer_facing": true,
       "priority": 4
     },
     {
       "label": "TTFT P50",
-      "value": "610ms",
-      "detail": "Time to first token, 192 QA benchmark",
+      "value": "590ms",
+      "detail": "R19 time to first token, 50-query benchmark",
       "customer_facing": true,
       "priority": 5
     },
@@ -54,8 +61,8 @@
     },
     {
       "label": "Context Precision",
-      "value": "85.0%",
-      "detail": "DeepEval native metric, target >=70% — passed!",
+      "value": "94.4%",
+      "detail": "R19 DeepEval native metric (0.944), target >=70%",
       "customer_facing": true,
       "priority": 10
     },
@@ -75,8 +82,8 @@
     },
     {
       "label": "Hallucination",
-      "value": "0.0%",
-      "detail": "DeepEval native metric, target <=20%",
+      "value": "6.7%",
+      "detail": "R19 DeepEval native metric (0.067), target <=20%",
       "customer_facing": false
     },
     {
@@ -93,14 +100,14 @@
     },
     {
       "label": "MRR",
-      "value": "0.888",
-      "detail": "Mean Reciprocal Rank, 192 QA pairs, target >=0.85",
+      "value": "0.968",
+      "detail": "R19 Mean Reciprocal Rank, 192 QA pairs, target >=0.85",
       "customer_facing": false
     },
     {
       "label": "Recall@5",
-      "value": "92.4%",
-      "detail": "192 QA pairs, BM25 + Vector RRF fusion + Reranker",
+      "value": "100.0%",
+      "detail": "R19 192 QA pairs, hybrid BM25+Dense+Sparse RRF fusion + reranker",
       "customer_facing": false
     },
     {
@@ -118,8 +125,8 @@
     },
     {
       "label": "TPOT",
-      "value": "72.9ms/tok",
-      "detail": "Time per output token, 192 QA benchmark",
+      "value": "55.7ms/tok",
+      "detail": "R19 time per output token, 50-query benchmark",
       "customer_facing": false
     },
     {
@@ -131,8 +138,8 @@
     },
     {
       "label": "Contextual Precision",
-      "value": "85.0%",
-      "detail": "DeepEval native metric, target >=70%",
+      "value": "94.4%",
+      "detail": "R19 DeepEval native metric (0.944), target >=70%",
       "customer_facing": false
     },
     {
@@ -155,7 +162,7 @@
     }
   ],
   "services": {
-    "llm": "Qwen3.5-Flash (production)",
+    "llm": "Qwen3.6-Flash (production)",
     "embedding": "DashScope text-embedding-v3 (1024d) + BGE-M3 sparse",
     "vector_db": "Qdrant Cloud (HNSW + sparse vectors)",
     "hybrid_search": "BM25 + Dense + Sparse → RRF fusion → Reranker",

@@ -302,9 +302,10 @@ async def _stream_rag_response(
 
     except Exception as e:
         logger.error("Error streaming response: %s", e, exc_info=True)
+        error_detail = str(e)[:200] if str(e) else "An error occurred while generating the response."
         await manager.send_json(client_id, {
             "type": "error",
-            "message": "An error occurred while generating the response.",
+            "message": error_detail,
         })
 
 

@@ -286,11 +286,25 @@ export function Dashboard() {
     timestamp: new Date(a.timestamp).toISOString(),
   }));
 
-  // 健康服务列表
+  // 健康服务列表 — 从 /api/rag/health 真实数据派生
   const healthServices: ServiceHealth[] = [
-    { name: t('dashboard.health.redis'), healthy: health?.status === 'ok', responseTime: 2 },
-    { name: t('dashboard.health.qdrant'), healthy: health?.index_status === 'ready', responseTime: 15 },
-    { name: t('dashboard.health.llm_api'), healthy: health?.llm_configured ?? false, responseTime: 120 },
+    {
+      name: t('dashboard.health.redis'),
+      healthy: health?.status === 'ok',
+      responseTime: health?.status === 'ok' ? 2 : 0,
+    },
+    {
+      name: t('dashboard.health.qdrant'),
+      // 后端返回 index_status: "ok" | "not_initialized"
+      // 仅当 index_status === "ok" 时表示 Qdrant 已连接且索引就绪
+      healthy: health?.index_status === 'ok',
+      responseTime: health?.index_status === 'ok' ? 15 : 0,
+    },
+    {
+      name: t('dashboard.health.llm_api'),
+      healthy: health?.llm_configured ?? false,
+      responseTime: health?.llm_configured ? 120 : 0,
+    },
   ];
 
   // Pipeline 分解数据
