@@ -707,5 +707,31 @@
     },
     "demo_mode": "Currently showing demo data. Will auto-update when connected to a live data source.",
     "export_failed": "Export failed"
+  },
+  "onboarding": {
+    "skip": "Skip",
+    "next": "Next →",
+    "back": "← Back",
+    "finish": "Done ✓",
+    "step_label": "Step {{current}}/{{total}} · {{title}}",
+    "recall_menu": "Restart tour",
+    "steps": {
+      "dashboard-overview": {
+        "title": "Overview: Live Health Metrics",
+        "description": "This is your system's command center. Latency, traffic, errors, and saturation — the four Golden Signals — at a glance. Green means healthy, red means attention needed."
+      },
+      "dashboard-pipeline": {
+        "title": "Attribution: Where's the latency?",
+        "description": "The pipeline breakdown shows time spent at each stage (retrieval → reranking → CRAG → generation). Spot bottlenecks instantly."
+      },
+      "search-execute": {
+        "title": "Execute: Start searching",
+        "description": "Type a question in the search box. The system auto-routes to the best retrieval strategy (simple/medium/complex) and returns answers with source citations."
+      },
+      "analytics-insight": {
+        "title": "Insight: Usage & costs",
+        "description": "Analytics tracks query volume, latency distribution, and token consumption. The Cost page goes further with budget execution rate and per-user breakdown."
+      }
+    }
   }
 }

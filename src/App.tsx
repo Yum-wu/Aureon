@@ -6,6 +6,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Toaster } from "sonner";
 import { LanguageSwitcher } from "./i18n/LanguageSwitcher";
 import { AuthProvider } from "./hooks/AuthProvider";
+import { OnboardingProvider } from "./components/onboarding/OnboardingProvider";
 import { useAuth } from "./hooks/AuthContext";
 import { AdminGate } from "./components/AdminGate";
 import { useUIStore } from "./stores/useUIStore";
@@ -243,7 +244,9 @@ function App() {
       <Toaster theme="dark" position="top-center" richColors closeButton />
       <BrowserRouter>
         <AuthProvider>
-          <AppLayout />
+          <OnboardingProvider>
+            <AppLayout />
+          </OnboardingProvider>
         </AuthProvider>
       </BrowserRouter>
     </ErrorBoundary>
