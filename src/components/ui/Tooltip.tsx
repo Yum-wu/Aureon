@@ -51,6 +51,7 @@ export function Tooltip({ content, children, placement = 'top' }: TooltipProps) 
           elements.floating.style.maxWidth = `${maxWidth}px`;
         },
       }),
+      // eslint-disable-next-line react-hooks/refs -- Floating UI callback ref pattern
       arrow({ element: arrowRef }),
     ],
     whileElementsMounted: autoUpdate,
@@ -91,7 +92,7 @@ export function Tooltip({ content, children, placement = 'top' }: TooltipProps) 
       {open &&
         createPortal(
           <div
-            ref={refs.setFloating}
+            ref={refs.setFloating} // eslint-disable-line react-hooks/refs -- Floating UI callback ref
             role="tooltip"
             className="z-[9999] px-3 py-2 text-sm font-medium rounded-lg leading-snug"
             style={{

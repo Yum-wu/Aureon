@@ -51,7 +51,7 @@ function AppLayout() {
   const setMobileMenuOpen = useUIStore(s => s.setMobileMenuOpen);
 
   // 路由变化时关闭移动端菜单
-  useEffect(() => { setMobileMenuOpen(false); }, [location.pathname]);
+  useEffect(() => { setMobileMenuOpen(false); }, [location.pathname, setMobileMenuOpen]);
 
   const navGroups = useMemo(() => [
     {
