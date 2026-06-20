@@ -37,11 +37,21 @@ interface DashboardData {
   refetch: () => void;
 }
 
+/** 空 StatsResponse 占位（避免加载闪烁） */
+const EMPTY_STATS: StatsResponse = {
+  cache_hit_rate: 0,
+  query_count_24h: 0,
+  avg_retrieval_latency_ms: 0,
+  total_indexed_docs: 0,
+  total_chunks: 0,
+};
+
 /**
- * 获取 Dashboard 统计数据
+ * 获取 Dashboard 绽计数据
  * 使用 TanStack Query 管理请求生命周期：
- * - staleTime: 20s（20 秒内切换页面不重新请求）
- * - refetchInterval: 30s（轮询替代原 setTimeout 递归）
+ * - staleTime: 10s（10 秒内切换页面不重新请求）
+ * - refetchInterval: 15s（轮询替代原 setTimeout 递归）
+ * - placeholderData: 避免加载闪烁
  */
 export function useDashboardData(): DashboardData {
   const statsQuery = useQuery<StatsResponse>({
@@ -54,8 +64,9 @@ export function useDashboardData(): DashboardData {
       }
       return res.json();
     },
-    staleTime: 20_000,
-    refetchInterval: 30_000,
+    staleTime: 10_000,
+    refetchInterval: 15_000,
+    placeholderData: EMPTY_STATS,
   });
 
   const recentQuery = useQuery<{ queries: RecentQuery[] }>({
@@ -68,8 +79,9 @@ export function useDashboardData(): DashboardData {
       }
       return res.json();
     },
-    staleTime: 20_000,
-    refetchInterval: 30_000,
+    staleTime: 10_000,
+    refetchInterval: 15_000,
+    placeholderData: { queries: [] },
   });
 
   const volumeQuery = useQuery<{ data: QueryVolumePoint[] }>({
@@ -79,8 +91,9 @@ export function useDashboardData(): DashboardData {
       if (!res.ok) return { data: [] };
       return res.json();
     },
-    staleTime: 20_000,
-    refetchInterval: 30_000,
+    staleTime: 10_000,
+    refetchInterval: 15_000,
+    placeholderData: { data: [] },
   });
 
   const isLoading = statsQuery.isLoading || recentQuery.isLoading || volumeQuery.isLoading;

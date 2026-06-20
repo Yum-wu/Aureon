@@ -281,6 +281,9 @@ def rag_query(
     if lang is None:
         lang = detect_language(query)
 
+    _t0 = time.time()
+    _pipeline_stages: dict[str, float] = {}
+
     # 1. Hybrid retrieval: BM25 keyword + vector search, RRF fusion
     #    HyDE only for medium/complex queries (skip for simple to save latency)
     from app.rag.query_classifier import route_retrieval
@@ -384,11 +387,24 @@ def rag_query(
             sources=[],
         )
 
+    # 记录检索阶段耗时（含 rerank）
+    _pipeline_stages["retrieval_ms"] = round((time.time() - _t0) * 1000, 1)
+
     # 2. Format context
     context = format_context(chunks)
 
     # 3. Generate
+    _t_gen = time.time()
     answer = generate_answer(query, context, llm_call_fn, lang=lang)
+    _pipeline_stages["generation_ms"] = round((time.time() - _t_gen) * 1000, 1)
+
+    # 记录流水线阶段延迟到 metrics collector
+    try:
+        from app.observability.metrics_collector import set_latest_pipeline
+        from app.multi_tenant.middleware import get_current_tenant_id
+        set_latest_pipeline(get_current_tenant_id(), _pipeline_stages)
+    except Exception:
+        pass
 
     # 轻量级生成质量反馈
     top_score = max(c.get("score", 0) for c in chunks) if chunks else 0

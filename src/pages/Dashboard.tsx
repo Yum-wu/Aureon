@@ -313,14 +313,12 @@ export function Dashboard() {
     },
   ];
 
-  // Pipeline 分解数据
-  // TODO: 等待后端 API 提供 pipeline 延迟数据
-  const pipelineStages = [
-    { name: t('dashboard.pipeline.retrieval'), ms: 85, color: '#5E6AD2' },
-    { name: t('dashboard.pipeline.rerank'), ms: 120, color: '#818CF8' },
-    { name: t('dashboard.pipeline.crag'), ms: 50, color: '#22C55E' },
-    { name: t('dashboard.pipeline.generation'), ms: 350, color: '#EAB308' },
-  ];
+  // Pipeline 分解数据（优先使用 WebSocket 实时数据，无数据时展示占位）
+  const hasPipelineData = rtMetrics.pipeline && (rtMetrics.pipeline.retrieval_ms ?? 0) > 0;
+  const pipelineStages = hasPipelineData ? [
+    { name: t('dashboard.pipeline.retrieval'), ms: rtMetrics.pipeline.retrieval_ms ?? 0, color: '#5E6AD2' },
+    { name: t('dashboard.pipeline.generation'), ms: rtMetrics.pipeline.generation_ms ?? 0, color: '#EAB308' },
+  ] : [];
 
   // 查询量柱状图数据（过滤无效值，防止 Nivo 生成 d="null" SVG 路径导致浏览器崩溃）
   const queryVolumeChartData = (queryVolume || [])
@@ -480,11 +478,14 @@ export function Dashboard() {
                   <h3 className="text-sm font-semibold text-[var(--text-primary)]">
                     {t('dashboard.pipeline.title')}
                   </h3>
-                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-400">
-                    {t('dashboard.demo_data')}
-                  </span>
                 </div>
-                <PipelineBreakdown stages={pipelineStages} />
+                {pipelineStages.length > 0 ? (
+                  <PipelineBreakdown stages={pipelineStages} />
+                ) : (
+                  <div className="flex items-center justify-center h-[100px] text-[var(--text-tertiary)] text-sm">
+                    {t('dashboard.no_data', '暂无数据')}
+                  </div>
+                )}
               </Card>
               {qualityChartData.some(s => s.data.length > 0) ? (
                 <LineChart data={qualityChartData} title={t('dashboard.charts.quality_trend')} />
