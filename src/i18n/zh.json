@@ -715,6 +715,8 @@
     "finish": "完成 ✓",
     "step_label": "步骤 {{current}}/{{total}} · {{title}}",
     "recall_menu": "重新查看引导",
+    "toast_skip": "引导已跳过，可通过顶部「?」菜单重新查看",
+    "toast_finish": "🎉 引导完成！探索更多功能吧",
     "steps": {
       "dashboard-overview": {
         "title": "总览：实时健康指标",

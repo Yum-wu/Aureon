@@ -44,10 +44,10 @@ export function CoachMark({
 
   // 定位说明卡
   const { refs, floatingStyles } = useFloating({
-    placement: 'bottom',
+    placement: 'top',
     middleware: [
       offset(12),
-      flip({ fallbackPlacements: ['top', 'right', 'left'], padding: 8 }),
+      flip({ fallbackPlacements: ['bottom', 'right', 'left'], padding: 8 }),
       shift({ padding: 8 }),
     ],
     whileElementsMounted: autoUpdate,
