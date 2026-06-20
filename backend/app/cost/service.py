@@ -32,20 +32,21 @@ _instance: Optional["CostService"] = None
 class CostService:
     """成本聚合与查询服务。"""
 
-    def __init__(self) -> None:
-        self._redis = None
-
     def _get_redis(self):
-        """懒加载 Redis 客户端。"""
-        if self._redis is not None:
-            return self._redis if self._redis is not False else None
+        """获取 Redis 客户端（每次调用都检查，支持冷启动后重连）。
+
+        直接使用 redis_client 的单例，它内置了失败重试机制。
+        不缓存结果，避免冷启动时缓存 False 后永不重连。
+        """
         try:
             from app.cache.redis_client import get_redis
-            self._redis = get_redis()
+            client = get_redis()
+            if client is None or client is False:
+                return None
+            return client
         except Exception as exc:
             logger.warning("cost_service_redis_unavailable", error=str(exc))
-            self._redis = False
-        return self._redis if self._redis and self._redis is not False else None
+            return None
 
     async def record_usage(self, usage: TokenUsage) -> None:
         """记录一次 Token 使用。
