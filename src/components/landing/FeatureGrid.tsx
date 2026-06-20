@@ -26,7 +26,7 @@ export function FeatureGrid() {
     `${fmtVal(ttftVal, '~310ms')} TTFT`,
     '100% detection',
     '192 QA pairs',
-    '26 articles / 191 chunks',
+    '99 articles / 1214 chunks',
     `${fmtVal(latencyVal, '156ms')} latency`,
   ];
 
