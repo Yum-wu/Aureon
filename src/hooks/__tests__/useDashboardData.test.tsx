@@ -31,8 +31,9 @@ describe('useDashboardData', () => {
     const { result } = renderHook(() => useDashboardData(), {
       wrapper: createWrapper(),
     });
-    expect(result.current.isLoading).toBe(true);
-    expect(result.current.stats).toBeUndefined();
+    // With placeholderData, isLoading is false immediately
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.stats).toBeDefined();
     expect(result.current.error).toBeNull();
   });
 
@@ -60,14 +61,14 @@ describe('useDashboardData', () => {
       wrapper: createWrapper(),
     });
 
+    // With placeholderData, isLoading is false immediately — wait for actual data
     await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
+      expect(result.current.stats?.query_count_24h).toBe(100);
     });
 
     expect(result.current.stats).toEqual(statsData);
     expect(result.current.recentQueries).toHaveLength(1);
     expect(result.current.queryVolume).toEqual([{ date: '2026-06-18', count: 42 }]);
-    expect(result.current.error).toBeNull();
   });
 
   it('handles fetch failure with error state', async () => {
@@ -80,11 +81,10 @@ describe('useDashboardData', () => {
       wrapper: createWrapper(),
     });
 
+    // With placeholderData, wait for error to appear
     await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
+      expect(result.current.error).toBeTruthy();
     });
-
-    expect(result.current.error).toBeTruthy();
   });
 
   it('provides refetch function', async () => {

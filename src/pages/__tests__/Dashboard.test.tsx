@@ -172,15 +172,11 @@ describe('Dashboard', () => {
     expect(screen.getByText('dashboard.charts.query_volume')).toBeInTheDocument();
     // latency trend has no data (fallback empty arrays), so empty state is shown
     expect(screen.queryByText('dashboard.charts.latency_trend')).not.toBeInTheDocument();
-    // 至少有 2 个空状态占位（latency 趋势 + 质量趋势）
-    expect(screen.getAllByText('dashboard.no_data').length).toBeGreaterThanOrEqual(2);
+    // 空状态占位（latency 趋势 + 质量趋势 + pipeline）
+    expect(screen.getAllByText('dashboard.no_data').length).toBeGreaterThanOrEqual(3);
 
-    // Pipeline section
+    // Pipeline section — shows "暂无数据" when no real pipeline data available
     expect(screen.getByText('dashboard.pipeline.title')).toBeInTheDocument();
-    expect(screen.getByText('dashboard.pipeline.retrieval')).toBeInTheDocument();
-    expect(screen.getByText('dashboard.pipeline.rerank')).toBeInTheDocument();
-    expect(screen.getByText('dashboard.pipeline.crag')).toBeInTheDocument();
-    expect(screen.getByText('dashboard.pipeline.generation')).toBeInTheDocument();
 
     // Health section
     expect(screen.getByText('dashboard.system_health')).toBeInTheDocument();
@@ -264,10 +260,7 @@ describe('Dashboard', () => {
     // 至少有 2 个空状态占位（latency 趋势 + 质量趋势 + 查询量）
     expect(screen.getAllByText('暂无数据').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('RAG Pipeline')).toBeInTheDocument();
-    expect(screen.getByText('检索')).toBeInTheDocument();
-    expect(screen.getByText('重排序')).toBeInTheDocument();
-    expect(screen.getByText('CRAG')).toBeInTheDocument();
-    expect(screen.getByText('生成')).toBeInTheDocument();
+    // Pipeline stages not shown when no real data (shows "暂无数据" instead)
     expect(screen.getByText('系统健康')).toBeInTheDocument();
     expect(screen.getByText('暂无告警')).toBeInTheDocument();
   });
@@ -343,10 +336,7 @@ describe('Dashboard', () => {
     // 至少有 2 个空状态占位（latency 趋势 + 质量趋势 + 查询量）
     expect(screen.getAllByText('No data').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('RAG Pipeline')).toBeInTheDocument();
-    expect(screen.getByText('Retrieval')).toBeInTheDocument();
-    expect(screen.getByText('Rerank')).toBeInTheDocument();
-    expect(screen.getByText('CRAG')).toBeInTheDocument();
-    expect(screen.getByText('Generation')).toBeInTheDocument();
+    // Pipeline stages not shown when no real data
     expect(screen.getByText('System Health')).toBeInTheDocument();
     expect(screen.getByText('No alerts')).toBeInTheDocument();
   });

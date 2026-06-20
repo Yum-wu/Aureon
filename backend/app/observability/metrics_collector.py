@@ -30,6 +30,9 @@ _TTL_RAW = 7 * 86400       # 7 天
 _TTL_HOURLY = 30 * 86400   # 30 天
 _TTL_DAILY = 90 * 86400    # 90 天
 
+# ── 最新流水线阶段延迟（模块级，供 WebSocket tick 读取） ──
+_latest_pipeline: dict[str, dict[str, float]] = {}  # tenant_id -> {stage: ms}
+
 # ── 单例 ──
 _instance: Optional["MetricsCollector"] = None
 
@@ -62,6 +65,7 @@ class MetricsCollector:
         model: str,
         cache_hit: bool = False,
         error: bool = False,
+        pipeline_stages: dict[str, float] | None = None,
     ) -> None:
         """记录单次查询指标，在 RAG 查询完成后调用。
 
@@ -74,6 +78,7 @@ class MetricsCollector:
             model: 使用的 LLM 模型名
             cache_hit: 是否命中缓存
             error: 是否发生错误
+            pipeline_stages: 流水线各阶段延迟 {"retrieval_ms": 85, "rerank_ms": 120, ...}
         """
         r = self._get_redis()
         if r is None:
@@ -93,6 +98,8 @@ class MetricsCollector:
             "error": error,
             "ts": now,
         }
+        if pipeline_stages:
+            entry["pipeline"] = pipeline_stages
 
         try:
             # 写入时间序列 sorted set（score=timestamp）
@@ -149,10 +156,13 @@ class MetricsCollector:
             five_min_ago = now - 300
             raw_entries = await r.zrangebyscore(ts_key, five_min_ago, now)
             ttft_list: list[float] = []
+            latest_pipeline: dict[str, float] = {}
             for raw in raw_entries:
                 try:
                     entry = json.loads(raw)
                     ttft_list.append(entry["ttft_ms"])
+                    if "pipeline" in entry:
+                        latest_pipeline = entry["pipeline"]
                 except (json.JSONDecodeError, KeyError):
                     continue
 
@@ -177,6 +187,7 @@ class MetricsCollector:
                 "token_usage": int(tokens_in + tokens_out),
                 "active_connections": active_connections,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
+                "pipeline": _latest_pipeline.get(tenant_id, latest_pipeline) or {},
             }
         except Exception as exc:
             logger.warning("metrics_get_current_failed", tenant_id=tenant_id, error=str(exc))
@@ -255,6 +266,11 @@ class MetricsCollector:
             return dashboard_manager.active_count()
         except ImportError:
             return 0
+
+
+def set_latest_pipeline(tenant_id: str, stages: dict[str, float]) -> None:
+    """更新最新流水线阶段延迟（由 RAG 查询流程调用）。"""
+    _latest_pipeline[tenant_id] = stages
 
 
 def _empty_metrics() -> dict[str, Any]:

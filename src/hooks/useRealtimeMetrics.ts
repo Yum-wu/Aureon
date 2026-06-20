@@ -10,6 +10,14 @@ import type { WSConnectionState } from '../services/ws';
 /** WebSocket 指标数据过期阈值（毫秒）。超过此时间未收到新 tick 则视为数据不可用。 */
 export const REALTIME_STALE_THRESHOLD_MS = 15_000; // 15 秒 = 3 个 tick 周期
 
+/** 流水线阶段延迟 */
+export interface PipelineStages {
+  retrieval_ms?: number;
+  rerank_ms?: number;
+  crag_ms?: number;
+  generation_ms?: number;
+}
+
 /** 实时指标数据 */
 export interface RealtimeMetrics {
   /** 每秒查询数 */
@@ -28,6 +36,8 @@ export interface RealtimeMetrics {
   token_usage: number;
   /** 活跃连接数 */
   active_connections: number;
+  /** 流水线阶段延迟 */
+  pipeline: PipelineStages;
 }
 
 /** 告警信息 */
@@ -61,6 +71,7 @@ const DEFAULT_METRICS: RealtimeMetrics = {
   cache_hit_rate: 0,
   token_usage: 0,
   active_connections: 0,
+  pipeline: {},
 };
 
 export function useRealtimeMetrics(): UseRealtimeMetricsReturn {
@@ -85,6 +96,7 @@ export function useRealtimeMetrics(): UseRealtimeMetricsReturn {
     // 处理 metrics.tick 消息
     if (msg.type === 'metrics.tick' && msg.data) {
       const tickData = msg.data as Record<string, unknown>;
+      const rawPipeline = tickData.pipeline as Record<string, number> | undefined;
       setMetrics({
         qps: Number(tickData.qps ?? 0),
         ttft_p50: Number(tickData.ttft_p50 ?? 0),
@@ -94,6 +106,12 @@ export function useRealtimeMetrics(): UseRealtimeMetricsReturn {
         cache_hit_rate: Number(tickData.cache_hit_rate ?? 0),
         token_usage: Number(tickData.token_usage ?? 0),
         active_connections: Number(tickData.active_connections ?? 0),
+        pipeline: rawPipeline ? {
+          retrieval_ms: rawPipeline.retrieval_ms,
+          rerank_ms: rawPipeline.rerank_ms,
+          crag_ms: rawPipeline.crag_ms,
+          generation_ms: rawPipeline.generation_ms,
+        } : {},
       });
       setLastUpdated(Date.now());
 
