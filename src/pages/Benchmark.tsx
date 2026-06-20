@@ -53,7 +53,7 @@ const Benchmark = () => {
         {customerMetrics.map((m, i) => (
           <div key={m.label} className={`bg-gradient-to-br ${HERO_COLORS[i % HERO_COLORS.length]} rounded-xl p-5 text-white shadow-lg`}>
             <div className="text-3xl font-bold">{m.value}</div>
-            <div className="text-sm opacity-90 mt-1">
+            <div className="text-sm mt-1">
               {m.label}
               {m.status === 'optimizing' && (
                 <span className="ml-2 text-xs bg-white/20 px-2 py-0.5 rounded-full">优化中</span>
@@ -83,7 +83,7 @@ const Benchmark = () => {
               )}
               <div className={`${colorMap[item.color]} px-4 py-3 rounded-lg border-2 ${borderMap[item.color]}`}>
                 <div className="font-semibold">{item.name}</div>
-                <div className="text-xs opacity-75">{item.detail}</div>
+                <div className="text-xs text-[var(--text-tertiary)]">{item.detail}</div>
               </div>
             </div>
           ))}
@@ -92,7 +92,7 @@ const Benchmark = () => {
           {[{ name: t('benchmark.document_input'), detail: 'PDF / MD / TXT', color: 'blue' }, { name: 'BGE-M3 Embedding', detail: '1024d dense + sparse', color: 'purple' }, { name: 'Qdrant Cloud', detail: t('benchmark.vector_database'), color: 'cyan' }, { name: 'Hybrid Search', detail: 'BM25 + Dense + Reranker', color: 'green' }, { name: 'LLM', detail: benchmark?.services?.llm || 'LLM', color: 'amber' }, { name: 'SSE Streaming', detail: t('benchmark.realtime_output'), color: 'rose' }].map((item, i) => (
             <div key={i} className={`${colorMap[item.color]} px-4 py-3 rounded-lg border-2 ${borderMap[item.color]}`}>
               <div className="font-semibold">{item.name}</div>
-              <div className="text-xs opacity-75">{item.detail}</div>
+              <div className="text-xs text-[var(--text-tertiary)]">{item.detail}</div>
             </div>
           ))}
         </div>
