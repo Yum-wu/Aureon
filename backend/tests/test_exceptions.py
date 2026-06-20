@@ -12,11 +12,13 @@ from httpx import AsyncClient, ASGITransport
 
 from app.main import app
 from app.dependencies import get_redis_or_none
+from app.api.rag_stats import reset_mem_stats
 
 
 @pytest.fixture(autouse=True)
 def _clear_overrides():
-    """Clear dependency overrides after each test."""
+    """Clear dependency overrides and reset in-memory stats after each test."""
+    reset_mem_stats()
     yield
     app.dependency_overrides.clear()
 
