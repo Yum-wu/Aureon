@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 
 // Mock i18n
@@ -77,26 +77,30 @@ describe('Page Scroll Behavior', () => {
   });
 
   describe('Admin Page', () => {
-    it('should render without crashing', () => {
+    it('should render without crashing', async () => {
       const { container } = render(
         <BrowserRouter>
           <Admin />
         </BrowserRouter>
       );
 
-      // Admin 页面成功渲染
-      expect(container.querySelector('[data-testid="admin-layout"]')).toBeInTheDocument();
+      // 等待 OverviewTab 异步数据加载完成
+      await waitFor(() => {
+        expect(container.querySelector('[data-testid="admin-layout"]')).toBeInTheDocument();
+      });
     });
 
-    it('should have admin layout structure', () => {
+    it('should have admin layout structure', async () => {
       const { container } = render(
         <BrowserRouter>
           <Admin />
         </BrowserRouter>
       );
 
-      // Admin 使用 AdminLayout 组件
-      expect(container.querySelector('[data-testid="admin-layout"]')).toBeTruthy();
+      // 等待 OverviewTab 异步数据加载完成
+      await waitFor(() => {
+        expect(container.querySelector('[data-testid="admin-layout"]')).toBeTruthy();
+      });
     });
   });
 });
