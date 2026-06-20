@@ -44,6 +44,13 @@ _mem_count: int = 0
 _mem_latencies: list[float] = []
 _MEM_MAX = 100
 
+def reset_mem_stats() -> None:
+    """Reset in-memory fallback counters. Called in test fixtures to isolate tests."""
+    global _mem_queries, _mem_count, _mem_latencies
+    _mem_queries = []
+    _mem_count = 0
+    _mem_latencies = []
+
 
 async def record_query(
     query: str,
