@@ -42,6 +42,7 @@ async def get_usage_analytics(
             "perHour": pg_data["perHour"],
             "byIntent": pg_data["byIntent"],
             "trend": {"change": 0, "period": "vs previous period"},
+            "data_available": pg_data["total"] > 0,
         }
 
     try:
@@ -59,6 +60,7 @@ async def get_usage_analytics(
                     "perHour": pg_data["perHour"],
                     "byIntent": pg_data["byIntent"],
                     "trend": {"change": 0, "period": "vs previous period"},
+                    "data_available": True,
                 }
 
         # 按意图分类
@@ -78,6 +80,7 @@ async def get_usage_analytics(
                 "change": 0,  # 待实现：对比前一天数据
                 "period": "vs previous period",
             },
+            "data_available": total > 0,
         }
     except Exception as e:
         logger.error(f"Error fetching usage analytics: {e}")
@@ -87,6 +90,7 @@ async def get_usage_analytics(
             "perHour": 0,
             "byIntent": {},
             "trend": {"change": 0, "period": "vs previous period"},
+            "data_available": False,
         }
 
 
@@ -120,6 +124,7 @@ async def get_latency_analytics(
                 "llm_generation": 0,
             },
             "trend": {"avg_change": 0, "period": "vs previous period"},
+            "data_available": pg_data["avg"] > 0,
         }
 
     try:
@@ -147,6 +152,7 @@ async def get_latency_analytics(
                     "p99": pg_data["p99"],
                     "breakdown": {"retrieval": 0, "llm_first_token": 0, "llm_generation": 0},
                     "trend": {"avg_change": 0, "period": "vs previous period"},
+                    "data_available": True,
                 }
             return {
                 "timeRange": time_range,
@@ -155,6 +161,7 @@ async def get_latency_analytics(
                 "p99": 0,
                 "breakdown": {"retrieval": 0, "llm_first_token": 0, "llm_generation": 0},
                 "trend": {"avg_change": 0, "period": "vs previous period"},
+                "data_available": False,
             }
 
         avg_lat = round(mean(latencies), 1)
@@ -175,6 +182,7 @@ async def get_latency_analytics(
                 "avg_change": 0,
                 "period": "vs previous period",
             },
+            "data_available": True,
         }
     except Exception as e:
         logger.error(f"Error fetching latency analytics: {e}")
@@ -185,6 +193,7 @@ async def get_latency_analytics(
             "p99": 0,
             "breakdown": {"retrieval": 0, "llm_first_token": 0, "llm_generation": 0},
             "trend": {"avg_change": 0, "period": "vs previous period"},
+            "data_available": False,
         }
 
 
@@ -214,6 +223,7 @@ async def get_token_analytics(
             "costPerQuery": pg_data["costPerQuery"],
             "model": "qwen3.6-flash",
             "trend": {"input_change": 0, "output_change": 0, "period": "vs previous period"},
+            "data_available": pg_data["total"] > 0,
         }
 
     try:
@@ -239,6 +249,7 @@ async def get_token_analytics(
                     "costPerQuery": pg_data["costPerQuery"],
                     "model": "qwen3.6-flash",
                     "trend": {"input_change": 0, "output_change": 0, "period": "vs previous period"},
+                    "data_available": True,
                 }
 
         # GPT-4o-mini 定价：$0.15/1M input, $0.60/1M output
@@ -263,6 +274,7 @@ async def get_token_analytics(
                 "output_change": 0,
                 "period": "vs previous period",
             },
+            "data_available": (input_tokens + output_tokens) > 0,
         }
     except Exception as e:
         logger.error(f"Error fetching token analytics: {e}")
@@ -275,6 +287,7 @@ async def get_token_analytics(
             "costPerQuery": 0,
             "model": "gpt-4o-mini",
             "trend": {"input_change": 0, "output_change": 0, "period": "vs previous period"},
+            "data_available": False,
         }
 
 
@@ -294,6 +307,7 @@ async def get_cache_analytics(redis=Depends(get_redis_or_none)):
             "saves": 0,
             "latencyReduction": 0,
             "memoryUsage": "0MB",
+            "data_available": False,
         }
 
     try:
@@ -316,6 +330,7 @@ async def get_cache_analytics(redis=Depends(get_redis_or_none)):
             "saves": cache_hits,
             "latencyReduction": 0,
             "memoryUsage": memory_usage,
+            "data_available": hit_rate > 0,
         }
     except Exception as e:
         logger.error(f"Error fetching cache analytics: {e}")
@@ -324,4 +339,5 @@ async def get_cache_analytics(redis=Depends(get_redis_or_none)):
             "saves": 0,
             "latencyReduction": 0,
             "memoryUsage": "0MB",
+            "data_available": False,
         }
