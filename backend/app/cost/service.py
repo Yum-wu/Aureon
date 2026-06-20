@@ -49,13 +49,14 @@ class CostService:
             return None
 
     async def record_usage(self, usage: TokenUsage) -> None:
-        """记录一次 Token 使用。
+        """记录一次 Token 使用（直接 Redis 命令，避免 pipeline 挂起）。
 
         Args:
             usage: TokenUsage 实例
         """
         r = self._get_redis()
         if r is None:
+            logger.warning("cost_record_no_redis", tenant_id=usage.tenant_id)
             return
 
         now = time.time()
@@ -63,7 +64,7 @@ class CostService:
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         daily_key = _COST_DAILY_KEY.format(tenant_id=usage.tenant_id, date=today)
 
-        entry = {
+        entry = json.dumps({
             "model": usage.model,
             "input_tokens": usage.input_tokens,
             "output_tokens": usage.output_tokens,
@@ -71,30 +72,22 @@ class CostService:
             "workspace_id": usage.workspace_id or "",
             "user_id": usage.user_id or "",
             "ts": now,
-        }
+        }, ensure_ascii=False)
 
         try:
-            pipe = r.pipeline()
-            # 写入时间序列
-            pipe.zadd(ts_key, {json.dumps(entry, ensure_ascii=False): now})
-            pipe.expire(ts_key, _TTL_RAW)
-
-            # 更新日聚合
-            pipe.hincrbyfloat(daily_key, "total_cost", usage.cost_usd)
-            pipe.hincrbyfloat(daily_key, "total_input_tokens", usage.input_tokens)
-            pipe.hincrbyfloat(daily_key, "total_output_tokens", usage.output_tokens)
-            pipe.hincrbyfloat(daily_key, "query_count", 1)
-            # 按模型聚合
+            # 直接写入（不用 pipeline，避免连接池阻塞）
+            await r.zadd(ts_key, {entry: now})
+            await r.expire(ts_key, _TTL_RAW)
+            await r.hincrbyfloat(daily_key, "total_cost", usage.cost_usd)
+            await r.hincrbyfloat(daily_key, "total_input_tokens", usage.input_tokens)
+            await r.hincrbyfloat(daily_key, "total_output_tokens", usage.output_tokens)
+            await r.hincrbyfloat(daily_key, "query_count", 1)
             model_field = f"model:{usage.model}"
-            pipe.hincrbyfloat(daily_key, model_field, usage.cost_usd)
-            # 按 workspace 聚合
+            await r.hincrbyfloat(daily_key, model_field, usage.cost_usd)
             if usage.workspace_id:
                 ws_field = f"ws:{usage.workspace_id}"
-                pipe.hincrbyfloat(daily_key, ws_field, usage.cost_usd)
-            pipe.expire(daily_key, _TTL_DAILY)
-
-            import asyncio
-            await asyncio.wait_for(pipe.execute(), timeout=5.0)
+                await r.hincrbyfloat(daily_key, ws_field, usage.cost_usd)
+            await r.expire(daily_key, _TTL_DAILY)
             logger.info("cost_record_success", tenant_id=usage.tenant_id, cost_usd=usage.cost_usd, daily_key=daily_key)
         except Exception as exc:
             logger.warning("cost_record_failed", tenant_id=usage.tenant_id, error=str(exc))
