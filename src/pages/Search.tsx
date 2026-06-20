@@ -77,7 +77,7 @@ export function Search() {
           </p>
         </div>
 
-        <div className="mb-8">
+        <div data-onboarding="search-input" className="mb-8">
           <SearchBar
             value={query}
             onChange={(val) => {

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useDashboardStats } from '../hooks/useDashboardStats';
 import { useSystemHealth } from '../hooks/useSystemHealth';
 import { useRealtimeMetrics } from '../hooks/useRealtimeMetrics';
+import { useViewStore } from '../stores/useViewStore';
 import { Card } from '../components/ui/Card';
 import { Tooltip } from '../components/ui/Tooltip';
 import { LineChart } from '../components/charts/LineChart';
@@ -252,7 +253,8 @@ export function Dashboard() {
     lastUpdated: rtLastUpdated,
   } = useRealtimeMetrics();
 
-  const [timeRange, setTimeRange] = useState<'1h' | '6h' | '24h' | '7d'>('24h');
+  const timeRange = useViewStore((s) => s.dashboardTimeRange);
+  const setDashboardTimeRange = useViewStore((s) => s.setDashboardTimeRange);
   const hasRealtimeData = rtLastUpdated !== null;
 
   // 合并实时数据和 API 数据
@@ -363,7 +365,7 @@ export function Dashboard() {
             <select
               aria-label={t('dashboard.time_range.label')}
               value={timeRange}
-              onChange={(e) => setTimeRange(e.target.value as '1h' | '6h' | '24h' | '7d')}
+              onChange={(e) => setDashboardTimeRange(e.target.value as '1h' | '6h' | '24h' | '7d')}
               className="px-3 py-1.5 text-sm rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-[var(--text-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
             >
               <option value="1h">{t('dashboard.time_range.1h')}</option>
@@ -388,7 +390,7 @@ export function Dashboard() {
               </div>
             )}
             {/* ── 2. Golden Signals row ── */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div data-onboarding="dashboard-metrics" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               <GoldenSignalCard
                 label={t('dashboard.golden_signals.latency')}
                 value={metrics?.ttft_p50 ?? '—'}
@@ -469,7 +471,7 @@ export function Dashboard() {
 
             {/* ── 4. Pipeline row ── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <Card>
+              <Card data-onboarding="pipeline-breakdown">
                 <div className="flex items-center gap-2 mb-4">
                   <h3 className="text-sm font-semibold text-[var(--text-primary)]">
                     {t('dashboard.pipeline.title')}

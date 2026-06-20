@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useCostData } from '../hooks/useCostData';
+import { useViewStore } from '../stores/useViewStore';
 import { Card } from '../components/ui/Card';
 import { Tooltip } from '../components/ui/Tooltip';
 import { LineChart } from '../components/charts/LineChart';
@@ -11,8 +12,6 @@ import { AdminTable } from '../components/admin/AdminTable';
 import { AlertTriangle } from 'lucide-react';
 
 /* ── 类型定义 ── */
-
-type TimeRange = '7d' | '30d' | '90d';
 
 interface CostConsumer {
   user: string;
@@ -70,7 +69,8 @@ function TrendIndicator({ trend }: { trend: 'up' | 'down' | 'stable' }) {
 
 export function CostGovernance() {
   const { t } = useTranslation();
-  const [timeRange, setTimeRange] = useState<TimeRange>('30d');
+  const timeRange = useViewStore((s) => s.costTimeRange);
+  const setCostTimeRange = useViewStore((s) => s.setCostTimeRange);
   const { summary, trends, breakdown, topConsumers: topConsumersData, loading, error, refetch } = useCostData(timeRange);
 
   // 导出 CSV
@@ -234,7 +234,7 @@ export function CostGovernance() {
           <div className="flex items-center gap-3">
             <select
               value={timeRange}
-              onChange={(e) => setTimeRange(e.target.value as TimeRange)}
+              onChange={(e) => setCostTimeRange(e.target.value as '7d' | '30d' | '90d')}
               className="px-3 py-1.5 text-sm rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-[var(--text-secondary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
             >
               <option value="7d">{t('cost.time_range.7d')}</option>
