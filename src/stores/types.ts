@@ -80,3 +80,25 @@ export interface UIState {
   /** 切换 AI 免责声明 */
   toggleAiDisclaimer: () => void;
 }
+
+/** 用户意图快照接口（持久化到 SafeStorage） */
+export interface ViewState {
+  /** Dashboard 时间范围 */
+  dashboardTimeRange: '1h' | '6h' | '24h' | '7d';
+  /** Analytics 时间范围 */
+  analyticsTimeRange: '24h' | '7d' | '30d';
+  /** Cost 时间范围 */
+  costTimeRange: '7d' | '30d' | '90d';
+  /** Onboarding 是否已完成 */
+  onboardingCompleted: boolean;
+  /** 设置 Dashboard 时间范围 */
+  setDashboardTimeRange: (range: ViewState['dashboardTimeRange']) => void;
+  /** 设置 Analytics 时间范围 */
+  setAnalyticsTimeRange: (range: ViewState['analyticsTimeRange']) => void;
+  /** 设置 Cost 时间范围 */
+  setCostTimeRange: (range: ViewState['costTimeRange']) => void;
+  /** 标记 Onboarding 完成 */
+  completeOnboarding: () => void;
+  /** 重置 Onboarding（用于手动召回） */
+  resetOnboarding: () => void;
+}

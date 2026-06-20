@@ -1,23 +1,31 @@
-/** UI 状态 Store */
+/** UI 状态 Store（SafeStorage 持久化） */
 
-import { create } from "zustand";
-import type { UIState } from "./types";
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { safeStorage } from './safeStorage';
+import type { UIState } from './types';
 
-const AI_DISCLAIMER_KEY = "aureon_ai_disclaimer";
+export const useUIStore = create<UIState>()(
+  persist(
+    (set) => ({
+      mobileMenuOpen: false,
+      aiDisclaimerEnabled: true,
 
-export const useUIStore = create<UIState>((set) => ({
-  mobileMenuOpen: false,
-  aiDisclaimerEnabled: localStorage.getItem(AI_DISCLAIMER_KEY) !== "false",
+      setMobileMenuOpen: (open: boolean) => {
+        set({ mobileMenuOpen: open });
+      },
 
-  setMobileMenuOpen: (open: boolean) => {
-    set({ mobileMenuOpen: open });
-  },
-
-  toggleAiDisclaimer: () => {
-    set((state) => {
-      const newValue = !state.aiDisclaimerEnabled;
-      localStorage.setItem(AI_DISCLAIMER_KEY, String(newValue));
-      return { aiDisclaimerEnabled: newValue };
-    });
-  },
-}));
+      toggleAiDisclaimer: () => {
+        set((state) => ({ aiDisclaimerEnabled: !state.aiDisclaimerEnabled }));
+      },
+    }),
+    {
+      name: 'aureon:ui',
+      storage: createJSONStorage(() => safeStorage),
+      // 只持久化 aiDisclaimerEnabled，mobileMenuOpen 是会话级状态
+      partialize: (state) => ({
+        aiDisclaimerEnabled: state.aiDisclaimerEnabled,
+      }),
+    }
+  )
+);
