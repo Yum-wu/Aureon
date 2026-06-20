@@ -6,7 +6,7 @@ import React from 'react';
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 
-import { useDashboardData, DASHBOARD_QUERY_KEYS } from '../useDashboardData';
+import { useDashboardData } from '../useDashboardData';
 
 function createWrapper() {
   const queryClient = new QueryClient({

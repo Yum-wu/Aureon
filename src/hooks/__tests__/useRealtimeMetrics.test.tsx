@@ -58,7 +58,7 @@ describe('useRealtimeMetrics stale timeout', () => {
     });
 
     expect(result.current.lastUpdated).not.toBeNull();
-    expect(result.current.metrics.qps).toBe(1);
+    expect(result.current.metrics?.qps).toBe(1);
   });
 
   it('resets lastUpdated to null after stale timeout', () => {

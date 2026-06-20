@@ -39,8 +39,8 @@ export interface MetricAlert {
 }
 
 interface UseRealtimeMetricsReturn {
-  /** 当前指标 */
-  metrics: RealtimeMetrics | null;
+  /** 当前指标（始终有值，无数据时返回全零默认值） */
+  metrics: RealtimeMetrics;
   /** 告警列表 */
   alerts: MetricAlert[];
   /** 是否已连接 */
