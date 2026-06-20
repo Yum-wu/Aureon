@@ -64,7 +64,7 @@ export function BenchmarkSection() {
 
         {/* 测试规模说明 */}
         <div className="text-center text-sm text-[var(--text-secondary)] animate-fade-up delay-200">
-          {t('landing.benchmark.test_scale', '192 QA pairs · DeepEval LLM-as-Judge · 26 articles knowledge base')}
+          {t('landing.benchmark.test_scale', '192 QA pairs · DeepEval LLM-as-Judge · 99 articles knowledge base')}
         </div>
       </div>
     </section>

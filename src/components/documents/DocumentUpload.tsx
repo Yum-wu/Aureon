@@ -15,7 +15,7 @@ interface DocumentUploadProps {
   onUploadSuccess?: () => void;
 }
 
-const ALLOWED_EXTENSIONS = new Set([".md", ".txt"]);
+const ALLOWED_EXTENSIONS = new Set([".md", ".txt", ".pdf", ".docx", ".xlsx"]);
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 export function DocumentUpload({ onUploadSuccess }: DocumentUploadProps) {
