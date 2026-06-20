@@ -55,8 +55,6 @@ export function CoachMark({
 
   // 监听目标元素位置
   useEffect(() => {
-    const el = document.querySelector(step.anchor);
-
     // 等待 DOM 渲染（目标元素可能延迟出现）
     const timer = setTimeout(() => {
       const found = document.querySelector(step.anchor);
