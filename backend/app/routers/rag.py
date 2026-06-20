@@ -103,6 +103,7 @@ def _record_dashboard_metrics(
             from app.cost.service import get_cost_service
             from app.cost.models import TokenUsage
             from app.multi_tenant.middleware import get_current_tenant_id
+            from app.dependencies import get_redis_or_none
 
             cost_service = get_cost_service()
             tenant_id = get_current_tenant_id()
@@ -111,6 +112,8 @@ def _record_dashboard_metrics(
                 6,
             )
             logger.info("cost_record_firing", tenant_id=tenant_id, tokens_in=tokens_in, tokens_out=tokens_out, cost_usd=cost_usd)
+            # 直接用 get_redis_or_none 获取 Redis 客户端，避免 cost service 内部缓存问题
+            redis_client = get_redis_or_none()
             fire_and_forget(
                 cost_service.record_usage(TokenUsage(
                     tenant_id=tenant_id,
@@ -118,7 +121,7 @@ def _record_dashboard_metrics(
                     input_tokens=tokens_in,
                     output_tokens=tokens_out,
                     cost_usd=cost_usd,
-                )),
+                ), redis_override=redis_client),
                 name="record_cost_usage",
             )
         except Exception as exc:

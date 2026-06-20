@@ -48,13 +48,14 @@ class CostService:
             logger.warning("cost_service_redis_unavailable", error=str(exc))
             return None
 
-    async def record_usage(self, usage: TokenUsage) -> None:
+    async def record_usage(self, usage: TokenUsage, redis_override=None) -> None:
         """记录一次 Token 使用（直接 Redis 命令，避免 pipeline 挂起）。
 
         Args:
             usage: TokenUsage 实例
+            redis_override: 可选的 Redis 客户端（从调用方传入，避免内部缓存问题）
         """
-        r = self._get_redis()
+        r = redis_override if redis_override is not None else self._get_redis()
         if r is None:
             logger.warning("cost_record_no_redis", tenant_id=usage.tenant_id)
             return

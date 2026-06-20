@@ -172,28 +172,20 @@ def close_sync_redis():
 
 
 def _get_redis():
-    """Return Redis client singleton, or False if unavailable.
+    """Return Redis client singleton, or None if unavailable.
 
-    Retries connection after _RECONNECT_AFTER consecutive failures to handle
-    cases where Redis becomes available after app startup.
+    Retries connection on every call when Redis was previously unavailable,
+    because Redis may become available after app startup (e.g. Railway deploy).
 
-    Sentinel values: None = uninitialized, False = unavailable, client = ready.
+    Sentinel values: None = unavailable/not-yet-connected, client = ready.
     """
-    global _redis, _redis_fail_count
-    if _redis is not None:
+    global _redis
+    # Return cached client if available
+    if _redis is not None and _redis is not False:
         return _redis
-    # Only retry after enough consecutive failures have accumulated
-    if _redis is False and _redis_fail_count < _RECONNECT_AFTER:
-        return False
-    # Reset sentinel to retry (fail_count preserved — only reset on success)
-    if _redis is False:
-        _redis = None
     from app.config import settings
     if not settings.redis_url:
-        # 未配置 Redis 时直接跳过，避免 fallback 到 localhost 导致连接阻塞
-        _redis = False
-        _redis_fail_count += 1
-        return False
+        return None
     try:
         import redis.asyncio as aioredis
         _redis = aioredis.from_url(
@@ -202,12 +194,10 @@ def _get_redis():
             socket_connect_timeout=2,
             socket_timeout=2,
         )
-        _redis_fail_count = 0  # Reset only on successful connection
         logger.info("Redis connected")
     except Exception as e:
         logger.warning("Redis unavailable (non-fatal): %s", e)
-        _redis = False  # sentinel
-        _redis_fail_count += 1
+        _redis = None
     return _redis
 
 
