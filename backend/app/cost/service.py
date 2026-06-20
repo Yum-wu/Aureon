@@ -93,7 +93,8 @@ class CostService:
                 pipe.hincrbyfloat(daily_key, ws_field, usage.cost_usd)
             pipe.expire(daily_key, _TTL_DAILY)
 
-            await pipe.execute()
+            import asyncio
+            await asyncio.wait_for(pipe.execute(), timeout=5.0)
             logger.info("cost_record_success", tenant_id=usage.tenant_id, cost_usd=usage.cost_usd, daily_key=daily_key)
         except Exception as exc:
             logger.warning("cost_record_failed", tenant_id=usage.tenant_id, error=str(exc))
