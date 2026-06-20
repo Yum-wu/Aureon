@@ -29,12 +29,13 @@ export function Tooltip({ content, children }: TooltipProps) {
       {visible && (
         <span
           role="tooltip"
-          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap z-50 pointer-events-none"
+          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 text-sm font-medium rounded-lg z-50 pointer-events-none max-w-xs leading-snug"
           style={{
             background: 'var(--bg-tertiary)',
             color: 'var(--text-primary)',
             border: '1px solid var(--border)',
             boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+            width: 'max-content',
           }}
         >
           {content}

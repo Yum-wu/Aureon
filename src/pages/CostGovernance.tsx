@@ -281,7 +281,7 @@ export function CostGovernance() {
             <p className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider mb-2 inline-flex items-center gap-1">
               {t('cost.summary.burn_rate')}
               <Tooltip content={t('cost.summary.burn_rate_tooltip')}>
-                <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full text-[9px] cursor-help" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)' }}>?</span>
+                <span className="inline-flex items-center justify-center w-4 h-4 rounded-full text-[11px] font-semibold cursor-help" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>?</span>
               </Tooltip>
             </p>
             <div className="flex items-baseline gap-1.5">
@@ -300,7 +300,7 @@ export function CostGovernance() {
             <p className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider mb-2 inline-flex items-center gap-1">
               {t('cost.summary.token_usage')}
               <Tooltip content={t('cost.summary.token_usage_tooltip')}>
-                <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full text-[9px] cursor-help" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)' }}>?</span>
+                <span className="inline-flex items-center justify-center w-4 h-4 rounded-full text-[11px] font-semibold cursor-help" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>?</span>
               </Tooltip>
             </p>
             <div className="flex items-baseline gap-1.5">

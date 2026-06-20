@@ -121,7 +121,7 @@ function GoldenSignalCard({
         {label}
         {tooltip && (
           <Tooltip content={tooltip}>
-            <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full text-[9px] cursor-help" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)' }}>?</span>
+            <span className="inline-flex items-center justify-center w-4 h-4 rounded-full text-[11px] font-semibold cursor-help" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>?</span>
           </Tooltip>
         )}
       </p>
@@ -349,7 +349,7 @@ export function Dashboard() {
             <p className="text-sm text-[var(--text-tertiary)] mt-1 inline-flex items-center gap-1.5">
               {t('dashboard.subtitle')}
               <Tooltip content={t('dashboard.golden_signals.tooltip')}>
-                <span className="inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] cursor-help" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)' }}>?</span>
+                <span className="inline-flex items-center justify-center w-4.5 h-4.5 rounded-full text-[11px] font-semibold cursor-help" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>?</span>
               </Tooltip>
             </p>
           </div>

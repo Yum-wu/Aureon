@@ -68,7 +68,7 @@ def _record_dashboard_metrics(
     cache_hit: bool = False,
     error: bool = False,
 ) -> None:
-    """Fire-and-forget: 将查询指标写入 Dashboard 实时指标采集器。
+    """Fire-and-forget: 将查询指标写入 Dashboard 实时指标采集器 + Cost 服务。
 
     TTFT 近似为总延迟（首 token 与最后 token 差异在流式中无法精确测量），
     TPOT 近似为 latency / output_tokens。
@@ -95,6 +95,32 @@ def _record_dashboard_metrics(
         )
     except Exception as exc:
         logger.debug("dashboard_metrics_record_skipped", error=str(exc))
+
+    # 记录成本数据（Cost Governance 数据源）
+    if tokens_in > 0 or tokens_out > 0:
+        try:
+            from app.cost.service import get_cost_service
+            from app.cost.models import TokenUsage
+            from app.multi_tenant.middleware import get_current_tenant_id
+
+            cost_service = get_cost_service()
+            tenant_id = get_current_tenant_id()
+            cost_usd = round(
+                (tokens_in / 1000 * 0.00015) + (tokens_out / 1000 * 0.0006),
+                6,
+            )
+            fire_and_forget(
+                cost_service.record_usage(TokenUsage(
+                    tenant_id=tenant_id,
+                    model=settings.llm_model,
+                    input_tokens=tokens_in,
+                    output_tokens=tokens_out,
+                    cost_usd=cost_usd,
+                )),
+                name="record_cost_usage",
+            )
+        except Exception as exc:
+            logger.debug("cost_record_skipped", error=str(exc))
 
 
 def _validate_filename(filename: str) -> str:

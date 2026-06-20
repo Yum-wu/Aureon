@@ -9,6 +9,8 @@ Routes:
 
 import asyncio
 import collections
+import json
+import time
 from typing import Any
 
 from fastapi import APIRouter, Request
@@ -21,7 +23,7 @@ from app.agent.agent import create_chat_agent
 from app.agent.executor import stream_agent_with_memory
 from app.memory.manager import manager as memory_manager
 from app.utils.lang_detect import detect_language
-from app.common import SSE_HEADERS, sse_event
+from app.common import SSE_HEADERS, sse_event, fire_and_forget
 from app.rag.guardrails import detect_prompt_injection, sanitize_input
 from app.audit.decorator import audit_action
 from app.exceptions import AureonException
@@ -35,6 +37,103 @@ _agents: collections.OrderedDict[str, Any] = collections.OrderedDict()
 _agent_lock = asyncio.Lock()
 
 router = APIRouter()
+
+
+async def _record_stream_analytics(
+    query: str,
+    model: str,
+    stream_gen,
+) -> Any:
+    """Wrap SSE stream to record analytics + cost data after completion."""
+    start_time = time.time()
+    full_text = ""
+    sources_count = 0
+
+    try:
+        async for raw_event in stream_gen:
+            # Parse SSE data for metric extraction (non-blocking)
+            try:
+                if raw_event.startswith("data: "):
+                    payload = json.loads(raw_event[6:].rstrip())
+                    etype = payload.get("type")
+                    if etype == "text":
+                        full_text += payload.get("content", "")
+                    elif etype == "sources":
+                        sources_count = len(payload.get("sources", []))
+            except (json.JSONDecodeError, AttributeError, KeyError):
+                pass
+            yield raw_event
+    except Exception:
+        raise
+    finally:
+        latency_ms = int((time.time() - start_time) * 1000)
+        output_tokens = max(len(full_text) // 2, 1) if full_text else 0
+        input_tokens = len(query) + 500
+
+        # 1. Record query stats (Analytics page data source)
+        try:
+            from app.api.rag_stats import record_query
+            fire_and_forget(
+                record_query(query, sources_count, latency_ms,
+                             input_tokens=input_tokens,
+                             output_tokens=output_tokens),
+                name="chat_record_query",
+            )
+        except Exception as exc:
+            logger.debug("chat_analytics_record_skipped", error=str(exc))
+
+        # 2. Record Dashboard realtime metrics
+        try:
+            from app.observability.metrics_collector import get_metrics_collector
+            from app.multi_tenant.middleware import get_current_tenant_id
+            from app.config import settings as _settings
+
+            collector = get_metrics_collector()
+            tenant_id = get_current_tenant_id()
+            fire_and_forget(
+                collector.record_query_metrics(
+                    tenant_id=tenant_id,
+                    ttft_ms=latency_ms,
+                    tpot_ms=latency_ms / max(output_tokens, 1),
+                    tokens_in=input_tokens,
+                    tokens_out=output_tokens,
+                    model=model or _settings.llm_model,
+                    cache_hit=False,
+                    error=False,
+                ),
+                name="chat_dashboard_metrics",
+            )
+        except Exception as exc:
+            logger.debug("chat_dashboard_metrics_skipped", error=str(exc))
+
+        # 3. Record cost usage (Cost Governance data source)
+        try:
+            from app.cost.service import get_cost_service
+            from app.cost.models import TokenUsage
+            from app.multi_tenant.middleware import get_current_tenant_id
+            from app.config import settings as _settings
+
+            cost_service = get_cost_service()
+            tenant_id = get_current_tenant_id()
+            cost_per_1k_in = 0.00015
+            cost_per_1k_out = 0.0006
+            cost_usd = round(
+                (input_tokens / 1000 * cost_per_1k_in)
+                + (output_tokens / 1000 * cost_per_1k_out),
+                6,
+            )
+            fire_and_forget(
+                cost_service.record_usage(TokenUsage(
+                    tenant_id=tenant_id,
+                    model=model or _settings.llm_model,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                    cost_usd=cost_usd,
+                )),
+                name="chat_cost_record",
+            )
+        except Exception as exc:
+            logger.debug("chat_cost_record_skipped", error=str(exc))
 
 
 async def _get_agent(lang: str = "zh", model: str = None):
@@ -71,13 +170,15 @@ async def chat_stream(req: ChatRequest, request: Request):
 
     lang = detect_language(sanitized_message)
     agent = await _get_agent(lang, model=req.model)
+
+    raw_stream = stream_agent_with_memory(
+        agent,
+        sanitized_message,
+        req.session_id or "",
+        memory_manager=memory_manager,
+    )
     return StreamingResponse(
-        stream_agent_with_memory(
-            agent,
-            sanitized_message,
-            req.session_id or "",
-            memory_manager=memory_manager,
-        ),
+        _record_stream_analytics(req.message, req.model, raw_stream),
         media_type="text/event-stream",
         headers=SSE_HEADERS,
     )
@@ -113,7 +214,7 @@ async def chat_enhanced_stream(req: ChatRequest, request: Request):
             yield sse_event({'type': 'error', 'content': 'An error occurred while processing your request'})
 
     return StreamingResponse(
-        event_stream(),
+        _record_stream_analytics(req.message, req.model, event_stream()),
         media_type="text/event-stream",
         headers=SSE_HEADERS,
     )

@@ -103,11 +103,12 @@ export function useCostData(timeRange: CostTimeRange = '30d'): UseCostDataReturn
           authFetch(`/api/cost/top-consumers?limit=10`),
         ]);
 
-        // 任一端点返回 401/403 → 静默降级为演示模式
+        // 任一端点返回 401/403 → 提示需要认证
         const anyAuth = [summaryRes, trendRes, breakdownRes, consumersRes]
           .some((r) => r.status === 401 || r.status === 403);
         if (anyAuth) {
           if (!cancelled) {
+            setError('需要管理员权限才能查看成本数据。请使用 X-API-Key 或管理员账户登录。');
             setSummary(null);
             setTrends([]);
             setBreakdown([]);
