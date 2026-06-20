@@ -94,6 +94,7 @@ class CostService:
             pipe.expire(daily_key, _TTL_DAILY)
 
             await pipe.execute()
+            logger.info("cost_record_success", tenant_id=usage.tenant_id, cost_usd=usage.cost_usd, daily_key=daily_key)
         except Exception as exc:
             logger.warning("cost_record_failed", tenant_id=usage.tenant_id, error=str(exc))
 
