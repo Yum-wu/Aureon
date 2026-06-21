@@ -2,6 +2,7 @@
  * RealtimeMetricsProvider — global realtime metrics Context
  * Mounts the single /ws/dashboard connection at app root.
  */
+/* eslint-disable react-refresh/only-export-components -- Context provider + hook is a standard pattern */
 
 import {
   createContext,
