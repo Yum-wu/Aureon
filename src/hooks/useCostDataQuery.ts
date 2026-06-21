@@ -49,6 +49,10 @@ interface CostDataResult {
   breakdown: CostBreakdown[];
   topConsumers: TopConsumer[];
   isLoading: boolean;
+  isLoadingSummary: boolean;
+  isLoadingTrends: boolean;
+  isLoadingBreakdown: boolean;
+  isLoadingConsumers: boolean;
   error: Error | null;
   refetch: () => void;
 }
@@ -152,6 +156,10 @@ export function useCostDataQuery(timeRange: CostTimeRange = '30d'): CostDataResu
     breakdown: breakdownQ.data ?? [],
     topConsumers: consumersQ.data ?? [],
     isLoading,
+    isLoadingSummary: summaryQ.isLoading,
+    isLoadingTrends: trendQ.isLoading,
+    isLoadingBreakdown: breakdownQ.isLoading,
+    isLoadingConsumers: consumersQ.isLoading,
     error,
     refetch: () => {
       results.forEach((r) => r.refetch());

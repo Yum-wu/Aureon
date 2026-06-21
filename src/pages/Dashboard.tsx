@@ -240,7 +240,7 @@ function PipelineBreakdown({ stages }: { stages: { name: string; ms: number; col
 
 export function Dashboard() {
   const { t } = useTranslation();
-  const { stats, queryVolume, isLoading: loading, error, refetch } = useDashboardData();
+  const { stats, queryVolume, isLoading: loading, isLoadingStats, isLoadingVolume, error, refetch } = useDashboardData();
   const { health } = useSystemHealth();
 
   // 实时指标（通过 useRealtimeMetrics hook，统一 WebSocket 管理）
@@ -378,10 +378,10 @@ export function Dashboard() {
           </div>
         </div>
 
-        {loading && <LoadingSkeleton />}
+        {loading && !stats && <LoadingSkeleton />}
         {error && !loading && <ErrorState message={error instanceof Error ? error.message : String(error)} onRetry={refetch} />}
 
-        {!loading && !error && (
+        {(stats || !loading) && !error && (
           <div className="space-y-6">
             {/* ── 演示模式水印 ── */}
             {!hasRealtimeData && !stats?.query_count_24h && !loading && !error && (
@@ -459,7 +459,11 @@ export function Dashboard() {
                   {t('dashboard.no_data', '暂无数据')}
                 </div>
               )}
-              {queryVolumeChartData.length > 0 ? (
+              {isLoadingVolume && queryVolumeChartData.length === 0 ? (
+                <div className="rounded-lg border bg-[var(--bg-secondary)] border-[var(--border)] flex items-center justify-center h-[300px]">
+                  <div className="animate-pulse h-4 w-24 bg-[var(--bg-tertiary)] rounded" />
+                </div>
+              ) : queryVolumeChartData.length > 0 ? (
                 <BarChart data={queryVolumeChartData} keys={['value']} indexBy="label" title={t('dashboard.charts.query_volume')} />
               ) : (
                 <div className="rounded-lg border bg-[var(--bg-secondary)] border-[var(--border)] flex items-center justify-center h-[300px] text-[var(--text-tertiary)] text-sm">

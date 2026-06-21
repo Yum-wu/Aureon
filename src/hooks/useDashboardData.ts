@@ -33,6 +33,8 @@ interface DashboardData {
   recentQueries: RecentQuery[];
   queryVolume: QueryVolumePoint[];
   isLoading: boolean;
+  isLoadingStats: boolean;
+  isLoadingVolume: boolean;
   error: Error | null;
   refetch: () => void;
 }
@@ -96,6 +98,8 @@ export function useDashboardData(): DashboardData {
     recentQueries: recentQuery.data?.queries ?? [],
     queryVolume: volumeQuery.data?.data ?? [],
     isLoading,
+    isLoadingStats: statsQuery.isLoading,
+    isLoadingVolume: volumeQuery.isLoading,
     error: error as Error | null,
     refetch: () => {
       statsQuery.refetch();
