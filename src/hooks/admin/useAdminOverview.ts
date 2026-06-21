@@ -10,7 +10,7 @@ export const ADMIN_QUERY_KEYS = {
   sso: ['admin', 'sso'] as const,
 } as const;
 
-const ADMIN_CACHE_CONFIG = {
+export const ADMIN_CACHE_CONFIG = {
   staleTime: 5 * 60 * 1000,   // 5 ∑÷÷”
   gcTime: 10 * 60 * 1000,     // 10 ∑÷÷”
   placeholderData: keepPreviousData,
