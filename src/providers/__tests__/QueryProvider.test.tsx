@@ -3,6 +3,7 @@ import { render, renderHook, waitFor } from '@testing-library/react';
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { QueryProvider } from '../QueryProvider';
+import { getCacheBuster } from '../../lib/appVersion';
 
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
@@ -55,7 +56,7 @@ describe('QueryProvider', () => {
     const cachedData = { value: 'from-cache' };
     const timestamp = Date.now();
     const cachePayload = {
-      buster: '1.0.0',
+      buster: getCacheBuster(),
       timestamp,
       clientState: {
         queries: [{

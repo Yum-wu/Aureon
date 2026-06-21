@@ -33,6 +33,49 @@ function getUserId(): string {
   return 'anonymous';
 }
 
+/** Default view state for migration fallback */
+const DEFAULT_VIEW_STATE = {
+  dashboardTimeRange: '24h' as const,
+  analyticsTimeRange: '24h' as const,
+  costTimeRange: '30d' as const,
+  onboardingCompleted: false,
+};
+
+/**
+ * State migration function — handles incompatible version changes.
+ *
+ * Migration history:
+ * - v0 → v1: old timeRange single field → split dashboardTimeRange
+ */
+export function migrateViewState(
+  persistedState: unknown,
+  version: number,
+): Partial<ViewState> {
+  const base = { ...DEFAULT_VIEW_STATE };
+
+  if (!persistedState || typeof persistedState !== 'object') return base;
+
+  const old = persistedState as Record<string, unknown>;
+
+  // Future version: downgrade to defaults
+  if (version > 1) return base;
+
+  // v0 → v1: timeRange → dashboardTimeRange
+  if (version < 1) {
+    if (typeof old.timeRange === 'string') {
+      base.dashboardTimeRange = old.timeRange as ViewState['dashboardTimeRange'];
+    }
+  }
+
+  // Whitelist copy of known fields
+  if (typeof old.dashboardTimeRange === 'string') base.dashboardTimeRange = old.dashboardTimeRange as ViewState['dashboardTimeRange'];
+  if (typeof old.analyticsTimeRange === 'string') base.analyticsTimeRange = old.analyticsTimeRange as ViewState['analyticsTimeRange'];
+  if (typeof old.costTimeRange === 'string') base.costTimeRange = old.costTimeRange as ViewState['costTimeRange'];
+  if (typeof old.onboardingCompleted === 'boolean') base.onboardingCompleted = old.onboardingCompleted;
+
+  return base;
+}
+
 export const useViewStore = create<ViewState>()(
   persist(
     (set) => ({
@@ -53,6 +96,7 @@ export const useViewStore = create<ViewState>()(
       name: `aureon:viewstate:${getUserId()}`,
       storage: createJSONStorage(() => safeStorage),
       version: 1,
+      migrate: migrateViewState,
     }
   )
 );
