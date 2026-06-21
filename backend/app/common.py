@@ -111,3 +111,54 @@ def fire_and_forget(coro, *, name: str = "") -> None:
             )
 
     task.add_done_callback(_on_done)
+
+
+def resilient_fire_and_forget(
+    coro,
+    *,
+    name: str = "",
+    max_retries: int = 2,
+    retry_delay: float = 1.0,
+) -> None:
+    """Fire-and-forget with retry on transient errors (ConnectionError, TimeoutError, OSError).
+
+    Non-transient errors are logged but not retried.
+    Per Python docs: save task reference to avoid disappearing mid-execution.
+    """
+    async def _run():
+        for attempt in range(max_retries + 1):
+            try:
+                await coro
+                return
+            except (ConnectionError, TimeoutError, OSError) as e:
+                if attempt < max_retries:
+                    await _asyncio.sleep(retry_delay * (attempt + 1))
+                    continue
+                _bg_logger.warning(
+                    "resilient_task_exhausted_retries",
+                    task_name=name,
+                    attempts=attempt + 1,
+                    error=str(e),
+                )
+            except Exception as e:
+                _bg_logger.error(
+                    "resilient_task_unexpected_error",
+                    task_name=name,
+                    error_type=type(e).__name__,
+                    error=str(e),
+                )
+                return
+
+    try:
+        task = _asyncio.create_task(_run(), name=f"resilient:{name}")
+    except RuntimeError:
+        _bg_logger.warning("resilient_fire_and_forget_no_loop", task_name=name)
+        coro.close()
+        return
+
+    _background_tasks.add(task)
+
+    def _on_done(t: _asyncio.Task) -> None:
+        _background_tasks.discard(t)
+
+    task.add_done_callback(_on_done)
