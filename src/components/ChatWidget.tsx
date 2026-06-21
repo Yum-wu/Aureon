@@ -11,7 +11,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useChatStore } from '../stores/useChatStore';
-import { useDocumentsStore } from '../stores/useDocumentsStore';
+import { useDocuments } from '../hooks/useDocumentsQuery';
 import { VoiceButton } from './VoiceButton';
 import { BookOpen, AlertTriangle } from 'lucide-react';
 
@@ -30,7 +30,7 @@ export function ChatWidget({ className = '' }: ChatWidgetProps) {
   const isLoading = useChatStore((s) => s.isLoading);
   const error = useChatStore((s) => s.error);
   const sendMessage = useChatStore((s) => s.sendMessage);
-  const documents = useDocumentsStore((s) => s.documents);
+  const documents = useDocuments();
 
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
