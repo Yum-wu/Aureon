@@ -56,6 +56,10 @@ interface AnalyticsResult {
   tokens: TokenData | null;
   cache: CacheData | null;
   isLoading: boolean;
+  isLoadingUsage: boolean;
+  isLoadingLatency: boolean;
+  isLoadingTokens: boolean;
+  isLoadingCache: boolean;
   error: Error | null;
   refetch: () => void;
 }
@@ -112,6 +116,10 @@ export function useAnalyticsData(timeRange: string = '24h'): AnalyticsResult {
     tokens: tokensQ.data ?? null,
     cache: cacheQ.data ?? null,
     isLoading,
+    isLoadingUsage: usageQ.isLoading,
+    isLoadingLatency: latencyQ.isLoading,
+    isLoadingTokens: tokensQ.isLoading,
+    isLoadingCache: cacheQ.isLoading,
     error,
     refetch: () => {
       results.forEach((r) => r.refetch());

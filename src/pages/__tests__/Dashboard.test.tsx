@@ -114,6 +114,8 @@ describe('Dashboard', () => {
       recentQueries: [],
       queryVolume: [],
       isLoading: true,
+      isLoadingStats: true,
+      isLoadingVolume: true,
       error: null,
       refetch: vi.fn(),
     });
@@ -131,6 +133,8 @@ describe('Dashboard', () => {
       recentQueries: [],
       queryVolume: [],
       isLoading: false,
+      isLoadingStats: false,
+      isLoadingVolume: false,
       error: new Error('Network error'),
       refetch: vi.fn(),
     });
@@ -159,6 +163,8 @@ describe('Dashboard', () => {
         { date: '2026-06-18', count: 210 },
       ],
       isLoading: false,
+      isLoadingStats: false,
+      isLoadingVolume: false,
       error: null,
       refetch: vi.fn(),
     });
@@ -249,6 +255,8 @@ describe('Dashboard', () => {
       recentQueries: [],
       queryVolume: [],
       isLoading: false,
+      isLoadingStats: false,
+      isLoadingVolume: false,
       error: null,
       refetch: vi.fn(),
     });
@@ -325,6 +333,8 @@ describe('Dashboard', () => {
       recentQueries: [],
       queryVolume: [],
       isLoading: false,
+      isLoadingStats: false,
+      isLoadingVolume: false,
       error: null,
       refetch: vi.fn(),
     });
