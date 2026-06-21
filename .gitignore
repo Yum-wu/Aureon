@@ -86,6 +86,9 @@ backend/=*
 # Added by code-review-graph
 .code-review-graph/
 
+# Brainstorming visual companion mockups (local only)
+.superpowers/
+
 # 临时调试文件
 _*.py
 !__init__.py
@@ -103,3 +106,7 @@ backend/data/feedback_log.jsonl
 # DeepEval 缓存
 backend/.deepeval/
 backend/scripts/
+
+# Windows reserved device names
+nul
+=nul

@@ -22,6 +22,7 @@ import { AdminForm } from '../components/admin/AdminForm';
 import { StatusBadge } from '../components/admin/StatusBadge';
 import { ConfirmDialog } from '../components/admin/ConfirmDialog';
 import { Card } from '../components/ui/Card';
+import { DatePicker } from '../components/ui/DatePicker';
 
 /* ── 类型定义 ── */
 
@@ -486,34 +487,18 @@ function AuditTab() {
     <div>
       {/* 筛选栏 */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        <div className="relative">
-          <input
-            type="date"
-            value={filters.dateFrom}
-            onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value }))}
-            aria-label={t('admin.audit.date_from')}
-            className="px-3 py-1.5 text-xs rounded-lg border border-[var(--border)] bg-[var(--bg-tertiary)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] [color-scheme:dark]"
-          />
-          {!filters.dateFrom && (
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--text-tertiary)] pointer-events-none">
-              {t('admin.audit.date_from')}
-            </span>
-          )}
-        </div>
-        <div className="relative">
-          <input
-            type="date"
-            value={filters.dateTo}
-            onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value }))}
-            aria-label={t('admin.audit.date_to')}
-            className="px-3 py-1.5 text-xs rounded-lg border border-[var(--border)] bg-[var(--bg-tertiary)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] [color-scheme:dark]"
-          />
-          {!filters.dateTo && (
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--text-tertiary)] pointer-events-none">
-              {t('admin.audit.date_to')}
-            </span>
-          )}
-        </div>
+        <DatePicker
+          value={filters.dateFrom}
+          onChange={(value) => setFilters((f) => ({ ...f, dateFrom: value }))}
+          placeholderKey="admin.audit.date_from"
+          ariaLabelKey="admin.audit.date_from"
+        />
+        <DatePicker
+          value={filters.dateTo}
+          onChange={(value) => setFilters((f) => ({ ...f, dateTo: value }))}
+          placeholderKey="admin.audit.date_to"
+          ariaLabelKey="admin.audit.date_to"
+        />
         <input
           type="text"
           placeholder={t('admin.audit.filter_user')}
