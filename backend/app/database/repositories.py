@@ -1,6 +1,9 @@
 """Database repositories using asyncpg."""
 
+import structlog
 from app.database.connection import get_db_pool
+
+logger = structlog.get_logger()
 
 
 class MessageRepository:
@@ -79,6 +82,9 @@ class AtomRepository:
             return [dict(r) for r in rows]
 
 
+_ALLOWED_UPDATE_FIELDS = frozenset({"name", "email", "role", "is_active", "password_hash"})
+
+
 class UserRepository:
     @staticmethod
     async def create(email: str, name: str, password_hash: str,
@@ -122,14 +128,17 @@ class UserRepository:
 
     @staticmethod
     async def update(user_id: int, **fields) -> bool:
-        if not fields:
-            return False
+        """Update user fields ¡ª only whitelisted column names allowed."""
         pool = get_db_pool()
         if not pool:
             return False
+        safe_fields = {k: v for k, v in fields.items() if k in _ALLOWED_UPDATE_FIELDS}
+        if not safe_fields:
+            logger.warning("user_update_no_safe_fields", user_id=user_id, requested=list(fields.keys()))
+            return False
         set_parts = []
         values = []
-        for i, (k, v) in enumerate(fields.items(), 1):
+        for i, (k, v) in enumerate(safe_fields.items(), 1):
             set_parts.append(f"{k} = ${i}")
             values.append(v)
         values.append(user_id)
