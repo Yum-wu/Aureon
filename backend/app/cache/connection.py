@@ -3,7 +3,6 @@
 Extracted from redis_client.py for single-responsibility.
 """
 import structlog
-from typing import Optional
 
 logger = structlog.get_logger()
 
