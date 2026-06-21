@@ -74,6 +74,17 @@ vi.mock('../../hooks/useBenchmark', () => ({
   useBenchmark: () => ({ data: null, loading: true, error: null }),
 }));
 
+vi.mock('../../hooks/useRealtimeMetrics', () => ({
+  useRealtimeMetrics: () => ({
+    metrics: { qps: 0, ttft_p50: 0, ttft_p95: 0, tpot: 0, error_rate: 0, cache_hit_rate: 0, token_usage: 0, active_connections: 0, pipeline: {} },
+    alerts: [],
+    isConnected: false,
+    connectionState: 'connecting',
+    lastUpdated: null,
+  }),
+  REALTIME_STALE_THRESHOLD_MS: 15000,
+}));
+
 // ── i18n mock ──
 let mockT = (key: string, opts?: Record<string, unknown>) => {
   if (opts && typeof opts === 'object') {
@@ -103,6 +114,8 @@ describe('Dashboard', () => {
       recentQueries: [],
       queryVolume: [],
       isLoading: true,
+      isLoadingStats: true,
+      isLoadingVolume: true,
       error: null,
       refetch: vi.fn(),
     });
@@ -120,6 +133,8 @@ describe('Dashboard', () => {
       recentQueries: [],
       queryVolume: [],
       isLoading: false,
+      isLoadingStats: false,
+      isLoadingVolume: false,
       error: new Error('Network error'),
       refetch: vi.fn(),
     });
@@ -148,6 +163,8 @@ describe('Dashboard', () => {
         { date: '2026-06-18', count: 210 },
       ],
       isLoading: false,
+      isLoadingStats: false,
+      isLoadingVolume: false,
       error: null,
       refetch: vi.fn(),
     });
@@ -238,6 +255,8 @@ describe('Dashboard', () => {
       recentQueries: [],
       queryVolume: [],
       isLoading: false,
+      isLoadingStats: false,
+      isLoadingVolume: false,
       error: null,
       refetch: vi.fn(),
     });
@@ -314,6 +333,8 @@ describe('Dashboard', () => {
       recentQueries: [],
       queryVolume: [],
       isLoading: false,
+      isLoadingStats: false,
+      isLoadingVolume: false,
       error: null,
       refetch: vi.fn(),
     });
