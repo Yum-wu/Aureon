@@ -48,16 +48,18 @@ interface NavLinkWithPreloadProps {
   children: React.ReactNode;
   className?: string;
   style?: React.CSSProperties;
-  'aria-current'?: string;
+  isActive?: boolean;
 }
 
-function NavLinkWithPreload({ to, preloadFn, children, ...rest }: NavLinkWithPreloadProps) {
+function NavLinkWithPreload({ to, preloadFn, children, className, style, isActive }: NavLinkWithPreloadProps) {
   return (
     <Link
       to={to}
       onMouseEnter={preloadFn}
       onFocus={preloadFn}
-      {...rest}
+      className={className}
+      style={style}
+      aria-current={isActive ? 'page' : undefined}
     >
       {children}
     </Link>
@@ -134,7 +136,7 @@ function AppLayout() {
                     color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
                     background: isActive ? 'var(--accent-soft)' : 'transparent',
                   }}
-                  aria-current={isActive ? 'page' : undefined}
+                  isActive={isActive}
                 >
                   {t(item.key)}
                 </NavLinkWithPreload>
@@ -153,7 +155,7 @@ function AppLayout() {
                     color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
                     background: isActive ? 'var(--accent-soft)' : 'transparent',
                   }}
-                  aria-current={isActive ? 'page' : undefined}
+                  isActive={isActive}
                 >
                   {t(item.key)}
                 </NavLinkWithPreload>
