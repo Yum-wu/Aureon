@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     compression({
-      algorithms: ['gzip'],
+      algorithms: ['gzip', 'brotliCompress'],
       threshold: 1024,
       deleteOriginalAssets: false,
     }),
@@ -37,6 +37,12 @@ export default defineConfig({
           }
           if (id.includes('node_modules/@nivo')) {
             return 'vendor-nivo';
+          }
+          if (id.includes('node_modules/@tanstack')) {
+            return 'vendor-query';
+          }
+          if (id.includes('node_modules/zustand')) {
+            return 'vendor-zustand';
           }
         },
       },
