@@ -28,14 +28,6 @@ import { DatePicker } from '../components/ui/DatePicker';
 
 // Types are now imported from '../hooks/admin'
 // Re-export for local use if needed
-interface SSOProvider {
-  id: number;
-  name: string;
-  provider_type: string;
-  client_id: string;
-  enabled: boolean;
-  created_at: string;
-}
 
 interface UserRecord {
   id: string;
@@ -52,14 +44,6 @@ interface WorkspaceRecord {
   member_count: number;
   quota: string;
   status: 'active' | 'archived';
-}
-
-interface FeatureFlag {
-  key: string;
-  name: string;
-  description: string;
-  enabled: boolean;
-  rules: string;
 }
 
 /* ── 角色权限矩阵 ── */

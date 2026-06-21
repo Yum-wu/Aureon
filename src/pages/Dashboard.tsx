@@ -261,7 +261,7 @@ export function Dashboard() {
   const hasRealtimeData = rtLastUpdated !== null;
 
   // 基准层：始终使用 HTTP 轮询数据（兜底）
-  const baseMetrics = stats ? {
+  const baseMetrics = useMemo(() => stats ? {
     ttft_p50: stats.avg_retrieval_latency_ms || 0,
     ttft_p95: 0,
     qps: Math.round((stats.query_count_24h || 0) / 86400 * 100) / 100,
@@ -271,22 +271,22 @@ export function Dashboard() {
     latency_trend: [] as number[],
     tpot_trend: [] as number[],
     e2e_trend: [] as number[],
-  } : null;
+  } : null, [stats]);
 
   // 增强层：WebSocket 实时数据（仅当有实际数据时叠加，全零不覆盖 HTTP 基准）
   const rtHasData = hasRealtimeData && (rtMetrics.qps > 0 || rtMetrics.ttft_p50 > 0 || rtMetrics.token_usage > 0);
-  const realtimeOverlay = rtHasData ? {
+  const realtimeOverlay = useMemo(() => rtHasData ? {
     ttft_p50: rtMetrics.ttft_p50,
     ttft_p95: rtMetrics.ttft_p95,
     qps: rtMetrics.qps,
     error_rate: rtMetrics.error_rate * 100, // 0-1 → 0-100%
     alert_count: rtAlerts.length,
-  } : null;
+  } : null, [rtHasData, rtMetrics.ttft_p50, rtMetrics.ttft_p95, rtMetrics.qps, rtMetrics.error_rate, rtAlerts.length]);
 
   // 融合：增强层覆盖基准层
-  const metrics = baseMetrics
+  const metrics = useMemo(() => baseMetrics
     ? { ...baseMetrics, ...realtimeOverlay }
-    : null;
+    : null, [baseMetrics, realtimeOverlay]);
 
   // 映射 hook 告警到 AlertMessage 格式
   const alerts: AlertMessage[] = rtAlerts.map((a) => ({

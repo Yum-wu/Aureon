@@ -11,8 +11,6 @@ import { RealtimeMetricsProvider } from "./providers/RealtimeMetricsProvider";
 import { useAuth } from "./hooks/AuthContext";
 import { AdminGate } from "./components/AdminGate";
 import { useUIStore } from "./stores/useUIStore";
-import { useQueryClient } from "@tanstack/react-query";
-import { prefetchDocuments } from "./hooks/useDocumentsQuery";
 
 // Route-level code splitting — each page is a separate chunk
 const Landing = lazy(() => import("./pages/Landing").then(m => ({ default: m.Landing })));
@@ -80,32 +78,9 @@ function AppLayout() {
   const location = useLocation();
   const mobileMenuOpen = useUIStore(s => s.mobileMenuOpen);
   const setMobileMenuOpen = useUIStore(s => s.setMobileMenuOpen);
-  const queryClient = useQueryClient();
 
   // 路由变化时关闭移动端菜单
   useEffect(() => { setMobileMenuOpen(false); }, [location.pathname, setMobileMenuOpen]);
-
-  // Hover 预取：鼠标悬停时预加载页面 chunk + 数据（TanStack Query 官方推荐模式）
-  const prefetchRoute = (path: string) => {
-    switch (path) {
-      case '/documents':
-        import('./pages/Documents');
-        prefetchDocuments(queryClient);
-        break;
-      case '/dashboard':
-        import('./pages/Dashboard');
-        break;
-      case '/analytics':
-        import('./pages/Analytics');
-        break;
-      case '/admin':
-        import('./pages/Admin');
-        break;
-      case '/search':
-        import('./pages/Search');
-        break;
-    }
-  };
 
   const navGroups = useMemo(() => [
     {
