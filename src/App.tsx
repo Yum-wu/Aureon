@@ -47,15 +47,17 @@ interface NavLinkWithPreloadProps {
   preloadFn?: () => Promise<unknown>;
   children: React.ReactNode;
   className?: string;
+  style?: React.CSSProperties;
+  'aria-current'?: string;
 }
 
-function NavLinkWithPreload({ to, preloadFn, children, className }: NavLinkWithPreloadProps) {
+function NavLinkWithPreload({ to, preloadFn, children, ...rest }: NavLinkWithPreloadProps) {
   return (
     <Link
       to={to}
       onMouseEnter={preloadFn}
       onFocus={preloadFn}
-      className={className}
+      {...rest}
     >
       {children}
     </Link>
