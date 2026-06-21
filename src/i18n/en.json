@@ -214,7 +214,8 @@
     "demo_mode": "Currently showing demo data. Will auto-update when connected to a live data source.",
     "demo_data": "Demo Data",
     "connecting": "Connecting",
-    "no_data": "No data available"
+    "no_data": "No data available",
+    "waiting_for_data": "Waiting for WebSocket data..."
   },
   "search": {
     "title": "Enterprise AI Search",
