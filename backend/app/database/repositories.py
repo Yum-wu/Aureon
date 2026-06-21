@@ -128,7 +128,7 @@ class UserRepository:
 
     @staticmethod
     async def update(user_id: int, **fields) -> bool:
-        """Update user fields ¡ª only whitelisted column names allowed."""
+        """Update user fields ï¿½ï¿½ only whitelisted column names allowed."""
         pool = get_db_pool()
         if not pool:
             return False
