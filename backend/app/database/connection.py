@@ -20,7 +20,7 @@ async def init_db() -> None:
             db_url,
             min_size=2,
             max_size=20,
-            command_timeout=30,
+            command_timeout=60,
         )
         logger.info("PostgreSQL connected (pool min=2, max=20)")
 
@@ -47,6 +47,31 @@ async def _run_schema() -> None:
 def get_db_pool() -> asyncpg.Pool | None:
     """Return the connection pool, or None if not initialized."""
     return _pool
+
+
+def get_pool_stats() -> dict | None:
+    """Return asyncpg pool statistics for monitoring."""
+    pool = get_db_pool()
+    if not pool:
+        return None
+    return {
+        "size": pool.get_size(),
+        "idle_size": pool.get_idle_size(),
+        "min_size": pool.get_min_size(),
+        "max_size": pool.get_max_size(),
+    }
+
+
+def update_prometheus_pool_stats() -> None:
+    """Push DB pool stats to Prometheus gauges."""
+    stats = get_pool_stats()
+    if stats:
+        try:
+            from app.observability.custom_metrics import db_pool_size, db_pool_idle
+            db_pool_size.set(stats["size"])
+            db_pool_idle.set(stats["idle_size"])
+        except Exception:
+            pass
 
 
 async def close_db_pool() -> None:
