@@ -22,7 +22,6 @@ function isDev(): boolean {
 
 export function reportWebVitals(metric: Metric): void {
   if (isDev()) {
-    // eslint-disable-next-line no-console
     console.debug(
       `[WebVitals] ${metric.name}: ${metric.value.toFixed(2)} (${metric.rating})`,
       metric,

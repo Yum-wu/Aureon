@@ -240,7 +240,7 @@ function PipelineBreakdown({ stages }: { stages: { name: string; ms: number; col
 
 export function Dashboard() {
   const { t } = useTranslation();
-  const { stats, queryVolume, isLoading: loading, isLoadingStats, isLoadingVolume, error, refetch } = useDashboardData();
+  const { stats, queryVolume, isLoading: loading, isLoadingVolume, error, refetch } = useDashboardData();
   const { health } = useSystemHealth();
 
   // 实时指标（通过 useRealtimeMetrics hook，统一 WebSocket 管理）
