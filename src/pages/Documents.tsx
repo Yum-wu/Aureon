@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { authFetch } from "../services/authFetch";
-import { useDocumentsStore } from "../stores/useDocumentsStore";
+import { useDocumentsQuery } from "../hooks/useDocumentsQuery";
 import { useBlogConfig } from "../hooks/useBlogConfig";
 import { DocumentUpload } from "../components/documents/DocumentUpload";
 import { FileText, BookOpen, BarChart3 } from "lucide-react";
@@ -16,14 +16,14 @@ const TYPE_BADGE: Record<string, string> = {
 
 export function Documents() {
   const { t } = useTranslation();
-  const { documents, totalDocs, totalChunks, loading, error, refetch, filter, setFilter } = useDocumentsStore();
+  const { data, isLoading, error, refetch } = useDocumentsQuery();
   const { config: blogConfig } = useBlogConfig();
   const [showUpload, setShowUpload] = useState(false);
+  const [filter, setFilter] = useState("");
 
-  // 组件挂载时获取文档
-  useEffect(() => {
-    refetch();
-  }, [refetch]);
+  const documents = data?.documents ?? [];
+  const totalDocs = data?.totalDocs ?? 0;
+  const totalChunks = data?.totalChunks ?? 0;
 
   const filtered = filter
     ? documents.filter(
@@ -45,9 +45,9 @@ export function Documents() {
         </div>
         <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
           <p className="text-red-600 mb-4">{t("documents.error_loading")}</p>
-          <p className="text-sm text-[var(--text-tertiary)] mb-4">{error}</p>
+          <p className="text-sm text-[var(--text-tertiary)] mb-4">{error instanceof Error ? error.message : String(error)}</p>
           <button
-            onClick={refetch}
+            onClick={() => refetch()}
             className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
           >
             {t("documents.retry")}
@@ -131,12 +131,12 @@ export function Documents() {
       {/* Upload area */}
       {showUpload && (
         <div className="mb-4">
-          <DocumentUpload onUploadSuccess={refetch} />
+          <DocumentUpload onUploadSuccess={() => refetch()} />
         </div>
       )}
 
       {/* Content */}
-      {loading ? (
+      {isLoading ? (
         <div className="flex items-center justify-center h-64">
           <div className="flex space-x-1.5">
             <span className="w-2.5 h-2.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
