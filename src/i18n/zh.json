@@ -213,7 +213,8 @@
     "demo_mode": "当前显示演示数据，连接实时数据源后自动更新",
     "demo_data": "演示数据",
     "connecting": "连接中",
-    "no_data": "暂无数据"
+    "no_data": "暂无数据",
+    "waiting_for_data": "等待 WebSocket 数据..."
   },
   "search": {
     "title": "企业级 AI 搜索",

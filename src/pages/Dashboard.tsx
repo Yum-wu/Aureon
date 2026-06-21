@@ -2,6 +2,8 @@ import { useTranslation } from 'react-i18next';
 import { useDashboardData } from '../hooks/useDashboardData';
 import { useSystemHealth } from '../hooks/useSystemHealth';
 import { useRealtimeMetrics } from '../hooks/useRealtimeMetrics';
+import { useLatencyHistory } from '../hooks/useLatencyHistory';
+import { useMemo, useState, useEffect } from 'react';
 import { useViewStore } from '../stores/useViewStore';
 import { Card } from '../components/ui/Card';
 import { Tooltip } from '../components/ui/Tooltip';
@@ -252,6 +254,8 @@ export function Dashboard() {
     lastUpdated: rtLastUpdated,
   } = useRealtimeMetrics();
 
+  const latencyHistory = useLatencyHistory();
+
   const timeRange = useViewStore((s) => s.dashboardTimeRange);
   const setDashboardTimeRange = useViewStore((s) => s.setDashboardTimeRange);
   const hasRealtimeData = rtLastUpdated !== null;
@@ -313,11 +317,34 @@ export function Dashboard() {
     },
   ];
 
-  // Pipeline 分解数据（优先使用 WebSocket 实时数据，无数据时展示占位）
+  // Pipeline data with localStorage fallback
+  const [cachedPipeline, setCachedPipeline] = useState(() => {
+    try {
+      const saved = localStorage.getItem('aureon:pipeline:last');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
   const hasPipelineData = rtMetrics.pipeline && (rtMetrics.pipeline.retrieval_ms ?? 0) > 0;
-  const pipelineStages = hasPipelineData ? [
-    { name: t('dashboard.pipeline.retrieval'), ms: rtMetrics.pipeline.retrieval_ms ?? 0, color: '#5E6AD2' },
-    { name: t('dashboard.pipeline.generation'), ms: rtMetrics.pipeline.generation_ms ?? 0, color: '#EAB308' },
+
+  useEffect(() => {
+    if (hasPipelineData) {
+      try {
+        localStorage.setItem('aureon:pipeline:last', JSON.stringify(rtMetrics.pipeline));
+        setCachedPipeline(rtMetrics.pipeline);
+      } catch {
+        // Silent fail
+      }
+    }
+  }, [hasPipelineData, rtMetrics.pipeline]);
+
+  const pipelineData = hasPipelineData ? rtMetrics.pipeline : cachedPipeline;
+
+  const pipelineStages = pipelineData ? [
+    { name: t('dashboard.pipeline.retrieval'), ms: pipelineData.retrieval_ms ?? 0, color: '#5E6AD2' },
+    { name: t('dashboard.pipeline.generation'), ms: pipelineData.generation_ms ?? 0, color: '#EAB308' },
   ] : [];
 
   // 查询量柱状图数据（过滤无效值，防止 Nivo 生成 d="null" SVG 路径导致浏览器崩溃）
@@ -328,12 +355,24 @@ export function Dashboard() {
       value: item.count,
     }));
 
-  // 延迟趋势折线图数据（过滤 null/undefined 和非正值，防止 Nivo 生成 d="null" SVG 路径导致浏览器崩溃）
-  const latencyChartData = metrics ? [
-    { id: t('dashboard.latency.ttft'), data: metrics.latency_trend.filter((v): v is number => v != null && v > 0).map((v, i) => ({ x: `${i}`, y: v })) },
-    { id: t('dashboard.latency.tpot'), data: metrics.tpot_trend.filter((v): v is number => v != null && v > 0).map((v, i) => ({ x: `${i}`, y: v })) },
-    { id: t('dashboard.latency.e2e'), data: metrics.e2e_trend.filter((v): v is number => v != null && v > 0).map((v, i) => ({ x: `${i}`, y: v })) },
-  ] : [];
+  // Latency trend chart data - prefer accumulated history
+  const latencyChartData = useMemo(() => {
+    if (latencyHistory.length > 5) {
+      return [
+        { 
+          id: t('dashboard.latency.ttft'), 
+          data: latencyHistory.map((p, i) => ({ x: `${i}`, y: p.ttft }))
+        },
+      ];
+    }
+    
+    // Fallback to existing realtime metrics
+    return metrics ? [
+      { id: t('dashboard.latency.ttft'), data: metrics.latency_trend.filter((v): v is number => v != null && v > 0).map((v, i) => ({ x: `${i}`, y: v })) },
+      { id: t('dashboard.latency.tpot'), data: metrics.tpot_trend.filter((v): v is number => v != null && v > 0).map((v, i) => ({ x: `${i}`, y: v })) },
+      { id: t('dashboard.latency.e2e'), data: metrics.e2e_trend.filter((v): v is number => v != null && v > 0).map((v, i) => ({ x: `${i}`, y: v })) },
+    ] : [];
+  }, [latencyHistory, metrics, t]);
 
   // 检索质量趋势数据
   const qualityChartData: { id: string; data: { x: string; y: number }[] }[] = []; // TODO: 等待后端 API 提供质量趋势数据
@@ -483,8 +522,9 @@ export function Dashboard() {
                 {pipelineStages.length > 0 ? (
                   <PipelineBreakdown stages={pipelineStages} />
                 ) : (
-                  <div className="flex items-center justify-center h-[100px] text-[var(--text-tertiary)] text-sm">
-                    {t('dashboard.no_data', '暂无数据')}
+                  <div className="flex flex-col items-center justify-center h-[100px] text-[var(--text-tertiary)] text-sm">
+                    <p>{t('dashboard.no_data')}</p>
+                    <p className="text-xs mt-1">{t('dashboard.waiting_for_data', 'Waiting for WebSocket data...')}</p>
                   </div>
                 )}
               </Card>
