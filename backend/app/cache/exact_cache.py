@@ -10,9 +10,8 @@ import time
 from typing import Optional
 import structlog
 
-from app.cache.connection import get_async_redis, get_sync_redis
+from app.cache.connection import get_async_redis
 from app.cache.metrics import record_hit, record_miss, record_set, record_error
-from app.multi_tenant.middleware import get_current_tenant_id
 
 logger = structlog.get_logger()
 

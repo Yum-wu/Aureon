@@ -23,7 +23,7 @@ from app.agent.agent import create_chat_agent
 from app.agent.executor import stream_agent_with_memory
 from app.memory.manager import manager as memory_manager
 from app.utils.lang_detect import detect_language
-from app.common import SSE_HEADERS, sse_event, fire_and_forget, resilient_fire_and_forget
+from app.common import SSE_HEADERS, sse_event, resilient_fire_and_forget
 from app.rag.guardrails import detect_prompt_injection, sanitize_input
 from app.audit.decorator import audit_action
 from app.exceptions import AureonException
