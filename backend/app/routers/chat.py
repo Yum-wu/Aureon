@@ -46,28 +46,27 @@ async def _record_stream_analytics(
 ) -> Any:
     """Wrap SSE stream to record analytics + cost data after completion."""
     start_time = time.time()
-    full_text = ""
+    full_text_len = 0
     sources_count = 0
 
     try:
         async for raw_event in stream_gen:
-            # Parse SSE data for metric extraction (non-blocking)
-            try:
-                if raw_event.startswith("data: "):
+            # Lightweight analytics — only parse sources events (low frequency)
+            if raw_event.startswith("data: ") and '"type": "sources"' in raw_event:
+                try:
                     payload = json.loads(raw_event[6:].rstrip())
-                    etype = payload.get("type")
-                    if etype == "text":
-                        full_text += payload.get("content", "")
-                    elif etype == "sources":
-                        sources_count = len(payload.get("sources", []))
-            except (json.JSONDecodeError, AttributeError, KeyError):
-                pass
+                    sources_count = len(payload.get("sources", []))
+                except (json.JSONDecodeError, AttributeError):
+                    pass
+            elif raw_event.startswith("data: "):
+                # Count output bytes without JSON parsing
+                full_text_len += len(raw_event) - 6
             yield raw_event
     except Exception:
         raise
     finally:
         latency_ms = int((time.time() - start_time) * 1000)
-        output_tokens = max(len(full_text) // 2, 1) if full_text else 0
+        output_tokens = max(full_text_len // 2, 1) if full_text_len else 0
         input_tokens = len(query) + 500
 
         # 1. Record query stats (Analytics page data source)
