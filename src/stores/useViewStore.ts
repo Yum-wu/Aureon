@@ -34,10 +34,10 @@ function getUserId(): string {
 }
 
 /** Default view state for migration fallback */
-const DEFAULT_VIEW_STATE = {
-  dashboardTimeRange: '24h' as const,
-  analyticsTimeRange: '24h' as const,
-  costTimeRange: '30d' as const,
+const DEFAULT_VIEW_STATE: Pick<ViewState, 'dashboardTimeRange' | 'analyticsTimeRange' | 'costTimeRange' | 'onboardingCompleted'> = {
+  dashboardTimeRange: '24h',
+  analyticsTimeRange: '24h',
+  costTimeRange: '30d',
   onboardingCompleted: false,
 };
 
