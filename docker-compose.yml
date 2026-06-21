@@ -88,6 +88,10 @@ services:
       retries: 3
     restart: unless-stopped
 
+  # Elasticsearch: 当前被 BM25 关键词检索使用 (BM25_BACKEND=elasticsearch)
+  # 注意: BM25 功能正在被弃用，计划迁移到 Qdrant 原生稀疏向量
+  # 迁移完成后，此服务可以安全移除
+  # 参见: backend/app/rag/bm25.py 中的弃用说明
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
     environment:
