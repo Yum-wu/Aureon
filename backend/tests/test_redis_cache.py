@@ -5,16 +5,18 @@ import pytest
 from unittest.mock import patch, AsyncMock
 
 from app.cache import redis_client
+from app.cache import connection
+from app.cache import exact_cache
 
 
 @pytest.fixture(autouse=True)
 def _reset_module_state():
     """Reset module-level state between tests."""
-    redis_client._redis = None
-    redis_client._mem_cache.clear()
+    connection._redis = None
+    exact_cache._mem_cache.clear()
     yield
-    redis_client._redis = None
-    redis_client._mem_cache.clear()
+    connection._redis = None
+    exact_cache._mem_cache.clear()
 
 
 # ── In-memory cache helpers ──
@@ -22,17 +24,17 @@ def _reset_module_state():
 
 class TestMemCacheKey:
     def test_deterministic(self):
-        k1 = redis_client._mem_cache_key("hello world")
-        k2 = redis_client._mem_cache_key("hello world")
+        k1 = exact_cache._mem_cache_key("hello world")
+        k2 = exact_cache._mem_cache_key("hello world")
         assert k1 == k2
 
     def test_prefix(self):
-        k = redis_client._mem_cache_key("test")
+        k = exact_cache._mem_cache_key("test")
         assert k.startswith("llm_cache:")
 
     def test_case_insensitive_and_strip(self):
-        k1 = redis_client._mem_cache_key("Hello")
-        k2 = redis_client._mem_cache_key("  hello  ")
+        k1 = exact_cache._mem_cache_key("Hello")
+        k2 = exact_cache._mem_cache_key("  hello  ")
         assert k1 == k2
 
 
@@ -52,7 +54,7 @@ class TestMemGetSet:
     def test_eviction_over_500(self):
         for i in range(510):
             redis_client._mem_set(f"q{i}", f"a{i}", ttl=3600)
-        assert len(redis_client._mem_cache) <= 500
+        assert len(exact_cache._mem_cache) <= 500
 
 
 # ── Semantic cache key ──
@@ -87,7 +89,7 @@ async def test_get_cached_mem_hit():
 async def test_get_cached_mem_miss_redis_miss():
     mock_r = AsyncMock()
     mock_r.get = AsyncMock(return_value=None)
-    redis_client._redis = mock_r
+    connection._redis = mock_r
 
     result = await redis_client.get_cached("unknown")
     assert result is None
@@ -97,7 +99,7 @@ async def test_get_cached_mem_miss_redis_miss():
 async def test_get_cached_redis_hit_populates_mem():
     mock_r = AsyncMock()
     mock_r.get = AsyncMock(return_value="redis_answer")
-    redis_client._redis = mock_r
+    connection._redis = mock_r
 
     result = await redis_client.get_cached("q")
     assert result == "redis_answer"
@@ -109,7 +111,7 @@ async def test_get_cached_redis_hit_populates_mem():
 async def test_get_cached_redis_exception_graceful():
     mock_r = AsyncMock()
     mock_r.get = AsyncMock(side_effect=ConnectionError("down"))
-    redis_client._redis = mock_r
+    connection._redis = mock_r
 
     result = await redis_client.get_cached("q")
     assert result is None
@@ -118,7 +120,7 @@ async def test_get_cached_redis_exception_graceful():
 @pytest.mark.asyncio
 async def test_set_cached_no_redis():
     """set_cached stores in memory even when Redis is unavailable."""
-    redis_client._redis = False
+    connection._redis = False
     await redis_client.set_cached("q", "answer")
     assert redis_client._mem_get("q") == "answer"
 
@@ -126,19 +128,19 @@ async def test_set_cached_no_redis():
 @pytest.mark.asyncio
 async def test_set_cached_with_redis():
     mock_r = AsyncMock()
-    mock_r.setex = AsyncMock()
-    redis_client._redis = mock_r
+    mock_r.set = AsyncMock()
+    connection._redis = mock_r
 
     await redis_client.set_cached("q", "answer", ttl=120)
-    mock_r.setex.assert_called_once()
+    mock_r.set.assert_called_once()
     assert redis_client._mem_get("q") == "answer"
 
 
 @pytest.mark.asyncio
 async def test_set_cached_redis_exception_graceful():
     mock_r = AsyncMock()
-    mock_r.setex = AsyncMock(side_effect=ConnectionError("down"))
-    redis_client._redis = mock_r
+    mock_r.set = AsyncMock(side_effect=ConnectionError("down"))
+    connection._redis = mock_r
 
     # Should not raise
     await redis_client.set_cached("q", "answer")
@@ -150,7 +152,7 @@ async def test_set_cached_redis_exception_graceful():
 
 def test_get_redis_returns_none_on_import_error():
     """When redis package is missing, _get_redis returns None."""
-    redis_client._redis = None
+    connection._redis = None
     with patch.dict("sys.modules", {"redis.asyncio": None}):
         result = redis_client._get_redis()
     # None = unavailable, or a valid client
@@ -159,7 +161,7 @@ def test_get_redis_returns_none_on_import_error():
 
 def test_get_redis_singleton():
     """Second call returns cached instance."""
-    redis_client._redis = "fake_client"
+    connection._redis = "fake_client"
     assert redis_client._get_redis() == "fake_client"
 
 
@@ -170,23 +172,23 @@ def test_get_redis_singleton():
 async def test_close_redis_with_client():
     mock_r = AsyncMock()
     mock_r.close = AsyncMock()
-    redis_client._redis = mock_r
+    connection._redis = mock_r
 
     await redis_client.close_redis()
     mock_r.close.assert_called_once()
-    assert redis_client._redis is None
+    assert connection._redis is None
 
 
 @pytest.mark.asyncio
 async def test_close_redis_with_false_sentinel():
-    redis_client._redis = False
+    connection._redis = False
     await redis_client.close_redis()
-    # Should not raise, _redis stays False (no close call)
-    assert redis_client._redis is False
+    # _redis is reset to None after close (False sentinel treated as no client)
+    assert connection._redis is None
 
 
 @pytest.mark.asyncio
 async def test_close_redis_with_none():
-    redis_client._redis = None
+    connection._redis = None
     await redis_client.close_redis()
-    assert redis_client._redis is None
+    assert connection._redis is None

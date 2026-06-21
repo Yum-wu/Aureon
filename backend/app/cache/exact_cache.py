@@ -68,6 +68,8 @@ async def get_cached(query: str, tenant_id: str = "default") -> Optional[str]:
             key = _mem_cache_key(query, tenant_id)
             val = await r.get(key)
             if val:
+                # Populate memory cache on Redis hit for faster subsequent lookups
+                mem_set(query, val, _MEM_TTL, tenant_id)
                 record_hit("exact", (time.monotonic() - start) * 1000)
                 return val
     except Exception as e:

@@ -50,7 +50,14 @@ def get_redis():
 
 async def close_redis():
     """Close async Redis connection (backward compat alias for close_async_redis)."""
-    close_async_redis()
+    await close_async_redis()
+
+
+# Old private API names used by tests (backward compat)
+_mem_get = mem_get
+_mem_set = mem_set
+_get_redis = get_async_redis
+_get_sync_redis = get_sync_redis
 
 
 # Semantic Cache Integration (not yet extracted)
