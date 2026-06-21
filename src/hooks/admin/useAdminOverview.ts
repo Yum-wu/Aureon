@@ -11,8 +11,8 @@ export const ADMIN_QUERY_KEYS = {
 } as const;
 
 export const ADMIN_CACHE_CONFIG = {
-  staleTime: 5 * 60 * 1000,   // 5 分钟
-  gcTime: 10 * 60 * 1000,     // 10 分钟
+  staleTime: 5 * 60 * 1000,   // 5 路脰脰脫
+  gcTime: 10 * 60 * 1000,     // 10 路脰脰脫
   placeholderData: keepPreviousData,
   retry: 2,
 };

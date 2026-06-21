@@ -1,5 +1,5 @@
 /**
- * useLatencyHistory ¡ª accumulates latency data from WebSocket metrics
+ * useLatencyHistory Â¡Âª accumulates latency data from WebSocket metrics
  * Persists to localStorage for trend visualization in Dashboard.
  */
 
