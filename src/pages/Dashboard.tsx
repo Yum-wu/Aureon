@@ -384,7 +384,7 @@ export function Dashboard() {
         {!loading && !error && (
           <div className="space-y-6">
             {/* ── 演示模式水印 ── */}
-            {!hasRealtimeData && !loading && !error && (
+            {!hasRealtimeData && !stats?.query_count_24h && !loading && !error && (
               <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-center">
                 <p className="text-sm font-medium text-amber-400">
                   <span className="inline-flex items-center gap-1"><AlertTriangle size={14} /> {t('dashboard.demo_mode')}</span>
@@ -397,7 +397,6 @@ export function Dashboard() {
                 label={t('dashboard.golden_signals.latency')}
                 value={metrics?.ttft_p50 ?? '—'}
                 unit="ms"
-                trend={hasRealtimeData ? -5 : undefined}
                 sparklineData={metrics?.latency_trend?.length ? metrics.latency_trend : undefined}
                 tooltip={t('dashboard.golden_signals.latency_tooltip')}
               />
@@ -405,7 +404,6 @@ export function Dashboard() {
                 label={t('dashboard.golden_signals.traffic')}
                 value={metrics?.qps?.toFixed(2) ?? '—'}
                 unit="QPS"
-                trend={hasRealtimeData ? 3 : undefined}
                 sparklineData={undefined}
                 tooltip={t('dashboard.golden_signals.traffic_tooltip')}
               />
@@ -413,7 +411,6 @@ export function Dashboard() {
                 label={t('dashboard.golden_signals.errors')}
                 value={metrics?.error_rate?.toFixed(1) ?? '—'}
                 unit="%"
-                trend={hasRealtimeData ? -2 : undefined}
                 sparklineData={undefined}
                 tooltip={t('dashboard.golden_signals.errors_tooltip')}
               />
