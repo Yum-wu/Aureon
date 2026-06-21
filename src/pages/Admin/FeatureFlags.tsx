@@ -89,16 +89,16 @@ export default function FeatureFlags() {
       case "deprecated":
         return "bg-orange-100 text-orange-800";
       case "archived":
-        return "bg-gray-100 text-gray-800";
+        return "bg-[var(--bg-tertiary)] text-[var(--text-primary)]";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-[var(--bg-tertiary)] text-[var(--text-primary)]";
     }
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">{t("common.loading")}</div>
+        <div className="text-[var(--text-tertiary)]">{t("common.loading")}</div>
       </div>
     );
   }
@@ -108,10 +108,10 @@ export default function FeatureFlags() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">
             {t("admin.featureFlags.title")}
           </h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-[var(--text-tertiary)]">
             {t("admin.featureFlags.description")}
           </p>
         </div>
@@ -137,36 +137,36 @@ export default function FeatureFlags() {
       )}
 
       {/* Flags Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="bg-[var(--bg-secondary)] rounded-lg shadow overflow-hidden">
+        <table className="min-w-full divide-y divide-[var(--border)]">
+          <thead className="bg-[var(--bg-elevated)]">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider">
                 {t("admin.featureFlags.name")}
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider">
                 {t("admin.featureFlags.status")}
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider">
                 {t("admin.featureFlags.enabled")}
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider">
                 {t("admin.featureFlags.percentage")}
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider">
                 {t("admin.featureFlags.actions")}
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-[var(--bg-secondary)] divide-y divide-[var(--border)]">
             {flags.map((flag) => (
-              <tr key={flag.id} className="hover:bg-gray-50">
+              <tr key={flag.id} className="hover:bg-[var(--bg-elevated)]">
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">
+                  <div className="text-sm font-medium text-[var(--text-primary)]">
                     {flag.name}
                   </div>
                   {flag.description && (
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-[var(--text-tertiary)]">
                       {flag.description}
                     </div>
                   )}
@@ -189,17 +189,17 @@ export default function FeatureFlags() {
                   <button
                     onClick={() => handleToggle(flag)}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      flag.enabled ? "bg-blue-600" : "bg-gray-200"
+                      flag.enabled ? "bg-blue-600" : "bg-[var(--bg-tertiary)]"
                     }`}
                   >
                     <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      className={`inline-block h-4 w-4 transform rounded-full bg-[var(--bg-secondary)] transition-transform ${
                         flag.enabled ? "translate-x-6" : "translate-x-1"
                       }`}
                     />
                   </button>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--text-tertiary)]">
                   {flag.percentage}%
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -217,7 +217,7 @@ export default function FeatureFlags() {
 
         {flags.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-500">
+            <p className="text-[var(--text-tertiary)]">
               {t("admin.featureFlags.noFlags")}
             </p>
           </div>
@@ -227,13 +227,13 @@ export default function FeatureFlags() {
       {/* Create Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+          <div className="bg-[var(--bg-secondary)] rounded-lg p-6 w-full max-w-md">
             <h2 className="text-lg font-semibold mb-4">
               {t("admin.featureFlags.createNew")}
             </h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                   {t("admin.featureFlags.name")}
                 </label>
                 <input
@@ -247,7 +247,7 @@ export default function FeatureFlags() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                   {t("admin.featureFlags.description")}
                 </label>
                 <textarea
@@ -260,7 +260,7 @@ export default function FeatureFlags() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                   {t("admin.featureFlags.rolloutPercentage")}
                 </label>
                 <input
@@ -281,7 +281,7 @@ export default function FeatureFlags() {
             <div className="flex justify-end space-x-3 mt-6">
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                className="px-4 py-2 text-[var(--text-secondary)] bg-[var(--bg-tertiary)] rounded-lg hover:bg-[var(--bg-tertiary)]"
               >
                 {t("common.cancel")}
               </button>
