@@ -1,6 +1,6 @@
 // Aureon — Enterprise AI Knowledge Base Platform
 import { lazy, Suspense, useEffect, useMemo, type ReactNode } from "react";
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Link, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Toaster } from "sonner";
@@ -28,11 +28,39 @@ const Architecture = lazy(() => import("./pages/Architecture").then(m => ({ defa
 const NotFound = lazy(() => import("./pages/NotFound"));
 const SupportWidget = lazy(() => import("./components/SupportWidget").then(m => ({ default: m.SupportWidget })));
 
+// Preload functions
+const preloadDashboard = () => import('./pages/Dashboard');
+const preloadAdmin = () => import('./pages/Admin');
+const preloadSearch = () => import('./pages/Search');
+const preloadDocuments = () => import('./pages/Documents');
+const preloadAnalytics = () => import('./pages/Analytics');
+const preloadCost = () => import('./pages/CostGovernance');
+
 function PageFallback() {
   return (
     <div className="flex items-center justify-center h-64" style={{background:'var(--bg-primary)'}}>
       <div className="animate-spin rounded-full h-8 w-8" style={{borderColor:'var(--bg-tertiary)',borderTopColor:'var(--accent)'}} />
     </div>
+  );
+}
+
+interface NavLinkWithPreloadProps {
+  to: string;
+  preloadFn?: () => Promise<unknown>;
+  children: React.ReactNode;
+  className?: string;
+}
+
+function NavLinkWithPreload({ to, preloadFn, children, className }: NavLinkWithPreloadProps) {
+  return (
+    <Link
+      to={to}
+      onMouseEnter={preloadFn}
+      onFocus={preloadFn}
+      className={className}
+    >
+      {children}
+    </Link>
   );
 }
 
@@ -83,18 +111,18 @@ function AppLayout() {
     {
       label: t('app.nav.group_core'),
       items: [
-        { path: "/dashboard", key: "app.nav.dashboard" },
-        { path: "/search", key: "app.nav.search" },
-        { path: "/documents", key: "app.nav.documents" },
-        { path: "/analytics", key: "app.nav.analytics" },
+        { path: "/dashboard", key: "app.nav.dashboard", preloadFn: preloadDashboard },
+        { path: "/search", key: "app.nav.search", preloadFn: preloadSearch },
+        { path: "/documents", key: "app.nav.documents", preloadFn: preloadDocuments },
+        { path: "/analytics", key: "app.nav.analytics", preloadFn: preloadAnalytics },
       ]
     },
     {
       label: t('app.nav.group_admin'),
       items: [
-        { path: "/architecture", key: "app.nav.architecture" },
-        { path: "/admin", key: "app.nav.admin" },
-        { path: "/cost", key: "app.nav.cost" },
+        { path: "/architecture", key: "app.nav.architecture", preloadFn: undefined },
+        { path: "/admin", key: "app.nav.admin", preloadFn: preloadAdmin },
+        { path: "/cost", key: "app.nav.cost", preloadFn: preloadCost },
       ]
     }
   ], [t]);
@@ -120,11 +148,10 @@ function AppLayout() {
             {navGroups[0].items.map((item) => {
               const isActive = location.pathname.startsWith(item.path);
               return (
-                <button
+                <NavLinkWithPreload
                   key={item.path}
-                  onMouseEnter={() => prefetchRoute(item.path)}
-                  onFocus={() => prefetchRoute(item.path)}
-                  onClick={() => navigate(item.path)}
+                  to={item.path}
+                  preloadFn={item.preloadFn}
                   className="relative px-4 py-3 text-sm font-medium transition-colors rounded-md"
                   style={{
                     color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
@@ -133,18 +160,17 @@ function AppLayout() {
                   aria-current={isActive ? 'page' : undefined}
                 >
                   {t(item.key)}
-                </button>
+                </NavLinkWithPreload>
               );
             })}
             <div className="w-px h-6 bg-[var(--border)] mx-2" />
             {navGroups[1].items.map((item) => {
               const isActive = location.pathname.startsWith(item.path);
               return (
-                <button
+                <NavLinkWithPreload
                   key={item.path}
-                  onMouseEnter={() => prefetchRoute(item.path)}
-                  onFocus={() => prefetchRoute(item.path)}
-                  onClick={() => navigate(item.path)}
+                  to={item.path}
+                  preloadFn={item.preloadFn}
                   className="relative px-4 py-3 text-sm font-medium transition-colors rounded-md"
                   style={{
                     color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
@@ -153,7 +179,7 @@ function AppLayout() {
                   aria-current={isActive ? 'page' : undefined}
                 >
                   {t(item.key)}
-                </button>
+                </NavLinkWithPreload>
               );
             })}
           </div>
