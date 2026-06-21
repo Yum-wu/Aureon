@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Mock i18n
 vi.mock('react-i18next', () => ({
@@ -78,10 +79,13 @@ describe('Page Scroll Behavior', () => {
 
   describe('Admin Page', () => {
     it('should render without crashing', async () => {
+      const queryClient = new QueryClient();
       const { container } = render(
-        <BrowserRouter>
-          <Admin />
-        </BrowserRouter>
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>
+            <Admin />
+          </BrowserRouter>
+        </QueryClientProvider>
       );
 
       // 等待 OverviewTab 异步数据加载完成
@@ -91,10 +95,13 @@ describe('Page Scroll Behavior', () => {
     });
 
     it('should have admin layout structure', async () => {
+      const queryClient = new QueryClient();
       const { container } = render(
-        <BrowserRouter>
-          <Admin />
-        </BrowserRouter>
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>
+            <Admin />
+          </BrowserRouter>
+        </QueryClientProvider>
       );
 
       // 等待 OverviewTab 异步数据加载完成

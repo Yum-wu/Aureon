@@ -1,7 +1,21 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { authFetch } from '../services/authFetch';
+import { 
+  useAdminOverview, 
+  useAdminUsers, 
+  useUpdateUserRole, 
+  useSuspendUser, 
+  useDeleteUser,
+  useAdminAudit,
+  useAdminWorkspaces,
+  useAdminFlags,
+  useToggleFlag,
+  useAdminSSO,
+  type AuditFilters,
+  type AuditEntry,
+} from '../hooks/admin';
 import { AdminLayout } from '../components/admin/AdminLayout';
 import { AdminTable } from '../components/admin/AdminTable';
 import { AdminForm } from '../components/admin/AdminForm';
@@ -11,6 +25,8 @@ import { Card } from '../components/ui/Card';
 
 /* ── 类型定义 ── */
 
+// Types are now imported from '../hooks/admin'
+// Re-export for local use if needed
 interface SSOProvider {
   id: number;
   name: string;
@@ -27,16 +43,6 @@ interface UserRecord {
   role: 'super_admin' | 'admin' | 'editor' | 'viewer';
   status: 'active' | 'suspended' | 'invited';
   last_login: string | null;
-}
-
-interface AuditEntry {
-  id: number;
-  timestamp: string;
-  user: string;
-  action: string;
-  resource: string;
-  severity: 'info' | 'warning' | 'critical';
-  details: string;
 }
 
 interface WorkspaceRecord {
@@ -96,48 +102,9 @@ type AdminTab = 'overview' | 'users' | 'roles' | 'workspaces' | 'audit' | 'flags
 /* ── 概览 Tab ── */
 function OverviewTab() {
   const { t } = useTranslation();
-  const [overviewData, setOverviewData] = useState<{
-    active_users: number;
-    today_queries: number;
-    storage_usage: string;
-    uptime: string;
-  } | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: overviewData, isLoading } = useAdminOverview();
 
-  useEffect(() => {
-    const controller = new AbortController();
-
-    async function fetchData() {
-      try {
-        const [statsRes, usersRes] = await Promise.all([
-          authFetch('/api/rag/stats', { signal: controller.signal }),
-          authFetch('/api/security/users', { signal: controller.signal }),
-        ]);
-
-        const statsData = statsRes.ok ? await statsRes.json() : null;
-        const usersData = usersRes.ok ? await usersRes.json() : [];
-        const activeUsers = Array.isArray(usersData)
-          ? usersData.filter((u: { status?: string }) => u.status === 'active').length
-          : 0;
-
-        setOverviewData({
-          active_users: activeUsers,
-          today_queries: statsData?.query_count_24h || 0,
-          storage_usage: '2.4 GB',
-          uptime: '99.9%',
-        });
-      } catch {
-        // 静默失败
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchData();
-    return () => controller.abort();
-  }, []);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
@@ -158,14 +125,12 @@ function OverviewTab() {
     );
   }
 
-  const cards = overviewData
-    ? [
-        { label: t('admin.overview.active_users'), value: overviewData.active_users },
-        { label: t('admin.overview.today_queries'), value: overviewData.today_queries },
-        { label: t('admin.overview.storage_usage'), value: overviewData.storage_usage },
-        { label: t('admin.overview.uptime'), value: overviewData.uptime },
-      ]
-    : [];
+  const cards = [
+    { label: t('admin.overview.active_users'), value: overviewData.active_users },
+    { label: t('admin.overview.today_queries'), value: overviewData.today_queries },
+    { label: t('admin.overview.storage_usage'), value: overviewData.storage_usage },
+    { label: t('admin.overview.uptime'), value: overviewData.uptime },
+  ];
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -182,73 +147,31 @@ function OverviewTab() {
 /* ── 用户管理 Tab ── */
 function UsersTab() {
   const { t } = useTranslation();
-  const [users, setUsers] = useState<UserRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: users = [], isLoading } = useAdminUsers();
+  const updateRole = useUpdateUserRole();
+  const suspendUser = useSuspendUser();
+  const deleteUser = useDeleteUser();
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ type: 'suspend' | 'delete'; user: UserRecord } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-
-  useEffect(() => {
-    const controller = new AbortController();
-    authFetch('/api/security/users', { signal: controller.signal })
-      .then((r) => (r.ok ? r.json() : []))
-      .then((data) => setUsers(Array.isArray(data) ? data : []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-    return () => controller.abort();
-  }, []);
 
   const filteredUsers = users.filter(
     (u) => u.email.toLowerCase().includes(searchQuery.toLowerCase()) || u.display_name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const handleRoleChange = useCallback(async (userId: string, newRole: string) => {
-    try {
-      const res = await authFetch(`/api/security/users/${userId}/role`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: newRole }),
-      });
-      if (res.ok) {
-        setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: newRole as UserRecord['role'] } : u)));
-        toast.success(t('admin.users.role_updated'));
-      } else {
-        toast.error(t('admin.users.role_update_failed'));
-      }
-    } catch {
-      toast.error(t('admin.users.role_update_failed'));
-    }
-  }, [t]);
+    updateRole.mutate({ userId, role: newRole });
+  }, [updateRole]);
 
   const handleSuspend = useCallback(async (userId: string) => {
-    try {
-      const res = await authFetch(`/api/security/users/${userId}/suspend`, { method: 'POST' });
-      if (res.ok) {
-        setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, status: 'suspended' as const } : u)));
-        toast.success(t('admin.users.suspended'));
-      } else {
-        toast.error(t('admin.users.suspend_failed'));
-      }
-    } catch {
-      toast.error(t('admin.users.suspend_failed'));
-    }
+    suspendUser.mutate(userId);
     setConfirmAction(null);
-  }, [t]);
+  }, [suspendUser]);
 
   const handleDelete = useCallback(async (userId: string) => {
-    try {
-      const res = await authFetch(`/api/security/users/${userId}`, { method: 'DELETE' });
-      if (res.ok) {
-        setUsers((prev) => prev.filter((u) => u.id !== userId));
-        toast.success(t('admin.users.deleted'));
-      } else {
-        toast.error(t('admin.users.delete_failed'));
-      }
-    } catch {
-      toast.error(t('admin.users.delete_failed'));
-    }
+    deleteUser.mutate(userId);
     setConfirmAction(null);
-  }, [t]);
+  }, [deleteUser]);
 
   const columns = [
     { key: 'email', label: t('admin.users.columns.email'), sortable: true },
@@ -335,10 +258,10 @@ function UsersTab() {
       <AdminTable<UserRecord>
         data={filteredUsers}
         columns={columns}
-        loading={loading}
+        loading={isLoading}
       />
 
-      {!loading && filteredUsers.length === 0 && (
+      {!isLoading && filteredUsers.length === 0 && (
         <div className="text-center py-12 text-[var(--text-tertiary)]">
           <p className="text-lg mb-2">{t('admin.users.no_users')}</p>
           <p className="text-sm">{t('admin.users.no_users_desc')}</p>
@@ -457,18 +380,7 @@ function RolesTab() {
 /* ── 工作区 Tab ── */
 function WorkspacesTab() {
   const { t } = useTranslation();
-  const [workspaces, setWorkspaces] = useState<WorkspaceRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    authFetch('/api/security/workspaces', { signal: controller.signal })
-      .then((r) => (r.ok ? r.json() : []))
-      .then((data) => setWorkspaces(Array.isArray(data) ? data : []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-    return () => controller.abort();
-  }, []);
+  const { data: workspaces = [], isLoading } = useAdminWorkspaces();
 
   const columns = [
     { key: 'name', label: t('admin.workspaces.columns.name'), sortable: true },
@@ -499,9 +411,9 @@ function WorkspacesTab() {
       <AdminTable<WorkspaceRecord>
         data={workspaces}
         columns={columns}
-        loading={loading}
+        loading={isLoading}
       />
-      {!loading && workspaces.length === 0 && (
+      {!isLoading && workspaces.length === 0 && (
         <div className="text-center py-12 text-[var(--text-tertiary)]">
           <p className="text-lg mb-2">{t('admin.workspaces.empty')}</p>
           <p className="text-sm">{t('admin.workspaces.empty_desc')}</p>
@@ -514,10 +426,8 @@ function WorkspacesTab() {
 /* ── 审计日志 Tab ── */
 function AuditTab() {
   const { t } = useTranslation();
-  const [auditLogs, setAuditLogs] = useState<AuditEntry[]>([]);
-  const [loading, setLoading] = useState(true);
   const [expandedRow, setExpandedRow] = useState<number | null>(null);
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<AuditFilters>({
     dateFrom: '',
     dateTo: '',
     user: '',
@@ -525,22 +435,7 @@ function AuditTab() {
     severity: '',
   });
 
-  useEffect(() => {
-    const controller = new AbortController();
-    const params = new URLSearchParams();
-    if (filters.user) params.set('user', filters.user);
-    if (filters.actionType) params.set('action', filters.actionType);
-    if (filters.severity) params.set('severity', filters.severity);
-    if (filters.dateFrom) params.set('from', filters.dateFrom);
-    if (filters.dateTo) params.set('to', filters.dateTo);
-
-    authFetch(`/api/audit/logs?${params.toString()}`, { signal: controller.signal })
-      .then((r) => (r.ok ? r.json() : []))
-      .then((data) => setAuditLogs(Array.isArray(data) ? data : []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-    return () => controller.abort();
-  }, [filters]);
+  const { data: auditLogs = [], isLoading } = useAdminAudit(filters);
 
   const handleExport = useCallback((format: 'csv' | 'json') => {
     const url = `/api/audit/logs/export?format=${format}`;
@@ -666,10 +561,10 @@ function AuditTab() {
       <AdminTable<AuditEntry>
         data={auditLogs}
         columns={columns}
-        loading={loading}
+        loading={isLoading}
         onRowClick={(entry: AuditEntry) => setExpandedRow(expandedRow === entry.id ? null : entry.id)}
       />
-      {!loading && auditLogs.length === 0 && (
+      {!isLoading && auditLogs.length === 0 && (
         <div className="text-center py-12 text-[var(--text-tertiary)]">
           <p className="text-lg mb-2">{t('admin.audit.empty')}</p>
           <p className="text-sm">{t('admin.audit.empty_desc')}</p>
@@ -682,32 +577,10 @@ function AuditTab() {
 /* ── Feature Flags Tab ── */
 function FlagsTab() {
   const { t } = useTranslation();
-  const [flags, setFlags] = useState<FeatureFlag[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: flags = [], isLoading } = useAdminFlags();
+  const toggleFlag = useToggleFlag();
 
-  useEffect(() => {
-    const controller = new AbortController();
-    authFetch('/api/feature-flags/', { signal: controller.signal })
-      .then((r) => (r.ok ? r.json() : []))
-      .then((data) => setFlags(Array.isArray(data) ? data : []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-    return () => controller.abort();
-  }, []);
-
-  const toggleFlag = useCallback(async (flagKey: string) => {
-    const prevEnabled = flags.find(f => f.key === flagKey)?.enabled ?? false;
-    setFlags((prev) => prev.map((f) => (f.key === flagKey ? { ...f, enabled: !f.enabled } : f)));
-    try {
-      await authFetch(`/api/feature-flags/${flagKey}/toggle`, { method: 'POST' });
-      toast.success(t('admin.flags.toggled'));
-    } catch {
-      setFlags((prev) => prev.map((f) => (f.key === flagKey ? { ...f, enabled: prevEnabled } : f)));
-      toast.error(t('admin.flags.toggle_failed'));
-    }
-  }, [flags, t]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-3">
         {Array.from({ length: 5 }).map((_, i) => (
@@ -740,7 +613,7 @@ function FlagsTab() {
             )}
           </div>
           <button
-            onClick={() => toggleFlag(flag.key)}
+            onClick={() => toggleFlag.mutate(flag.key)}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
               flag.enabled ? 'bg-[var(--accent)]' : 'bg-[var(--bg-tertiary)]'
             }`}
@@ -760,20 +633,9 @@ function FlagsTab() {
 /* ── SSO Tab ── */
 function SSOTab() {
   const { t } = useTranslation();
-  const [providers, setProviders] = useState<SSOProvider[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: providers = [], isLoading } = useAdminSSO();
 
-  useEffect(() => {
-    const controller = new AbortController();
-    authFetch('/api/security/sso/providers', { signal: controller.signal })
-      .then((r) => (r.ok ? r.json() : []))
-      .then((data) => setProviders(Array.isArray(data) ? data : []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-    return () => controller.abort();
-  }, []);
-
-  if (loading) {
+  if (isLoading) {
     return <div className="p-8 text-center text-[var(--text-tertiary)]">{t('admin.loading')}</div>;
   }
 
