@@ -23,7 +23,7 @@ from app.agent.agent import create_chat_agent
 from app.agent.executor import stream_agent_with_memory
 from app.memory.manager import manager as memory_manager
 from app.utils.lang_detect import detect_language
-from app.common import SSE_HEADERS, sse_event, fire_and_forget
+from app.common import SSE_HEADERS, sse_event, fire_and_forget, resilient_fire_and_forget
 from app.rag.guardrails import detect_prompt_injection, sanitize_input
 from app.audit.decorator import audit_action
 from app.exceptions import AureonException
@@ -72,7 +72,7 @@ async def _record_stream_analytics(
         # 1. Record query stats (Analytics page data source)
         try:
             from app.api.rag_stats import record_query
-            fire_and_forget(
+            resilient_fire_and_forget(
                 record_query(query, sources_count, latency_ms,
                              input_tokens=input_tokens,
                              output_tokens=output_tokens),
@@ -89,7 +89,7 @@ async def _record_stream_analytics(
 
             collector = get_metrics_collector()
             tenant_id = get_current_tenant_id()
-            fire_and_forget(
+            resilient_fire_and_forget(
                 collector.record_query_metrics(
                     tenant_id=tenant_id,
                     ttft_ms=latency_ms,
@@ -121,7 +121,7 @@ async def _record_stream_analytics(
                 + (output_tokens / 1000 * cost_per_1k_out),
                 6,
             )
-            fire_and_forget(
+            resilient_fire_and_forget(
                 cost_service.record_usage(TokenUsage(
                     tenant_id=tenant_id,
                     model=model or _settings.llm_model,
