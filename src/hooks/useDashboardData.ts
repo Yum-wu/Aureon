@@ -8,7 +8,7 @@
  * - 统一错误处理
  */
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { authFetch } from '../services/authFetch';
 import type { StatsResponse, RecentQuery } from '../types/dashboard';
 
@@ -37,14 +37,6 @@ interface DashboardData {
   refetch: () => void;
 }
 
-/** 空 StatsResponse 占位（避免加载闪烁） */
-const EMPTY_STATS: StatsResponse = {
-  cache_hit_rate: 0,
-  query_count_24h: 0,
-  avg_retrieval_latency_ms: 0,
-  total_indexed_docs: 0,
-  total_chunks: 0,
-};
 
 /**
  * 获取 Dashboard 绽计数据
@@ -66,7 +58,7 @@ export function useDashboardData(): DashboardData {
     },
     staleTime: 10_000,
     refetchInterval: 15_000,
-    placeholderData: EMPTY_STATS,
+    placeholderData: keepPreviousData,
   });
 
   const recentQuery = useQuery<{ queries: RecentQuery[] }>({
@@ -81,7 +73,7 @@ export function useDashboardData(): DashboardData {
     },
     staleTime: 10_000,
     refetchInterval: 15_000,
-    placeholderData: { queries: [] },
+    placeholderData: keepPreviousData,
   });
 
   const volumeQuery = useQuery<{ data: QueryVolumePoint[] }>({
@@ -93,7 +85,7 @@ export function useDashboardData(): DashboardData {
     },
     staleTime: 10_000,
     refetchInterval: 15_000,
-    placeholderData: { data: [] },
+    placeholderData: keepPreviousData,
   });
 
   const isLoading = statsQuery.isLoading || recentQuery.isLoading || volumeQuery.isLoading;
