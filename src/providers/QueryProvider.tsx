@@ -1,7 +1,9 @@
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { QueryClient, type QueryClientConfig } from '@tanstack/react-query';
-import { useState, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { createSafeStoragePersister } from './queryPersister';
+import { useWebVitals } from '../hooks/useWebVitals';
+import { attachCacheMetrics } from '../lib/cacheMetrics';
 
 const APP_VERSION = '1.0.0';
 const PERSIST_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7;
@@ -30,6 +32,13 @@ function getQueryClient() {
 export function QueryProvider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(getQueryClient);
   const [persister] = useState(() => createSafeStoragePersister());
+
+  useWebVitals();
+
+  useEffect(() => {
+    const detach = attachCacheMetrics(queryClient);
+    return detach;
+  }, [queryClient]);
 
   return (
     <PersistQueryClientProvider
