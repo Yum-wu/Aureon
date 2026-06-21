@@ -4,8 +4,8 @@ import { useState, useEffect, type ReactNode } from 'react';
 import { createSafeStoragePersister } from './queryPersister';
 import { useWebVitals } from '../hooks/useWebVitals';
 import { attachCacheMetrics } from '../lib/cacheMetrics';
+import { getCacheBuster } from '../lib/appVersion';
 
-const APP_VERSION = '1.0.0';
 const PERSIST_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7;
 
 const defaultQueryOptions: QueryClientConfig['defaultOptions'] = {
@@ -45,7 +45,7 @@ export function QueryProvider({ children }: { children: ReactNode }) {
       client={queryClient}
       persistOptions={{
         persister,
-        buster: APP_VERSION,
+        buster: getCacheBuster(),
         maxAge: PERSIST_MAX_AGE_MS,
       }}
     >
