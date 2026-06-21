@@ -26,14 +26,13 @@ describe('useDashboardData', () => {
     vi.restoreAllMocks();
   });
 
-  it('starts with loading state', () => {
+  it('starts with loading state when no cache', () => {
     mockFetch.mockReturnValue(new Promise(() => {}));
     const { result } = renderHook(() => useDashboardData(), {
       wrapper: createWrapper(),
     });
-    // With placeholderData, isLoading is false immediately
-    expect(result.current.isLoading).toBe(false);
-    expect(result.current.stats).toBeDefined();
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.stats).toBeUndefined();
     expect(result.current.error).toBeNull();
   });
 
