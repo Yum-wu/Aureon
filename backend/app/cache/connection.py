@@ -87,7 +87,12 @@ def close_sync_redis():
         _sync_redis_pool = None
 
 
-def close_async_redis():
+async def close_async_redis():
     """Reset async Redis client, called during app shutdown."""
     global _redis
+    if _redis is not None and hasattr(_redis, "close"):
+        try:
+            await _redis.close()
+        except Exception as e:
+            logger.debug("async_redis_close_failed", error=str(e))
     _redis = None
