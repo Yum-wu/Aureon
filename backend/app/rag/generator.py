@@ -494,6 +494,7 @@ async def rag_query_astream(
             chunks = await asyncio.to_thread(multi_query_retrieve, query, top_k=top_k, lang_filter=filter_lang)
 
     # 2. 轻量 CRAG 评估（基于检索分数，无需 LLM 调用）
+    #    "incorrect" → 仅在 top score 极低时拒绝，否则降级为 ambiguous 继续生成
     if settings.crag_enabled and chunks:
         from app.rag.retrieval_confidence import lightweight_crag_assess
         assessment = lightweight_crag_assess(
@@ -502,14 +503,19 @@ async def rag_query_astream(
             low_threshold=settings.crag_low_confidence,
         )
         if assessment == "incorrect":
-            no_result_msg = (
-                "No relevant content found in the knowledge base. Please try a different question."
-                if lang == "en"
-                else "知识库中暂无相关内容，请尝试其他问题。"
-            )
-            yield {"type": "sources", "sources": []}
-            yield {"type": "text", "content": no_result_msg}
-            return
+            top_cr = max(c.get("score", 0) for c in chunks) if chunks else 0
+            if top_cr < 0.05:
+                # 极低置信度 → 真正无相关内容
+                no_result_msg = (
+                    "No relevant content found in the knowledge base. Please try a different question."
+                    if lang == "en"
+                    else "知识库中暂无相关内容，请尝试其他问题。"
+                )
+                yield {"type": "sources", "sources": []}
+                yield {"type": "text", "content": no_result_msg}
+                return
+            else:
+                logger.info("CRAG: low confidence (top_score=%.4f), continuing with disclaimer", top_cr)
         # "correct" 和 "ambiguous" 都继续执行
 
     if not chunks:
@@ -542,15 +548,22 @@ async def rag_query_astream(
 
     # 1b. Context compression: filter chunks by embedding similarity to query
     #     Skip for simple queries with high retrieval confidence (already optimal)
+    #     Fallback: if compression removes all chunks, keep originals (avoid empty sources)
     if chunks:
         top_score = max(c.get("score", 0) for c in chunks) if chunks else 0
         # 简单查询 + 中等置信度 → 跳过 compression（节省 ~1-2s embedding API 调用）
         if route == "simple" and top_score >= 0.3:
             logger.info("Skipping context compression: simple query, top_score=%.4f", top_score)
         else:
+            pre_compression_chunks = chunks  # 保留原始 chunks 作为 fallback
             chunks = await asyncio.to_thread(compress_context, query, chunks)
             if chunks:
                 chunks = _deduplicate_chunks(chunks, threshold=0.85)
+            elif pre_compression_chunks:
+                # Compression 移除了所有 chunks → 使用原始结果（避免丢失 sources）
+                logger.warning("Context compression removed all %d chunks, falling back to originals",
+                               len(pre_compression_chunks))
+                chunks = pre_compression_chunks
 
     # 2. Format context
     context = format_context(chunks)
@@ -569,13 +582,14 @@ async def rag_query_astream(
     ]
 
     # 4. Yield sources event first
+    #    确保 score 始终为数值（避免前端因 score=null 不显示分数条）
     sources_data = [
         {
             "title": c["metadata"].get("title", c["metadata"].get("source", "Unknown")),
             "slug": c["metadata"].get("slug", ""),
-            "score": c.get("score"),
+            "score": c.get("score") if c.get("score") is not None else 0.0,
             "chunk_id": c.get("id", c["metadata"].get("chunk_id", "")),
-            "chunk_text_snippet": c["text"],  # 完整文本，供 benchmark 评估用
+            "chunk_text_snippet": c["text"],
         }
         for c in chunks
     ]
@@ -590,7 +604,7 @@ async def rag_query_astream(
                 "title": c["metadata"].get("title", c["metadata"].get("source", "Unknown")),
                 "slug": c["metadata"].get("slug", ""),
                 "chunk": c["text"][:300] + "..." if len(c["text"]) > 300 else c["text"],
-                "score": c.get("score"),
+                "score": c.get("score") if c.get("score") is not None else 0.0,
             },
         }
 
