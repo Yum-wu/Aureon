@@ -7,6 +7,7 @@ import { Toaster } from "sonner";
 import { LanguageSwitcher } from "./i18n/LanguageSwitcher";
 import { AuthProvider } from "./hooks/AuthProvider";
 import { OnboardingProvider } from "./components/onboarding/OnboardingProvider";
+import { RealtimeMetricsProvider } from "./providers/RealtimeMetricsProvider";
 import { useAuth } from "./hooks/AuthContext";
 import { AdminGate } from "./components/AdminGate";
 import { useUIStore } from "./stores/useUIStore";
@@ -244,9 +245,11 @@ function App() {
       <Toaster theme="dark" position="top-center" richColors closeButton />
       <BrowserRouter>
         <AuthProvider>
-          <OnboardingProvider>
-            <AppLayout />
-          </OnboardingProvider>
+          <RealtimeMetricsProvider>
+            <OnboardingProvider>
+              <AppLayout />
+            </OnboardingProvider>
+          </RealtimeMetricsProvider>
         </AuthProvider>
       </BrowserRouter>
     </ErrorBoundary>
