@@ -1,19 +1,18 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from '../utils/toast';
 import { authFetch } from '../services/authFetch';
-import { 
-  useAdminOverview, 
-  useAdminUsers, 
-  useUpdateUserRole, 
-  useSuspendUser, 
+import {
+  useAdminOverview,
+  useAdminUsers,
+  useUpdateUserRole,
+  useSuspendUser,
   useDeleteUser,
   useAdminAudit,
   useAdminWorkspaces,
   useAdminFlags,
   useToggleFlag,
   useAdminSSO,
-  type AuditFilters,
   type AuditEntry,
 } from '../hooks/admin';
 import { AdminLayout } from '../components/admin/AdminLayout';
@@ -23,6 +22,7 @@ import { StatusBadge } from '../components/admin/StatusBadge';
 import { ConfirmDialog } from '../components/admin/ConfirmDialog';
 import { Card } from '../components/ui/Card';
 import { DatePicker } from '../components/ui/DatePicker';
+import { useAdminViewStore, type AuditFilters, type RolePermissions } from '../stores/useAdminViewStore';
 
 /* ── 类型定义 ── */
 
@@ -81,9 +81,6 @@ const DEFAULT_PERMISSIONS: Record<Role, string[]> = {
   viewer: ['workspaces.read', 'audit.read', 'cost.read', 'flags.read'],
 };
 
-/* ── Tab 类型 ── */
-type AdminTab = 'overview' | 'users' | 'roles' | 'workspaces' | 'audit' | 'flags' | 'sso';
-
 /* ── 概览 Tab ── */
 function OverviewTab() {
   const { t } = useTranslation();
@@ -138,7 +135,9 @@ function UsersTab() {
   const deleteUser = useDeleteUser();
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ type: 'suspend' | 'delete'; user: UserRecord } | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  // 持久化搜索词：切走再回来不丢失
+  const searchQuery = useAdminViewStore((s) => s.userSearchQuery);
+  const setSearchQuery = useAdminViewStore((s) => s.setUserSearchQuery);
 
   const filteredUsers = users.filter(
     (u) => u.email.toLowerCase().includes(searchQuery.toLowerCase()) || u.display_name.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -308,11 +307,19 @@ function UsersTab() {
 function RolesTab() {
   const { t } = useTranslation();
   const permissions = usePermissions();
-  const [permState, setPermState] = useState<Record<Role, string[]>>(DEFAULT_PERMISSIONS);
+  // 持久化权限勾选状态：刷新后保留
+  const persistedPerms = useAdminViewStore((s) => s.rolePermissions);
+  const setRolePermissions = useAdminViewStore((s) => s.setRolePermissions);
+  const [permState, setPermState] = useState<RolePermissions>(() => persistedPerms ?? DEFAULT_PERMISSIONS);
+
+  // 同步到 store
+  useEffect(() => {
+    setRolePermissions(permState);
+  }, [permState, setRolePermissions]);
 
   const togglePermission = (role: Role, permKey: string) => {
     setPermState((prev) => {
-      const current = prev[role];
+      const current = prev[role] ?? [];
       const updated = current.includes(permKey) ? current.filter((k) => k !== permKey) : [...current, permKey];
       return { ...prev, [role]: updated };
     });
@@ -412,13 +419,10 @@ function WorkspacesTab() {
 function AuditTab() {
   const { t } = useTranslation();
   const [expandedRow, setExpandedRow] = useState<number | null>(null);
-  const [filters, setFilters] = useState<AuditFilters>({
-    dateFrom: '',
-    dateTo: '',
-    user: '',
-    actionType: '',
-    severity: '',
-  });
+  // 持久化筛选条件：切走再回来保留日期/用户/操作/级别筛选
+  const filters: AuditFilters = useAdminViewStore((s) => s.auditFilters);
+  const setAuditFilters = useAdminViewStore((s) => s.setAuditFilters);
+  const patchFilter = useCallback((patch: Partial<AuditFilters>) => setAuditFilters(patch), [setAuditFilters]);
 
   const { data: auditLogs = [], isLoading } = useAdminAudit(filters);
 
@@ -473,26 +477,28 @@ function AuditTab() {
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <DatePicker
           value={filters.dateFrom}
-          onChange={(value) => setFilters((f) => ({ ...f, dateFrom: value }))}
+          onChange={(value) => patchFilter({ dateFrom: value })}
           placeholderKey="admin.audit.date_from"
           ariaLabelKey="admin.audit.date_from"
+          maxDate={filters.dateTo || undefined}
         />
         <DatePicker
           value={filters.dateTo}
-          onChange={(value) => setFilters((f) => ({ ...f, dateTo: value }))}
+          onChange={(value) => patchFilter({ dateTo: value })}
           placeholderKey="admin.audit.date_to"
           ariaLabelKey="admin.audit.date_to"
+          minDate={filters.dateFrom || undefined}
         />
         <input
           type="text"
           placeholder={t('admin.audit.filter_user')}
           value={filters.user}
-          onChange={(e) => setFilters((f) => ({ ...f, user: e.target.value }))}
+          onChange={(e) => patchFilter({ user: e.target.value })}
           className="px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--bg-tertiary)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
         />
         <select
           value={filters.actionType}
-          onChange={(e) => setFilters((f) => ({ ...f, actionType: e.target.value }))}
+          onChange={(e) => patchFilter({ actionType: e.target.value })}
           className="px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--bg-tertiary)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
         >
           <option value="">{t('admin.audit.all_actions')}</option>
@@ -503,7 +509,7 @@ function AuditTab() {
         </select>
         <select
           value={filters.severity}
-          onChange={(e) => setFilters((f) => ({ ...f, severity: e.target.value }))}
+          onChange={(e) => patchFilter({ severity: e.target.value })}
           className="px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--bg-tertiary)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
         >
           <option value="">{t('admin.audit.all_severity')}</option>
@@ -639,23 +645,10 @@ function SSOTab() {
 
 /* ── 主组件 ── */
 
-const ADMIN_TAB_STORAGE_KEY = 'aureon:admin:activeTab';
-
 const Admin = () => {
-  const [activeTab, setActiveTab] = useState<AdminTab>(() => {
-    try {
-      const saved = localStorage.getItem(ADMIN_TAB_STORAGE_KEY);
-      if (saved && ['overview', 'users', 'roles', 'workspaces', 'audit', 'flags', 'sso'].includes(saved)) {
-        return saved as AdminTab;
-      }
-    } catch { /* ignore */ }
-    return 'overview';
-  });
-
-  const handleTabChange = useCallback((tab: AdminTab) => {
-    setActiveTab(tab);
-    try { localStorage.setItem(ADMIN_TAB_STORAGE_KEY, tab); } catch { /* ignore */ }
-  }, []);
+  // activeTab 从持久化 store 读取，刷新或切走再回来都保留
+  const activeTab = useAdminViewStore((s) => s.activeTab);
+  const setActiveTab = useAdminViewStore((s) => s.setActiveTab);
 
   const renderTab = () => {
     switch (activeTab) {
@@ -672,7 +665,7 @@ const Admin = () => {
   return (
     <AdminLayout
       activeTab={activeTab}
-      onTabChange={handleTabChange}
+      onTabChange={setActiveTab}
     >
       {renderTab()}
     </AdminLayout>

@@ -1,8 +1,12 @@
 /**
  * Nivo Bar 图表封装
  * 支持分组/堆叠模式、水平/垂直布局
+ *
+ * 使用 React.memo 优化：只在 data/height/animate 真正变化时重渲染，
+ * 避免父组件频繁更新（如 Dashboard metrics 轮询）触发 Nivo 完整重绘动画。
  */
 
+import { memo } from 'react';
 import { Bar, type BarSvgProps, type BarDatum } from '@nivo/bar';
 import { ChartContainer } from './ChartContainer';
 import { useChartTheme, CHART_COLORS, DEFAULT_MARGIN, CHART_DEFAULTS, type TimeRange } from './chartTheme';
@@ -44,7 +48,7 @@ interface BarChartProps<T extends BarDatum = BarDatum> {
   className?: string;
 }
 
-export function BarChart<T extends BarDatum = BarDatum>({
+function BarChartInner<T extends BarDatum = BarDatum>({
   data,
   keys,
   indexBy,
@@ -166,3 +170,11 @@ export function BarChart<T extends BarDatum = BarDatum>({
     </ChartContainer>
   );
 }
+
+/**
+ * Memo 优化：只在影响图表渲染的核心 prop 变化时重渲染
+ * - data: 图表数据（引用相等性）
+ * - height: 图表高度
+ * - animate: 是否启用动画
+ */
+export const BarChart = memo(BarChartInner) as typeof BarChartInner;

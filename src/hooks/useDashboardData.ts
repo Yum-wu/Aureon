@@ -41,10 +41,12 @@ interface DashboardData {
 
 
 /**
- * 获取 Dashboard 绽计数据
+ * 获取 Dashboard 统计数据
  * 使用 TanStack Query 管理请求生命周期：
  * - staleTime: 10s（10 秒内切换页面不重新请求）
  * - refetchInterval: 15s（轮询替代原 setTimeout 递归）
+ * - refetchIntervalInBackground: false（页面不可见时停止轮询，避免后台持续刷新）
+ *   这对切到其他 Tab 时避免 Nivo 图表持续重绘导致主线程阻塞至关重要
  * - placeholderData: 避免加载闪烁
  */
 export function useDashboardData(): DashboardData {
@@ -60,6 +62,7 @@ export function useDashboardData(): DashboardData {
     },
     staleTime: 10_000,
     refetchInterval: 15_000,
+    refetchIntervalInBackground: false,
     placeholderData: keepPreviousData,
   });
 
@@ -75,6 +78,7 @@ export function useDashboardData(): DashboardData {
     },
     staleTime: 10_000,
     refetchInterval: 15_000,
+    refetchIntervalInBackground: false,
     placeholderData: keepPreviousData,
   });
 
@@ -87,6 +91,7 @@ export function useDashboardData(): DashboardData {
     },
     staleTime: 10_000,
     refetchInterval: 15_000,
+    refetchIntervalInBackground: false,
     placeholderData: keepPreviousData,
   });
 
