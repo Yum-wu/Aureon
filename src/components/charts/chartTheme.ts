@@ -4,6 +4,7 @@
  */
 
 import type { PartialTheme } from '@nivo/theming';
+import { useTheme } from '../../hooks/ThemeProvider';
 
 /** 图表系列配色（8 色，基于 oklch 色阶 + 项目 accent 色） */
 export const CHART_COLORS = [
@@ -82,6 +83,20 @@ export const chartDarkTheme: PartialTheme = {
 
 /** 默认使用暗色主题（项目主色调） */
 export const chartTheme = chartDarkTheme;
+
+/** 根据当前 DOM 主题属性返回对应图表主题 */
+export function getChartTheme(): PartialTheme {
+  if (typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark') {
+    return chartDarkTheme;
+  }
+  return chartLightTheme;
+}
+
+/** React hook: 响应式图表主题，跟随 ThemeProvider 切换 */
+export function useChartTheme(): PartialTheme {
+  const { theme } = useTheme();
+  return theme === 'dark' ? chartDarkTheme : chartLightTheme;
+}
 
 /** 通用图表默认边距 */
 export const DEFAULT_MARGIN = { top: 12, right: 16, bottom: 40, left: 48 };

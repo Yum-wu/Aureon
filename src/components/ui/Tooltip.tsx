@@ -100,7 +100,7 @@ export function Tooltip({ content, children, placement = 'top' }: TooltipProps) 
               background: 'var(--bg-tertiary)',
               color: 'var(--text-primary)',
               border: '1px solid var(--border)',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+              boxShadow: 'var(--shadow-lg)',
               width: 'max-content',
               opacity: 1,
               animation: 'tooltipFadeIn 150ms ease-out',

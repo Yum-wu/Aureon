@@ -26,8 +26,8 @@ const STATUS_STYLES: Record<StatusType, { dot: string; bg: string; text: string 
   active: { dot: 'bg-emerald-400', bg: 'bg-emerald-500/10', text: 'text-emerald-400' },
   warning: { dot: 'bg-amber-400', bg: 'bg-amber-500/10', text: 'text-amber-400' },
   error: { dot: 'bg-red-400', bg: 'bg-red-500/10', text: 'text-red-400' },
-  disabled: { dot: 'bg-gray-500', bg: 'bg-white/[0.04]', text: 'text-[var(--text-tertiary)]' },
-  suspended: { dot: 'bg-gray-500', bg: 'bg-white/[0.04]', text: 'text-[var(--text-tertiary)]' },
+  disabled: { dot: 'bg-gray-500', bg: 'bg-[var(--surface-inset)]', text: 'text-[var(--fg-tertiary)]' },
+  suspended: { dot: 'bg-gray-500', bg: 'bg-[var(--surface-inset)]', text: 'text-[var(--fg-tertiary)]' },
 };
 
 /** 默认状态标签 */

@@ -45,7 +45,7 @@ export function AdminLayout({ children, activeTab, onTabChange }: AdminLayoutPro
         <div className="flex items-center justify-end p-2">
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="p-1.5 rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-white/[0.05] transition-colors"
+            className="p-1.5 rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-inset)] transition-colors"
             aria-label={sidebarCollapsed ? t('admin.sidebar.expand', '展开侧边栏') : t('admin.sidebar.collapse', '收起侧边栏')}
           >
             {sidebarCollapsed ? '→' : '←'}
@@ -61,7 +61,7 @@ export function AdminLayout({ children, activeTab, onTabChange }: AdminLayoutPro
               className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors ${
                 activeTab === key
                   ? 'bg-[var(--accent-soft)] text-[var(--accent)] font-medium'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/[0.03]'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-inset)]'
               }`}
               title={t(`admin.tabs.${key}`)}
             >

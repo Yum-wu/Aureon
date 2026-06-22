@@ -4,6 +4,7 @@ import { BenchmarkSection } from '../components/landing/BenchmarkSection';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { LanguageSwitcher } from '../i18n/LanguageSwitcher';
+import { ThemeToggle } from '../components/ThemeToggle';
 
 export function Landing() {
   const navigate = useNavigate();
@@ -13,8 +14,9 @@ export function Landing() {
     <div className="min-h-screen">
       {/* Minimal top bar */}
       <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 h-12 border-b border-[var(--border-subtle)] glass-strong">
-        <span className="text-sm font-semibold text-white/90 tracking-tight">Aureon</span>
+        <span className="text-sm font-extrabold tracking-tight" style={{ color: 'var(--accent)' }}>Aureon</span>
         <div className="flex items-center gap-3">
+          <ThemeToggle />
           <LanguageSwitcher />
           <button
             onClick={() => navigate('/search')}

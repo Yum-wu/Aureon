@@ -30,7 +30,7 @@ export function RecentQueries({ queries }: RecentQueriesProps) {
               key={`${q.timestamp}-${q.query}-${i}`}
               role="button"
               tabIndex={0}
-              className="flex items-center justify-between px-3 py-2.5 rounded-md hover:bg-white/[0.03] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2"
+              className="flex items-center justify-between px-3 py-2.5 rounded-md hover:bg-[var(--surface-inset)] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2"
             >
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-[var(--text-primary)] truncate">

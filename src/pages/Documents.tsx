@@ -145,7 +145,7 @@ export function Documents() {
           </div>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex items-center justify-center h-64 text-gray-400">
+        <div className="flex items-center justify-center h-64 text-[var(--text-tertiary)]">
           <p>{t("documents.empty")}</p>
         </div>
       ) : (
@@ -176,7 +176,7 @@ export function Documents() {
                 {filtered.map((doc, i) => (
                   <tr
                     key={`${doc.source}-${doc.title}-${i}`}
-                    className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors"
+                    className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-inset)] transition-colors"
                   >
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-2">

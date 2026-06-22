@@ -5,7 +5,7 @@
 
 import { Pie, type PieSvgProps, type DefaultRawDatum } from '@nivo/pie';
 import { ChartContainer } from './ChartContainer';
-import { chartTheme, CHART_COLORS, CHART_DEFAULTS, type TimeRange } from './chartTheme';
+import { useChartTheme, CHART_COLORS, CHART_DEFAULTS, type TimeRange } from './chartTheme';
 
 interface PieChartProps<T extends DefaultRawDatum = DefaultRawDatum> {
   /** 图表数据（Nivo DefaultRawDatum 格式：{ id, value, label? }） */
@@ -51,6 +51,7 @@ export function PieChart<T extends DefaultRawDatum = DefaultRawDatum>({
   valueFormat,
   className,
 }: PieChartProps<T>) {
+  const theme = useChartTheme();
   return (
     <ChartContainer
       title={title}
@@ -69,7 +70,7 @@ export function PieChart<T extends DefaultRawDatum = DefaultRawDatum>({
           margin={{ top: 12, right: 80, bottom: 12, left: 12 }}
           innerRadius={innerRadius > 0 ? innerRadius : 0}
           colors={colors}
-          theme={chartTheme}
+          theme={theme}
           animate={animate}
           motionConfig={CHART_DEFAULTS.motionConfig}
           padAngle={0.7}

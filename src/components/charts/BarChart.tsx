@@ -5,7 +5,7 @@
 
 import { Bar, type BarSvgProps, type BarDatum } from '@nivo/bar';
 import { ChartContainer } from './ChartContainer';
-import { chartTheme, CHART_COLORS, DEFAULT_MARGIN, CHART_DEFAULTS, type TimeRange } from './chartTheme';
+import { useChartTheme, CHART_COLORS, DEFAULT_MARGIN, CHART_DEFAULTS, type TimeRange } from './chartTheme';
 
 interface BarChartProps<T extends BarDatum = BarDatum> {
   /** 图表数据 */
@@ -63,6 +63,7 @@ export function BarChart<T extends BarDatum = BarDatum>({
   valueFormat,
   className,
 }: BarChartProps<T>) {
+  const theme = useChartTheme();
   // 安全检查：如果数据为空，直接显示空状态，避免 Nivo 生成 d="null" SVG 路径导致浏览器崩溃
   const hasData = data.length > 0;
 
@@ -105,7 +106,7 @@ export function BarChart<T extends BarDatum = BarDatum>({
           height={containerHeight}
           margin={DEFAULT_MARGIN}
           colors={colors}
-          theme={chartTheme}
+          theme={theme}
           layout={layout}
           groupMode={groupMode}
           animate={animate}

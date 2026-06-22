@@ -18,7 +18,7 @@ export function Button({
   const variants = {
     primary: 'glow-btn text-white',
     secondary: 'glow-btn-outline',
-    ghost: 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/[0.05]',
+    ghost: 'text-[var(--fg-secondary)] hover:text-[var(--fg)] hover:bg-[var(--surface-inset)]',
   };
 
   const sizes = {
