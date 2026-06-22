@@ -123,7 +123,7 @@ export function AdminTable<T extends object>({
               <tr key={`skeleton-${i}`} className="border-b border-[var(--border-subtle)]">
                 {columns.map((col) => (
                   <td key={col.key} className="px-4 py-3">
-                    <div className="h-4 bg-white/[0.04] rounded animate-pulse" />
+                    <div className="h-4 bg-[var(--surface-inset)] rounded animate-pulse" />
                   </td>
                 ))}
                 {actions && actions.length > 0 && <td className="px-4 py-3" />}
@@ -144,7 +144,7 @@ export function AdminTable<T extends object>({
               <tr
                 key={rowIndex}
                 className={`border-b border-[var(--border-subtle)] transition-colors ${
-                  onRowClick ? 'cursor-pointer hover:bg-white/[0.02]' : ''
+                  onRowClick ? 'cursor-pointer hover:bg-[var(--surface-inset)]' : ''
                 }`}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
               >
@@ -166,7 +166,7 @@ export function AdminTable<T extends object>({
                           className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
                             action.variant === 'danger'
                               ? 'text-red-400 hover:bg-red-500/10'
-                              : 'text-[var(--text-secondary)] hover:bg-white/[0.05] hover:text-[var(--text-primary)]'
+                              : 'text-[var(--text-secondary)] hover:bg-[var(--surface-inset)] hover:text-[var(--text-primary)]'
                           }`}
                         >
                           {action.icon && <span>{action.icon}</span>}
@@ -192,7 +192,7 @@ export function AdminTable<T extends object>({
             <button
               disabled={pagination.page <= 1}
               onClick={() => onPageChange?.(pagination.page - 1)}
-              className="px-2 py-1 rounded text-xs text-[var(--text-secondary)] hover:bg-white/[0.05] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="px-2 py-1 rounded text-xs text-[var(--text-secondary)] hover:bg-[var(--surface-inset)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               ←
             </button>
@@ -205,7 +205,7 @@ export function AdminTable<T extends object>({
                   className={`px-2.5 py-1 rounded text-xs transition-colors ${
                     page === pagination.page
                       ? 'bg-[var(--accent)] text-white font-medium'
-                      : 'text-[var(--text-secondary)] hover:bg-white/[0.05]'
+                      : 'text-[var(--text-secondary)] hover:bg-[var(--surface-inset)]'
                   }`}
                 >
                   {page}
@@ -215,7 +215,7 @@ export function AdminTable<T extends object>({
             <button
               disabled={pagination.page >= totalPages}
               onClick={() => onPageChange?.(pagination.page + 1)}
-              className="px-2 py-1 rounded text-xs text-[var(--text-secondary)] hover:bg-white/[0.05] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="px-2 py-1 rounded text-xs text-[var(--text-secondary)] hover:bg-[var(--surface-inset)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               →
             </button>

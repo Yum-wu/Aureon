@@ -5,7 +5,7 @@
 
 import { Line, type LineSvgProps, type LineSeries } from '@nivo/line';
 import { ChartContainer } from './ChartContainer';
-import { chartTheme, CHART_COLORS, DEFAULT_MARGIN, CHART_DEFAULTS, type TimeRange } from './chartTheme';
+import { useChartTheme, CHART_COLORS, DEFAULT_MARGIN, CHART_DEFAULTS, type TimeRange } from './chartTheme';
 
 interface LineChartProps {
   /** 图表数据（Nivo Line Serie 格式） */
@@ -60,6 +60,7 @@ export function LineChart({
   yAxisLabel,
   className,
 }: LineChartProps) {
+  const theme = useChartTheme();
   // 安全检查：如果所有系列都没有有效数据点，直接显示空状态，避免 Nivo 生成 d="null" SVG 路径导致浏览器崩溃
   const hasData = data.some(series => series.data.length > 0);
 
@@ -100,7 +101,7 @@ export function LineChart({
           height={containerHeight}
           margin={DEFAULT_MARGIN}
           colors={colors}
-          theme={chartTheme}
+          theme={theme}
           animate={animate}
           motionConfig={CHART_DEFAULTS.motionConfig}
           enableGridX={showGrid && CHART_DEFAULTS.enableGridX}

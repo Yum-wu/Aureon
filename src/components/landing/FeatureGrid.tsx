@@ -40,7 +40,7 @@ export function FeatureGrid() {
   return (
     <section className="section-alt relative py-20 px-6">
       <div className="max-w-5xl mx-auto">
-        <h2 className="text-2xl font-bold tracking-[-0.02em] mb-2 text-white animate-fade-up">
+        <h2 className="text-2xl font-bold tracking-[-0.02em] mb-2 text-[var(--text-primary)] animate-fade-up">
           {t('landing.features_title')}
         </h2>
         <p className="text-sm text-[var(--text-tertiary)] mb-12 animate-fade-up delay-100">
@@ -53,7 +53,7 @@ export function FeatureGrid() {
               <div className="text-xs font-mono text-[var(--accent)] mb-4 opacity-60">
                 {feature.icon}
               </div>
-              <h3 className="text-sm font-semibold text-white mb-2 tracking-tight">
+              <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-2 tracking-tight">
                 {feature.title}
               </h3>
               <p className="text-xs text-[var(--text-secondary)] leading-relaxed mb-4">

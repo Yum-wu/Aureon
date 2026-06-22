@@ -35,7 +35,7 @@ export function BenchmarkSection() {
       />
 
       <div className="relative max-w-5xl mx-auto">
-        <h2 className="text-2xl font-bold tracking-[-0.02em] mb-2 text-white animate-fade-up">
+        <h2 className="text-2xl font-bold tracking-[-0.02em] mb-2 text-[var(--text-primary)] animate-fade-up">
           {t('landing.benchmark.title')}
         </h2>
         <p className="text-base text-[var(--text-secondary)] mb-12 animate-fade-up delay-100">

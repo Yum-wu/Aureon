@@ -333,7 +333,7 @@ function RolesTab() {
         </thead>
         <tbody>
           {permissions.map((perm) => (
-            <tr key={perm.key} className="border-b border-[var(--border-subtle)] hover:bg-white/[0.02]">
+            <tr key={perm.key} className="border-b border-[var(--border-subtle)] hover:bg-[var(--surface-inset)]">
               <td className="py-3 px-4 text-[var(--text-primary)]">{perm.i18nKey}</td>
               {ROLES.map((role) => (
                 <td key={role} className="text-center py-3 px-4">
@@ -514,13 +514,13 @@ function AuditTab() {
         <div className="ml-auto flex items-center gap-2">
           <button
             onClick={() => handleExport('csv')}
-            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-white/[0.03] transition-colors"
+            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-inset)] transition-colors"
           >
             {t('admin.audit.export_csv')}
           </button>
           <button
             onClick={() => handleExport('json')}
-            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-white/[0.03] transition-colors"
+            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-inset)] transition-colors"
           >
             {t('admin.audit.export_json')}
           </button>

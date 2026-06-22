@@ -6,6 +6,8 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Toaster } from "sonner";
 import { LanguageSwitcher } from "./i18n/LanguageSwitcher";
 import { AuthProvider } from "./hooks/AuthProvider";
+import { ThemeProvider, useTheme } from "./hooks/ThemeProvider";
+import { ThemeToggle } from "./components/ThemeToggle";
 import { OnboardingProvider } from "./components/onboarding/OnboardingProvider";
 import { RealtimeMetricsProvider } from "./providers/RealtimeMetricsProvider";
 import { useAuth } from "./hooks/AuthContext";
@@ -73,6 +75,12 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
     return <Navigate to="/login" replace />;
   }
   return <>{children}</>;
+}
+
+/* ── Toaster wrapper (dynamic theme) ── */
+function ToasterWrapper() {
+  const { theme } = useTheme();
+  return <Toaster theme={theme} position="top-center" richColors closeButton />;
 }
 
 /* ── App Layout ── */
@@ -182,6 +190,7 @@ function AppLayout() {
 
           {/* Right side */}
           <div className="ml-auto flex items-center gap-3">
+            <ThemeToggle />
             <LanguageSwitcher />
             <button
               onClick={() => navigate("/login")}
@@ -276,16 +285,18 @@ function AppLayout() {
 function App() {
   return (
     <ErrorBoundary>
-      <Toaster theme="dark" position="top-center" richColors closeButton />
-      <BrowserRouter>
-        <AuthProvider>
-          <RealtimeMetricsProvider>
-            <OnboardingProvider>
-              <AppLayout />
-            </OnboardingProvider>
-          </RealtimeMetricsProvider>
-        </AuthProvider>
-      </BrowserRouter>
+      <ThemeProvider>
+        <ToasterWrapper />
+        <BrowserRouter>
+          <AuthProvider>
+            <RealtimeMetricsProvider>
+              <OnboardingProvider>
+                <AppLayout />
+              </OnboardingProvider>
+            </RealtimeMetricsProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

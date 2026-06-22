@@ -37,10 +37,10 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="flex flex-col items-center justify-center min-h-[200px] p-8 text-center">
           <div className="text-4xl mb-4"><AlertTriangle size={24} /></div>
-          <h2 className="text-lg font-semibold text-gray-800 mb-2">
+          <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
             {i18n.t("errorBoundary.title", "Something went wrong")}
           </h2>
-          <p className="text-sm text-gray-500 mb-4 max-w-md">
+          <p className="text-sm text-[var(--text-secondary)] mb-4 max-w-md">
             {this.state.error?.message || i18n.t("errorBoundary.description", "An unexpected error occurred")}
           </p>
           <button

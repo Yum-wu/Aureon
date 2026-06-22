@@ -243,7 +243,7 @@ export function CostGovernance() {
             </select>
             <button
               onClick={handleExport}
-              className="px-4 py-1.5 text-sm font-medium rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-white/[0.03] transition-colors"
+              className="px-4 py-1.5 text-sm font-medium rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-inset)] transition-colors"
             >
               {t('cost.export')}
             </button>

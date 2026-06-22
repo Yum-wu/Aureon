@@ -125,7 +125,7 @@ export function ConfirmDialog({
         <div className="flex items-center justify-end gap-2 mt-6">
           <button
             onClick={onCancel}
-            className="px-4 py-2 rounded-md text-sm font-medium text-[var(--text-secondary)] border border-[var(--border)] hover:bg-white/[0.03] hover:text-[var(--text-primary)] transition-colors"
+            className="px-4 py-2 rounded-md text-sm font-medium text-[var(--text-secondary)] border border-[var(--border)] hover:bg-[var(--surface-inset)] hover:text-[var(--text-primary)] transition-colors"
           >
             {cancelLabel ?? t('admin.confirm.cancel', '取消')}
           </button>

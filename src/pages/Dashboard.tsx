@@ -163,7 +163,7 @@ function GoldenSignalCard({
 function HealthServiceCard({ service }: { service: ServiceHealth }) {
   const { t } = useTranslation();
   return (
-    <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-white/[0.02] border border-[var(--border-subtle)]">
+    <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-[var(--surface-inset)] border border-[var(--border-subtle)]">
       <span className="relative flex h-2.5 w-2.5">
         {service.healthy && (
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
