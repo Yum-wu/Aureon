@@ -6,6 +6,11 @@ import App from "./App.tsx";
 import { ErrorBoundary } from "./components/ErrorBoundary.tsx";
 import { QueryProvider } from "./providers/QueryProvider";
 
+/* build-verify: canvas-nav-toast-2026 */
+if (typeof window !== 'undefined') {
+  (window as any).__AUREON_BUILD__ = 'canvas-nav-toast-2026';
+}
+
 const rootElement = document.getElementById("root");
 if (!rootElement) {
   throw new Error("Root element not found");

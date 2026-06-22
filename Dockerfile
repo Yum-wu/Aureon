@@ -4,14 +4,14 @@ FROM node:22-alpine AS frontend-builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --prefer-offline
-ARG CACHEBUST=2026-06-22
+ARG CACHEBUST=2026-06-22v2
 COPY . .
 
 ARG VITE_API_URL
 ARG VITE_CREW_API_URL
 ENV VITE_API_URL=/api/chat/stream
 ENV VITE_CREW_API_URL=/api/crew
-RUN npm run build
+RUN rm -rf dist && npm run build && echo "[build] Frontend build completed at $(date -u +%Y-%m-%dT%H:%M:%SZ)" && ls -la dist/assets/index-*.js
 
 # ── Stage 2：后端 + nginx ──
 FROM python:3.12-slim
