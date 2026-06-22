@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
+import { toast } from '../utils/toast';
 import { authFetch } from '../services/authFetch';
 import { 
   useAdminOverview, 
@@ -488,12 +488,12 @@ function AuditTab() {
           placeholder={t('admin.audit.filter_user')}
           value={filters.user}
           onChange={(e) => setFilters((f) => ({ ...f, user: e.target.value }))}
-          className="px-3 py-1.5 text-xs rounded-lg border border-[var(--border)] bg-[var(--bg-tertiary)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+          className="px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--bg-tertiary)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
         />
         <select
           value={filters.actionType}
           onChange={(e) => setFilters((f) => ({ ...f, actionType: e.target.value }))}
-          className="px-3 py-1.5 text-xs rounded-lg border border-[var(--border)] bg-[var(--bg-tertiary)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+          className="px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--bg-tertiary)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
         >
           <option value="">{t('admin.audit.all_actions')}</option>
           <option value="login">{t('admin.audit.action_login')}</option>
@@ -504,7 +504,7 @@ function AuditTab() {
         <select
           value={filters.severity}
           onChange={(e) => setFilters((f) => ({ ...f, severity: e.target.value }))}
-          className="px-3 py-1.5 text-xs rounded-lg border border-[var(--border)] bg-[var(--bg-tertiary)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+          className="px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--bg-tertiary)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
         >
           <option value="">{t('admin.audit.all_severity')}</option>
           <option value="info">{t('admin.audit.severity_info')}</option>
@@ -514,13 +514,13 @@ function AuditTab() {
         <div className="ml-auto flex items-center gap-2">
           <button
             onClick={() => handleExport('csv')}
-            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-inset)] transition-colors"
+            className="px-3 py-2 text-sm font-medium rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-inset)] transition-colors"
           >
             {t('admin.audit.export_csv')}
           </button>
           <button
             onClick={() => handleExport('json')}
-            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-inset)] transition-colors"
+            className="px-3 py-2 text-sm font-medium rounded-lg border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-inset)] transition-colors"
           >
             {t('admin.audit.export_json')}
           </button>
@@ -639,8 +639,23 @@ function SSOTab() {
 
 /* ── 主组件 ── */
 
+const ADMIN_TAB_STORAGE_KEY = 'aureon:admin:activeTab';
+
 const Admin = () => {
-  const [activeTab, setActiveTab] = useState<AdminTab>('overview');
+  const [activeTab, setActiveTab] = useState<AdminTab>(() => {
+    try {
+      const saved = localStorage.getItem(ADMIN_TAB_STORAGE_KEY);
+      if (saved && ['overview', 'users', 'roles', 'workspaces', 'audit', 'flags', 'sso'].includes(saved)) {
+        return saved as AdminTab;
+      }
+    } catch { /* ignore */ }
+    return 'overview';
+  });
+
+  const handleTabChange = useCallback((tab: AdminTab) => {
+    setActiveTab(tab);
+    try { localStorage.setItem(ADMIN_TAB_STORAGE_KEY, tab); } catch { /* ignore */ }
+  }, []);
 
   const renderTab = () => {
     switch (activeTab) {
@@ -657,7 +672,7 @@ const Admin = () => {
   return (
     <AdminLayout
       activeTab={activeTab}
-      onTabChange={setActiveTab}
+      onTabChange={handleTabChange}
     >
       {renderTab()}
     </AdminLayout>

@@ -3,11 +3,10 @@ import { lazy, Suspense, useEffect, useMemo, type ReactNode } from "react";
 import { BrowserRouter, Routes, Route, Navigate, Link, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import { Toaster } from "sonner";
+import { ToastProvider } from "./hooks/useToast";
 import { LanguageSwitcher } from "./i18n/LanguageSwitcher";
 import { AuthProvider } from "./hooks/AuthProvider";
 import { ThemeProvider } from "./hooks/ThemeProvider";
-import { useTheme } from "./hooks/useTheme";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { OnboardingProvider } from "./components/onboarding/OnboardingProvider";
 import { RealtimeMetricsProvider } from "./providers/RealtimeMetricsProvider";
@@ -78,10 +77,24 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-/* ── Toaster wrapper (dynamic theme) ── */
-function ToasterWrapper() {
-  const { theme } = useTheme();
-  return <Toaster theme={theme} position="top-center" richColors closeButton />;
+function App() {
+  return (
+    <ErrorBoundary>
+      <ThemeProvider>
+        <ToastProvider>
+          <BrowserRouter>
+            <AuthProvider>
+              <RealtimeMetricsProvider>
+                <OnboardingProvider>
+                  <AppLayout />
+                </OnboardingProvider>
+              </RealtimeMetricsProvider>
+            </AuthProvider>
+          </BrowserRouter>
+        </ToastProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
+  );
 }
 
 /* ── App Layout ── */
@@ -280,25 +293,6 @@ function AppLayout() {
         </Suspense>
       )}
     </div>
-  );
-}
-
-function App() {
-  return (
-    <ErrorBoundary>
-      <ThemeProvider>
-        <ToasterWrapper />
-        <BrowserRouter>
-          <AuthProvider>
-            <RealtimeMetricsProvider>
-              <OnboardingProvider>
-                <AppLayout />
-              </OnboardingProvider>
-            </RealtimeMetricsProvider>
-          </AuthProvider>
-        </BrowserRouter>
-      </ThemeProvider>
-    </ErrorBoundary>
   );
 }
 

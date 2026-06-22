@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
+import { toast } from "../utils/toast";
 import { authFetch } from "../services/authFetch";
 import type { KeyboardEvent } from "react";
 
