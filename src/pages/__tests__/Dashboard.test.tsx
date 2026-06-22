@@ -54,7 +54,7 @@ vi.mock('../../components/charts/BarChart', () => ({
 }));
 
 // ── i18n mock ──
-let mockT = (key: string) => key;
+const mockT = (key: string) => key;
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => mockT(key) }),
