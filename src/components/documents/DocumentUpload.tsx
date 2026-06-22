@@ -237,9 +237,9 @@ export function DocumentUpload({ onUploadSuccess }: DocumentUploadProps) {
           </div>
           {/* Phase indicators */}
           <div className="flex justify-between text-xs text-blue-400">
-            <span className={uploadPhase === 'uploading' ? 'text-blue-600 font-medium' : ''}>上传</span>
-            <span className={uploadPhase === 'parsing' ? 'text-blue-600 font-medium' : ''}>解析</span>
-            <span className={uploadPhase === 'indexing' ? 'text-blue-600 font-medium' : ''}>索引</span>
+            <span className={uploadPhase === 'uploading' ? 'text-blue-600 font-medium' : ''}>{t('documents.upload.phase_uploading')}</span>
+            <span className={uploadPhase === 'parsing' ? 'text-blue-600 font-medium' : ''}>{t('documents.upload.phase_parsing')}</span>
+            <span className={uploadPhase === 'indexing' ? 'text-blue-600 font-medium' : ''}>{t('documents.upload.phase_indexing')}</span>
           </div>
         </div>
       )}
