@@ -1,13 +1,5 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
-
-/* ── Types ── */
-type Theme = 'light' | 'dark';
-
-interface ThemeContextValue {
-  theme: Theme;
-  toggleTheme: () => void;
-  setTheme: (t: Theme) => void;
-}
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
+import { ThemeContext, type Theme } from './useTheme';
 
 /* ── Dark theme variable overrides (cssText batch) ── */
 const DARK_VARS = `
@@ -103,15 +95,6 @@ function getInitialTheme(): Theme {
     if (stored === 'dark' || stored === 'light') return stored;
   } catch { /* localStorage unavailable */ }
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-}
-
-/* ── Context ── */
-const ThemeContext = createContext<ThemeContextValue | null>(null);
-
-export function useTheme(): ThemeContextValue {
-  const ctx = useContext(ThemeContext);
-  if (!ctx) throw new Error('useTheme must be used within ThemeProvider');
-  return ctx;
 }
 
 /* ── Provider ── */

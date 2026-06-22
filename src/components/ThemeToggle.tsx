@@ -1,4 +1,4 @@
-import { useTheme } from '../hooks/ThemeProvider';
+import { useTheme } from '../hooks/useTheme';
 
 /* ── Sun icon ── */
 function SunIcon({ className }: { className?: string }) {

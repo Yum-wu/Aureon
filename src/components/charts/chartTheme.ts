@@ -4,7 +4,7 @@
  */
 
 import type { PartialTheme } from '@nivo/theming';
-import { useTheme } from '../../hooks/ThemeProvider';
+import { useTheme } from '../../hooks/useTheme';
 
 /** 图表系列配色（8 色，基于 oklch 色阶 + 项目 accent 色） */
 export const CHART_COLORS = [
