@@ -43,7 +43,7 @@ function pickLocale(lang: string): Locale {
 }
 
 /** 安全解析 ISO 日期 */
-function parseSafe(iso: string): Date | undefined {
+function parseSafe(iso?: string): Date | undefined {
   if (!iso) return undefined;
   const d = parseISO(iso);
   return isValid(d) ? d : undefined;
@@ -156,17 +156,16 @@ export function DatePicker({
               ...(maxD ? [{ after: maxD }] : []),
             ]}
             // 限制可选范围到今天（审计日志不会是未来）
-            toDate={maxD ?? new Date()}
-            initialFocus
+            endMonth={maxD ?? new Date()}
+            autoFocus
             classNames={{
               root: 'text-[var(--text-primary)]',
               months: 'flex flex-col',
               month_caption: 'flex justify-center py-2 text-sm font-medium',
               caption_label: 'text-[var(--text-primary)]',
               nav: 'flex items-center justify-between absolute top-3 left-2 right-2',
-              nav_button: 'inline-flex items-center justify-center w-7 h-7 rounded text-[var(--text-tertiary)] hover:bg-[var(--surface-inset)] hover:text-[var(--text-primary)] transition-colors',
-              nav_button_previous: '',
-              nav_button_next: 'order-2',
+              button_previous: 'inline-flex items-center justify-center w-7 h-7 rounded text-[var(--text-tertiary)] hover:bg-[var(--surface-inset)] hover:text-[var(--text-primary)] transition-colors',
+              button_next: 'order-2 inline-flex items-center justify-center w-7 h-7 rounded text-[var(--text-tertiary)] hover:bg-[var(--surface-inset)] hover:text-[var(--text-primary)] transition-colors',
               month_grid: 'w-full border-collapse',
               weekdays: 'flex',
               weekday: 'text-[var(--text-tertiary)] text-xs font-medium w-8 text-center py-1',
