@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { authFetch } from '../../services/authFetch';
 import { ADMIN_QUERY_KEYS, ADMIN_CACHE_CONFIG } from './useAdminOverview';
-import { toast } from 'sonner';
+import { toast } from '../../utils/toast';
 
 interface UserRecord {
   id: string;

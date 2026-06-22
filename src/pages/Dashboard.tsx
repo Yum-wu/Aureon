@@ -260,18 +260,34 @@ export function Dashboard() {
   const setDashboardTimeRange = useViewStore((s) => s.setDashboardTimeRange);
   const hasRealtimeData = rtLastUpdated !== null;
 
-  // 基准层：始终使用 HTTP 轮询数据（兜底）
-  const baseMetrics = useMemo(() => stats ? {
-    ttft_p50: stats.avg_retrieval_latency_ms || 0,
-    ttft_p95: 0,
-    qps: Math.round((stats.query_count_24h || 0) / 86400 * 100) / 100,
-    error_rate: 0,
-    saturation: 0,
-    alert_count: 0,
-    latency_trend: [] as number[],
-    tpot_trend: [] as number[],
-    e2e_trend: [] as number[],
-  } : null, [stats]);
+  // 从 localStorage 读取缓存的指标（确保卡片始终可见）
+  const [cachedMetrics, setCachedMetrics] = useState(() => {
+    try {
+      const saved = localStorage.getItem('aureon:metrics:last');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  // 基准层：始终使用 HTTP 轮询数据（兜底），无 stats 时用缓存
+  const baseMetrics = useMemo(() => {
+    if (stats) {
+      return {
+        ttft_p50: stats.avg_retrieval_latency_ms || 0,
+        ttft_p95: 0,
+        qps: Math.round((stats.query_count_24h || 0) / 86400 * 100) / 100,
+        error_rate: 0,
+        saturation: 0,
+        alert_count: 0,
+        latency_trend: [] as number[],
+        tpot_trend: [] as number[],
+        e2e_trend: [] as number[],
+      };
+    }
+    // 回退到 localStorage 缓存数据，确保卡片始终显示
+    return cachedMetrics ?? null;
+  }, [stats, cachedMetrics]);
 
   // 增强层：WebSocket 实时数据（仅当有实际数据时叠加，全零不覆盖 HTTP 基准）
   const rtHasData = hasRealtimeData && (rtMetrics.qps > 0 || rtMetrics.ttft_p50 > 0 || rtMetrics.token_usage > 0);
@@ -287,6 +303,19 @@ export function Dashboard() {
   const metrics = useMemo(() => baseMetrics
     ? { ...baseMetrics, ...realtimeOverlay }
     : null, [baseMetrics, realtimeOverlay]);
+
+  // 持久化指标到 localStorage（确保下次访问时卡片立即显示）
+  useEffect(() => {
+    if (metrics && (metrics.ttft_p50 > 0 || metrics.qps > 0)) {
+      try {
+        const toCache = { ttft_p50: metrics.ttft_p50, qps: metrics.qps, error_rate: metrics.error_rate, saturation: metrics.saturation, alert_count: metrics.alert_count };
+        localStorage.setItem('aureon:metrics:last', JSON.stringify(toCache));
+        setCachedMetrics(toCache);
+      } catch {
+        // Silent fail
+      }
+    }
+  }, [metrics]);
 
   // 映射 hook 告警到 AlertMessage 格式
   const alerts: AlertMessage[] = rtAlerts.map((a) => ({
@@ -368,9 +397,9 @@ export function Dashboard() {
     
     // Fallback to existing realtime metrics
     return metrics ? [
-      { id: t('dashboard.latency.ttft'), data: metrics.latency_trend.filter((v): v is number => v != null && v > 0).map((v, i) => ({ x: `${i}`, y: v })) },
-      { id: t('dashboard.latency.tpot'), data: metrics.tpot_trend.filter((v): v is number => v != null && v > 0).map((v, i) => ({ x: `${i}`, y: v })) },
-      { id: t('dashboard.latency.e2e'), data: metrics.e2e_trend.filter((v): v is number => v != null && v > 0).map((v, i) => ({ x: `${i}`, y: v })) },
+      { id: t('dashboard.latency.ttft'), data: metrics.latency_trend.filter((v: number): v is number => v != null && v > 0).map((v: number, i: number) => ({ x: `${i}`, y: v })) },
+      { id: t('dashboard.latency.tpot'), data: metrics.tpot_trend.filter((v: number): v is number => v != null && v > 0).map((v: number, i: number) => ({ x: `${i}`, y: v })) },
+      { id: t('dashboard.latency.e2e'), data: metrics.e2e_trend.filter((v: number): v is number => v != null && v > 0).map((v: number, i: number) => ({ x: `${i}`, y: v })) },
     ] : [];
   }, [latencyHistory, metrics, t]);
 

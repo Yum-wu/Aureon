@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
+import { toast } from '../utils/toast';
 import { useCostDataQuery } from '../hooks/useCostDataQuery';
 import { useViewStore } from '../stores/useViewStore';
 import { Card } from '../components/ui/Card';

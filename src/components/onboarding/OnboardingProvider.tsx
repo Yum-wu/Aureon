@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
+import { toast } from '../../utils/toast';
 import { useTranslation } from 'react-i18next';
 import { useViewStore } from '../../stores/useViewStore';
 import { CoachMark } from './CoachMark';
