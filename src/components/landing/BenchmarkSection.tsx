@@ -51,10 +51,10 @@ export function BenchmarkSection() {
               style={{ animationDelay: `${idx * 0.08 + 0.2}s` }}
             >
               <p className="text-2xl mb-2 inline-flex items-center justify-center">{ICONS[m.label] ?? <BarChart3 size={20} />}</p>
-              <p className="text-sm text-[var(--text-secondary)] uppercase tracking-wider mb-3">
+              <p className="text-base text-[var(--text-primary)] uppercase tracking-wider mb-3 font-medium">
                 {m.label}
                 {m.status === 'optimizing' && (
-                  <span className="ml-2 text-amber-400 normal-case">优化中</span>
+                  <span className="ml-2 text-amber-400 normal-case">{t('landing.benchmark.optimizing', '优化中')}</span>
                 )}
               </p>
               <p className="metric-value text-2xl md:text-3xl mb-1">{fmtVal(m.value, '—')}</p>
@@ -63,7 +63,7 @@ export function BenchmarkSection() {
         </div>
 
         {/* 测试规模说明 */}
-        <div className="text-center text-sm text-[var(--text-secondary)] animate-fade-up delay-200">
+        <div className="text-center text-base text-[var(--text-primary)] animate-fade-up delay-200 font-medium">
           {t('landing.benchmark.test_scale', '192 QA pairs · DeepEval LLM-as-Judge · 99 articles knowledge base')}
         </div>
       </div>

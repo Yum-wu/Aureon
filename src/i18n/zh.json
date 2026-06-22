@@ -78,6 +78,8 @@
       "vs_baseline": "对比基线",
       "optimized": "已优化",
       "reduced": "已降低",
+      "optimizing": "优化中",
+      "test_scale": "192 QA pairs · DeepEval LLM-as-Judge · 99 articles knowledge base",
       "optimization_story": "优化历程",
       "cache_hit_rate": "缓存命中率",
       "cost_per_query": "每次查询成本"

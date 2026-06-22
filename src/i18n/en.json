@@ -79,6 +79,8 @@
       "vs_baseline": "vs baseline",
       "optimized": "optimized",
       "reduced": "reduced",
+      "optimizing": "Optimizing",
+      "test_scale": "192 QA pairs · DeepEval LLM-as-Judge · 99 articles knowledge base",
       "optimization_story": "Optimization Story",
       "cache_hit_rate": "Cache Hit Rate",
       "cost_per_query": "Cost/Query"

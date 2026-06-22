@@ -511,9 +511,14 @@ async def rag_upload_endpoint(
     # Get tenant_id from current context
     tenant_id = get_current_tenant_id()
 
-    # 验证 API Key（如果配置了）
+    # 验证 blog_sync API Key（仅对未通过 header 认证的外部请求生效）
+    # 已通过 JWT 或 X-API-Key header 认证的用户（如演示账号登录）跳过此检查
     expected_key = settings.blog_sync_api_key
-    if expected_key and api_key != expected_key:
+    has_header_auth = bool(
+        request.headers.get("Authorization", "").startswith("Bearer ")
+        or request.headers.get("X-API-Key", "")
+    )
+    if expected_key and not has_header_auth and api_key != expected_key:
         raise AuthenticationError("Invalid API key")
 
 
