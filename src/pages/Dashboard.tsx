@@ -3,7 +3,7 @@ import { useDashboardData } from '../hooks/useDashboardData';
 import { useSystemHealth } from '../hooks/useSystemHealth';
 import { useRealtimeMetrics } from '../hooks/useRealtimeMetrics';
 import { useLatencyHistory } from '../hooks/useLatencyHistory';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useViewStore } from '../stores/useViewStore';
 import { Card } from '../components/ui/Card';
 import { Tooltip } from '../components/ui/Tooltip';
@@ -305,16 +305,25 @@ export function Dashboard() {
     : null, [baseMetrics, realtimeOverlay]);
 
   // 持久化指标到 localStorage（确保下次访问时卡片立即显示）
+  // Debounce：metrics 每秒可能更新数次（HTTP 轮询 + WebSocket 叠加），
+  // 直接写 localStorage 会阻塞主线程，导致路由切换卡顿
+  const metricsFlushRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (metrics && (metrics.ttft_p50 > 0 || metrics.qps > 0)) {
-      try {
-        const toCache = { ttft_p50: metrics.ttft_p50, qps: metrics.qps, error_rate: metrics.error_rate, saturation: metrics.saturation, alert_count: metrics.alert_count };
-        localStorage.setItem('aureon:metrics:last', JSON.stringify(toCache));
-        setCachedMetrics(toCache);
-      } catch {
-        // Silent fail
-      }
+      const toCache = { ttft_p50: metrics.ttft_p50, qps: metrics.qps, error_rate: metrics.error_rate, saturation: metrics.saturation, alert_count: metrics.alert_count };
+      if (metricsFlushRef.current) clearTimeout(metricsFlushRef.current);
+      metricsFlushRef.current = setTimeout(() => {
+        try {
+          localStorage.setItem('aureon:metrics:last', JSON.stringify(toCache));
+          setCachedMetrics(toCache);
+        } catch {
+          // Silent fail
+        }
+      }, 2000);
     }
+    return () => {
+      if (metricsFlushRef.current) clearTimeout(metricsFlushRef.current);
+    };
   }, [metrics]);
 
   // 映射 hook 告警到 AlertMessage 格式
@@ -358,15 +367,22 @@ export function Dashboard() {
 
   const hasPipelineData = rtMetrics.pipeline && (rtMetrics.pipeline.retrieval_ms ?? 0) > 0;
 
+  const pipelineFlushRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (hasPipelineData) {
-      try {
-        localStorage.setItem('aureon:pipeline:last', JSON.stringify(rtMetrics.pipeline));
-        setCachedPipeline(rtMetrics.pipeline);
-      } catch {
-        // Silent fail
-      }
+      if (pipelineFlushRef.current) clearTimeout(pipelineFlushRef.current);
+      pipelineFlushRef.current = setTimeout(() => {
+        try {
+          localStorage.setItem('aureon:pipeline:last', JSON.stringify(rtMetrics.pipeline));
+          setCachedPipeline(rtMetrics.pipeline);
+        } catch {
+          // Silent fail
+        }
+      }, 2000);
     }
+    return () => {
+      if (pipelineFlushRef.current) clearTimeout(pipelineFlushRef.current);
+    };
   }, [hasPipelineData, rtMetrics.pipeline]);
 
   const pipelineData = hasPipelineData ? rtMetrics.pipeline : cachedPipeline;

@@ -1,8 +1,12 @@
 /**
  * Nivo Line 图表封装
  * 支持多系列、响应式、统一主题
+ *
+ * 使用 React.memo 优化：只在 data/height/animate 真正变化时重渲染，
+ * 避免父组件频繁更新（如 Dashboard metrics 轮询）触发 Nivo 完整重绘动画。
  */
 
+import { memo } from 'react';
 import { Line, type LineSvgProps, type LineSeries } from '@nivo/line';
 import { ChartContainer } from './ChartContainer';
 import { useChartTheme, CHART_COLORS, DEFAULT_MARGIN, CHART_DEFAULTS, type TimeRange } from './chartTheme';
@@ -42,7 +46,7 @@ interface LineChartProps {
   className?: string;
 }
 
-export function LineChart({
+function LineChartInner({
   data,
   title,
   subtitle,
@@ -158,3 +162,17 @@ export function LineChart({
     </ChartContainer>
   );
 }
+
+/**
+ * Memo 优化：只在影响图表渲染的核心 prop 变化时重渲染
+ * - data: 图表数据（引用相等性）
+ * - height: 图表高度
+ * - animate: 是否启用动画
+ */
+export const LineChart = memo(LineChartInner, (prev, next) => {
+  return (
+    prev.data === next.data &&
+    prev.height === next.height &&
+    prev.animate === next.animate
+  );
+});

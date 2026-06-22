@@ -3,9 +3,10 @@
  * 左侧导航 + 面包屑 + 内容区，响应式侧边栏
  */
 
-import { useState, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LayoutDashboard, Users, Shield, Folder, ClipboardList, Flag, Key } from 'lucide-react';
+import { useAdminViewStore } from '../../stores/useAdminViewStore';
 
 /** Admin 标签页类型 */
 export type AdminTab = 'overview' | 'users' | 'roles' | 'workspaces' | 'audit' | 'flags' | 'sso';
@@ -31,7 +32,9 @@ const TAB_CONFIG: { key: AdminTab; icon: ReactNode }[] = [
 
 export function AdminLayout({ children, activeTab, onTabChange }: AdminLayoutProps) {
   const { t } = useTranslation();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // 持久化折叠状态：刷新后保留用户偏好
+  const sidebarCollapsed = useAdminViewStore((s) => s.sidebarCollapsed);
+  const setSidebarCollapsed = useAdminViewStore((s) => s.setSidebarCollapsed);
 
   return (
     <div className="flex h-full min-h-0">
