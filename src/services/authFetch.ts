@@ -40,50 +40,39 @@ function isAuthBypass(url: string): boolean {
 let isRedirecting = false;
 
 /**
- * 处理 401:清除凭证 + 通知 store + 跳转登录页。
+ * 处理 401:跳转登录页。
  * 幂等:多次调用安全(靠 isRedirecting 标志位去重)。
- * redirect 异步执行,不阻塞当前 fetch 响应链。
+ *
+ * 关键:不在这里清除 sessionStorage/authStore!
+ * 原因:清除凭证是同步的,但跳转是异步的(setTimeout),
+ * 中间窗口内其他 in-flight 请求会丢失凭证导致连锁 401。
+ * 让登录页在成功登录时自然覆盖旧凭证即可。
  */
 function handleAuthExpired(): void {
   if (isRedirecting) return;
 
+  // 派发自定义事件,供 App 层做额外处理(toast 等)
   try {
-    // 1. 清除失效凭证(避免下次请求又带上无效凭证)
-    sessionStorage.removeItem(API_KEY_STORAGE);
-    sessionStorage.removeItem(JWT_TOKEN_STORAGE);
-    sessionStorage.removeItem(ROLE_STORAGE);
-
-    // 2. 同步 Zustand auth store(若已加载),让 UI 立即反映登出态
-    //    动态 import 规避循环依赖;失败则降级(跳转本身已足够)
-    import("../stores/useAuthStore")
-      .then(({ useAuthStore }) => {
-        useAuthStore.setState({ apiKey: "", token: "", isAuthenticated: false, role: null });
-      })
-      .catch(() => {
-        /* 降级:仅靠跳转 */
-      });
-
-    // 3. 派发自定义事件,供 App 层做额外处理(toast 等)
     window.dispatchEvent(new CustomEvent("aureon:auth-expired"));
-
-    // 4. 异步跳转登录页(不阻塞当前响应链,也避免 jsdom 环境报错)
-    isRedirecting = true;
-    setTimeout(() => {
-      try {
-        const currentPath = window.location.pathname + window.location.search;
-        const redirect = encodeURIComponent(currentPath);
-        window.location.href = `/login?redirect=${redirect}`;
-      } catch {
-        /* jsdom 或 SSR 环境跳过 */
-      }
-      // 5s 后重置标志位(若跳转失败容错)
-      setTimeout(() => {
-        isRedirecting = false;
-      }, 5000);
-    }, 0);
   } catch {
-    /* sessionStorage 不可用时降级 */
+    /* SSR */
   }
+
+  // 异步跳转登录页(不阻塞当前响应链,也避免 jsdom 环境报错)
+  isRedirecting = true;
+  setTimeout(() => {
+    try {
+      const currentPath = window.location.pathname + window.location.search;
+      const redirect = encodeURIComponent(currentPath);
+      window.location.href = `/login?redirect=${redirect}`;
+    } catch {
+      /* jsdom 或 SSR 环境跳过 */
+    }
+    // 5s 后重置标志位(若跳转失败容错)
+    setTimeout(() => {
+      isRedirecting = false;
+    }, 5000);
+  }, 0);
 }
 
 function getApiKey(): string {
