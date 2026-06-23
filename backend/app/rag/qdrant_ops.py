@@ -127,6 +127,16 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
     """
     lock_acquired = False
     lock_key = f"aureon:index_rebuild:{collection_name}"
+    lock_token = None  # UUID token for safe release
+
+    # Lua script: atomic release — only delete if we own the lock
+    _RELEASE_LOCK_SCRIPT = """
+    if redis.call("get", KEYS[1]) == ARGV[1] then
+        return redis.call("del", KEYS[1])
+    else
+        return 0
+    end
+    """
 
     from qdrant_client import models as qmodels
 
@@ -210,21 +220,21 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
         # 分布式锁：防止多实例同时删除+重建集合
         # 只在需要重建时加锁，upsert 不需要锁
         try:
+            import uuid as _uuid
             from app.cache.redis_client import get_sync_redis
             r = get_sync_redis()
             if r is not None:
-                lock_acquired = r.set(lock_key, "locked", nx=True, ex=600)  # 10 分钟超时
+                lock_token = _uuid.uuid4().hex
+                lock_acquired = r.set(lock_key, lock_token, nx=True, ex=600)  # 10 min TTL
                 if not lock_acquired:
                     logger.info("Another instance is rebuilding index '%s', waiting...", collection_name)
-                    # 等待锁释放（最多 5 分钟）
+                    # Wait with 1s polling (max 60 attempts = 1 min)
                     import time as _wt
-                    for _ in range(30):
-                        _wt.sleep(10)
-                        if r.get(lock_key) is None:
-                            lock_acquired = True
-                            lock_acquired = r.set(lock_key, "locked", nx=True, ex=600)
-                            if lock_acquired:
-                                break
+                    for _ in range(60):
+                        _wt.sleep(1)
+                        lock_acquired = r.set(lock_key, lock_token, nx=True, ex=600)
+                        if lock_acquired:
+                            break
                     if not lock_acquired:
                         logger.warning("Timed out waiting for index rebuild lock on '%s'", collection_name)
                         return
@@ -242,15 +252,18 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
                 logger.debug("delete_collection_failed", collection=collection_name, error=str(e))
         except Exception as e:
             logger.error("Failed to rebuild collection '%s': %s", collection_name, e)
-            # 释放锁
-            if lock_acquired:
+            # 释放锁（Lua 原子释放，防止误删他人锁）
+            if lock_acquired and lock_token:
                 try:
                     from app.cache.redis_client import get_sync_redis
                     r = get_sync_redis()
                     if r is not None:
+                        r.eval(_RELEASE_LOCK_SCRIPT, 1, lock_key, lock_token)
+                except Exception:
+                    try:
                         r.delete(lock_key)
-                except Exception as e:
-                    logger.debug("redis_lock_release_failed", error=str(e))
+                    except Exception as e:
+                        logger.debug("redis_lock_release_failed", error=str(e))
             raise
 
     # 根据是否启用 sparse 向量选择 vectors_config
@@ -559,15 +572,18 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
 
     logger.info("Qdrant: indexed %d chunks into '%s' (complete)", len(chunks), collection_name)
 
-    # 释放分布式锁（仅在重建时获取了锁）
-    if lock_acquired:
+    # 释放分布式锁（Lua 原子释放，防止误删他人锁）
+    if lock_acquired and lock_token:
         try:
             from app.cache.redis_client import get_sync_redis
             r = get_sync_redis()
             if r is not None:
+                r.eval(_RELEASE_LOCK_SCRIPT, 1, lock_key, lock_token)
+        except Exception:
+            try:
                 r.delete(lock_key)
-        except Exception as e:
-            logger.debug("redis_lock_release_failed", error=str(e))
+            except Exception as e:
+                logger.debug("redis_lock_release_failed", error=str(e))
 
 
 

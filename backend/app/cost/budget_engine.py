@@ -5,7 +5,7 @@
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import structlog
@@ -194,14 +194,18 @@ class BudgetEngine:
         days_in_month = (now - month_start).days + 1
 
         try:
-            for i in range(days_in_month):
-                day = (month_start + __import__("datetime").timedelta(days=i)).strftime("%Y-%m-%d")
-                daily_key = f"cost:{tenant_id}:daily:{day}"
-                daily_data = await r.hgetall(daily_key)
+            # Pipeline: batch all daily hgetall into one round-trip
+            async with r.pipeline(transaction=False) as pipe:
+                for i in range(days_in_month):
+                    day = (month_start + timedelta(days=i)).strftime("%Y-%m-%d")
+                    daily_key = f"cost:{tenant_id}:daily:{day}"
+                    await pipe.hgetall(daily_key)
+                results = await pipe.execute()
+
+            for daily_data in results:
                 if daily_data:
                     if workspace_id:
-                        ws_field = f"ws:{workspace_id}"
-                        total += float(daily_data.get(ws_field, 0))
+                        total += float(daily_data.get(f"ws:{workspace_id}", 0))
                     else:
                         total += float(daily_data.get("total_cost", 0))
         except Exception as exc:
