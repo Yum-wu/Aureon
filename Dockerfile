@@ -4,8 +4,10 @@ FROM node:22-alpine AS frontend-builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --prefer-offline
-ARG CACHEBUST=2026-06-23v1
-COPY . .
+ARG CACHEBUST=2026-06-23v2
+COPY vite.config.ts index.html tsconfig*.json ./
+COPY public/ ./public/
+COPY src/ ./src/
 
 ARG VITE_API_URL
 ARG VITE_CREW_API_URL

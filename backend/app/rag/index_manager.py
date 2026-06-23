@@ -13,6 +13,8 @@ Extracted from vector_store.py.
 
 
 
+import uuid
+
 import numpy as np
 
 from typing import List, Dict, Any
@@ -162,7 +164,7 @@ def _add_to_index_qdrant(chunks: List[Dict[str, Any]]):
 
             points.append(PointStruct(
 
-                id=existing_count + idx,
+                id=uuid.uuid4().hex,
 
                 vector=vector_data,
 
