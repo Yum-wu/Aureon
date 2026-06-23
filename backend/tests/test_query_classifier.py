@@ -2,7 +2,24 @@
 Tests for query complexity classifier.
 """
 
-from app.rag.query_classifier import classify_query_complexity, get_reranking_strategy
+import asyncio
+
+import pytest
+from unittest.mock import AsyncMock, MagicMock, patch
+
+from app.rag.query_classifier import (
+    classify_query_complexity,
+    classify_query_complexity_adaptive,
+    get_reranking_strategy,
+    route_retrieval,
+    route_retrieval_adaptive,
+    _llm_classify,
+    _rule_classify,
+    _count_keyword_matches,
+    _has_multiple_questions,
+    _get_query_length_score,
+    _has_conjunction_patterns,
+)
 
 
 class TestQueryComplexityClassification:
@@ -214,3 +231,207 @@ class TestKeywordIndicatorCoverage:
                 break
         else:
             assert False, "No synthesis queries classified as medium or complex"
+
+
+# ── Helper functions unit tests ──
+
+
+class TestHelperFunctions:
+    """Test internal helper functions."""
+
+    def test_count_keyword_matches_comparison(self):
+        matches = _count_keyword_matches("比较两种方案的区别")
+        assert matches["comparison"] >= 2
+
+    def test_count_keyword_matches_no_match(self):
+        matches = _count_keyword_matches("你好")
+        assert sum(matches.values()) == 0
+
+    def test_has_multiple_questions_single(self):
+        assert _has_multiple_questions("什么是RAG？") is False
+
+    def test_has_multiple_questions_multiple(self):
+        assert _has_multiple_questions("什么是RAG？什么是BM25？") is True
+
+    def test_get_query_length_score_short(self):
+        assert _get_query_length_score("Hi") == 0
+
+    def test_get_query_length_score_very_long(self):
+        assert _get_query_length_score("a" * 110) == 3
+
+    def test_has_conjunction_patterns_chinese(self):
+        assert _has_conjunction_patterns("RAG和BM25") is True
+
+    def test_has_conjunction_patterns_none(self):
+        assert _has_conjunction_patterns("什么是RAG") is False
+
+    def test_rule_classify_empty(self):
+        assert _rule_classify("") == "simple"
+        assert _rule_classify("   ") == "simple"
+
+
+# ── Route retrieval (sync) ──
+
+
+class TestRouteRetrieval:
+    """Test sync route_retrieval function."""
+
+    @patch("app.config.settings")
+    def test_disabled_routing_returns_complex(self, mock_settings):
+        mock_settings.query_routing_enabled = False
+        assert route_retrieval("你好") == "complex"
+
+    @patch("app.config.settings")
+    def test_enabled_routing_classifies(self, mock_settings):
+        mock_settings.query_routing_enabled = True
+        result = route_retrieval("你好")
+        assert result in ("simple", "medium", "complex")
+
+
+# ── LLM classify (async, mocked) ──
+
+
+class TestLlmClassify:
+    """Test LLM classification path with mocked LLM."""
+
+    @pytest.mark.asyncio
+    async def test_returns_simple(self):
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(return_value=MagicMock(content="simple"))
+        with patch("app.agent.llm.create_llm", return_value=mock_llm):
+            result = await _llm_classify("What is RAG?")
+            assert result == "simple"
+
+    @pytest.mark.asyncio
+    async def test_returns_medium(self):
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(return_value=MagicMock(content="medium"))
+        with patch("app.agent.llm.create_llm", return_value=mock_llm):
+            result = await _llm_classify("Analyze RAG pipeline")
+            assert result == "medium"
+
+    @pytest.mark.asyncio
+    async def test_returns_complex(self):
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(return_value=MagicMock(content="complex"))
+        with patch("app.agent.llm.create_llm", return_value=mock_llm):
+            result = await _llm_classify("Compare and synthesize all approaches")
+            assert result == "complex"
+
+    @pytest.mark.asyncio
+    async def test_strips_thinking_tags(self):
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(
+            return_value=MagicMock(content="<think>Let me think...</think>medium")
+        )
+        with patch("app.agent.llm.create_llm", return_value=mock_llm):
+            result = await _llm_classify("Analyze RAG pipeline")
+            assert result == "medium"
+
+    @pytest.mark.asyncio
+    async def test_invalid_response_defaults_to_medium(self):
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(return_value=MagicMock(content="I don't know"))
+        with patch("app.agent.llm.create_llm", return_value=mock_llm):
+            result = await _llm_classify("ambiguous query")
+            assert result == "medium"
+
+
+# ── Adaptive classifier (async) ──
+
+
+class TestClassifyQueryComplexityAdaptive:
+    """Test hybrid classifier: rule fast-path + LLM fallback."""
+
+    @pytest.mark.asyncio
+    async def test_rule_high_confidence_skips_llm(self):
+        """High-confidence rule result should skip LLM call."""
+        result = await classify_query_complexity_adaptive(
+            "比较BM25和向量检索的区别，并分析为什么混合检索更好"
+        )
+        assert result in ("simple", "medium", "complex")
+
+    @pytest.mark.asyncio
+    async def test_llm_fallback_for_low_confidence(self):
+        """Low-confidence rule result should fall through to LLM."""
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(return_value=MagicMock(content="medium"))
+        with patch("app.agent.llm.create_llm", return_value=mock_llm):
+            # "比较一下" has 1 keyword, short length → low confidence → LLM
+            result = await classify_query_complexity_adaptive("比较一下")
+            assert result in ("simple", "medium", "complex")
+
+    @pytest.mark.asyncio
+    async def test_timeout_falls_back_to_medium(self):
+        """LLM timeout should degrade to medium."""
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(side_effect=asyncio.TimeoutError())
+        with patch("app.agent.llm.create_llm", return_value=mock_llm):
+            result = await classify_query_complexity_adaptive("比较一下")
+            assert result == "medium"
+
+    @pytest.mark.asyncio
+    async def test_llm_exception_falls_back_to_medium(self):
+        """LLM exception should degrade to medium."""
+        mock_llm = MagicMock()
+        mock_llm.ainvoke = AsyncMock(side_effect=RuntimeError("API error"))
+        with patch("app.agent.llm.create_llm", return_value=mock_llm):
+            result = await classify_query_complexity_adaptive("比较一下")
+            assert result == "medium"
+
+
+# ── Adaptive route retrieval (async) ──
+
+
+class TestRouteRetrievalAdaptive:
+    """Test async route_retrieval_adaptive function."""
+
+    @pytest.mark.asyncio
+    async def test_disabled_returns_complex(self):
+        with patch("app.config.settings") as mock_settings:
+            mock_settings.query_routing_enabled = False
+            result = await route_retrieval_adaptive("你好")
+            assert result == "complex"
+
+    @pytest.mark.asyncio
+    async def test_enabled_classifies(self):
+        with patch("app.config.settings") as mock_settings:
+            mock_settings.query_routing_enabled = True
+            result = await route_retrieval_adaptive("你好")
+            assert result in ("simple", "medium", "complex")
+
+
+# ── Edge cases ──
+
+
+class TestEdgeCases:
+    """Test edge cases and boundary conditions."""
+
+    def test_very_long_query(self):
+        q = "a" * 10000
+        result = classify_query_complexity(q)
+        assert result in ("simple", "medium", "complex")
+
+    def test_whitespace_only(self):
+        assert classify_query_complexity("     ") == "simple"
+
+    def test_special_characters(self):
+        result = classify_query_complexity("!@#$%^&*()")
+        assert result in ("simple", "medium", "complex")
+
+    def test_unicode_query(self):
+        result = classify_query_complexity("什么是RAG系统？请详细解释其工作原理")
+        assert result in ("simple", "medium", "complex")
+
+    @pytest.mark.asyncio
+    async def test_adaptive_empty_query(self):
+        """Empty query should return simple without LLM call."""
+        result = await classify_query_complexity_adaptive("")
+        assert result == "simple"
+
+    @pytest.mark.asyncio
+    async def test_adaptive_very_long_query(self):
+        """Very long query should be classified without error."""
+        q = "比较" + "a" * 1000 + "和" + "b" * 1000 + "的区别，并分析为什么"
+        result = await classify_query_complexity_adaptive(q)
+        assert result in ("simple", "medium", "complex")

@@ -43,4 +43,45 @@ test.describe("Chat Flow", () => {
       await expect(sendButton).toBeDisabled();
     }
   });
+
+  test("full chat conversation with SSE mock", async ({ page }) => {
+    // Build SSE response chunks
+    const sseChunks = [
+      `data: ${JSON.stringify({ type: "session", content: { session_id: "test-session-123" } })}\n\n`,
+      `data: ${JSON.stringify({ type: "text", content: "Hello! " })}\n\n`,
+      `data: ${JSON.stringify({ type: "text", content: "I am Aureon. " })}\n\n`,
+      `data: ${JSON.stringify({ type: "text", content: "How can I help?" })}\n\n`,
+      `data: ${JSON.stringify({ type: "sources", content: [{ title: "Guide", slug: "guide", score: 0.95 }] })}\n\n`,
+      `data: ${JSON.stringify({ type: "done" })}\n\n`,
+    ];
+
+    // Mock the SSE endpoint
+    await page.route("**/api/chat/**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+        },
+        body: sseChunks.join(""),
+      });
+    });
+
+    await page.goto("/chat");
+
+    // Wait for the chat input to be visible
+    const input = page.locator('[data-testid="chat-input"], textarea').first();
+    await expect(input).toBeVisible({ timeout: 10000 });
+
+    // Type and send a message
+    await input.fill("What is RAG?");
+    await input.press("Enter");
+
+    // Wait for the response text to appear
+    await expect(page.locator("body")).toContainText("How can I help?", { timeout: 15000 });
+
+    // Verify user message appeared
+    await expect(page.locator("body")).toContainText("What is RAG?");
+  });
 });
