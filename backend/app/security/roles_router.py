@@ -52,7 +52,7 @@ _ROLE_META: Dict[str, Dict[str, str]] = {
 
 # ── 端点 ──
 
-@router.get("/", response_model=List[Role])
+@router.get("", response_model=List[Role])
 async def list_roles(
     user: dict = Depends(require_role(UserRole.ADMIN)),
 ):
