@@ -2,7 +2,6 @@ from langchain.agents import create_agent
 from app.tools import ALL_TOOLS
 from app.utils.lang_detect import lang_instruction
 from app.observability.prompt_manager import register_prompt, get_prompt
-from app.prompts import get_system_prompt
 from app.prompts.agent import SYSTEM_PROMPT_ZH, SYSTEM_PROMPT_EN
 
 

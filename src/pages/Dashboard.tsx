@@ -224,7 +224,7 @@ export function Dashboard() {
         ttft_p50: metrics.ttft_p50 ?? 0,
         qps: metrics.qps ?? 0,
         error_rate: metrics.error_rate ?? 0,
-        saturation: (metrics as any).saturation ?? 0,
+        saturation: metrics.saturation ?? 0,
         alert_count: metrics.alert_count ?? 0,
       });
     }
@@ -249,7 +249,7 @@ export function Dashboard() {
   const hasPipelineData = rtMetrics.pipeline && (rtMetrics.pipeline.retrieval_ms ?? 0) > 0;
   useEffect(() => {
     if (hasPipelineData) {
-      setCachedPipeline(rtMetrics.pipeline as any);
+      setCachedPipeline(rtMetrics.pipeline as Record<string, number>);
     }
   }, [hasPipelineData, rtMetrics.pipeline]);
   const pipelineData = hasPipelineData ? rtMetrics.pipeline : cachedPipeline;
@@ -285,9 +285,9 @@ export function Dashboard() {
     }
 
     return metrics ? [
-      { id: t('dashboard.latency.ttft'), data: ((metrics as any).latency_trend ?? []).filter((v: number): v is number => v != null && v > 0).map((v: number, i: number) => ({ x: `${i}`, y: v })) },
-      { id: t('dashboard.latency.tpot'), data: ((metrics as any).tpot_trend ?? []).filter((v: number): v is number => v != null && v > 0).map((v: number, i: number) => ({ x: `${i}`, y: v })) },
-      { id: t('dashboard.latency.e2e'), data: ((metrics as any).e2e_trend ?? []).filter((v: number): v is number => v != null && v > 0).map((v: number, i: number) => ({ x: `${i}`, y: v })) },
+      { id: t('dashboard.latency.ttft'), data: (metrics.latency_trend ?? []).filter((v: number): v is number => v != null && v > 0).map((v: number, i: number) => ({ x: `${i}`, y: v })) },
+      { id: t('dashboard.latency.tpot'), data: (metrics.tpot_trend ?? []).filter((v: number): v is number => v != null && v > 0).map((v: number, i: number) => ({ x: `${i}`, y: v })) },
+      { id: t('dashboard.latency.e2e'), data: (metrics.e2e_trend ?? []).filter((v: number): v is number => v != null && v > 0).map((v: number, i: number) => ({ x: `${i}`, y: v })) },
     ] : [];
   }, [latencyHistory, metrics, t]);
 

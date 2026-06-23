@@ -94,7 +94,7 @@ export function DashboardCharts({
             <div className="animate-pulse h-4 w-24 bg-[var(--bg-tertiary)] rounded" />
           </div>
         ) : queryVolumeChartData.length > 0 ? (
-          <BarChart data={queryVolumeChartData as any} keys={['value']} indexBy="label" title={t('dashboard.charts.query_volume')} />
+          <BarChart data={queryVolumeChartData.map(d => ({ ...d }))} keys={['value']} indexBy="label" title={t('dashboard.charts.query_volume')} />
         ) : (
           <NoDataPlaceholder />
         )}

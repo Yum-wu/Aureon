@@ -35,6 +35,12 @@ export interface RealtimeMetrics {
   token_usage: number;
   active_connections: number;
   pipeline: PipelineStages;
+  /** Dashboard-only extended fields (set by baseMetrics from HTTP stats) */
+  saturation?: number;
+  alert_count?: number;
+  latency_trend?: number[];
+  tpot_trend?: number[];
+  e2e_trend?: number[];
 }
 
 export interface MetricAlert {
