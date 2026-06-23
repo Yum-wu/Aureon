@@ -14,6 +14,7 @@ import hashlib
 import json
 import random
 import re
+import threading
 import time
 import uuid
 from collections import OrderedDict
@@ -76,6 +77,7 @@ class SemanticLLMCache:
         # In-memory caches (fallback when Redis unavailable)
         self._mem_exact_cache: OrderedDict = OrderedDict()  # LRU
         self._mem_semantic_cache: Dict[str, Dict] = {}
+        self._mem_lock = threading.Lock()
         self._stats = {
             "exact_hits": 0,
             "semantic_hits": 0,
@@ -327,16 +329,17 @@ class SemanticLLMCache:
         cache_key = self._exact_cache_key(query, model, temperature, max_tokens, tenant_id)
 
         # Try in-memory first (fastest)
-        if cache_key in self._mem_exact_cache:
-            # Move to end (most recently used)
-            self._mem_exact_cache.move_to_end(cache_key)
-            entry = self._mem_exact_cache[cache_key]
-            if time.monotonic() < entry["expires_at"]:
-                self._stats["exact_hits"] += 1
-                logger.debug("Exact cache HIT (in-memory)")
-                return entry["response"]
-            else:
-                del self._mem_exact_cache[cache_key]
+        with self._mem_lock:
+            if cache_key in self._mem_exact_cache:
+                # Move to end (most recently used)
+                self._mem_exact_cache.move_to_end(cache_key)
+                entry = self._mem_exact_cache[cache_key]
+                if time.monotonic() < entry["expires_at"]:
+                    self._stats["exact_hits"] += 1
+                    logger.debug("Exact cache HIT (in-memory)")
+                    return entry["response"]
+                else:
+                    del self._mem_exact_cache[cache_key]
 
         # Try Redis
         r = self._get_redis()
@@ -348,10 +351,11 @@ class SemanticLLMCache:
                     logger.debug("Exact cache HIT (Redis)")
                     # Populate in-memory cache (with TTL jitter)
                     jittered_ttl = self.default_ttl + (random.randint(0, 300) if self.default_ttl > 0 else 0)
-                    self._mem_exact_cache[cache_key] = {
-                        "response": cached,
-                        "expires_at": time.monotonic() + jittered_ttl,
-                    }
+                    with self._mem_lock:
+                        self._mem_exact_cache[cache_key] = {
+                            "response": cached,
+                            "expires_at": time.monotonic() + jittered_ttl,
+                        }
                     return cached
             except Exception as e:
                 logger.debug("Redis exact lookup error: %s", e)
@@ -392,14 +396,15 @@ class SemanticLLMCache:
             return None
 
         # Filter valid candidates (model/params/expiry) before computing similarity
-        candidates = [
-            entry for entry in self._mem_semantic_cache.values()
-            if entry.get("model") == model
-            and entry.get("temperature") == temperature
-            and entry.get("max_tokens") == max_tokens
-            and now <= entry.get("expires_at", 0)
-            and entry.get("embedding")
-        ]
+        with self._mem_lock:
+            candidates = [
+                entry for entry in self._mem_semantic_cache.values()
+                if entry.get("model") == model
+                and entry.get("temperature") == temperature
+                and entry.get("max_tokens") == max_tokens
+                and now <= entry.get("expires_at", 0)
+                and entry.get("embedding")
+            ]
 
         for entry in candidates:
             cached_emb = entry["embedding"]
@@ -513,14 +518,15 @@ class SemanticLLMCache:
         exact_key = self._exact_cache_key(query, model, temperature, max_tokens, tenant_id)
 
         # In-memory exact cache
-        self._mem_exact_cache[exact_key] = {
-            "response": response,
-            "expires_at": expires_at,
-        }
+        with self._mem_lock:
+            self._mem_exact_cache[exact_key] = {
+                "response": response,
+                "expires_at": expires_at,
+            }
 
-        # Evict LRU if over limit
-        while len(self._mem_exact_cache) > self.max_cache_size:
-            self._mem_exact_cache.popitem(last=False)
+            # Evict LRU if over limit
+            while len(self._mem_exact_cache) > self.max_cache_size:
+                self._mem_exact_cache.popitem(last=False)
 
         # Redis exact cache (with TTL jitter)
         r = self._get_redis()
@@ -552,7 +558,8 @@ class SemanticLLMCache:
             }
 
             # In-memory semantic cache
-            self._mem_semantic_cache[semantic_key] = semantic_data
+            with self._mem_lock:
+                self._mem_semantic_cache[semantic_key] = semantic_data
 
             # Qdrant semantic store (primary) / Redis fallback
             if self._qdrant_ready:
@@ -645,8 +652,9 @@ class SemanticLLMCache:
 
         # Clear in-memory caches
         if prefix is None:
-            self._mem_exact_cache.clear()
-            self._mem_semantic_cache.clear()
+            with self._mem_lock:
+                self._mem_exact_cache.clear()
+                self._mem_semantic_cache.clear()
             logger.info("Cleared all in-memory semantic cache entries")
             return -1  # Indicate all cleared
 

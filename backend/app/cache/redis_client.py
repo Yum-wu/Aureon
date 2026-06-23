@@ -6,6 +6,7 @@ redis_client continue to work. Functions not yet extracted to sub-modules
 """
 import hashlib
 import re
+import threading
 import time
 from typing import Optional, Dict, Any
 import structlog
@@ -65,6 +66,7 @@ _get_sync_redis = get_sync_redis
 # Gracefully degrades when SemanticLLMCache is unavailable
 
 _semantic_cache_instance = None
+_semantic_cache_lock = threading.Lock()
 
 
 def get_semantic_cache_instance():
@@ -75,24 +77,28 @@ def get_semantic_cache_instance():
     """
     global _semantic_cache_instance
 
-    if _semantic_cache_instance is not None:
+    if _semantic_cache_instance is not None:  # Fast path (no lock)
         return _semantic_cache_instance
 
-    try:
-        from app.cache.semantic_cache import SemanticLLMCache
-        _semantic_cache_instance = SemanticLLMCache(
-            similarity_threshold=0.92,
-            default_ttl=3600,  # Match Redis TTL
-            max_cache_size=10000,
-        )
-        logger.info("Semantic cache singleton created")
-        return _semantic_cache_instance
-    except ImportError:
-        logger.debug("semantic_cache module not available, using exact-match only")
-        return None
-    except Exception as e:
-        logger.warning("Failed to create semantic cache: %s (non-fatal)", e)
-        return None
+    with _semantic_cache_lock:
+        if _semantic_cache_instance is not None:  # Double-check
+            return _semantic_cache_instance
+
+        try:
+            from app.cache.semantic_cache import SemanticLLMCache
+            _semantic_cache_instance = SemanticLLMCache(
+                similarity_threshold=0.92,
+                default_ttl=3600,  # Match Redis TTL
+                max_cache_size=10000,
+            )
+            logger.info("Semantic cache singleton created")
+            return _semantic_cache_instance
+        except ImportError:
+            logger.debug("semantic_cache module not available, using exact-match only")
+            return None
+        except Exception as e:
+            logger.warning("Failed to create semantic cache: %s (non-fatal)", e)
+            return None
 
 
 def increment_cache_miss():
