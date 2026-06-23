@@ -164,6 +164,7 @@ export function SupportWidget() {
           aria-label="Open support chat"
           aria-expanded={isOpen}
           data-testid="support-fab"
+          data-onboarding="support-fab"
         >
           {/* Chat bubble icon */}
           <svg

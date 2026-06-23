@@ -1,20 +1,24 @@
 /**
  * OnboardingProvider — 引导状态 Context Provider
  * 管理当前步骤、跨页面导航、完成/跳过标记
+ *
+ * 支持角色感知：根据用户角色过滤引导步骤
  */
 
 import {
   useState,
   useCallback,
   useEffect,
+  useMemo,
   type ReactNode,
 } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from '../../utils/toast';
 import { useTranslation } from 'react-i18next';
 import { useViewStore } from '../../stores/useViewStore';
+import { useAuth } from '../../hooks/AuthContext';
 import { CoachMark } from './CoachMark';
-import { ONBOARDING_STEPS } from './steps';
+import { ONBOARDING_STEPS, type OnboardingStep } from './steps';
 import { OnboardingContext } from './useOnboarding';
 
 interface OnboardingProviderProps {
@@ -23,6 +27,7 @@ interface OnboardingProviderProps {
 
 export function OnboardingProvider({ children }: OnboardingProviderProps) {
   const { t } = useTranslation();
+  const { role } = useAuth();
   const [currentStep, setCurrentStep] = useState(-1);
   const [isActive, setIsActive] = useState(false);
   const location = useLocation();
@@ -31,6 +36,17 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
   const onboardingCompleted = useViewStore((s) => s.onboardingCompleted);
   const completeOnboarding = useViewStore((s) => s.completeOnboarding);
   const resetOnboarding = useViewStore((s) => s.resetOnboarding);
+
+  // 根据用户角色过滤步骤
+  const filteredSteps = useMemo(() => {
+    const userRole = (role || 'VIEWER').toUpperCase();
+    return ONBOARDING_STEPS.filter((step) => {
+      // 如果没有指定角色限制，所有角色都可见
+      if (!step.roles || step.roles.length === 0) return true;
+      // 检查用户角色是否在允许列表中
+      return step.roles.includes(userRole);
+    });
+  }, [role]);
 
   // 自动触发：首次访问 Dashboard
   useEffect(() => {
@@ -47,7 +63,7 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
   // 跨页面导航
   useEffect(() => {
     if (!isActive || currentStep < 0) return;
-    const step = ONBOARDING_STEPS[currentStep];
+    const step = filteredSteps[currentStep];
     if (!step) return;
 
     // 被重定向到登录页（受保护路由）→ 跳过当前步骤
@@ -60,7 +76,7 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
     if (step.page !== location.pathname) {
       navigate(step.page);
     }
-  }, [isActive, currentStep, location.pathname, navigate]);
+  }, [isActive, currentStep, location.pathname, navigate, filteredSteps]);
 
   const handleNext = useCallback(() => {
     setCurrentStep((prev) => prev + 1);
@@ -97,10 +113,10 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
 
   // 当 currentStep 越界（被跳过或自然走完）→ 自动完成引导
   useEffect(() => {
-    if (isActive && currentStep >= ONBOARDING_STEPS.length) {
+    if (isActive && currentStep >= filteredSteps.length) {
       handleFinish();
     }
-  }, [isActive, currentStep, handleFinish]);
+  }, [isActive, currentStep, handleFinish, filteredSteps.length]);
 
   const start = useCallback(() => {
     resetOnboarding();
@@ -115,8 +131,8 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
   }, [resetOnboarding]);
 
   const currentStepData =
-    isActive && currentStep >= 0 && currentStep < ONBOARDING_STEPS.length
-      ? ONBOARDING_STEPS[currentStep]
+    isActive && currentStep >= 0 && currentStep < filteredSteps.length
+      ? filteredSteps[currentStep]
       : null;
 
   return (
@@ -126,7 +142,7 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
         <CoachMark
           step={currentStepData}
           current={currentStep}
-          total={ONBOARDING_STEPS.length}
+          total={filteredSteps.length}
           onNext={handleNext}
           onPrev={handlePrev}
           onSkip={handleSkip}

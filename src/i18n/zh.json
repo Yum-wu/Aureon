@@ -771,21 +771,31 @@
     "toast_finish": "🎉 引导完成！探索更多功能吧",
     "steps": {
       "dashboard-overview": {
-        "title": "总览：实时健康指标",
-        "description": "这是系统的核心仪表盘。延迟、流量、错误率、饱和度四大 Golden Signal 一目了然。低于阈值为绿色，超过则变红。"
-      },
-      "dashboard-pipeline": {
-        "title": "归因：延迟从哪来？",
-        "description": "Pipeline 分解条展示每个环节（检索→重排序→CRAG→生成）的耗时占比。哪个环节慢，一目了然。"
+        "title": "系统健康一目了然",
+        "description": "这里展示 Aureon 的实时状态。延迟、流量、错误率、饱和度四大指标帮助您快速了解系统运行状况。绿色表示正常，红色需要关注。"
       },
       "search-execute": {
-        "title": "执行：开始检索",
-        "description": "在搜索框输入问题，系统会自动路由到最合适的检索策略（简单/中等/复杂），返回带来源引用的答案。"
+        "title": "智能搜索，精准回答",
+        "description": "输入任何问题，Aureon 会自动选择最佳检索策略，返回带来源引用的答案。试试输入「这个平台能做什么？」"
+      },
+      "documents-upload": {
+        "title": "知识库管理",
+        "description": "上传文档让 Aureon 学习您的知识。支持 .md、.txt、.pdf、.docx、.xlsx 格式。上传后系统会自动索引，立即可用于搜索。"
+      },
+      "support-widget": {
+        "title": "随时获取帮助",
+        "description": "右下角的客服助手可以回答关于 Aureon 的任何问题。点击快捷回复或直接输入问题，获得即时帮助。"
       },
       "analytics-insight": {
-        "title": "洞察：用量与成本",
-        "description": "Analytics 帮你追踪查询量、延迟分布、Token 消耗。Cost 页面进一步展示预算执行率和按用户分解。"
+        "title": "洞察使用模式",
+        "description": "Analytics 页面展示查询量、延迟分布、Token 消耗等数据，帮助您优化使用策略和控制成本。"
       }
     }
+  },
+  "help": {
+    "search_no_results": "没有找到相关结果？尝试更通用的查询，或上传相关文档到知识库。",
+    "documents_empty": "知识库为空，点击「上传文档」开始构建您的专属知识库。",
+    "dashboard_first_visit": "欢迎使用 Aureon！这里是您的系统仪表盘，查看实时状态和关键指标。",
+    "admin_first_visit": "这里是管理中心，您可以管理用户、配置权限、查看审计日志。"
   }
 }

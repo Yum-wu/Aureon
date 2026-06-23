@@ -126,12 +126,14 @@ export function Documents() {
           )}
 
           {/* Upload button */}
-          <button
-            onClick={() => setShowUpload((v) => !v)}
-            className="px-4 py-2 rounded-lg bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 transition-colors"
-          >
-            {showUpload ? t("documents.upload.upload_another") : t("documents.upload.button")}
-          </button>
+          <div data-onboarding="documents-upload">
+            <button
+              onClick={() => setShowUpload((v) => !v)}
+              className="px-4 py-2 rounded-lg bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 transition-colors"
+            >
+              {showUpload ? t("documents.upload.upload_another") : t("documents.upload.button")}
+            </button>
+          </div>
           <div className="text-right">
             <p className="text-xs text-[var(--text-tertiary)]">{t("documents.total_docs")}</p>
             <p className="text-xl font-bold text-[var(--text-primary)]">{totalDocs}</p>

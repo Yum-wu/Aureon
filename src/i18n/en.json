@@ -770,21 +770,31 @@
     "toast_finish": "🎉 Tour complete! Explore more features.",
     "steps": {
       "dashboard-overview": {
-        "title": "Overview: Live Health Metrics",
-        "description": "This is your system's command center. Latency, traffic, errors, and saturation — the four Golden Signals — at a glance. Green means healthy, red means attention needed."
-      },
-      "dashboard-pipeline": {
-        "title": "Attribution: Where's the latency?",
-        "description": "The pipeline breakdown shows time spent at each stage (retrieval → reranking → CRAG → generation). Spot bottlenecks instantly."
+        "title": "System Health at a Glance",
+        "description": "This dashboard shows Aureon's real-time status. The four Golden Signals — Latency, Traffic, Errors, and Saturation — help you quickly understand system health. Green means healthy, red needs attention."
       },
       "search-execute": {
-        "title": "Execute: Start searching",
-        "description": "Type a question in the search box. The system auto-routes to the best retrieval strategy (simple/medium/complex) and returns answers with source citations."
+        "title": "Smart Search, Precise Answers",
+        "description": "Type any question and Aureon will automatically select the best retrieval strategy, returning answers with source citations. Try asking \"What can this platform do?\""
+      },
+      "documents-upload": {
+        "title": "Knowledge Base Management",
+        "description": "Upload documents to teach Aureon your knowledge. Supports .md, .txt, .pdf, .docx, .xlsx formats. After upload, the system automatically indexes them for immediate search."
+      },
+      "support-widget": {
+        "title": "Get Help Anytime",
+        "description": "The support assistant in the bottom-right corner can answer any questions about Aureon. Click quick replies or type your question directly for instant help."
       },
       "analytics-insight": {
-        "title": "Insight: Usage & costs",
-        "description": "Analytics tracks query volume, latency distribution, and token consumption. The Cost page goes further with budget execution rate and per-user breakdown."
+        "title": "Insight Usage Patterns",
+        "description": "The Analytics page shows query volume, latency distribution, token consumption and more, helping you optimize usage strategies and control costs."
       }
     }
+  },
+  "help": {
+    "search_no_results": "No results found? Try a more general query, or upload relevant documents to the knowledge base.",
+    "documents_empty": "Knowledge base is empty. Click \"Upload Document\" to start building your dedicated knowledge base.",
+    "dashboard_first_visit": "Welcome to Aureon! This is your system dashboard for viewing real-time status and key metrics.",
+    "admin_first_visit": "This is the admin center where you can manage users, configure permissions, and view audit logs."
   }
 }
