@@ -63,11 +63,11 @@ async def stream_agent(
                 output = event["data"].get("output", "")
                 yield {"type": "tool_end", "content": {"tool": name, "result": str(output)}}
 
+        yield {"type": "done", "content": None}
+
     except Exception as e:
         logger.error("Agent stream error: %s", e, exc_info=True)
         yield {"type": "error", "content": {"message": "An internal error occurred while processing your request."}}
-
-    yield {"type": "done", "content": None}
 
 
 async def stream_agent_with_memory(
