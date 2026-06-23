@@ -12,7 +12,7 @@ import time
 from collections import OrderedDict
 
 import numpy as np
-from typing import List
+from typing import List, Optional
 
 import structlog
 
@@ -98,13 +98,18 @@ def _cache_key(text: str) -> str:
     return hashlib.md5(text.encode()).hexdigest()
 
 
-def _embed_api(texts: List[str], provider: str, batch_size: int = 10) -> np.ndarray:
+def _embed_api(texts: List[str], provider: str, batch_size: int = 10,
+               client: Optional[object] = None) -> np.ndarray:
     """Call a single embedding API provider. Returns (N, dim) array.
 
     Raises on failure — caller decides fallback strategy.
 
     Args:
         provider: "dashscope" | "siliconflow" | "zhipu"
+        client: Optional httpx.AsyncClient for connection pooling.
+                Currently unused in sync path — reserved for async migration.
+                When callers become async, pass app.state.http_client to
+                reuse TCP connections instead of creating new ones per request.
     """
     from app.config import settings
     import requests
@@ -176,8 +181,13 @@ def _embed_api(texts: List[str], provider: str, batch_size: int = 10) -> np.ndar
 
 
 def _embed_dense_sparse_dashscope(texts: List[str], batch_size: int = 10,
-                                   max_workers: int = 5) -> tuple[np.ndarray, list]:
-    """DashScope text-embedding-v4 output_type=dense&sparse 一次调用同时获取 dense + sparse。
+                                   max_workers: int = 5,
+                                   client: Optional[object] = None) -> tuple[np.ndarray, list]:
+    """DashScope text-embedding-v4 output_type=dense&sparse 一次调用同时获取 dense + sparse.
+
+    Args:
+        client: Optional httpx.AsyncClient for connection pooling.
+                Currently unused in sync path — reserved for async migration.
 
     Returns:
         (dense_embeddings, sparse_vectors)，dense 为 (N, dim) ndarray，
@@ -322,7 +332,7 @@ def _embed_dense_sparse_dashscope(texts: List[str], batch_size: int = 10,
     return dense_result, all_sparse
 
 
-def embed_texts_as_list(texts: List[str]) -> List[np.ndarray]:
+def embed_texts_as_list(texts: List[str], client: Optional[object] = None) -> List[np.ndarray]:
     """Embed texts and return as list of vectors (for SemanticTextSplitter).
 
     Wrapper around embed_texts_llm that returns a list of individual vectors
@@ -330,14 +340,19 @@ def embed_texts_as_list(texts: List[str]) -> List[np.ndarray]:
     """
     if not texts:
         return []
-    result = embed_texts_llm(texts)
+    result = embed_texts_llm(texts, client=client)
     return [result[i] for i in range(len(texts))]
 
 
-def embed_texts_llm(texts: List[str], batch_size: int = 10) -> np.ndarray:
+def embed_texts_llm(texts: List[str], batch_size: int = 10,
+                    client: Optional[object] = None) -> np.ndarray:
     """Multi-provider embedding with fallback chain.
 
     Priority: DashScope → SiliconFlow → Zhipu.
+
+    Args:
+        client: Optional httpx.AsyncClient for connection pooling.
+                Passed through to provider functions for future async migration.
 
     Raises if ALL providers fail. Never returns zero vectors.
     """
@@ -398,7 +413,7 @@ def embed_texts_llm(texts: List[str], batch_size: int = 10) -> np.ndarray:
     last_error = None
     for p in providers:
         try:
-            embeddings = _embed_api(uncached_texts, p, batch_size)
+            embeddings = _embed_api(uncached_texts, p, batch_size, client=client)
             break
         except Exception as e:
             logger.warning("Embedding provider %s failed: %s", p, e)
