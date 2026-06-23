@@ -504,7 +504,7 @@ export function Dashboard() {
 
   // 缓存命中率趋势数据（前端 WebSocket 累积历史，后端无序列数据）
   const cacheTrendData: { id: string; data: { x: string; y: number }[] }[] = useMemo(() => {
-    if (cacheHistory.length > 3) {
+    if (cacheHistory.length > 0) {
       return [
         {
           id: t('dashboard.charts.cache_hit_rate', '缓存命中率'),
