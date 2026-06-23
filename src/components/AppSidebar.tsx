@@ -18,9 +18,11 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   LogIn,
+  User,
 } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { LanguageSwitcher } from '../i18n/LanguageSwitcher';
+import { useAuth } from '../hooks/AuthContext';
 
 interface SidebarItem {
   path: string;
@@ -45,6 +47,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: AppSidebarProps) {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
+  const { isAuthenticated, role } = useAuth();
 
   const groups: SidebarGroup[] = useMemo(() => [
     {
@@ -227,43 +230,90 @@ export function AppSidebar({ collapsed, onToggleCollapse }: AppSidebarProps) {
         ))}
       </nav>
 
-      {/* Bottom: Theme + Language + Login */}
+      {/* Bottom: Theme + Language + User Info */}
       <div
         style={{
           flexShrink: 0,
           borderTop: '1px solid var(--border)',
           padding: collapsed ? 'var(--space-3) var(--space-2)' : 'var(--space-3) var(--space-4)',
           display: 'flex',
-          flexDirection: collapsed ? 'column' : 'row',
-          alignItems: 'center',
+          flexDirection: 'column',
           gap: 'var(--space-2)',
         }}
       >
-        <ThemeToggle />
-        {!collapsed && <LanguageSwitcher />}
-        {!collapsed && (
-          <button
-            onClick={() => navigate('/login')}
+        {/* User Info */}
+        {isAuthenticated && !collapsed && (
+          <div
+            data-testid="user-info"
             style={{
-              marginLeft: 'auto',
               display: 'flex',
               alignItems: 'center',
-              gap: 'var(--space-2)',
-              padding: 'var(--space-1) var(--space-3)',
+              gap: 'var(--space-3)',
+              padding: 'var(--space-2) var(--space-3)',
               borderRadius: 'var(--radius-sm)',
-              fontSize: 13,
-              fontWeight: 500,
-              color: 'var(--fg-secondary)',
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              cursor: 'pointer',
-              transition: 'all var(--duration-fast) var(--ease-out)',
+              background: 'var(--surface-inset)',
             }}
           >
-            <LogIn size={14} />
-            <span>{t('app.nav.admin')}</span>
-          </button>
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: '50%',
+                background: 'var(--seed-accent)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <User size={16} style={{ color: 'white' }} />
+            </div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {t('app.user.demo', 'Demo User')}
+              </p>
+              <p style={{ fontSize: 11, color: 'var(--fg-muted)', margin: 0, textTransform: 'capitalize' }}>
+                {role || 'viewer'}
+              </p>
+            </div>
+          </div>
         )}
+
+        {/* Theme + Language */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: collapsed ? 'column' : 'row',
+            alignItems: 'center',
+            gap: 'var(--space-2)',
+          }}
+        >
+          <ThemeToggle />
+          {!collapsed && <LanguageSwitcher />}
+          {!collapsed && (
+            <button
+              onClick={() => navigate('/login')}
+              style={{
+                marginLeft: 'auto',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--space-2)',
+                padding: 'var(--space-1) var(--space-3)',
+                borderRadius: 'var(--radius-sm)',
+                fontSize: 13,
+                fontWeight: 500,
+                color: 'var(--fg-secondary)',
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                cursor: 'pointer',
+                transition: 'all var(--duration-fast) var(--ease-out)',
+              }}
+            >
+              <LogIn size={14} />
+              <span>{t('app.nav.admin')}</span>
+            </button>
+          )}
+        </div>
       </div>
     </aside>
   );

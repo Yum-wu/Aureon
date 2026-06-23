@@ -25,8 +25,12 @@
       "recall": "召回率",
       "latency": "延迟",
       "ttft": "首字延迟"
+    },
+    "user": {
+      "demo": "演示用户"
     }
-  },  "landing": {
+  },
+  "landing": {
     "hero": {
       "badge": "生产就绪",
       "title": "企业 AI 知识库平台",
@@ -98,7 +102,14 @@
     "features_subtitle": "企业知识管理所需的全部能力",
     "trust": {
       "title": "企业级安全与可靠性",
-      "badges": ["SOC 2 合规", "端到端加密", "99.9% 可用性", "多租户隔离", "SSO 集成", "审计日志"],
+      "badges": [
+        "SOC 2 合规",
+        "端到端加密",
+        "99.9% 可用性",
+        "多租户隔离",
+        "SSO 集成",
+        "审计日志"
+      ],
       "tests": "测试用例",
       "articles": "文章",
       "chunks": "索引片段",
@@ -212,7 +223,8 @@
     "charts": {
       "latency_trend": "延迟趋势",
       "query_volume": "查询量",
-      "quality_trend": "检索质量趋势"
+      "quality_trend": "检索质量",
+      "cache_hit_rate": "缓存命中率"
     },
     "alerts": {
       "title": "最近告警",
@@ -225,13 +237,7 @@
     "waiting_for_data": "等待 WebSocket 数据...",
     "auth_failed_title": "认证已失效",
     "auth_failed_desc": "API Key 或登录凭证无效，请使用演示账号登录后查看数据。",
-    "go_login": "去登录",
-    "charts": {
-      "latency_trend": "延迟趋势",
-      "query_volume": "查询量",
-      "quality_trend": "检索质量",
-      "cache_hit_rate": "缓存命中率"
-    }
+    "go_login": "去登录"
   },
   "search": {
     "title": "企业级 AI 搜索",
@@ -448,6 +454,12 @@
       "confirm_msg": "确定删除「{{title}}」及其 {{count}} 个 chunks？此操作不可撤销。",
       "confirm": "确认删除",
       "cancel": "取消"
+    },
+    "pagination": {
+      "total": "共 {{total}} 条记录，第 {{page}}/{{totalPages}} 页",
+      "per_page": "每页",
+      "prev": "上一页",
+      "next": "下一页"
     }
   },
   "analytics": {
@@ -479,9 +491,8 @@
     },
     "queries": {
       "title": "查询分布",
-      "intent": "意图",
-      "count": "数量",
-      "percentage": "占比"
+      "total": "查询总量",
+      "per_hour": "平均/小时"
     },
     "intent": {
       "document_query": "文档查询",
@@ -505,11 +516,6 @@
       "output": "输出 Token",
       "cost": "预估成本",
       "per_query": "~${cost}/查询"
-    },
-    "queries": {
-      "title": "查询分布",
-      "total": "查询总量",
-      "per_hour": "平均/小时"
     },
     "cache": {
       "title": "缓存命中率",

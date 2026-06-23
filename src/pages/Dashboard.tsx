@@ -172,7 +172,7 @@ function GoldenSignalCard({
   children?: React.ReactNode;
 }) {
   return (
-    <Card className="relative overflow-hidden">
+    <Card data-testid="golden-signal-card" className="relative overflow-hidden">
       {/* 顶部装饰线 */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/5 h-px bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-30" />
       <p className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider mb-2 inline-flex items-center gap-1">
@@ -663,7 +663,7 @@ export function Dashboard() {
 
             {/* ── 4. Pipeline row ── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <Card data-onboarding="pipeline-breakdown">
+              <Card data-testid="rag-pipeline" data-onboarding="pipeline-breakdown">
                 <div className="flex items-center gap-2 mb-4">
                   <h3 className="text-sm font-semibold text-[var(--text-primary)]">
                     {t('dashboard.pipeline.title')}
