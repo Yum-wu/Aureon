@@ -3,6 +3,14 @@
  * 管理当前步骤、跨页面导航、完成/跳过标记
  *
  * 支持角色感知：根据用户角色过滤引导步骤
+ * 支持自动预填：搜索步骤可自动填入查询文本
+ *
+ * 理想用户流程：
+ * 1. 搜索体验 → 展示核心价值
+ * 2. 上传文档 → 让知识库个人化
+ * 3. 搜索自己的数据 → Aha moment
+ * 4. 仪表盘 → 系统状态（管理员）
+ * 5. 分析 → 使用洞察（管理员）
  */
 
 import {
@@ -48,17 +56,51 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
     });
   }, [role]);
 
-  // 自动触发：首次访问 Dashboard
+  // 自动触发：首次访问 Dashboard 或 Search
   useEffect(() => {
-    if (!onboardingCompleted && location.pathname === '/dashboard' && !isActive) {
+    const shouldTrigger = !onboardingCompleted && !isActive && (
+      location.pathname === '/dashboard' || location.pathname === '/search'
+    );
+
+    if (shouldTrigger) {
       // 延迟启动，等待页面渲染完成
       const timer = setTimeout(() => {
         setIsActive(true);
         setCurrentStep(0);
+        // 如果第一步是搜索，导航到搜索页面
+        if (filteredSteps[0]?.page === '/search' && location.pathname !== '/search') {
+          navigate('/search');
+        }
       }, 500);
       return () => clearTimeout(timer);
     }
   }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 处理自动预填查询
+  useEffect(() => {
+    if (!isActive || currentStep < 0) return;
+    const step = filteredSteps[currentStep];
+    if (!step) return;
+
+    // 如果当前步骤有自动预填查询，填入搜索框
+    if (step.autoFillQuery && step.page === '/search' && location.pathname === '/search') {
+      const timer = setTimeout(() => {
+        const searchInput = document.querySelector('input[placeholder*="搜索"]') as HTMLInputElement;
+        if (searchInput && !searchInput.value) {
+          // 使用 React 的 onChange 事件触发
+          const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+            window.HTMLInputElement.prototype, 'value'
+          )?.set;
+          if (nativeInputValueSetter) {
+            nativeInputValueSetter.call(searchInput, step.autoFillQuery);
+            searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+            searchInput.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isActive, currentStep, location.pathname, filteredSteps]);
 
   // 跨页面导航
   useEffect(() => {

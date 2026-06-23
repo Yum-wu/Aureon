@@ -770,21 +770,21 @@
     "toast_skip": "引导已跳过，可通过顶部「?」菜单重新查看",
     "toast_finish": "🎉 引导完成！探索更多功能吧",
     "steps": {
-      "dashboard-overview": {
-        "title": "系统健康一目了然",
-        "description": "这里展示 Aureon 的实时状态。延迟、流量、错误率、饱和度四大指标帮助您快速了解系统运行状况。绿色表示正常，红色需要关注。"
-      },
-      "search-execute": {
-        "title": "智能搜索，精准回答",
-        "description": "输入任何问题，Aureon 会自动选择最佳检索策略，返回带来源引用的答案。试试输入「这个平台能做什么？」"
+      "search-first": {
+        "title": "立即体验智能搜索",
+        "description": "这是 Aureon 的核心价值！输入任何问题，系统会自动检索知识库，返回带来源引用的精准答案。试试下面的示例查询，感受 AI 搜索的威力。"
       },
       "documents-upload": {
-        "title": "知识库管理",
+        "title": "上传您的知识库",
         "description": "上传文档让 Aureon 学习您的知识。支持 .md、.txt、.pdf、.docx、.xlsx 格式。上传后系统会自动索引，立即可用于搜索。"
       },
-      "support-widget": {
-        "title": "随时获取帮助",
-        "description": "右下角的客服助手可以回答关于 Aureon 的任何问题。点击快捷回复或直接输入问题，获得即时帮助。"
+      "search-own-data": {
+        "title": "搜索您自己的数据",
+        "description": "现在试试搜索您刚上传的文档内容！Aureon 会基于您的知识库返回精准答案。这是平台真正的价值所在。"
+      },
+      "dashboard-overview": {
+        "title": "系统健康一目了然",
+        "description": "这里展示 Aureon 的实时状态。延迟、流量、错误率、饱和度四大指标帮助您快速了解系统运行状况。"
       },
       "analytics-insight": {
         "title": "洞察使用模式",

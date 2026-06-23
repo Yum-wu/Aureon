@@ -769,21 +769,21 @@
     "toast_skip": "Tour skipped. Reopen via the \"?\" menu anytime.",
     "toast_finish": "🎉 Tour complete! Explore more features.",
     "steps": {
-      "dashboard-overview": {
-        "title": "System Health at a Glance",
-        "description": "This dashboard shows Aureon's real-time status. The four Golden Signals — Latency, Traffic, Errors, and Saturation — help you quickly understand system health. Green means healthy, red needs attention."
-      },
-      "search-execute": {
-        "title": "Smart Search, Precise Answers",
-        "description": "Type any question and Aureon will automatically select the best retrieval strategy, returning answers with source citations. Try asking \"What can this platform do?\""
+      "search-first": {
+        "title": "Experience Smart Search Now",
+        "description": "This is Aureon's core value! Type any question and the system will automatically search the knowledge base, returning precise answers with source citations. Try the example query below to feel the power of AI search."
       },
       "documents-upload": {
-        "title": "Knowledge Base Management",
+        "title": "Upload Your Knowledge Base",
         "description": "Upload documents to teach Aureon your knowledge. Supports .md, .txt, .pdf, .docx, .xlsx formats. After upload, the system automatically indexes them for immediate search."
       },
-      "support-widget": {
-        "title": "Get Help Anytime",
-        "description": "The support assistant in the bottom-right corner can answer any questions about Aureon. Click quick replies or type your question directly for instant help."
+      "search-own-data": {
+        "title": "Search Your Own Data",
+        "description": "Now try searching the documents you just uploaded! Aureon will return precise answers based on your knowledge base. This is where the platform truly shines."
+      },
+      "dashboard-overview": {
+        "title": "System Health at a Glance",
+        "description": "This dashboard shows Aureon's real-time status. The four Golden Signals — Latency, Traffic, Errors, and Saturation — help you quickly understand system health."
       },
       "analytics-insight": {
         "title": "Insight Usage Patterns",
