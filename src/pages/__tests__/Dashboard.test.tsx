@@ -12,6 +12,10 @@ vi.mock('../../hooks/useSystemHealth', () => ({
   useSystemHealth: () => ({ health: null, loading: true, error: null }),
 }));
 
+vi.mock('../../hooks/useSystemHealthQuery', () => ({
+  useSystemHealthQuery: () => ({ data: null, isLoading: true, error: null }),
+}));
+
 vi.mock('../../hooks/useRealtimeMetrics', () => ({
   useRealtimeMetrics: () => ({
     metrics: { qps: 0, ttft_p50: 0, ttft_p95: 0, tpot: 0, error_rate: 0, cache_hit_rate: 0, token_usage: 0, active_connections: 0, pipeline: {} },
