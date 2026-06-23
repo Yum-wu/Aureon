@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useDashboardData } from '../hooks/useDashboardData';
-import { useSystemHealth } from '../hooks/useSystemHealth';
+import { useSystemHealthQuery } from '../hooks/useSystemHealthQuery';
 import { useRealtimeMetrics } from '../hooks/useRealtimeMetrics';
 import { useLatencyHistory } from '../hooks/useLatencyHistory';
 import { useCacheHistory } from '../hooks/useCacheHistory';
@@ -294,7 +294,7 @@ function PipelineBreakdown({ stages }: { stages: { name: string; ms: number; col
 export function Dashboard() {
   const { t } = useTranslation();
   const { stats, queryVolume, isLoading: loading, isLoadingVolume, error, refetch } = useDashboardData();
-  const { health } = useSystemHealth();
+  const { data: healthData } = useSystemHealthQuery();
 
   // 实时指标（通过 useRealtimeMetrics hook，统一 WebSocket 管理）
   const {
@@ -386,24 +386,22 @@ export function Dashboard() {
     timestamp: new Date(a.timestamp).toISOString(),
   }));
 
-  // 健康服务列表 — 从 /api/rag/health 真实数据派生
-  const healthServices: ServiceHealth[] = [
+  // 健康服务列表 — 从 /api/health 真实数据派生
+  const healthServices: ServiceHealth[] = healthData?.services || [
     {
-      name: t('dashboard.health.redis'),
-      healthy: health?.status === 'ok',
-      responseTime: health?.status === 'ok' ? 2 : 0,
+      name: t('dashboard.health.api_server'),
+      healthy: false,
+      responseTime: 0,
     },
     {
-      name: t('dashboard.health.qdrant'),
-      // 后端返回 index_status: "ok" | "not_initialized"
-      // 仅当 index_status === "ok" 时表示 Qdrant 已连接且索引就绪
-      healthy: health?.index_status === 'ok',
-      responseTime: health?.index_status === 'ok' ? 15 : 0,
+      name: t('dashboard.health.index'),
+      healthy: false,
+      responseTime: 0,
     },
     {
-      name: t('dashboard.health.llm_api'),
-      healthy: health?.llm_configured ?? false,
-      responseTime: health?.llm_configured ? 120 : 0,
+      name: t('dashboard.health.tools'),
+      healthy: false,
+      responseTime: 0,
     },
   ];
 
