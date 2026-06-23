@@ -39,7 +39,7 @@ Aureon/
 │   ├── config.py     # pydantic_settings（所有环境变量统一在此）
 │   ├── exceptions.py # AureonException 层级异常体系
 │   └── main.py       # FastAPI 入口 + Auth Middleware + TenantMiddleware
-├── backend/tests/     # 793 passed, 5 skipped
+├── backend/tests/     # 114 passed (CI 2026-06-23)
 ├── src/               # React 前端
 │   ├── components/ hooks/ pages/ services/ i18n/ types/
 │   ├── hooks/AuthContext.ts    # Auth 状态定义
@@ -258,6 +258,31 @@ npx vite preview --port 5174 --host 127.0.0.1
 | * | /api/audit/* | 审计日志 |
 
 **认证**：配置 `API_AUTH_KEY` 后，所有 `/api/` 端点需 `X-API-Key` header（白名单：`/api/health`、`/api/crew/health`、`/metrics`）。SSO/RBAC 端点需 `Authorization: Bearer <JWT>` header，JWT 签名密钥由 `JWT_SECRET` 环境变量提供。
+
+**端点认证要求**（2026-06-23 更新）：
+| 端点 | 角色要求 | 说明 |
+|------|----------|------|
+| GET /api/rag/uploads | VIEWER | 列出上传文件 |
+| DELETE /api/rag/upload/{fn} | EDITOR | 删除文档 |
+| POST /api/rag/cache/clear | ADMIN | 清除缓存 |
+
+**生产平台检测**：dev 模式绕过检查扩展到 Railway、Render、Fly.io、Heroku、Vercel、Netlify。
+
+## 用户引导系统
+
+**引导流程**（搜索优先，价值驱动）：
+1. **搜索体验** → 展示核心价值（自动预填示例查询）
+2. **上传文档** → 让知识库个人化
+3. **搜索自己的数据** → Aha moment
+4. **仪表盘** → 系统状态（仅管理员）
+5. **分析** → 使用洞察（仅管理员）
+
+**角色感知**：Viewer 看 3 步，Editor/Admin 看 5 步。
+
+**相关文件**：
+- `src/components/onboarding/steps.ts` — 步骤配置
+- `src/components/onboarding/OnboardingProvider.tsx` — 引导状态管理
+- `src/i18n/zh.json` / `en.json` — 引导文案
 
 语言规则：所有回复必须使用简体中文回答
 
