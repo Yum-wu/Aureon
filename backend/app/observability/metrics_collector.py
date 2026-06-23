@@ -187,11 +187,34 @@ class MetricsCollector:
                 "token_usage": int(tokens_in + tokens_out),
                 "active_connections": active_connections,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
-                "pipeline": _latest_pipeline.get(tenant_id, latest_pipeline) or {},
+                "pipeline": await self._resolve_pipeline(tenant_id, latest_pipeline),
             }
         except Exception as exc:
             logger.warning("metrics_get_current_failed", tenant_id=tenant_id, error=str(exc))
             return _empty_metrics()
+
+    async def _resolve_pipeline(
+        self, tenant_id: str, recent_pipeline: dict[str, float]
+    ) -> dict[str, float]:
+        """解析 pipeline 数据，优先级：内存缓存 > 近期数据 > Redis 持久化。"""
+        # 1. 内存缓存（最快）
+        mem = _latest_pipeline.get(tenant_id)
+        if mem:
+            return mem
+        # 2. 近期 5 分钟内的原始数据
+        if recent_pipeline:
+            return recent_pipeline
+        # 3. Redis 持久化（TTL 24h，重启后仍可用）
+        try:
+            r = self._get_redis()
+            if r is not None:
+                key = f"aureon:metrics:pipeline:{tenant_id}"
+                raw = await r.get(key)
+                if raw:
+                    return json.loads(raw)
+        except Exception:
+            pass
+        return {}
 
     async def get_metrics_range(
         self,
@@ -269,8 +292,22 @@ class MetricsCollector:
 
 
 def set_latest_pipeline(tenant_id: str, stages: dict[str, float]) -> None:
-    """更新最新流水线阶段延迟（由 RAG 查询流程调用）。"""
+    """更新最新流水线阶段延迟（由 RAG 查询流程调用）。
+
+    同时写入内存缓存和 Redis 持久化（TTL 24h），
+    确保无查询时 WebSocket 仍能推送上一次的 pipeline 数据。
+    """
     _latest_pipeline[tenant_id] = stages
+    # 异步持久化到 Redis（fire-and-forget）
+    try:
+        import asyncio
+        from app.dependencies import get_redis_or_none
+        r = get_redis_or_none()
+        if r is not None:
+            key = f"aureon:metrics:pipeline:{tenant_id}"
+            asyncio.ensure_future(r.set(key, json.dumps(stages), ex=86400))
+    except Exception:
+        pass  # 非阻塞，失败不影响主流程
 
 
 def _empty_metrics() -> dict[str, Any]:
