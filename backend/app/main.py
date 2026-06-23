@@ -5,7 +5,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 
 import structlog
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -44,6 +44,7 @@ from app.routers import rag as rag_router
 from app.security.roles_router import router as roles_router
 from app.security.router import router as security_router
 from app.security.users_router import router as users_router
+from app.security.rbac import require_role, UserRole
 from app.startup import warmup
 from app.startup.lifespan import lifespan
 from app.tools import ALL_TOOLS
@@ -167,7 +168,7 @@ class LangGraphRunRequest(BaseModel):
 
 @app.post("/api/langgraph/run")
 @limiter.limit("5/minute")
-async def langgraph_run(req: LangGraphRunRequest, request: Request):
+async def langgraph_run(req: LangGraphRunRequest, request: Request, user: dict = Depends(require_role(UserRole.VIEWER))):
     """Run LangGraph workflow for complex tasks."""
     from app.langgraph.graph import run_workflow
     result = await run_workflow(req.query, session_id=req.session_id or None)

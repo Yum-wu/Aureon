@@ -1,6 +1,7 @@
 """RBAC: Roles, Permissions, JWT token utilities, and FastAPI role dependencies."""
 
 import enum
+import hmac
 import os
 from datetime import datetime, timezone
 
@@ -146,7 +147,7 @@ def require_role(min_role: UserRole):
         
         # API key authentication (X-API-Key header) — grants ADMIN access
         api_key = request.headers.get("X-API-Key", "")
-        if api_key and settings.api_auth_key and api_key == settings.api_auth_key:
+        if api_key and settings.api_auth_key and hmac.compare_digest(api_key, settings.api_auth_key):
             return {"sub": "api-key-user", "role": "ADMIN", "_role": UserRole.ADMIN}
         
         # Extract token directly from Authorization header
