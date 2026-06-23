@@ -4,7 +4,7 @@ FROM node:22-alpine AS frontend-builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --prefer-offline
-ARG CACHEBUST=2026-06-22v2
+ARG CACHEBUST=2026-06-23v1
 COPY . .
 
 ARG VITE_API_URL
