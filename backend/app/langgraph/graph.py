@@ -134,8 +134,8 @@ async def run_workflow(query: str, session_id: str = "") -> dict:
         import traceback
         tb = traceback.format_exc()
         logger.error(f"[LangGraph] Workflow error: {e}\n{tb}")
-        state["error"] = str(e)
-        state["final_answer"] = f"处理出错：{e}"
+        state["error"] = "internal_error"
+        state["final_answer"] = "处理出错，请稍后重试。"
 
     return _build_result(state, start_total)
 

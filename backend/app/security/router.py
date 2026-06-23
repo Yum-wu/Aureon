@@ -102,7 +102,7 @@ async def mask_pii(
 ):
     """脱敏文本中的 PII"""
     masked_text = pii_detector.mask(text, pii_type)
-    return {"original": text, "masked": masked_text}
+    return {"masked": masked_text}
 
 
 @router.post("/pii/scan-document")
