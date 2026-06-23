@@ -48,18 +48,20 @@ async def init_prompt_manager() -> None:
         return
 
     try:
-        from langfuse import Langfuse
+        # Reuse the singleton Langfuse client from langfuse_integration
+        # (init_langfuse() runs before init_prompt_manager() in lifespan)
+        from app.observability.langfuse_integration import _client as langfuse_client
 
-        client = Langfuse(
-            public_key=settings.observability.langfuse_public_key,
-            secret_key=settings.observability.langfuse_secret_key,
-            host=settings.observability.langfuse_host,
-        )
+        if langfuse_client is None:
+            logger.warning("Langfuse client not available, using default prompts")
+            _load_defaults()
+            _initialized = True
+            return
 
         loaded = 0
         for name, (default, _) in PROMPT_REGISTRY.items():
             try:
-                prompt = client.get_prompt(name)
+                prompt = langfuse_client.get_prompt(name)
                 if prompt:
                     _prompts[name] = prompt.compile()
                     loaded += 1

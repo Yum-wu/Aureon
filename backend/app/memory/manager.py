@@ -1,4 +1,5 @@
 import asyncio
+import threading
 import time
 import structlog
 
@@ -17,21 +18,25 @@ _CLEANUP_INTERVAL = 5 * 60         # check every 5 minutes
 class MemoryManager:
     def __init__(self):
         self._sessions: dict[str, dict] = {}
+        self._sessions_lock = threading.Lock()
         self._scenario_task: asyncio.Task | None = None
 
     # ── Session lifecycle ──
 
     def touch_session(self, session_id: str):
         """Mark a session as recently active (called on each message)."""
-        if session_id not in self._sessions:
-            self._sessions[session_id] = {"created_at": time.time()}
-        self._sessions[session_id]["last_active"] = time.time()
+        with self._sessions_lock:
+            if session_id not in self._sessions:
+                self._sessions[session_id] = {"created_at": time.time()}
+            self._sessions[session_id]["last_active"] = time.time()
 
     def get_active_sessions(self) -> list[str]:
-        return list(self._sessions.keys())
+        with self._sessions_lock:
+            return list(self._sessions.keys())
 
     def clear_session(self, session_id: str):
-        self._sessions.pop(session_id, None)
+        with self._sessions_lock:
+            self._sessions.pop(session_id, None)
         logger.info(f"Session cleared: {session_id}")
 
     # ── Context ──
@@ -149,7 +154,9 @@ User message: {content[:500]}"""
 
     def flush_all_scenarios(self):
         """Finalize scenarios for all active sessions (called on shutdown)."""
-        for sid in list(self._sessions.keys()):
+        with self._sessions_lock:
+            session_ids = list(self._sessions.keys())
+        for sid in session_ids:
             try:
                 self.finalize_scenario(sid, summary="会话因服务关闭而结束")
                 logger.info(f"Flushed scenario for session {sid}")
@@ -162,15 +169,19 @@ User message: {content[:500]}"""
             try:
                 await asyncio.sleep(_CLEANUP_INTERVAL)
                 now = time.time()
-                for sid in list(self._sessions.keys()):
-                    last_active = self._sessions[sid].get("last_active", 0)
-                    idle_seconds = now - last_active
-                    if idle_seconds > _INACTIVE_TIMEOUT:
-                        logger.info(f"Auto-finalizing inactive session {sid} (idle={idle_seconds:.0f}s)")
-                        try:
-                            await asyncio.to_thread(self.finalize_scenario, sid, "会话因超时而结束")
-                        except Exception as e:
-                            logger.error(f"Auto-finalize failed for {sid}: {e}")
+                with self._sessions_lock:
+                    expired_sids = [
+                        sid for sid in list(self._sessions.keys())
+                        if now - self._sessions[sid].get("last_active", 0) > _INACTIVE_TIMEOUT
+                    ]
+                for sid in expired_sids:
+                    idle_seconds = now - self._sessions[sid].get("last_active", now) if sid in self._sessions else _INACTIVE_TIMEOUT
+                    logger.info(f"Auto-finalizing inactive session {sid} (idle={idle_seconds:.0f}s)")
+                    try:
+                        await asyncio.to_thread(self.finalize_scenario, sid, "会话因超时而结束")
+                    except Exception as e:
+                        logger.error(f"Auto-finalize failed for {sid}: {e}")
+                    with self._sessions_lock:
                         self._sessions.pop(sid, None)
             except asyncio.CancelledError:
                 logger.info("Background cleanup task cancelled — allowing graceful shutdown")
