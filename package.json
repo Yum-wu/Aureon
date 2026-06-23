@@ -44,7 +44,6 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.60.0",
-    "@rolldown/plugin-babel": "^1.0.0",
     "@tailwindcss/typography": "^0.5.0-alpha.3",
     "@tailwindcss/vite": "^4.2.4",
     "@testing-library/jest-dom": "^6.9.1",
