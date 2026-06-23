@@ -49,7 +49,7 @@ class CostService:
             return None
 
     async def record_usage(self, usage: TokenUsage, redis_override=None) -> None:
-        """记录一次 Token 使用（直接 Redis 命令，避免 pipeline 挂起）。
+        """记录一次 Token 使用（Redis pipeline 批量写入）。
 
         Args:
             usage: TokenUsage 实例
@@ -75,19 +75,19 @@ class CostService:
         }, ensure_ascii=False)
 
         try:
-            # 直接写入（不用 pipeline，避免连接池阻塞）
-            await r.zadd(ts_key, {entry: now})
-            await r.expire(ts_key, _TTL_RAW)
-            await r.hincrbyfloat(daily_key, "total_cost", usage.cost_usd)
-            await r.hincrbyfloat(daily_key, "total_input_tokens", usage.input_tokens)
-            await r.hincrbyfloat(daily_key, "total_output_tokens", usage.output_tokens)
-            await r.hincrbyfloat(daily_key, "query_count", 1)
-            model_field = f"model:{usage.model}"
-            await r.hincrbyfloat(daily_key, model_field, usage.cost_usd)
-            if usage.workspace_id:
-                ws_field = f"ws:{usage.workspace_id}"
-                await r.hincrbyfloat(daily_key, ws_field, usage.cost_usd)
-            await r.expire(daily_key, _TTL_DAILY)
+            # Pipeline: batch all writes into one round-trip
+            async with r.pipeline(transaction=False) as pipe:
+                await pipe.zadd(ts_key, {entry: now})
+                await pipe.expire(ts_key, _TTL_RAW)
+                await pipe.hincrbyfloat(daily_key, "total_cost", usage.cost_usd)
+                await pipe.hincrbyfloat(daily_key, "total_input_tokens", usage.input_tokens)
+                await pipe.hincrbyfloat(daily_key, "total_output_tokens", usage.output_tokens)
+                await pipe.hincrbyfloat(daily_key, "query_count", 1)
+                await pipe.hincrbyfloat(daily_key, f"model:{usage.model}", usage.cost_usd)
+                if usage.workspace_id:
+                    await pipe.hincrbyfloat(daily_key, f"ws:{usage.workspace_id}", usage.cost_usd)
+                await pipe.expire(daily_key, _TTL_DAILY)
+                await pipe.execute()
         except Exception as exc:
             logger.warning("cost_record_failed", tenant_id=usage.tenant_id, error=str(exc))
 
