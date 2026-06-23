@@ -15,6 +15,12 @@
       "group_core": "Core",
       "group_admin": "Admin"
     },
+    "sidebar": {
+      "platform": "Platform",
+      "administration": "Administration",
+      "expand": "Expand sidebar",
+      "collapse": "Collapse sidebar"
+    },
     "badges": {
       "recall": "Recall",
       "latency": "Latency",
@@ -217,7 +223,16 @@
     "demo_data": "Demo Data",
     "connecting": "Connecting",
     "no_data": "No data available",
-    "waiting_for_data": "Waiting for WebSocket data..."
+    "waiting_for_data": "Waiting for WebSocket data...",
+    "auth_failed_title": "Authentication Expired",
+    "auth_failed_desc": "Your API Key or login credentials are invalid. Please log in with a demo account to view data.",
+    "go_login": "Go to Login",
+    "charts": {
+      "latency_trend": "Latency Trend",
+      "query_volume": "Query Volume",
+      "quality_trend": "Quality Trend",
+      "cache_hit_rate": "Cache Hit Rate"
+    }
   },
   "search": {
     "title": "Enterprise AI Search",
@@ -397,7 +412,8 @@
       "source": "Source",
       "type": "Format",
       "chunks": "Chunks",
-      "status": "Status"
+      "status": "Status",
+      "actions": "Actions"
     },
     "status": {
       "ready": "Ready"
@@ -424,7 +440,15 @@
     },
     "open_blog": "Open Blog",
     "sync_blog": "Sync Blog Docs",
-    "chunks": "chunks"
+    "chunks": "chunks",
+    "delete": {
+      "button": "Delete",
+      "tooltip": "Delete this document",
+      "confirm_title": "Delete Document",
+      "confirm_msg": "Are you sure you want to delete \"{{title}}\" and its {{count}} chunks? This action cannot be undone.",
+      "confirm": "Confirm Delete",
+      "cancel": "Cancel"
+    }
   },
   "analytics": {
     "title": "Analytics",
@@ -441,6 +465,24 @@
     "avg_per_hour": "avg {count}/hour",
     "saves": "{count} queries saved",
     "no_data": "No data available",
+    "tabs": {
+      "overview": "Overview",
+      "latency": "Latency",
+      "tokens": "Tokens",
+      "queries": "Queries"
+    },
+    "table": {
+      "module": "Module",
+      "status": "Status",
+      "tests": "Tests",
+      "latency": "Latency"
+    },
+    "queries": {
+      "title": "Query Distribution",
+      "intent": "Intent",
+      "count": "Count",
+      "percentage": "Share"
+    },
     "intent": {
       "document_query": "Document Query",
       "code_search": "Code Search",

@@ -1,15 +1,20 @@
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useDashboardData } from '../hooks/useDashboardData';
 import { useSystemHealth } from '../hooks/useSystemHealth';
 import { useRealtimeMetrics } from '../hooks/useRealtimeMetrics';
 import { useLatencyHistory } from '../hooks/useLatencyHistory';
+import { useCacheHistory } from '../hooks/useCacheHistory';
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { useViewStore } from '../stores/useViewStore';
+import { useAuth } from '../hooks/AuthContext';
 import { Card } from '../components/ui/Card';
 import { Tooltip } from '../components/ui/Tooltip';
 import { LineChart } from '../components/charts/LineChart';
 import { BarChart } from '../components/charts/BarChart';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, LogIn, Sparkles } from 'lucide-react';
+import { Breadcrumb } from '../components/ui/Breadcrumb';
+import { StatusDot } from '../components/ui/StatusDot';
 
 /* ── 类型定义 ── */
 
@@ -53,16 +58,67 @@ function LoadingSkeleton() {
 /** 错误状态 */
 function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { login } = useAuth();
+  const [isDemoLoading, setIsDemoLoading] = useState(false);
+
+  // 检测是否为认证类错误(401/403 或文案含认证关键词)
+  const isAuthError = /401|403|unauthor|forbidden|认证|权限|未登录|auth/i.test(message);
+
+  const handleDemoLogin = async () => {
+    setIsDemoLoading(true);
+    try {
+      // 复用 Login.tsx 的演示 API Key(生产模式)
+      const DEMO_API_KEY = '7c249a3dd6b893e04ac5a42ef338f62c73d26bcb0b8ec6655ed6aedf6f07e129';
+      const success = await login(DEMO_API_KEY);
+      if (success) {
+        // 登录成功后刷新当前页(触发带新凭证的数据重载)
+        window.location.reload();
+      }
+    } finally {
+      setIsDemoLoading(false);
+    }
+  };
+
   return (
     <div className="flex flex-col items-center justify-center py-16">
-      <p className="text-[var(--error)] text-lg mb-2">{t('dashboard.error_loading')}</p>
-      <p className="text-[var(--text-tertiary)] text-sm mb-4">{message}</p>
-      <button
-        onClick={onRetry}
-        className="px-4 py-2 bg-[var(--accent)] text-white rounded-lg hover:bg-[var(--accent-hover)] transition-colors text-sm font-medium"
-      >
-        {t('dashboard.retry')}
-      </button>
+      {isAuthError ? (
+        <>
+          <AlertTriangle size={40} className="text-[var(--warning)] mb-4" />
+          <p className="text-[var(--text-primary)] text-lg font-semibold mb-2">
+            {t('dashboard.auth_failed_title', '认证已失效')}
+          </p>
+          <p className="text-[var(--text-tertiary)] text-sm mb-6 max-w-md text-center">
+            {t('dashboard.auth_failed_desc', 'API Key 或登录凭证无效,请使用演示账号登录后查看数据。')}
+          </p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/login')}
+              className="px-4 py-2 bg-[var(--accent)] text-white rounded-lg hover:bg-[var(--accent-hover)] transition-colors text-sm font-medium inline-flex items-center gap-2"
+            >
+              <LogIn size={16} /> {t('dashboard.go_login', '去登录')}
+            </button>
+            <button
+              onClick={handleDemoLogin}
+              disabled={isDemoLoading}
+              className="px-4 py-2 bg-[var(--accent-soft)] border border-[var(--accent)]/30 text-[var(--accent)] rounded-lg hover:bg-[var(--accent)]/20 transition-colors text-sm font-medium inline-flex items-center gap-2 disabled:opacity-50"
+            >
+              <Sparkles size={16} /> {isDemoLoading ? t('login.logging_in') : t('login.demo_account')}
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="text-[var(--error)] text-lg mb-2">{t('dashboard.error_loading')}</p>
+          <p className="text-[var(--text-tertiary)] text-sm mb-4">{message}</p>
+          <button
+            onClick={onRetry}
+            className="px-4 py-2 bg-[var(--accent)] text-white rounded-lg hover:bg-[var(--accent-hover)] transition-colors text-sm font-medium"
+          >
+            {t('dashboard.retry')}
+          </button>
+        </>
+      )}
     </div>
   );
 }
@@ -163,21 +219,16 @@ function GoldenSignalCard({
 function HealthServiceCard({ service }: { service: ServiceHealth }) {
   const { t } = useTranslation();
   return (
-    <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-[var(--surface-inset)] border border-[var(--border-subtle)]">
-      <span className="relative flex h-2.5 w-2.5">
-        {service.healthy && (
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-        )}
-        <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${service.healthy ? 'bg-emerald-400' : 'bg-red-400'}`} />
-      </span>
+    <div className="flex items-center gap-3 px-4 py-3 rounded-lg border" style={{ background: 'var(--surface-inset)', borderColor: 'var(--border-subtle)' }}>
+      <StatusDot status={service.healthy ? 'success' : 'error'} />
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-[var(--text-primary)]">{service.name}</p>
-        <p className="text-xs text-[var(--text-tertiary)]">
+        <p className="text-sm font-medium text-[var(--fg)]">{service.name}</p>
+        <p className="text-xs text-[var(--fg-tertiary)]">
           {service.healthy ? `${service.responseTime}ms` : '—'}
         </p>
       </div>
-      <span className={`text-xs font-medium ${service.healthy ? 'text-emerald-400' : 'text-red-400'}`} aria-label={service.healthy ? t('dashboard.health.healthy') : t('dashboard.health.unhealthy')}>
-        ●
+      <span className={`text-xs font-medium ${service.healthy ? 'text-[var(--success)]' : 'text-[var(--error)]'}`} aria-label={service.healthy ? t('dashboard.health.healthy') : t('dashboard.health.unhealthy')}>
+        {service.healthy ? t('dashboard.health.healthy') : t('dashboard.health.unhealthy')}
       </span>
     </div>
   );
@@ -255,6 +306,7 @@ export function Dashboard() {
   } = useRealtimeMetrics();
 
   const latencyHistory = useLatencyHistory();
+  const cacheHistory = useCacheHistory();
 
   const timeRange = useViewStore((s) => s.dashboardTimeRange);
   const setDashboardTimeRange = useViewStore((s) => s.setDashboardTimeRange);
@@ -392,10 +444,41 @@ export function Dashboard() {
     { name: t('dashboard.pipeline.generation'), ms: pipelineData.generation_ms ?? 0, color: '#EAB308' },
   ] : [];
 
+  // 查询量 localStorage 兜底(确保切走再回来图表不空)
+  const [cachedVolume, setCachedVolume] = useState(() => {
+    try {
+      const saved = localStorage.getItem('aureon:volume:last');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const volumeFlushRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (queryVolume && queryVolume.length > 0) {
+      if (volumeFlushRef.current) clearTimeout(volumeFlushRef.current);
+      volumeFlushRef.current = setTimeout(() => {
+        try {
+          localStorage.setItem('aureon:volume:last', JSON.stringify(queryVolume));
+          setCachedVolume(queryVolume);
+        } catch {
+          // Silent fail
+        }
+      }, 2000);
+    }
+    return () => {
+      if (volumeFlushRef.current) clearTimeout(volumeFlushRef.current);
+    };
+  }, [queryVolume]);
+
+  // 优先用实时数据，回退到 localStorage 缓存
+  const effectiveQueryVolume = (queryVolume && queryVolume.length > 0) ? queryVolume : (cachedVolume ?? []);
+
   // 查询量柱状图数据（过滤无效值，防止 Nivo 生成 d="null" SVG 路径导致浏览器崩溃）
-  const queryVolumeChartData = (queryVolume || [])
-    .filter((item): item is { date: string; count: number } => item != null && item.count > 0)
-    .map((item) => ({
+  const queryVolumeChartData = effectiveQueryVolume
+    .filter((item: { date: string; count: number } | null | undefined): item is { date: string; count: number } => item != null && item.count > 0)
+    .map((item: { date: string; count: number }) => ({
       label: item.date,
       value: item.count,
     }));
@@ -419,14 +502,36 @@ export function Dashboard() {
     ] : [];
   }, [latencyHistory, metrics, t]);
 
-  // 检索质量趋势数据
-  const qualityChartData: { id: string; data: { x: string; y: number }[] }[] = []; // TODO: 等待后端 API 提供质量趋势数据
+  // 缓存命中率趋势数据（前端 WebSocket 累积历史，后端无序列数据）
+  const cacheTrendData: { id: string; data: { x: string; y: number }[] }[] = useMemo(() => {
+    if (cacheHistory.length > 3) {
+      return [
+        {
+          id: t('dashboard.charts.cache_hit_rate', '缓存命中率'),
+          data: cacheHistory.map((p, i) => ({ x: `${i}`, y: p.hitRate })),
+        },
+      ];
+    }
+    // 回退：用当前实时值构造单点(至少有当前快照)
+    if (rtMetrics.cache_hit_rate > 0) {
+      return [
+        {
+          id: t('dashboard.charts.cache_hit_rate', '缓存命中率'),
+          data: [{ x: '0', y: rtMetrics.cache_hit_rate }],
+        },
+      ];
+    }
+    return [];
+  }, [cacheHistory, rtMetrics.cache_hit_rate, t]);
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)]">
-      <div className="max-w-7xl mx-auto px-6 py-8">
+    <div className="min-h-screen">
+      <div className="px-6 py-8">
+        {/* Breadcrumb */}
+        <Breadcrumb auto />
+
         {/* ── 1. Header bar ── */}
-        <div className="flex items-end justify-between mb-8">
+        <div className="flex items-end justify-between mb-8 mt-4">
           <div>
             <h1
               className="text-2xl font-bold text-[var(--text-primary)] tracking-tight animate-fade-up"
@@ -573,8 +678,8 @@ export function Dashboard() {
                   </div>
                 )}
               </Card>
-              {qualityChartData.some(s => s.data.length > 0) ? (
-                <LineChart data={qualityChartData} title={t('dashboard.charts.quality_trend')} />
+              {cacheTrendData.some(s => s.data.length > 0) ? (
+                <LineChart data={cacheTrendData} title={t('dashboard.charts.cache_hit_rate', '缓存命中率')} />
               ) : (
                 <div className="rounded-lg border bg-[var(--bg-secondary)] border-[var(--border)] flex items-center justify-center h-[300px] text-[var(--text-tertiary)] text-sm">
                   {t('dashboard.no_data', '暂无数据')}

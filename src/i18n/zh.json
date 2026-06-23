@@ -15,6 +15,12 @@
       "group_core": "核心功能",
       "group_admin": "管理"
     },
+    "sidebar": {
+      "platform": "平台",
+      "administration": "管理",
+      "expand": "展开侧边栏",
+      "collapse": "收起侧边栏"
+    },
     "badges": {
       "recall": "召回率",
       "latency": "延迟",
@@ -216,7 +222,16 @@
     "demo_data": "演示数据",
     "connecting": "连接中",
     "no_data": "暂无数据",
-    "waiting_for_data": "等待 WebSocket 数据..."
+    "waiting_for_data": "等待 WebSocket 数据...",
+    "auth_failed_title": "认证已失效",
+    "auth_failed_desc": "API Key 或登录凭证无效，请使用演示账号登录后查看数据。",
+    "go_login": "去登录",
+    "charts": {
+      "latency_trend": "延迟趋势",
+      "query_volume": "查询量",
+      "quality_trend": "检索质量",
+      "cache_hit_rate": "缓存命中率"
+    }
   },
   "search": {
     "title": "企业级 AI 搜索",
@@ -396,7 +411,8 @@
       "source": "来源",
       "type": "格式",
       "chunks": "片段数",
-      "status": "状态"
+      "status": "状态",
+      "actions": "操作"
     },
     "status": {
       "ready": "就绪"
@@ -423,7 +439,15 @@
     },
     "open_blog": "打开博客",
     "sync_blog": "同步博客文档",
-    "chunks": "片段"
+    "chunks": "片段",
+    "delete": {
+      "button": "删除",
+      "tooltip": "删除此文档",
+      "confirm_title": "删除文档",
+      "confirm_msg": "确定删除「{{title}}」及其 {{count}} 个 chunks？此操作不可撤销。",
+      "confirm": "确认删除",
+      "cancel": "取消"
+    }
   },
   "analytics": {
     "title": "分析",
@@ -440,6 +464,24 @@
     "avg_per_hour": "平均 {count}/小时",
     "saves": "节省 {count} 次查询",
     "no_data": "暂无数据",
+    "tabs": {
+      "overview": "概览",
+      "latency": "延迟",
+      "tokens": "令牌",
+      "queries": "查询"
+    },
+    "table": {
+      "module": "模块",
+      "status": "状态",
+      "tests": "测试",
+      "latency": "延迟"
+    },
+    "queries": {
+      "title": "查询分布",
+      "intent": "意图",
+      "count": "数量",
+      "percentage": "占比"
+    },
     "intent": {
       "document_query": "文档查询",
       "code_search": "代码搜索",

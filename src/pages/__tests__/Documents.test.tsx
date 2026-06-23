@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import React from 'react';
 
 // Mock useDocumentsQuery (TanStack Query)
 const mockUseDocumentsQuery = vi.fn();
@@ -27,11 +29,29 @@ vi.mock('../../components/documents/DocumentUpload', () => ({
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (key: string, opts?: Record<string, unknown>) => {
+      if (opts) return key.replace(/\{\{(\w+)\}\}/g, (_, k) => String(opts[k] ?? ''));
+      return key;
+    },
   }),
 }));
 
+// Mock Breadcrumb (requires Router context)
+vi.mock('../../components/ui/Breadcrumb', () => ({
+  Breadcrumb: () => null,
+}));
+
 import { Documents } from '../Documents';
+
+// Helper to wrap in QueryClientProvider
+function renderWithQueryClient(ui: React.ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: 0 } },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+  );
+}
 
 const mockDocuments = [
   { title: 'RAG Guide', source: 'rag-guide.md', file_type: 'md', chunk_count: 15, status: 'ready' },
@@ -53,7 +73,7 @@ describe('Documents', () => {
     });
 
     act(() => {
-      render(<Documents />);
+      renderWithQueryClient(<Documents />);
     });
     expect(screen.getByText('documents.title')).toBeInTheDocument();
     expect(screen.queryByText('documents.empty')).not.toBeInTheDocument();
@@ -69,7 +89,7 @@ describe('Documents', () => {
     });
 
     act(() => {
-      render(<Documents />);
+      renderWithQueryClient(<Documents />);
     });
     expect(screen.getByText('documents.error_loading')).toBeInTheDocument();
     expect(screen.getByText('Network error')).toBeInTheDocument();
@@ -88,7 +108,7 @@ describe('Documents', () => {
     });
 
     act(() => {
-      render(<Documents />);
+      renderWithQueryClient(<Documents />);
     });
     expect(screen.getByText('documents.empty')).toBeInTheDocument();
   });
@@ -102,7 +122,7 @@ describe('Documents', () => {
     });
 
     act(() => {
-      render(<Documents />);
+      renderWithQueryClient(<Documents />);
     });
     expect(screen.getByText('documents.title')).toBeInTheDocument();
     const allThrees = screen.getAllByText('3');
@@ -123,7 +143,7 @@ describe('Documents', () => {
       refetch: vi.fn(),
     });
 
-    render(<Documents />);
+    renderWithQueryClient(<Documents />);
     const searchInput = screen.getByPlaceholderText('documents.search_placeholder');
     await user.type(searchInput, 'RAG');
 
@@ -142,7 +162,7 @@ describe('Documents', () => {
       refetch: vi.fn(),
     });
 
-    render(<Documents />);
+    renderWithQueryClient(<Documents />);
     expect(screen.queryByTestId('document-upload')).not.toBeInTheDocument();
 
     await user.click(screen.getByText('documents.upload.button'));
@@ -158,7 +178,7 @@ describe('Documents', () => {
     });
 
     act(() => {
-      render(<Documents />);
+      renderWithQueryClient(<Documents />);
     });
     expect(screen.getByText('documents.table.name')).toBeInTheDocument();
     expect(screen.getByText('documents.table.source')).toBeInTheDocument();
