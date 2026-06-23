@@ -2,6 +2,7 @@ import { useState, useMemo, memo } from "react";
 import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeSanitize from "rehype-sanitize";
 import type { Message } from "../types/message";
 import { BookOpen, Link, Bot } from "lucide-react";
 import { markdownComponents } from "./markdown/markdownConfig";
@@ -50,6 +51,12 @@ export const MessageItem = memo(function MessageItem({ message, onRegenerate }: 
   };
 
   const remarkPlugins = useMemo(() => [remarkGfm], []);
+  const rehypePlugins = useMemo(() => [
+    [rehypeSanitize, {
+      tagNames: ['p','br','strong','em','code','pre','ul','ol','li','h1','h2','h3','a','blockquote','hr','table','thead','tbody','tr','th','td'],
+      attributes: { code: ['className'], pre: ['className'], a: ['href','target','rel'] }
+    }]
+  ], []);
 
   return (
     <div className={`group/msg flex ${isUser ? "justify-end" : "justify-start"} mb-4`}>
@@ -63,13 +70,13 @@ export const MessageItem = memo(function MessageItem({ message, onRegenerate }: 
         >
           {isUser ? (
             <div className="prose prose-sm max-w-none prose-invert break-words">
-              <ReactMarkdown remarkPlugins={remarkPlugins}>
+              <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins}>
                 {message.content}
               </ReactMarkdown>
             </div>
           ) : (
             <div className="prose prose-sm max-w-none break-words" translate="no">
-              <ReactMarkdown remarkPlugins={remarkPlugins} components={markdownComponents}>
+              <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins} components={markdownComponents}>
                 {message.content}
               </ReactMarkdown>
 
