@@ -118,13 +118,12 @@ describe('Analytics Page', () => {
         'analytics.latency.avg': '平均',
         'analytics.latency.p95': 'P95',
         'analytics.latency.p99': 'P99',
-        'analytics.tokens.title': 'Token 使用详情',
-        'analytics.tokens.input': '输入 Token',
-        'analytics.tokens.output': '输出 Token',
-        'analytics.tokens.cost': '预估成本',
-        'analytics.tokens.per_query': '~$0.001/查询',
         'analytics.queries.title': '查询分布',
         'analytics.intent.general_qa': '通用问答',
+        'analytics.tabs.overview': '概览',
+        'analytics.tabs.latency': '延迟',
+        'analytics.tabs.tokens': '令牌',
+        'analytics.tabs.queries': '查询',
         'analytics.time_range.24h': '最近 24 小时',
         'analytics.time_range.7d': '最近 7 天',
         'analytics.time_range.30d': '最近 30 天',
@@ -155,12 +154,9 @@ describe('Analytics Page', () => {
     expect(screen.getByText('查询总量')).toBeInTheDocument();
     expect(screen.getByText('缓存命中率')).toBeInTheDocument();
     expect(screen.getByText('延迟分布')).toBeInTheDocument();
-    expect(screen.getByText('Token 使用详情')).toBeInTheDocument();
-    expect(screen.getByText('输入 Token')).toBeInTheDocument();
-    expect(screen.getByText('输出 Token')).toBeInTheDocument();
-    expect(screen.getByText('预估成本')).toBeInTheDocument();
     expect(screen.getByText('查询分布')).toBeInTheDocument();
     expect(screen.getByText('通用问答')).toBeInTheDocument();
+    expect(screen.getByText('概览')).toBeInTheDocument();
   });
 
   it('renders English translation', () => {
@@ -184,13 +180,12 @@ describe('Analytics Page', () => {
         'analytics.latency.avg': 'Avg',
         'analytics.latency.p95': 'P95',
         'analytics.latency.p99': 'P99',
-        'analytics.tokens.title': 'Token Usage Details',
-        'analytics.tokens.input': 'Input Tokens',
-        'analytics.tokens.output': 'Output Tokens',
-        'analytics.tokens.cost': 'Estimated Cost',
-        'analytics.tokens.per_query': '~$0.001/query',
         'analytics.queries.title': 'Query Distribution',
         'analytics.intent.general_qa': 'General Q&A',
+        'analytics.tabs.overview': 'Overview',
+        'analytics.tabs.latency': 'Latency',
+        'analytics.tabs.tokens': 'Tokens',
+        'analytics.tabs.queries': 'Queries',
         'analytics.time_range.24h': 'Last 24 hours',
         'analytics.time_range.7d': 'Last 7 days',
         'analytics.time_range.30d': 'Last 30 days',
@@ -221,11 +216,8 @@ describe('Analytics Page', () => {
     expect(screen.getByText('Total Queries')).toBeInTheDocument();
     expect(screen.getByText('Cache Hit Rate')).toBeInTheDocument();
     expect(screen.getByText('Latency Distribution')).toBeInTheDocument();
-    expect(screen.getByText('Token Usage Details')).toBeInTheDocument();
-    expect(screen.getByText('Input Tokens')).toBeInTheDocument();
-    expect(screen.getByText('Output Tokens')).toBeInTheDocument();
-    expect(screen.getByText('Estimated Cost')).toBeInTheDocument();
     expect(screen.getByText('Query Distribution')).toBeInTheDocument();
     expect(screen.getByText('General Q&A')).toBeInTheDocument();
+    expect(screen.getByText('Overview')).toBeInTheDocument();
   });
 });

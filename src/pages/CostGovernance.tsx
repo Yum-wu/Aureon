@@ -8,6 +8,7 @@ import { Tooltip } from '../components/ui/Tooltip';
 import { LineChart } from '../components/charts/LineChart';
 import { BarChart } from '../components/charts/BarChart';
 import { PieChart } from '../components/charts/PieChart';
+import { Breadcrumb } from '../components/ui/Breadcrumb';
 import { AdminTable } from '../components/admin/AdminTable';
 import { AlertTriangle } from 'lucide-react';
 
@@ -208,8 +209,9 @@ export function CostGovernance() {
   ];
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)]">
-      <div className="max-w-7xl mx-auto px-6 py-8">
+    <div className="min-h-screen">
+      <div className="px-6 py-8">
+        <Breadcrumb auto />
         {/* ── 演示模式水印 ── */}
         {!summary && !loading && !error && (
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-center mb-6">

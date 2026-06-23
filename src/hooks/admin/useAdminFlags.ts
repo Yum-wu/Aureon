@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { authFetch } from '../../services/authFetch';
 import { ADMIN_QUERY_KEYS, ADMIN_CACHE_CONFIG } from './useAdminOverview';
 import { toast } from '../../utils/toast';
@@ -21,6 +21,7 @@ export function useAdminFlags() {
       return Array.isArray(data) ? data : [];
     },
     ...ADMIN_CACHE_CONFIG,
+    placeholderData: keepPreviousData,
   });
 }
 

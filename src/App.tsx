@@ -1,18 +1,16 @@
 // Aureon — Enterprise AI Knowledge Base Platform
-import { lazy, Suspense, useEffect, useMemo, type ReactNode } from "react";
-import { BrowserRouter, Routes, Route, Navigate, Link, useNavigate, useLocation } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+import { lazy, Suspense, useEffect, type ReactNode } from "react";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ToastProvider } from "./hooks/useToast";
-import { LanguageSwitcher } from "./i18n/LanguageSwitcher";
 import { AuthProvider } from "./hooks/AuthProvider";
 import { ThemeProvider } from "./hooks/ThemeProvider";
-import { ThemeToggle } from "./components/ThemeToggle";
 import { OnboardingProvider } from "./components/onboarding/OnboardingProvider";
 import { RealtimeMetricsProvider } from "./providers/RealtimeMetricsProvider";
 import { useAuth } from "./hooks/AuthContext";
 import { AdminGate } from "./components/AdminGate";
 import { useUIStore } from "./stores/useUIStore";
+import { AppSidebar } from "./components/AppSidebar";
 
 // Route-level code splitting — each page is a separate chunk
 const Landing = lazy(() => import("./pages/Landing").then(m => ({ default: m.Landing })));
@@ -28,43 +26,11 @@ const Architecture = lazy(() => import("./pages/Architecture").then(m => ({ defa
 const NotFound = lazy(() => import("./pages/NotFound"));
 const SupportWidget = lazy(() => import("./components/SupportWidget").then(m => ({ default: m.SupportWidget })));
 
-// Preload functions
-const preloadDashboard = () => import('./pages/Dashboard');
-const preloadAdmin = () => import('./pages/Admin');
-const preloadSearch = () => import('./pages/Search');
-const preloadDocuments = () => import('./pages/Documents');
-const preloadAnalytics = () => import('./pages/Analytics');
-const preloadCost = () => import('./pages/CostGovernance');
-
 function PageFallback() {
   return (
     <div className="flex items-center justify-center h-64" style={{background:'var(--bg-primary)'}}>
       <div className="animate-spin rounded-full h-8 w-8" style={{borderColor:'var(--bg-tertiary)',borderTopColor:'var(--accent)'}} />
     </div>
-  );
-}
-
-interface NavLinkWithPreloadProps {
-  to: string;
-  preloadFn?: () => Promise<unknown>;
-  children: React.ReactNode;
-  className?: string;
-  style?: React.CSSProperties;
-  isActive?: boolean;
-}
-
-function NavLinkWithPreload({ to, preloadFn, children, className, style, isActive }: NavLinkWithPreloadProps) {
-  return (
-    <Link
-      to={to}
-      onMouseEnter={preloadFn}
-      onFocus={preloadFn}
-      className={className}
-      style={style}
-      aria-current={isActive ? 'page' : undefined}
-    >
-      {children}
-    </Link>
   );
 }
 
@@ -97,193 +63,109 @@ function App() {
   );
 }
 
-/* ── App Layout ── */
+/* ── App Layout — Sidebar + Content (flex-row) ── */
 function AppLayout() {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
   const location = useLocation();
-  const mobileMenuOpen = useUIStore(s => s.mobileMenuOpen);
-  const setMobileMenuOpen = useUIStore(s => s.setMobileMenuOpen);
+  const sidebarCollapsed = useUIStore(s => s.sidebarCollapsed);
+  const toggleSidebarCollapsed = useUIStore(s => s.toggleSidebarCollapsed);
+  const mobileSidebarOpen = useUIStore(s => s.mobileSidebarOpen);
+  const setMobileSidebarOpen = useUIStore(s => s.setMobileSidebarOpen);
 
-  // 路由变化时关闭移动端菜单
-  useEffect(() => { setMobileMenuOpen(false); }, [location.pathname, setMobileMenuOpen]);
+  // 路由变化时关闭移动端侧边栏
+  useEffect(() => { setMobileSidebarOpen(false); }, [location.pathname, setMobileSidebarOpen]);
 
-  const navGroups = useMemo(() => [
-    {
-      label: t('app.nav.group_core'),
-      items: [
-        { path: "/dashboard", key: "app.nav.dashboard", preloadFn: preloadDashboard },
-        { path: "/search", key: "app.nav.search", preloadFn: preloadSearch },
-        { path: "/documents", key: "app.nav.documents", preloadFn: preloadDocuments },
-        { path: "/analytics", key: "app.nav.analytics", preloadFn: preloadAnalytics },
-      ]
-    },
-    {
-      label: t('app.nav.group_admin'),
-      items: [
-        { path: "/architecture", key: "app.nav.architecture", preloadFn: undefined },
-        { path: "/admin", key: "app.nav.admin", preloadFn: preloadAdmin },
-        { path: "/cost", key: "app.nav.cost", preloadFn: preloadCost },
-      ]
+  // Body scroll lock when mobile drawer is open
+  useEffect(() => {
+    if (mobileSidebarOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
     }
-  ], [t]);
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileSidebarOpen]);
 
   const isLanding = location.pathname === "/";
   const isLogin = location.pathname === "/login";
+  // Landing 和 Login 页面不显示侧边栏
+  const showSidebar = !isLanding && !isLogin;
 
   return (
-    <div className="h-screen flex flex-col" style={{background:'var(--bg-primary)'}}>
-      {!isLanding && !isLogin && (
+    <div className="h-screen flex flex-row" style={{background:'var(--bg-primary)'}}>
+      {/* Desktop Sidebar */}
+      {showSidebar && (
+        <div className="hidden md:block">
+          <AppSidebar collapsed={sidebarCollapsed} onToggleCollapse={toggleSidebarCollapsed} />
+        </div>
+      )}
+
+      {/* Mobile Sidebar Drawer */}
+      {showSidebar && (
         <>
-        <nav className="flex items-center border-b px-6 py-0 glass sticky top-0 z-40" style={{borderColor:'var(--border)'}} role="navigation" aria-label={t('app.nav.menu')}>
-          {/* Logo */}
-          <button
-            onClick={() => navigate("/")}
-            className="mr-8 py-3 shrink-0 group"
+          {/* Overlay with fade */}
+          <div
+            className="md:hidden fixed inset-0 z-40 transition-opacity duration-200"
+            style={{
+              background: 'rgba(0,0,0,0.4)',
+              opacity: mobileSidebarOpen ? 1 : 0,
+              pointerEvents: mobileSidebarOpen ? 'auto' : 'none',
+            }}
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+          {/* Drawer with slide */}
+          <div
+            className="md:hidden fixed left-0 top-0 bottom-0 z-50 transition-transform duration-200 ease-out"
+            style={{
+              transform: mobileSidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
+              maxWidth: '80vw',
+            }}
           >
-            <span className="text-base font-extrabold tracking-tight" style={{color:'var(--accent)'}}>Aureon</span>
-          </button>
-
-          {/* Desktop Nav links */}
-          <div className="hidden md:flex items-center gap-1">
-            {navGroups[0].items.map((item) => {
-              const isActive = location.pathname.startsWith(item.path);
-              return (
-                <NavLinkWithPreload
-                  key={item.path}
-                  to={item.path}
-                  preloadFn={item.preloadFn}
-                  className="relative px-4 py-3 text-sm font-medium transition-colors rounded-md"
-                  style={{
-                    color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                    background: isActive ? 'var(--accent-soft)' : 'transparent',
-                  }}
-                  isActive={isActive}
-                >
-                  {t(item.key)}
-                </NavLinkWithPreload>
-              );
-            })}
-            <div className="w-px h-6 bg-[var(--border)] mx-2" />
-            {navGroups[1].items.map((item) => {
-              const isActive = location.pathname.startsWith(item.path);
-              return (
-                <NavLinkWithPreload
-                  key={item.path}
-                  to={item.path}
-                  preloadFn={item.preloadFn}
-                  className="relative px-4 py-3 text-sm font-medium transition-colors rounded-md"
-                  style={{
-                    color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                    background: isActive ? 'var(--accent-soft)' : 'transparent',
-                  }}
-                  isActive={isActive}
-                >
-                  {t(item.key)}
-                </NavLinkWithPreload>
-              );
-            })}
+            <AppSidebar collapsed={false} onToggleCollapse={() => setMobileSidebarOpen(false)} />
           </div>
-
-          {/* Mobile hamburger button */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-md"
-            style={{ color: 'var(--text-secondary)' }}
-            aria-label={t('app.nav.menu')}
-            aria-expanded={mobileMenuOpen}
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {mobileMenuOpen ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              )}
-            </svg>
-          </button>
-
-          {/* Right side */}
-          <div className="ml-auto flex items-center gap-3">
-            <ThemeToggle />
-            <LanguageSwitcher />
-            <button
-              onClick={() => navigate("/login")}
-              className="glow-btn-outline !py-1.5 !px-3 !text-xs"
-            >
-              {t("app.nav.admin")}
-            </button>
-          </div>
-        </nav>
-
-        {/* Mobile dropdown menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden absolute top-full left-0 right-0 border-b z-50" style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
-            <div className="px-6 py-2 text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
-              {navGroups[0].label}
-            </div>
-            {navGroups[0].items.map((item) => {
-              const isActive = location.pathname.startsWith(item.path);
-              return (
-                <button
-                  key={item.path}
-                  onClick={() => { navigate(item.path); setMobileMenuOpen(false); }}
-                  className="block w-full text-left px-6 py-3 text-sm font-medium transition-colors"
-                  style={{
-                    color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                    background: isActive ? 'var(--accent-soft)' : 'transparent',
-                  }}
-                  aria-current={isActive ? 'page' : undefined}
-                >
-                  {t(item.key)}
-                </button>
-              );
-            })}
-            <div className="h-px bg-[var(--border)] mx-4 my-1" />
-            <div className="px-6 py-2 text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
-              {navGroups[1].label}
-            </div>
-            {navGroups[1].items.map((item) => {
-              const isActive = location.pathname.startsWith(item.path);
-              return (
-                <button
-                  key={item.path}
-                  onClick={() => { navigate(item.path); setMobileMenuOpen(false); }}
-                  className="block w-full text-left px-6 py-3 text-sm font-medium transition-colors"
-                  style={{
-                    color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                    background: isActive ? 'var(--accent-soft)' : 'transparent',
-                  }}
-                  aria-current={isActive ? 'page' : undefined}
-                >
-                  {t(item.key)}
-                </button>
-              );
-            })}
-          </div>
-        )}
         </>
       )}
 
-      <div className="flex-1 overflow-auto">
-        <Suspense fallback={<PageFallback />}>
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/search" element={<Search />} />
-            <Route path="/documents" element={<Documents />} />
-            <Route path="/crew" element={<CrewGenerator />} />
-            {/* Protected routes — require auth */}
-            <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
-            {/* Admin routes — require auth + admin gate */}
-            <Route path="/architecture" element={<AdminGate><Architecture /></AdminGate>} />
-            <Route path="/portfolio" element={<Navigate to="/architecture" replace />} />
-            <Route path="/admin" element={<AdminGate><Admin /></AdminGate>} />
-            <Route path="/cost" element={<AdminGate><CostGovernance /></AdminGate>} />
-            {/* Catch-all 404 route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Suspense>
+      {/* Mobile top bar — hamburger only */}
+      {showSidebar && (
+        <div className="md:hidden fixed top-0 left-0 right-0 z-30 flex items-center px-4 py-2 glass" style={{ borderBottom: '1px solid var(--border)' }}>
+          <button
+            onClick={() => setMobileSidebarOpen(true)}
+            className="p-2 rounded-md"
+            style={{ color: 'var(--text-secondary)' }}
+            aria-label="Open menu"
+            aria-expanded={mobileSidebarOpen}
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <span className="ml-3 text-base font-extrabold tracking-tight" style={{color:'var(--seed-primary)', fontFamily:'var(--font-display)'}}>Aureon</span>
+        </div>
+      )}
+
+      {/* Main Content Area */}
+      <div className="flex-1 min-w-0 overflow-auto">
+        {/* Add top padding on mobile when sidebar is shown (for the fixed hamburger bar) */}
+        <div className={showSidebar ? 'md:pt-0 pt-12' : ''}>
+          <Suspense fallback={<PageFallback />}>
+            <Routes>
+              <Route path="/" element={<Landing />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/search" element={<Search />} />
+              <Route path="/documents" element={<Documents />} />
+              <Route path="/crew" element={<CrewGenerator />} />
+              {/* Protected routes — require auth */}
+              <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+              {/* Admin routes — require auth + admin gate */}
+              <Route path="/architecture" element={<AdminGate><Architecture /></AdminGate>} />
+              <Route path="/portfolio" element={<Navigate to="/architecture" replace />} />
+              <Route path="/admin" element={<AdminGate><Admin /></AdminGate>} />
+              <Route path="/cost" element={<AdminGate><CostGovernance /></AdminGate>} />
+              {/* Catch-all 404 route */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
+        </div>
       </div>
 
       {/* Global Support Widget — hidden on login page */}

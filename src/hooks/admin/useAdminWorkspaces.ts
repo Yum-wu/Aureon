@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { authFetch } from '../../services/authFetch';
 import { ADMIN_QUERY_KEYS, ADMIN_CACHE_CONFIG } from './useAdminOverview';
 
@@ -20,5 +20,6 @@ export function useAdminWorkspaces() {
       return Array.isArray(data) ? data : [];
     },
     ...ADMIN_CACHE_CONFIG,
+    placeholderData: keepPreviousData,
   });
 }
