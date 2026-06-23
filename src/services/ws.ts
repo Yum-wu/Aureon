@@ -158,7 +158,7 @@ export function createWebSocket(
       ws.onopen = () => {
         // S8: Send auth token as first message instead of URL query parameter
         const token = getAuthToken();
-        if (token) {
+        if (token && ws) {
           ws.send(JSON.stringify({ type: 'auth', token }));
         }
         reconnectAttempts = 0;

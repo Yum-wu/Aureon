@@ -55,7 +55,7 @@ export const MessageItem = memo(function MessageItem({ message, onRegenerate }: 
     [rehypeSanitize, {
       tagNames: ['p','br','strong','em','code','pre','ul','ol','li','h1','h2','h3','a','blockquote','hr','table','thead','tbody','tr','th','td'],
       attributes: { code: ['className'], pre: ['className'], a: ['href','target','rel'] }
-    }]
+    }] as any
   ], []);
 
   return (
