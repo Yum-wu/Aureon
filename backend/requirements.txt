@@ -52,6 +52,7 @@ elasticsearch>=8.10.0
 
 # Redis semantic cache
 redis>=5.0,<6.0
+cachetools>=5.3,<6.0
 
 # Document format parsers
 pypdf>=6.13,<7.0
