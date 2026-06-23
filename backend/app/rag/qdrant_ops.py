@@ -13,6 +13,7 @@ Extracted from vector_store.py.
 
 
 import time
+import threading
 
 import numpy as np
 
@@ -40,6 +41,7 @@ _TENANT_ID_CACHE_TTL = 300  # 5 分钟
 # ���� Qdrant Backend ����
 
 _qdrant_client = None
+_qdrant_lock = threading.Lock()
 
 _qdrant_available = False  # Global flag: True if Qdrant is reachable
 
@@ -63,7 +65,12 @@ def _get_qdrant():
 
     global _qdrant_client
 
-    if _qdrant_client is None:
+    if _qdrant_client is not None:  # Fast path (no lock)
+        return _qdrant_client
+
+    with _qdrant_lock:
+        if _qdrant_client is not None:  # Double-check
+            return _qdrant_client
 
         from qdrant_client import QdrantClient
 

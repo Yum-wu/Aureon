@@ -15,6 +15,7 @@ Extracted from vector_store.py.
 from typing import List, Dict, Any, Optional
 
 import asyncio
+import threading
 
 import structlog
 
@@ -29,6 +30,7 @@ logger = structlog.get_logger()
 # ���� Cross-Encoder Reranker (lazy-loaded singleton) ����
 
 _reranker = None
+_reranker_lock = threading.Lock()
 
 _RERANKER_MODEL = "BAAI/bge-reranker-v2-m3"
 
@@ -54,7 +56,12 @@ def _get_reranker():
 
     global _reranker
 
-    if _reranker is None:
+    if _reranker is not None:  # Fast path (no lock)
+        return _reranker if _reranker is not False else None
+
+    with _reranker_lock:
+        if _reranker is not None:  # Double-check
+            return _reranker if _reranker is not False else None
 
         from app.config import settings as _cfg
 
