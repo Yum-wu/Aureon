@@ -70,12 +70,12 @@ def test_lang_instruction_not_empty():
 
 def test_agent_prompt_imports():
     """Verify agent module imports without hardcoded language."""
-    from app.agent.agent import DEFAULT_SYSTEM_PROMPT
-    assert "始终以中文回复" not in DEFAULT_SYSTEM_PROMPT, (
-        "DEFAULT_SYSTEM_PROMPT should not have hardcoded language"
+    from app.prompts.agent import SYSTEM_PROMPT_ZH
+    assert "始终以中文回复" not in SYSTEM_PROMPT_ZH, (
+        "SYSTEM_PROMPT_ZH should not have hardcoded language"
     )
-    assert "calculator" in DEFAULT_SYSTEM_PROMPT, (
-        "DEFAULT_SYSTEM_PROMPT should contain calculator tool example"
+    assert "calculator" in SYSTEM_PROMPT_ZH, (
+        "SYSTEM_PROMPT_ZH should contain calculator tool example"
     )
 
 
