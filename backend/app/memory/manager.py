@@ -56,18 +56,73 @@ class MemoryManager:
         self.touch_session(session_id)
 
     async def extract_atoms(self, session_id: str):
+        """Extract atomic facts from conversation using LLM.
+
+        Uses a lightweight LLM call to extract structured facts
+        (subject-predicate-object) with confidence scores.
+        Falls back to raw message storage on failure.
+        """
         backend = get_backend()
         messages = await asyncio.to_thread(backend.get_conversation, session_id, 10)
         if not messages:
             return
+
         user_msgs = [m for m in messages if m["role"] == "user"]
-        if user_msgs:
-            last = user_msgs[-1]
-            await asyncio.to_thread(
-                backend.save_atom,
-                session_id, "user", "said",
-                last["content"][:100], last["id"], 0.3,
-            )
+        if not user_msgs:
+            return
+
+        last = user_msgs[-1]
+        content = last["content"]
+
+        # Try LLM-based extraction for better quality atoms
+        try:
+            from app.agent.llm import create_llm
+            llm = create_llm(temperature=0.0, streaming=False, max_tokens=200)
+
+            extraction_prompt = f"""Extract 1-3 atomic facts from this user message as JSON array.
+Each fact: {{"subject": "...", "predicate": "...", "object": "...", "confidence": 0.0-1.0}}
+Only extract clear, factual statements. If no facts, return [].
+
+User message: {content[:500]}"""
+
+            response = await asyncio.to_thread(llm.invoke, extraction_prompt)
+            response_text = response.content if hasattr(response, 'content') else str(response)
+
+            # Parse JSON response
+            import json
+            # Handle markdown code blocks
+            clean_text = response_text.strip()
+            if clean_text.startswith("```"):
+                clean_text = clean_text.split("\n", 1)[1] if "\n" in clean_text else clean_text[3:]
+                if clean_text.endswith("```"):
+                    clean_text = clean_text[:-3]
+                clean_text = clean_text.strip()
+
+            atoms = json.loads(clean_text)
+            if isinstance(atoms, list):
+                for atom in atoms[:3]:  # Max 3 atoms per extraction
+                    if all(k in atom for k in ["subject", "predicate", "object"]):
+                        confidence = min(max(float(atom.get("confidence", 0.7)), 0.0), 1.0)
+                        await asyncio.to_thread(
+                            backend.save_atom,
+                            session_id,
+                            atom["subject"][:50],
+                            atom["predicate"][:50],
+                            atom["object"][:100],
+                            last["id"],
+                            confidence,
+                        )
+                return
+        except Exception as e:
+            # Fallback to raw message storage on any failure
+            logger.debug("atom_extraction_fallback", error=str(e))
+
+        # Fallback: save raw user message as atom
+        await asyncio.to_thread(
+            backend.save_atom,
+            session_id, "user", "said",
+            content[:100], last["id"], 0.3,
+        )
 
     # ── Scenario / Persona ──
 

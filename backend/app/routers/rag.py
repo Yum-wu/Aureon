@@ -590,7 +590,7 @@ async def rag_upload_endpoint(
 
 
 @router.get("/uploads")
-async def rag_list_uploads():
+async def rag_list_uploads(_user: dict = require_role(UserRole.VIEWER)):
     """List all uploaded files in the uploads directory."""
     if not os.path.isdir(UPLOADS_DIR):
         return {"files": []}
@@ -609,7 +609,7 @@ async def rag_list_uploads():
 
 
 @router.delete("/upload/{filename}", response_model=StatusResponse)
-async def rag_delete_upload(filename: str):
+async def rag_delete_upload(filename: str, _user: dict = require_role(UserRole.EDITOR)):
     """Delete an uploaded file and its chunks from the index."""
     # Security: prevent path traversal
     _validate_filename(filename)
@@ -728,7 +728,7 @@ async def rag_benchmark():
 
 
 @router.post("/cache/clear")
-async def rag_cache_clear():
+async def rag_cache_clear(_user: dict = require_role(UserRole.ADMIN)):
     """Clear all RAG query caches (Redis exact + semantic + in-memory)."""
     from app.cache.redis_client import clear_cache_by_prefix, _mem_cache
     _mem_cache.clear()

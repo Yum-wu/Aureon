@@ -128,7 +128,14 @@ def require_role(min_role: UserRole):
         from app.config import settings
 
         # Hard block: dev bypass forbidden on production platforms
-        _is_prod_platform = os.environ.get("RAILWAY_ENVIRONMENT") == "production"
+        _is_prod_platform = any([
+            os.environ.get("RAILWAY_ENVIRONMENT") == "production",
+            os.environ.get("RENDER"),
+            os.environ.get("FLY_APP_NAME"),
+            os.environ.get("HEROKU_APP_ID"),
+            os.environ.get("VERCEL"),
+            os.environ.get("NETLIFY"),
+        ])
         if settings.auth.environment == "dev" and _is_prod_platform:
             logger.critical("security.rbac_dev_bypass_blocked_in_prod")
             raise AuthenticationError("Authentication required")
