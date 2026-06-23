@@ -5,6 +5,7 @@ import { SearchBar } from '../components/search/SearchBar';
 import { StreamingAnswer } from '../components/search/StreamingAnswer';
 import { CitationList } from '../components/search/CitationList';
 import { streamRAGQuery, type Citation } from '../services/rag';
+import { Breadcrumb } from '../components/ui/Breadcrumb';
 
 const MAX_QUERY_LENGTH = 1000;
 
@@ -68,9 +69,10 @@ export function Search() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)]">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="text-center mb-8">
+    <div className="min-h-screen">
+      <div className="px-4 py-8">
+        <Breadcrumb auto />
+        <div className="text-center mb-8 mt-4">
           <h1 className="text-3xl font-bold mb-2 animate-fade-up" style={{ fontFamily: 'var(--font-display)' }}>{t('search.title')}</h1>
           <p className="text-[var(--text-secondary)]">
             {t('search.subtitle')}

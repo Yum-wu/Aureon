@@ -1,12 +1,14 @@
 /**
  * Admin 布局组件
- * 左侧导航 + 面包屑 + 内容区，响应式侧边栏
+ * 使用全局设计系统的面包屑 + 标签页模式
+ * （全局侧边栏已处理导航，这里只需要面包屑和标签页）
  */
 
 import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LayoutDashboard, Users, Shield, Folder, ClipboardList, Flag, Key } from 'lucide-react';
-import { useAdminViewStore } from '../../stores/useAdminViewStore';
+import { Breadcrumb } from '../ui/Breadcrumb';
+import { Tabs } from '../ui/Tabs';
 
 /** Admin 标签页类型 */
 export type AdminTab = 'overview' | 'users' | 'roles' | 'workspaces' | 'audit' | 'flags' | 'sso';
@@ -20,75 +22,57 @@ interface AdminLayoutProps {
 }
 
 /** 标签页配置 */
-const TAB_CONFIG: { key: AdminTab; icon: ReactNode }[] = [
-  { key: 'overview', icon: <LayoutDashboard size={16} /> },
-  { key: 'users', icon: <Users size={16} /> },
-  { key: 'roles', icon: <Shield size={16} /> },
-  { key: 'workspaces', icon: <Folder size={16} /> },
-  { key: 'audit', icon: <ClipboardList size={16} /> },
-  { key: 'flags', icon: <Flag size={16} /> },
-  { key: 'sso', icon: <Key size={16} /> },
+const TAB_CONFIG: { key: AdminTab; icon: ReactNode; i18nKey: string }[] = [
+  { key: 'overview', icon: <LayoutDashboard size={16} />, i18nKey: 'admin.tabs.overview' },
+  { key: 'users', icon: <Users size={16} />, i18nKey: 'admin.tabs.users' },
+  { key: 'roles', icon: <Shield size={16} />, i18nKey: 'admin.tabs.roles' },
+  { key: 'workspaces', icon: <Folder size={16} />, i18nKey: 'admin.tabs.workspaces' },
+  { key: 'audit', icon: <ClipboardList size={16} />, i18nKey: 'admin.tabs.audit' },
+  { key: 'flags', icon: <Flag size={16} />, i18nKey: 'admin.tabs.flags' },
+  { key: 'sso', icon: <Key size={16} />, i18nKey: 'admin.tabs.sso' },
 ];
 
 export function AdminLayout({ children, activeTab, onTabChange }: AdminLayoutProps) {
   const { t } = useTranslation();
-  // 持久化折叠状态：刷新后保留用户偏好
-  const sidebarCollapsed = useAdminViewStore((s) => s.sidebarCollapsed);
-  const setSidebarCollapsed = useAdminViewStore((s) => s.setSidebarCollapsed);
+
+  const tabs = TAB_CONFIG.map(({ key, icon, i18nKey }) => ({
+    id: key,
+    label: t(i18nKey),
+    icon,
+  }));
 
   return (
-    <div className="flex h-full min-h-0">
-      {/* 侧边栏 */}
-      <aside
-        className={`shrink-0 border-r border-[var(--border)] bg-[var(--bg-secondary)] transition-all duration-200 ${
-          sidebarCollapsed ? 'w-14' : 'w-52'
-        }`}
-      >
-        {/* 折叠按钮 */}
-        <div className="flex items-center justify-end p-2">
-          <button
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="p-1.5 rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-inset)] transition-colors"
-            aria-label={sidebarCollapsed ? t('admin.sidebar.expand', '展开侧边栏') : t('admin.sidebar.collapse', '收起侧边栏')}
-          >
-            {sidebarCollapsed ? '→' : '←'}
-          </button>
-        </div>
+    <div className="p-6">
+      {/* Breadcrumb */}
+      <Breadcrumb
+        items={[
+          { label: 'Aureon', href: '/' },
+          { label: t('admin.title'), href: '/admin' },
+          { label: t(`admin.tabs.${activeTab}`) },
+        ]}
+      />
 
-        {/* 导航列表 */}
-        <nav className="px-2 space-y-0.5">
-          {TAB_CONFIG.map(({ key, icon }) => (
-            <button
-              key={key}
-              onClick={() => onTabChange(key)}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors ${
-                activeTab === key
-                  ? 'bg-[var(--accent-soft)] text-[var(--accent)] font-medium'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-inset)]'
-              }`}
-              title={t(`admin.tabs.${key}`)}
-            >
-              <span className="leading-none shrink-0">{icon}</span>
-              {!sidebarCollapsed && <span>{t(`admin.tabs.${key}`)}</span>}
-            </button>
-          ))}
-        </nav>
-      </aside>
+      {/* Header */}
+      <div className="mt-4 mb-6">
+        <h1
+          className="text-2xl font-bold text-[var(--fg)] tracking-tight"
+          style={{ fontFamily: 'var(--font-display)' }}
+        >
+          {t('admin.title')}
+        </h1>
+        <p className="text-sm text-[var(--fg-tertiary)] mt-1">{t('admin.subtitle', 'Manage users, roles, and system settings')}</p>
+      </div>
 
-      {/* 主内容区 */}
-      <main className="flex-1 min-w-0 flex flex-col">
-        {/* 面包屑 */}
-        <div className="flex items-center gap-2 px-6 py-3 border-b border-[var(--border)] bg-[var(--bg-primary)]">
-          <span className="text-xs text-[var(--text-tertiary)]">{t('admin.title')}</span>
-          <span className="text-xs text-[var(--text-tertiary)]">/</span>
-          <span className="text-xs text-[var(--text-secondary)] font-medium">
-            {t(`admin.tabs.${activeTab}`)}
-          </span>
-        </div>
+      {/* Tabs */}
+      <Tabs
+        tabs={tabs}
+        activeTab={activeTab}
+        onChange={(id) => onTabChange(id as AdminTab)}
+        className="mb-6"
+      />
 
-        {/* 内容 */}
-        <div className="flex-1 overflow-auto p-6">{children}</div>
-      </main>
+      {/* Content */}
+      <div>{children}</div>
     </div>
   );
 }

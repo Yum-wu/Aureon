@@ -75,10 +75,20 @@ export interface UIState {
   mobileMenuOpen: boolean;
   /** AI 免责声明是否启用 */
   aiDisclaimerEnabled: boolean;
+  /** 全局侧边栏是否折叠 */
+  sidebarCollapsed: boolean;
+  /** 移动端侧边栏抽屉是否打开 */
+  mobileSidebarOpen: boolean;
   /** 设置移动端菜单状态 */
   setMobileMenuOpen: (open: boolean) => void;
   /** 切换 AI 免责声明 */
   toggleAiDisclaimer: () => void;
+  /** 设置全局侧边栏折叠状态 */
+  setSidebarCollapsed: (collapsed: boolean) => void;
+  /** 切换侧边栏折叠 */
+  toggleSidebarCollapsed: () => void;
+  /** 设置移动端侧边栏抽屉状态 */
+  setMobileSidebarOpen: (open: boolean) => void;
 }
 
 /** 用户意图快照接口（持久化到 SafeStorage） */

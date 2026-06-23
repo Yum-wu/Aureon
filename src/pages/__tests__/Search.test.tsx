@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 
 // Mock rag service
 const mockStreamRAGQuery = vi.fn();
@@ -72,7 +73,7 @@ describe('Search', () => {
 
   it('renders initial state with title and empty search', async () => {
     await act(async () => {
-      render(<Search />);
+      render(<MemoryRouter><Search /></MemoryRouter>);
     });
     expect(screen.getByText('search.title')).toBeInTheDocument();
     expect(screen.getByText('search.subtitle')).toBeInTheDocument();
@@ -81,7 +82,7 @@ describe('Search', () => {
 
   it('does not show answer area initially', async () => {
     await act(async () => {
-      render(<Search />);
+      render(<MemoryRouter><Search /></MemoryRouter>);
     });
     expect(screen.queryByTestId('streaming-answer')).not.toBeInTheDocument();
   });
@@ -89,7 +90,7 @@ describe('Search', () => {
   it('shows error when query exceeds max length', async () => {
     const user = userEvent.setup();
     await act(async () => {
-      render(<Search />);
+      render(<MemoryRouter><Search /></MemoryRouter>);
     });
 
     const input = screen.getByTestId('search-input');
@@ -117,7 +118,7 @@ describe('Search', () => {
 
     const user = userEvent.setup();
     await act(async () => {
-      render(<Search />);
+      render(<MemoryRouter><Search /></MemoryRouter>);
     });
 
     const input = screen.getByTestId('search-input');
@@ -134,7 +135,7 @@ describe('Search', () => {
 
     const user = userEvent.setup();
     await act(async () => {
-      render(<Search />);
+      render(<MemoryRouter><Search /></MemoryRouter>);
     });
 
     const input = screen.getByTestId('search-input');
@@ -154,7 +155,7 @@ describe('Search', () => {
 
     const user = userEvent.setup();
     await act(async () => {
-      render(<Search />);
+      render(<MemoryRouter><Search /></MemoryRouter>);
     });
 
     const input = screen.getByTestId('search-input');
@@ -167,7 +168,7 @@ describe('Search', () => {
 
   it('displays character count', async () => {
     await act(async () => {
-      render(<Search />);
+      render(<MemoryRouter><Search /></MemoryRouter>);
     });
     expect(screen.getByText('0/1000')).toBeInTheDocument();
   });

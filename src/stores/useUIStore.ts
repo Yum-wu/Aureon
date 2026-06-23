@@ -10,6 +10,8 @@ export const useUIStore = create<UIState>()(
     (set) => ({
       mobileMenuOpen: false,
       aiDisclaimerEnabled: true,
+      sidebarCollapsed: false,
+      mobileSidebarOpen: false,
 
       setMobileMenuOpen: (open: boolean) => {
         set({ mobileMenuOpen: open });
@@ -18,13 +20,26 @@ export const useUIStore = create<UIState>()(
       toggleAiDisclaimer: () => {
         set((state) => ({ aiDisclaimerEnabled: !state.aiDisclaimerEnabled }));
       },
+
+      setSidebarCollapsed: (collapsed: boolean) => {
+        set({ sidebarCollapsed: collapsed });
+      },
+
+      toggleSidebarCollapsed: () => {
+        set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed }));
+      },
+
+      setMobileSidebarOpen: (open: boolean) => {
+        set({ mobileSidebarOpen: open });
+      },
     }),
     {
       name: 'aureon:ui',
       storage: createJSONStorage(() => safeStorage),
-      // 只持久化 aiDisclaimerEnabled，mobileMenuOpen 是会话级状态
+      // 持久化 aiDisclaimerEnabled + sidebarCollapsed，mobileMenuOpen/mobileSidebarOpen 是会话级状态
       partialize: (state) => ({
         aiDisclaimerEnabled: state.aiDisclaimerEnabled,
+        sidebarCollapsed: state.sidebarCollapsed,
       }),
     }
   )
