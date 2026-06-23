@@ -95,7 +95,7 @@ export function Search() {
         </div>
 
         {suggestions.length > 0 && !answer && !isLoading && (
-          <div className="flex flex-wrap gap-2 mt-4">
+          <div className="flex flex-wrap justify-center gap-2 mt-4 max-w-3xl mx-auto">
             {suggestions.map((s, i) => (
               <button
                 key={i}
