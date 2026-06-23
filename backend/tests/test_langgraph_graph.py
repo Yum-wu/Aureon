@@ -92,5 +92,5 @@ class TestRunWorkflow:
 
         result = await run_workflow("test")
         assert result["error"] is not None
-        assert "LLM crash" in result["error"]
-        assert "处理出错" in result["answer"]
+        assert result["error"] == "internal_error"
+        assert result["answer"] == "处理出错，请稍后重试。"
