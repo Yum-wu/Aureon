@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Aureon 风格对比</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #080808; color: #aaa; font-family: sans-serif; padding: 20px; }
+h1 { color: #ddd; text-align: center; font-size: 18px; margin-bottom: 6px; }
+.sub { text-align: center; color: #555; font-size: 12px; margin-bottom: 20px; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 1600px; margin: 0 auto; }
+@media (max-width: 1000px) { .grid { grid-template-columns: 1fr; } }
+.label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+/* App shell */
+.app { background: #111; border: 1px solid #222; border-radius: 10px; height: 700px; display: flex; flex-direction: column; overflow: hidden; }
+.app-c { background: #0d0b14; border-color: #1a1030; }
+/* Sidebar */
+.sb { width: 200px; min-width: 200px; background: #191919; padding: 12px 8px; display: flex; flex-direction: column; gap: 2px; border-right: 1px solid #222; }
+.sb-c { background: #130f20; border-color: #1a1030; }
+.logo { color: #eee; font-weight: 700; font-size: 15px; padding: 4px 8px 14px; }
+.sec { font-size: 9px; color: #555; text-transform: uppercase; letter-spacing: 1px; padding: 8px 8px 3px; font-weight: 600; }
+.item { padding: 6px 8px; border-radius: 6px; font-size: 12px; color: #888; display: flex; align-items: center; gap: 6px; }
+.item:hover { background: #222; color: #ccc; }
+.item.act { background: rgba(94,106,210,0.10); color: #5E6AD2; font-weight: 500; }
+.item.act-c { background: rgba(139,92,246,0.10); color: #8B5CF6; }
+.badge { margin-left: auto; font-size: 9px; padding: 0 5px; border-radius: 99px; background: rgba(94,106,210,0.10); color: #5E6AD2; }
+.badge-c { background: rgba(139,92,246,0.10); color: #8B5CF6; }
+.user { margin-top: auto; padding: 8px; border-top: 1px solid #222; display: flex; align-items: center; gap: 6px; }
+.user-c { border-color: #1a1030; }
+.avatar { width: 24px; height: 24px; border-radius: 50%; background: #5E6AD2; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; }
+.avatar-c { background: #8B5CF6; }
+.uname { font-size: 11px; color: #ccc; }
+.urole { font-size: 9px; color: #555; }
+/* Main */
+.wrap { display: flex; flex: 1; overflow: hidden; }
+.content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+/* Topbar */
+.tb { padding: 10px 16px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; }
+.tb-c { border-color: #1a1030; }
+.tbt { font-size: 13px; font-weight: 600; color: #ddd; }
+.tbs { font-size: 10px; color: #555; margin-top: 2px; display: flex; gap: 6px; align-items: center; }
+.mtag { font-size: 9px; padding: 1px 6px; border-radius: 99px; background: rgba(94,106,210,0.10); color: #5E6AD2; display: inline-flex; align-items: center; gap: 4px; }
+.mtag-c { background: rgba(139,92,246,0.10); color: #8B5CF6; }
+.mdot { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
+.btns { display: flex; gap: 6px; }
+.btn { padding: 4px 10px; border-radius: 6px; border: 1px solid #333; background: transparent; color: #888; font-size: 11px; cursor: pointer; }
+.btn:hover { color: #ccc; border-color: #555; }
+.btn-pri { background: #5E6AD2; border-color: #5E6AD2; color: #fff; }
+.btn-pri:hover { background: #6E7CE0; }
+.btn-pri-c { background: #8B5CF6; border-color: #8B5CF6; }
+.btn-pri-c:hover { background: #A78BFA; }
+/* Metrics */
+.mets { display: flex; gap: 8px; padding: 0 16px 10px; }
+.met { flex: 1; background: #191919; border: 1px solid #222; border-radius: 8px; padding: 10px 12px; }
+.met-c { background: #130f20; border-color: #1a1030; }
+.ml { font-size: 10px; color: #555; margin-bottom: 3px; }
+.mv { font-size: 20px; font-weight: 700; color: #ddd; }
+.md { font-size: 10px; margin-top: 2px; }
+.md-up { color: #22C55E; }
+/* Features */
+.feats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 16px 12px; }
+.feat { background: #191919; border: 1px solid #222; border-radius: 8px; padding: 10px 12px; }
+.feat-c { background: #130f20; border-color: #1a1030; }
+.fic { width: 28px; height: 28px; border-radius: 6px; background: rgba(94,106,210,0.10); color: #5E6AD2; display: flex; align-items: center; justify-content: center; font-size: 12px; margin-bottom: 6px; }
+.fic-c { background: rgba(139,92,246,0.10); color: #8B5CF6; }
+.ft { font-size: 12px; font-weight: 600; color: #ddd; margin-bottom: 3px; }
+.fd { font-size: 10px; color: #888; line-height: 1.4; }
+/* Chat */
+.chat { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.bub { max-width: 70%; padding: 10px 14px; border-radius: 10px; font-size: 12px; line-height: 1.5; }
+.bub-u { align-self: flex-end; background: #5E6AD2; color: #fff; border-bottom-right-radius: 4px; }
+.bub-u-c { background: #8B5CF6; }
+.bub-ai { align-self: flex-start; background: #191919; border: 1px solid #222; color: #ccc; border-bottom-left-radius: 4px; }
+.bub-ai-c { background: #130f20; border-color: #1a1030; }
+.meta { font-size: 9px; color: #555; margin-top: 4px; display: flex; gap: 8px; }
+.stag { font-size: 9px; padding: 0 5px; border-radius: 99px; background: rgba(94,106,210,0.10); color: #5E6AD2; }
+.stag-c { background: rgba(139,92,246,0.10); color: #8B5CF6; }
+.cb { background: #1f1f1f; border: 1px solid #2a2a2a; border-radius: 6px; padding: 8px 10px; margin-top: 6px; font-family: monospace; font-size: 10px; color: #ccc; line-height: 1.6; }
+.cb-c { background: #1a1030; border-color: #1a1030; }
+.kw { color: #5E6AD2; }
+.kw-c { color: #8B5CF6; }
+.str { color: #22C55E; }
+.cm { color: #555; font-style: italic; }
+/* Input */
+.ib { padding: 10px 16px; border-top: 1px solid #222; background: #191919; }
+.ib-c { border-color: #1a1030; background: #130f20; }
+.ib-in { display: flex; align-items: center; gap: 8px; background: #111; border: 1px solid #2a2a2a; border-radius: 10px; padding: 6px 12px; }
+.ib-in-c { background: #0d0b14; border-color: #1a1030; }
+.ii { flex: 1; background: none; border: none; outline: none; color: #ccc; font-size: 12px; }
+.ii::placeholder { color: #444; }
+.send { width: 28px; height: 28px; border-radius: 6px; background: #5E6AD2; border: none; color: #fff; cursor: pointer; font-size: 12px; }
+.send:hover { background: #6E7CE0; }
+.send-c { background: #8B5CF6; }
+.send-c:hover { background: #A78BFA; }
+.tlb { width: 26px; height: 26px; border-radius: 4px; background: transparent; border: none; color: #444; cursor: pointer; font-size: 12px; }
+.tlb:hover { color: #888; }
+.footer { text-align: center; margin-top: 30px; font-size: 11px; color: #333; line-height: 1.8; }
+b { color: #777; }
+</style>
+</head>
+<body>
+
+<h1>Aureon 设计风格对比</h1>
+<p class="sub">左侧：方案 A Linear Neutral &middot; 右侧：方案 C Violet Tech</p>
+
+<div class="grid">
+
+  <!-- ========== SCHEME A ========== -->
+  <div>
+    <div class="label" style="color:#5E6AD2;">方案 A &middot; Linear Neutral &middot; Indigo #5E6AD2</div>
+    <div class="app">
+      <div class="wrap">
+        <div class="sb">
+          <div class="logo">Aureon</div>
+          <div class="sec">Main</div>
+          <div class="item act">
+            <span>&#128172;</span> Chat
+            <span class="badge">3</span>
+          </div>
+          <div class="item"><span>&#128218;</span> Knowledge</div>
+          <div class="item"><span>&#128202;</span> Analytics</div>
+          <div class="sec">Tools</div>
+          <div class="item"><span>&#128295;</span> Tools</div>
+          <div class="item"><span>&#9881;</span> Settings</div>
+          <div class="user">
+            <div class="avatar">Y</div>
+            <div>
+              <div class="uname">Yum</div>
+              <div class="urole">Admin &middot; Pro</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="content">
+          <div class="tb">
+            <div>
+              <div class="tbt">New Conversation</div>
+              <div class="tbs">
+                <span class="mtag"><span class="mdot"></span> gpt-4o-mini</span>
+              </div>
+            </div>
+            <div class="btns">
+              <button class="btn">Share</button>
+              <button class="btn btn-pri">+ New</button>
+            </div>
+          </div>
+
+          <div class="mets">
+            <div class="met">
+              <div class="ml">Response Time</div>
+              <div class="mv">186ms</div>
+              <div class="md md-up">&darr; 12% vs last week</div>
+            </div>
+            <div class="met">
+              <div class="ml">Recall@5</div>
+              <div class="mv">0.92</div>
+              <div class="md md-up">&uarr; 3.4% vs baseline</div>
+            </div>
+            <div class="met">
+              <div class="ml">Tokens</div>
+              <div class="mv">1.2K</div>
+              <div class="md md-up">&darr; 5% vs last month</div>
+            </div>
+          </div>
+
+          <div class="feats">
+            <div class="feat">
+              <div class="fic">&#128269;</div>
+              <div class="ft">Hybrid Search</div>
+              <div class="fd">Dense + Sparse 联合检索，召回率 +34%</div>
+            </div>
+            <div class="feat">
+              <div class="fic">&#129504;</div>
+              <div class="ft">L0&ndash;L3 Memory</div>
+              <div class="fd">四层记忆架构，跨会话个性化</div>
+            </div>
+          </div>
+
+          <div class="chat">
+            <div class="bub bub-u">
+              Aureon 的 RAG Pipeline 和 LangChain Agent 如何协同工作？
+            </div>
+            <div class="bub bub-ai">
+              Aureon 采用 LangChain Agent 作为编排层，RAG Pipeline 作为知识检索工具。<br><br>
+              流程：输入 &rarr; Query Router &rarr; 检索策略 &rarr; LLM 生成。<br><br>
+              <div class="cb">
+                <span class="cm"># Agent init</span><br>
+                <span class="kw">agent</span> = create_agent(<br>
+                &nbsp;&nbsp;model=<span class="str">"gpt-4o-mini"</span>,<br>
+                &nbsp;&nbsp;tools=[rag_tool, memory_tool],<br>
+                &nbsp;&nbsp;memory_layers=[L0, L1, L2, L3]<br>
+                )
+              </div>
+              <div class="meta">
+                <span class="stag">RAG &middot; 3 sources</span>
+                <span>186ms</span>
+                <span>1.2K tokens</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="ib">
+            <div class="ib-in">
+              <button class="tlb">&#128206;</button>
+              <button class="tlb">&#128218;</button>
+              <input class="ii" placeholder="Type a message...">
+              <button class="send">&#10148;</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== SCHEME C ========== -->
+  <div>
+    <div class="label" style="color:#8B5CF6;">方案 C &middot; Violet Tech &middot; Purple #8B5CF6</div>
+    <div class="app app-c">
+      <div class="wrap">
+        <div class="sb sb-c">
+          <div class="logo">Aureon</div>
+          <div class="sec">Main</div>
+          <div class="item act-c">
+            <span>&#128172;</span> Chat
+            <span class="badge-c">3</span>
+          </div>
+          <div class="item"><span>&#128218;</span> Knowledge</div>
+          <div class="item"><span>&#128202;</span> Analytics</div>
+          <div class="sec">Tools</div>
+          <div class="item"><span>&#128295;</span> Tools</div>
+          <div class="item"><span>&#9881;</span> Settings</div>
+          <div class="user user-c">
+            <div class="avatar avatar-c">Y</div>
+            <div>
+              <div class="uname">Yum</div>
+              <div class="urole">Admin &middot; Pro</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="content">
+          <div class="tb tb-c">
+            <div>
+              <div class="tbt">New Conversation</div>
+              <div class="tbs">
+                <span class="mtag mtag-c"><span class="mdot"></span> gpt-4o-mini</span>
+              </div>
+            </div>
+            <div class="btns">
+              <button class="btn">Share</button>
+              <button class="btn btn-pri btn-pri-c">+ New</button>
+            </div>
+          </div>
+
+          <div class="mets">
+            <div class="met met-c">
+              <div class="ml">Response Time</div>
+              <div class="mv">186ms</div>
+              <div class="md md-up">&darr; 12% vs last week</div>
+            </div>
+            <div class="met met-c">
+              <div class="ml">Recall@5</div>
+              <div class="mv">0.92</div>
+              <div class="md md-up">&uarr; 3.4% vs baseline</div>
+            </div>
+            <div class="met met-c">
+              <div class="ml">Tokens</div>
+              <div class="mv">1.2K</div>
+              <div class="md md-up">&darr; 5% vs last month</div>
+            </div>
+          </div>
+
+          <div class="feats">
+            <div class="feat feat-c">
+              <div class="fic fic-c">&#128269;</div>
+              <div class="ft">Hybrid Search</div>
+              <div class="fd">Dense + Sparse 联合检索，召回率 +34%</div>
+            </div>
+            <div class="feat feat-c">
+              <div class="fic fic-c">&#129504;</div>
+              <div class="ft">L0&ndash;L3 Memory</div>
+              <div class="fd">四层记忆架构，跨会话个性化</div>
+            </div>
+          </div>
+
+          <div class="chat">
+            <div class="bub bub-u bub-u-c">
+              Aureon 的 RAG Pipeline 和 LangChain Agent 如何协同工作？
+            </div>
+            <div class="bub bub-ai bub-ai-c">
+              Aureon 采用 LangChain Agent 作为编排层，RAG Pipeline 作为知识检索工具。<br><br>
+              流程：输入 &rarr; Query Router &rarr; 检索策略 &rarr; LLM 生成。<br><br>
+              <div class="cb cb-c">
+                <span class="cm"># Agent init</span><br>
+                <span class="kw kw-c">agent</span> = create_agent(<br>
+                &nbsp;&nbsp;model=<span class="str">"gpt-4o-mini"</span>,<br>
+                &nbsp;&nbsp;tools=[rag_tool, memory_tool],<br>
+                &nbsp;&nbsp;memory_layers=[L0, L1, L2, L3]<br>
+                )
+              </div>
+              <div class="meta">
+                <span class="stag stag-c">RAG &middot; 3 sources</span>
+                <span>186ms</span>
+                <span>1.2K tokens</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="ib ib-c">
+            <div class="ib-in ib-in-c">
+              <button class="tlb">&#128206;</button>
+              <button class="tlb">&#128218;</button>
+              <input class="ii" placeholder="Type a message...">
+              <button class="send send-c">&#10148;</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  <b>方案 A</b>：Indigo #5E6AD2 &middot; 暖灰底色 #111 &middot; 圆角 6&ndash;12px &middot; 专业工具感<br>
+  <b>方案 C</b>：Violet #8B5CF6 &middot; 紫黑底色 #0d0b14 &middot; 圆角 8&ndash;16px &middot; AI 科技感<br><br>
+  请选择方案，我将写入 Aureon 项目文件。
+</div>
+
+</body>
+</html>

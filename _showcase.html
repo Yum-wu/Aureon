@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Design System — Showcase</title>
+  <link rel="stylesheet" href="design-system.css" />
+  <style>
+    /* showcase 布局样式（独立于 design-system.css） */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      background: var(--primitive-color-bg);
+      color: var(--primitive-color-fg);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    .showcase { max-width: 960px; margin: 0 auto; padding: 48px 32px; }
+    .showcase h1 {
+      font-size: 28px; font-weight: 700; margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+    .showcase .subtitle { font-size: 15px; color: var(--primitive-color-muted); margin-bottom: 48px; }
+    .section { margin-bottom: 48px; }
+    .section-title {
+      font-size: 13px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--primitive-color-muted); margin-bottom: 16px;
+      padding-bottom: 8px; border-bottom: 1px solid var(--primitive-color-border);
+    }
+    .grid { display: grid; gap: 12px; }
+    .grid-2 { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+    .grid-4 { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+  </style>
+</head>
+<body>
+  <div class="showcase" data-component="Showcase">
+    <h1>Design System</h1>
+    <p class="subtitle">Auto-generated from design-system.css tokens</p>
+
+    <div class="section" data-component="ColorPalette">
+      <div class="section-title">Color Palette</div>
+      <div class="grid grid-3">
+      <div style="border-radius: 10px; overflow: hidden; border: 1px solid var(--primitive-color-border);">
+        <div style="height: 72px; background: var(--primitive-color-danger); display: flex; align-items: flex-end; padding: 8px 10px;">
+          <span style="font-size: 11px; color: #ffffff; opacity: 0.8;">#DC2626</span>
+        </div>
+        <div style="padding: 8px 10px; background: var(--primitive-color-surface);">
+          <div style="font-size: 12px; font-weight: 500;">Primitive Color Danger</div>
+          <div style="font-size: 11px; color: var(--primitive-color-muted); font-family: monospace;">--primitive-color-danger</div>
+        </div>
+      </div>
+      <div style="border-radius: 10px; overflow: hidden; border: 1px solid var(--primitive-color-border);">
+        <div style="height: 72px; background: var(--primitive-color-danger-foreground); display: flex; align-items: flex-end; padding: 8px 10px;">
+          <span style="font-size: 11px; color: #000000; opacity: 0.8;">#FFFFFF</span>
+        </div>
+        <div style="padding: 8px 10px; background: var(--primitive-color-surface);">
+          <div style="font-size: 12px; font-weight: 500;">Primitive Color Danger Foreground</div>
+          <div style="font-size: 11px; color: var(--primitive-color-muted); font-family: monospace;">--primitive-color-danger-foreground</div>
+        </div>
+      </div>
+      <div style="border-radius: 10px; overflow: hidden; border: 1px solid var(--primitive-color-border);">
+        <div style="height: 72px; background: var(--color-bg); display: flex; align-items: flex-end; padding: 8px 10px;">
+          <span style="font-size: 11px; color: #ffffff; opacity: 0.8;">var(--primitive-color-bg)</span>
+        </div>
+        <div style="padding: 8px 10px; background: var(--primitive-color-surface);">
+          <div style="font-size: 12px; font-weight: 500;">Color Bg</div>
+          <div style="font-size: 11px; color: var(--primitive-color-muted); font-family: monospace;">--color-bg</div>
+        </div>
+      </div>
+      <div style="border-radius: 10px; overflow: hidden; border: 1px solid var(--primitive-color-border);">
+        <div style="height: 72px; background: var(--color-surface); display: flex; align-items: flex-end; padding: 8px 10px;">
+          <span style="font-size: 11px; color: #ffffff; opacity: 0.8;">var(--primitive-color-surface)</span>
+        </div>
+        <div style="padding: 8px 10px; background: var(--primitive-color-surface);">
+          <div style="font-size: 12px; font-weight: 500;">Color Surface</div>
+          <div style="font-size: 11px; color: var(--primitive-color-muted); font-family: monospace;">--color-surface</div>
+        </div>
+      </div>
+      <div style="border-radius: 10px; overflow: hidden; border: 1px solid var(--primitive-color-border);">
+        <div style="height: 72px; background: var(--color-fg); display: flex; align-items: flex-end; padding: 8px 10px;">
+          <span style="font-size: 11px; color: #ffffff; opacity: 0.8;">var(--primitive-color-fg)</span>
+        </div>
+        <div style="padding: 8px 10px; background: var(--primitive-color-surface);">
+          <div style="font-size: 12px; font-weight: 500;">Color Fg</div>
+          <div style="font-size: 11px; color: var(--primitive-color-muted); font-family: monospace;">--color-fg</div>
+        </div>
+      </div>
+      <div style="border-radius: 10px; overflow: hidden; border: 1px solid var(--primitive-color-border);">
+        <div style="height: 72px; background: var(--color-muted); display: flex; align-items: flex-end; padding: 8px 10px;">
+          <span style="font-size: 11px; color: #ffffff; opacity: 0.8;">var(--primitive-color-muted)</span>
+        </div>
+        <div style="padding: 8px 10px; background: var(--primitive-color-surface);">
+          <div style="font-size: 12px; font-weight: 500;">Color Muted</div>
+          <div style="font-size: 11px; color: var(--primitive-color-muted); font-family: monospace;">--color-muted</div>
+        </div>
+      </div>
+      <div style="border-radius: 10px; overflow: hidden; border: 1px solid var(--primitive-color-border);">
+        <div style="height: 72px; background: var(--color-border); display: flex; align-items: flex-end; padding: 8px 10px;">
+          <span style="font-size: 11px; color: #ffffff; opacity: 0.8;">var(--primitive-color-border)</span>
+        </div>
+        <div style="padding: 8px 10px; background: var(--primitive-color-surface);">
+          <div style="font-size: 12px; font-weight: 500;">Color Border</div>
+          <div style="font-size: 11px; color: var(--primitive-color-muted); font-family: monospace;">--color-border</div>
+        </div>
+      </div>
+      <div style="border-radius: 10px; overflow: hidden; border: 1px solid var(--primitive-color-border);">
+        <div style="height: 72px; background: var(--color-accent); display: flex; align-items: flex-end; padding: 8px 10px;">
+          <span style="font-size: 11px; color: #ffffff; opacity: 0.8;">var(--primitive-color-accent)</span>
+        </div>
+        <div style="padding: 8px 10px; background: var(--primitive-color-surface);">
+          <div style="font-size: 12px; font-weight: 500;">Color Accent</div>
+          <div style="font-size: 11px; color: var(--primitive-color-muted); font-family: monospace;">--color-accent</div>
+        </div>
+      </div>
+      <div style="border-radius: 10px; overflow: hidden; border: 1px solid var(--primitive-color-border);">
+        <div style="height: 72px; background: var(--color-accent-contrast); display: flex; align-items: flex-end; padding: 8px 10px;">
+          <span style="font-size: 11px; color: #ffffff; opacity: 0.8;">var(--primitive-color-accent-foreground)</span>
+        </div>
+        <div style="padding: 8px 10px; background: var(--primitive-color-surface);">
+          <div style="font-size: 12px; font-weight: 500;">Color Accent Contrast</div>
+          <div style="font-size: 11px; color: var(--primitive-color-muted); font-family: monospace;">--color-accent-contrast</div>
+        </div>
+      </div>
+      <div style="border-radius: 10px; overflow: hidden; border: 1px solid var(--primitive-color-border);">
+        <div style="height: 72px; background: var(--color-danger); display: flex; align-items: flex-end; padding: 8px 10px;">
+          <span style="font-size: 11px; color: #ffffff; opacity: 0.8;">var(--primitive-color-danger)</span>
+        </div>
+        <div style="padding: 8px 10px; background: var(--primitive-color-surface);">
+          <div style="font-size: 12px; font-weight: 500;">Color Danger</div>
+          <div style="font-size: 11px; color: var(--primitive-color-muted); font-family: monospace;">--color-danger</div>
+        </div>
+      </div>
+      <div style="border-radius: 10px; overflow: hidden; border: 1px solid var(--primitive-color-border);">
+        <div style="height: 72px; background: var(--color-danger-contrast); display: flex; align-items: flex-end; padding: 8px 10px;">
+          <span style="font-size: 11px; color: #ffffff; opacity: 0.8;">var(--primitive-color-danger-foreground)</span>
+        </div>
+        <div style="padding: 8px 10px; background: var(--primitive-color-surface);">
+          <div style="font-size: 12px; font-weight: 500;">Color Danger Contrast</div>
+          <div style="font-size: 11px; color: var(--primitive-color-muted); font-family: monospace;">--color-danger-contrast</div>
+        </div>
+      </div>
+      <div style="border-radius: 10px; overflow: hidden; border: 1px solid var(--primitive-color-border);">
+        <div style="height: 72px; background: var(--color-ring); display: flex; align-items: flex-end; padding: 8px 10px;">
+          <span style="font-size: 11px; color: #ffffff; opacity: 0.8;">var(--primitive-color-ring)</span>
+        </div>
+        <div style="padding: 8px 10px; background: var(--primitive-color-surface);">
+          <div style="font-size: 12px; font-weight: 500;">Color Ring</div>
+          <div style="font-size: 11px; color: var(--primitive-color-muted); font-family: monospace;">--color-ring</div>
+        </div>
+      </div>
+      </div>
+    </div>
+
+    <div class="section" data-component="Typography">
+      <div class="section-title">Typography</div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Primitive Color Bg</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--primitive-color-bg: oklch(98% 0.005 250)</div>
+        </div>
+        <div><span>oklch(98% 0.005 250)</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Primitive Color Surface</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--primitive-color-surface: oklch(100% 0 0)</div>
+        </div>
+        <div><span>oklch(100% 0 0)</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Primitive Color Fg</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--primitive-color-fg: oklch(22% 0.02 240)</div>
+        </div>
+        <div><span>oklch(22% 0.02 240)</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Primitive Color Muted</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--primitive-color-muted: oklch(50% 0.018 240)</div>
+        </div>
+        <div><span>oklch(50% 0.018 240)</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Primitive Color Border</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--primitive-color-border: oklch(90% 0.008 240)</div>
+        </div>
+        <div><span>oklch(90% 0.008 240)</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Primitive Color Accent</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--primitive-color-accent: oklch(58% 0.16 145)</div>
+        </div>
+        <div><span>oklch(58% 0.16 145)</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Primitive Color Accent Foreground</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--primitive-color-accent-foreground: oklch(100% 0 0)</div>
+        </div>
+        <div><span>oklch(100% 0 0)</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Primitive Color Ring</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--primitive-color-ring: oklch(58% 0.16 145)</div>
+        </div>
+        <div><span>oklch(58% 0.16 145)</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Primitive Duration Fast</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--primitive-duration-fast: 150ms</div>
+        </div>
+        <div><span>150ms</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Primitive Duration Normal</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--primitive-duration-normal: 220ms</div>
+        </div>
+        <div><span>220ms</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Font Display</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--font-display: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif</div>
+        </div>
+        <div><span style="font-family: var(--font-display); font-size: 16px;">The quick brown fox</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Font Body</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--font-body: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif</div>
+        </div>
+        <div><span style="font-family: var(--font-body); font-size: 16px;">The quick brown fox</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Font Mono</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--font-mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, Menlo, monospace</div>
+        </div>
+        <div><span style="font-family: var(--font-mono); font-size: 16px;">The quick brown fox</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Duration Fast</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--duration-fast: var(--primitive-duration-fast)</div>
+        </div>
+        <div><span>var(--primitive-duration-fast)</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Duration Normal</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--duration-normal: var(--primitive-duration-normal)</div>
+        </div>
+        <div><span>var(--primitive-duration-normal)</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Button Bg</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--button-bg: var(--color-accent)</div>
+        </div>
+        <div><span>var(--color-accent)</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Button Fg</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--button-fg: var(--color-accent-contrast)</div>
+        </div>
+        <div><span>var(--color-accent-contrast)</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Button Border</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--button-border: var(--color-accent)</div>
+        </div>
+        <div><span>var(--color-accent)</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Button Bg Hover</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--button-bg-hover: color-mix(in oklch, var(--color-accent) 88%, var(--color-fg))</div>
+        </div>
+        <div><span>color-mix(in oklch, var(--color-accent) 88%, var(--color-fg))</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Button Radius</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--button-radius: var(--radius-md)</div>
+        </div>
+        <div><span>var(--radius-md)</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Button Padding X</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--button-padding-x: var(--spacing-md)</div>
+        </div>
+        <div><span>var(--spacing-md)</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Button Padding Y</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--button-padding-y: var(--spacing-sm)</div>
+        </div>
+        <div><span>var(--spacing-sm)</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Card Bg</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--card-bg: var(--color-surface)</div>
+        </div>
+        <div><span>var(--color-surface)</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Card Fg</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--card-fg: var(--color-fg)</div>
+        </div>
+        <div><span>var(--color-fg)</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Card Border</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--card-border: var(--color-border)</div>
+        </div>
+        <div><span>var(--color-border)</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Card Padding</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--card-padding: var(--spacing-lg)</div>
+        </div>
+        <div><span>var(--spacing-lg)</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Card Radius</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--card-radius: var(--radius-lg)</div>
+        </div>
+        <div><span>var(--radius-lg)</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Card Shadow</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--card-shadow: var(--shadow-sm)</div>
+        </div>
+        <div><span>var(--shadow-sm)</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Input Bg</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--input-bg: var(--color-surface)</div>
+        </div>
+        <div><span>var(--color-surface)</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Input Fg</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--input-fg: var(--color-fg)</div>
+        </div>
+        <div><span>var(--color-fg)</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Input Border</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--input-border: var(--color-border)</div>
+        </div>
+        <div><span>var(--color-border)</span></div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--color-border, var(--border, #e5e5e5));">
+        <div>
+          <div style="font-size: 12px; font-weight: 500;">Input Focus Ring</div>
+          <div style="font-size: 11px; color: #999; font-family: monospace;">--input-focus-ring: var(--color-ring)</div>
+        </div>
+        <div><span>var(--color-ring)</span></div>
+      </div>
+    </div>
+
+    <div class="section" data-component="SpacingScale">
+      <div class="section-title">Spacing</div>
+      <div style="display: flex; align-items: center; gap: 12px; padding: 6px 0;">
+        <div style="width: var(--primitive-space-1); height: 20px; background: var(--color-primary, #3b82f6); border-radius: 4px; min-width: 4px; opacity: 0.7;"></div>
+        <div style="font-size: 12px; white-space: nowrap;">
+          <span style="font-weight: 500;">Primitive Space 1</span>
+          <span style="color: #999; font-family: monospace; margin-left: 6px;">4px</span>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px; padding: 6px 0;">
+        <div style="width: var(--primitive-space-2); height: 20px; background: var(--color-primary, #3b82f6); border-radius: 4px; min-width: 4px; opacity: 0.7;"></div>
+        <div style="font-size: 12px; white-space: nowrap;">
+          <span style="font-weight: 500;">Primitive Space 2</span>
+          <span style="color: #999; font-family: monospace; margin-left: 6px;">8px</span>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px; padding: 6px 0;">
+        <div style="width: var(--primitive-space-3); height: 20px; background: var(--color-primary, #3b82f6); border-radius: 4px; min-width: 4px; opacity: 0.7;"></div>
+        <div style="font-size: 12px; white-space: nowrap;">
+          <span style="font-weight: 500;">Primitive Space 3</span>
+          <span style="color: #999; font-family: monospace; margin-left: 6px;">12px</span>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px; padding: 6px 0;">
+        <div style="width: var(--primitive-space-4); height: 20px; background: var(--color-primary, #3b82f6); border-radius: 4px; min-width: 4px; opacity: 0.7;"></div>
+        <div style="font-size: 12px; white-space: nowrap;">
+          <span style="font-weight: 500;">Primitive Space 4</span>
+          <span style="color: #999; font-family: monospace; margin-left: 6px;">16px</span>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px; padding: 6px 0;">
+        <div style="width: var(--primitive-space-6); height: 20px; background: var(--color-primary, #3b82f6); border-radius: 4px; min-width: 4px; opacity: 0.7;"></div>
+        <div style="font-size: 12px; white-space: nowrap;">
+          <span style="font-weight: 500;">Primitive Space 6</span>
+          <span style="color: #999; font-family: monospace; margin-left: 6px;">24px</span>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px; padding: 6px 0;">
+        <div style="width: var(--primitive-space-10); height: 20px; background: var(--color-primary, #3b82f6); border-radius: 4px; min-width: 4px; opacity: 0.7;"></div>
+        <div style="font-size: 12px; white-space: nowrap;">
+          <span style="font-weight: 500;">Primitive Space 10</span>
+          <span style="color: #999; font-family: monospace; margin-left: 6px;">40px</span>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px; padding: 6px 0;">
+        <div style="width: var(--primitive-space-16); height: 20px; background: var(--color-primary, #3b82f6); border-radius: 4px; min-width: 4px; opacity: 0.7;"></div>
+        <div style="font-size: 12px; white-space: nowrap;">
+          <span style="font-weight: 500;">Primitive Space 16</span>
+          <span style="color: #999; font-family: monospace; margin-left: 6px;">64px</span>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px; padding: 6px 0;">
+        <div style="width: var(--primitive-radius-sm); height: 20px; background: var(--color-primary, #3b82f6); border-radius: 4px; min-width: 4px; opacity: 0.7;"></div>
+        <div style="font-size: 12px; white-space: nowrap;">
+          <span style="font-weight: 500;">Primitive Radius Sm</span>
+          <span style="color: #999; font-family: monospace; margin-left: 6px;">4px</span>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px; padding: 6px 0;">
+        <div style="width: var(--primitive-radius-md); height: 20px; background: var(--color-primary, #3b82f6); border-radius: 4px; min-width: 4px; opacity: 0.7;"></div>
+        <div style="font-size: 12px; white-space: nowrap;">
+          <span style="font-weight: 500;">Primitive Radius Md</span>
+          <span style="color: #999; font-family: monospace; margin-left: 6px;">8px</span>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px; padding: 6px 0;">
+        <div style="width: var(--primitive-radius-lg); height: 20px; background: var(--color-primary, #3b82f6); border-radius: 4px; min-width: 4px; opacity: 0.7;"></div>
+        <div style="font-size: 12px; white-space: nowrap;">
+          <span style="font-weight: 500;">Primitive Radius Lg</span>
+          <span style="color: #999; font-family: monospace; margin-left: 6px;">12px</span>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px; padding: 6px 0;">
+        <div style="width: var(--spacing-xs); height: 20px; background: var(--color-primary, #3b82f6); border-radius: 4px; min-width: 4px; opacity: 0.7;"></div>
+        <div style="font-size: 12px; white-space: nowrap;">
+          <span style="font-weight: 500;">Spacing Xs</span>
+          <span style="color: #999; font-family: monospace; margin-left: 6px;">var(--primitive-space-1)</span>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px; padding: 6px 0;">
+        <div style="width: var(--spacing-sm); height: 20px; background: var(--color-primary, #3b82f6); border-radius: 4px; min-width: 4px; opacity: 0.7;"></div>
+        <div style="font-size: 12px; white-space: nowrap;">
+          <span style="font-weight: 500;">Spacing Sm</span>
+          <span style="color: #999; font-family: monospace; margin-left: 6px;">var(--primitive-space-2)</span>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px; padding: 6px 0;">
+        <div style="width: var(--spacing-md); height: 20px; background: var(--color-primary, #3b82f6); border-radius: 4px; min-width: 4px; opacity: 0.7;"></div>
+        <div style="font-size: 12px; white-space: nowrap;">
+          <span style="font-weight: 500;">Spacing Md</span>
+          <span style="color: #999; font-family: monospace; margin-left: 6px;">var(--primitive-space-4)</span>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px; padding: 6px 0;">
+        <div style="width: var(--spacing-lg); height: 20px; background: var(--color-primary, #3b82f6); border-radius: 4px; min-width: 4px; opacity: 0.7;"></div>
+        <div style="font-size: 12px; white-space: nowrap;">
+          <span style="font-weight: 500;">Spacing Lg</span>
+          <span style="color: #999; font-family: monospace; margin-left: 6px;">var(--primitive-space-6)</span>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px; padding: 6px 0;">
+        <div style="width: var(--spacing-xl); height: 20px; background: var(--color-primary, #3b82f6); border-radius: 4px; min-width: 4px; opacity: 0.7;"></div>
+        <div style="font-size: 12px; white-space: nowrap;">
+          <span style="font-weight: 500;">Spacing Xl</span>
+          <span style="color: #999; font-family: monospace; margin-left: 6px;">var(--primitive-space-10)</span>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px; padding: 6px 0;">
+        <div style="width: var(--spacing-2xl); height: 20px; background: var(--color-primary, #3b82f6); border-radius: 4px; min-width: 4px; opacity: 0.7;"></div>
+        <div style="font-size: 12px; white-space: nowrap;">
+          <span style="font-weight: 500;">Spacing 2xl</span>
+          <span style="color: #999; font-family: monospace; margin-left: 6px;">var(--primitive-space-16)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" data-component="BorderRadius">
+      <div class="section-title">Border Radius</div>
+      <div class="grid grid-4">
+      <div style="text-align: center;">
+        <div style="width: 64px; height: 64px; border: 2px solid var(--color-primary, #3b82f6); border-radius: var(--radius-sm); margin: 0 auto 8px;"></div>
+        <div style="font-size: 12px; font-weight: 500;">Radius Sm</div>
+        <div style="font-size: 11px; color: #999; font-family: monospace;">var(--primitive-radius-sm)</div>
+      </div>
+      <div style="text-align: center;">
+        <div style="width: 64px; height: 64px; border: 2px solid var(--color-primary, #3b82f6); border-radius: var(--radius-md); margin: 0 auto 8px;"></div>
+        <div style="font-size: 12px; font-weight: 500;">Radius Md</div>
+        <div style="font-size: 11px; color: #999; font-family: monospace;">var(--primitive-radius-md)</div>
+      </div>
+      <div style="text-align: center;">
+        <div style="width: 64px; height: 64px; border: 2px solid var(--color-primary, #3b82f6); border-radius: var(--radius-lg); margin: 0 auto 8px;"></div>
+        <div style="font-size: 12px; font-weight: 500;">Radius Lg</div>
+        <div style="font-size: 11px; color: #999; font-family: monospace;">var(--primitive-radius-lg)</div>
+      </div>
+      </div>
+    </div>
+
+    <div class="section" data-component="Shadows">
+      <div class="section-title">Shadows</div>
+      <div class="grid grid-3">
+      <div style="padding: 24px; background: var(--primitive-color-surface); border-radius: 12px; box-shadow: var(--shadow-sm); text-align: center;">
+        <div style="font-size: 12px; font-weight: 500;">Shadow Sm</div>
+        <div style="font-size: 11px; color: #999; font-family: monospace; margin-top: 4px;">--shadow-sm</div>
+      </div>
+      <div style="padding: 24px; background: var(--primitive-color-surface); border-radius: 12px; box-shadow: var(--shadow-md); text-align: center;">
+        <div style="font-size: 12px; font-weight: 500;">Shadow Md</div>
+        <div style="font-size: 11px; color: #999; font-family: monospace; margin-top: 4px;">--shadow-md</div>
+      </div>
+      </div>
+    </div>
+
+    <div class="section" data-component="ComponentSamples">
+      <div class="section-title">Component Samples</div>
+      <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 24px;">
+        <button style="
+          padding: 10px 20px; border-radius: var(--radius-md, 8px); border: none; cursor: pointer;
+          background: var(--primitive-color-accent); color: #ffffff; font-size: 14px; font-weight: 500;
+        ">Primary Button</button>
+        <button style="
+          padding: 10px 20px; border-radius: var(--radius-md, 8px); border: 1px solid var(--primitive-color-border); cursor: pointer;
+          background: transparent; color: var(--primitive-color-fg); font-size: 14px; font-weight: 500;
+        ">Ghost Button</button>
+        <button style="
+          padding: 10px 20px; border-radius: var(--radius-md, 8px); border: none; cursor: pointer;
+          background: #6366f1; color: #ffffff; font-size: 14px; font-weight: 500;
+        ">Secondary</button>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+        <div style="background: var(--primitive-color-surface); border: 1px solid var(--primitive-color-border); border-radius: var(--radius-md, 8px); padding: 20px;">
+          <div style="font-size: 15px; font-weight: 600; margin-bottom: 6px;">Card Title</div>
+          <div style="font-size: 13px; color: var(--primitive-color-muted); line-height: 1.5;">
+            A sample card component styled with design system tokens. The background, borders, and typography all use token values.
+          </div>
+        </div>
+        <div style="background: var(--primitive-color-surface); border: 1px solid var(--primitive-color-border); border-radius: var(--radius-md, 8px); padding: 20px;">
+          <div style="font-size: 15px; font-weight: 600; margin-bottom: 6px;">Another Card</div>
+          <div style="font-size: 13px; color: var(--primitive-color-muted); line-height: 1.5;">
+            Consistent styling across components ensures a unified visual language throughout the design system.
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 24px;">
+        <div style="display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; background: var(--primitive-color-accent); color: #ffffff; margin-right: 8px;">Badge</div>
+        <div style="display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; background: var(--primitive-color-surface); color: var(--primitive-color-fg); border: 1px solid var(--primitive-color-border); margin-right: 8px;">Outline</div>
+        <div style="display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; background: #6366f1; color: #ffffff;">Info</div>
+      </div>
+
+      <div style="max-width: 400px;">
+        <input type="text" placeholder="Input field sample..." style="
+          width: 100%; padding: 10px 14px; border-radius: var(--radius-md, 8px);
+          border: 1px solid var(--primitive-color-border); background: var(--primitive-color-bg);
+          color: var(--primitive-color-fg); font-size: 14px; outline: none;
+        " />
+      </div>
+    </div>
+  </div>
+</body>
+</html>

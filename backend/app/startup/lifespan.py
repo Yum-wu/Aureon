@@ -121,6 +121,24 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning("Prompt manager init failed (non-fatal): %s", e)
 
+    # ── Periodic cache cleanup (every 5 minutes) ──
+    import asyncio as _asyncio
+
+    async def _cache_cleanup_loop():
+        while True:
+            try:
+                from app.cache.semantic_cache import get_semantic_cache
+                cache = get_semantic_cache()
+                if hasattr(cache, '_mem_exact_cache'):
+                    cache._mem_exact_cache.expire()
+                if hasattr(cache, '_mem_semantic_cache'):
+                    cache._mem_semantic_cache.expire()
+            except Exception:
+                pass
+            await _asyncio.sleep(300)
+
+    cache_cleanup_task = _asyncio.create_task(_cache_cleanup_loop())
+
     logger.info("Startup complete")
 
     yield  # Application runs here
@@ -129,6 +147,13 @@ async def lifespan(app: FastAPI):
     # Close shared httpx client (connection pool)
     if hasattr(app.state, 'http_client'):
         await app.state.http_client.aclose()
+
+    # Cancel periodic cache cleanup
+    cache_cleanup_task.cancel()
+    try:
+        await cache_cleanup_task
+    except _asyncio.CancelledError:
+        pass
 
     # Flush Langfuse traces
     try:

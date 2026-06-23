@@ -67,17 +67,11 @@ async def _record_stream_analytics(
     finally:
         latency_ms = int((time.time() - start_time) * 1000)
 
-        # Improved token estimation using tiktoken
-        try:
-            import tiktoken
-            encoding = tiktoken.get_encoding("cl100k_base")
-            output_tokens = len(encoding.encode(full_text)) if full_text else 0
-            input_tokens = len(encoding.encode(query)) + 500
-        except Exception:
-            # Fallback: estimate based on character count
-            # Chinese: ~1 token/char, English: ~4 chars/token
-            output_tokens = max(full_text_len // 2, 1) if full_text_len else 0
-            input_tokens = len(query) + 500
+        # Token estimation based on character count
+        # Chinese: ~1 token/char, English: ~4 chars/token
+        # Average: ~2 chars per token for mixed content
+        output_tokens = max(full_text_len // 2, 1) if full_text_len else 0
+        input_tokens = len(query) + 500
 
         # 1. Record query stats (Analytics page data source)
         try:

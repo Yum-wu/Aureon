@@ -6,6 +6,7 @@ document rankings through score normalization and weighted aggregation.
 """
 
 import os
+import threading
 import time
 from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass, field
@@ -508,6 +509,9 @@ class EnsembleReranker:
         self._stats = EnsembleRerankerStats()
 
 
+_ensemble_reranker_lock = threading.Lock()
+
+
 def get_ensemble_reranker() -> EnsembleReranker:
     """Get a singleton ensemble reranker instance.
 
@@ -517,7 +521,12 @@ def get_ensemble_reranker() -> EnsembleReranker:
     Returns:
         EnsembleReranker instance with auto-detected available models
     """
-    if not hasattr(get_ensemble_reranker, "_instance"):
+    if hasattr(get_ensemble_reranker, "_instance"):  # Fast path (no lock)
+        return get_ensemble_reranker._instance
+
+    with _ensemble_reranker_lock:
+        if hasattr(get_ensemble_reranker, "_instance"):  # Double-check
+            return get_ensemble_reranker._instance
         get_ensemble_reranker._instance = create_default_ensemble()
     return get_ensemble_reranker._instance
 

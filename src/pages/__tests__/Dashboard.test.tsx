@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import React from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // ── Hooks mock ──
 const mockUseDashboardData = vi.fn();
@@ -94,6 +95,13 @@ afterEach(() => {
   cleanup();
 });
 
+function renderWithQueryClient(ui: React.ReactElement) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
+  );
+}
+
 describe('Dashboard – loading state', () => {
   it('renders loading skeleton', () => {
     mockUseDashboardData.mockReturnValue({
@@ -107,7 +115,7 @@ describe('Dashboard – loading state', () => {
       refetch: vi.fn(),
     });
 
-    render(<Dashboard />);
+    renderWithQueryClient(<Dashboard />);
     expect(screen.getByTestId('dashboard-loading')).toBeInTheDocument();
   });
 });
@@ -125,7 +133,7 @@ describe('Dashboard – error state', () => {
       refetch: vi.fn(),
     });
 
-    render(<Dashboard />);
+    renderWithQueryClient(<Dashboard />);
     expect(screen.getByText('dashboard.error_loading')).toBeInTheDocument();
     expect(screen.getByText('Network error')).toBeInTheDocument();
     expect(screen.getByText('dashboard.retry')).toBeInTheDocument();
