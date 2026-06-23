@@ -243,7 +243,8 @@
     "score": "相关度",
     "history": "搜索历史",
     "empty": "输入问题开始搜索",
-    "no_results": "未找到相关结果"
+    "no_results": "未找到相关结果",
+    "no_sources": "暂无来源引用"
   },
   "crew": {
     "title": "AI 内容工作室",

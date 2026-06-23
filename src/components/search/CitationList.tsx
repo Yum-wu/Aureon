@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 interface Citation {
   id: number;
   title: string;
@@ -11,11 +12,17 @@ interface CitationListProps {
 }
 
 export function CitationList({ citations }: CitationListProps) {
-  if (citations.length === 0) return null;
+  const { t } = useTranslation();
+  if (citations.length === 0) return (
+    <div className="space-y-3">
+      <h3 className="text-sm font-medium text-[var(--text-secondary)]">{t("search.sources") || "Sources"}</h3>
+      <p className="text-xs text-[var(--text-tertiary)]">{t("search.no_sources") || "No sources found"}</p>
+    </div>
+  );
 
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-medium text-[var(--text-secondary)]">Sources</h3>
+      <h3 className="text-sm font-medium text-[var(--text-secondary)]">{t("search.sources") || "Sources"}</h3>
       {citations.map((citation) => (
         <div
           key={citation.id}

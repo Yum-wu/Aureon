@@ -244,7 +244,8 @@
     "score": "Score",
     "history": "Search History",
     "empty": "Ask a question to start searching",
-    "no_results": "No results found"
+    "no_results": "No results found",
+    "no_sources": "No sources available"
   },
   "crew": {
     "title": "AI Content Studio",
