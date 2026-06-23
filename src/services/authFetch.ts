@@ -15,7 +15,6 @@
 
 const API_KEY_STORAGE = "aureon_api_key";
 const JWT_TOKEN_STORAGE = "aureon_jwt_token";
-const ROLE_STORAGE = "aureon_role";
 
 /**
  * 白名单:这些路径的 401 不触发跳转(避免登录页/健康检查自身请求循环)
