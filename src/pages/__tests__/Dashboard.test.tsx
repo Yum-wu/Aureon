@@ -27,6 +27,27 @@ vi.mock('../../hooks/useLatencyHistory', () => ({
   useLatencyHistory: () => [],
 }));
 
+vi.mock('../../hooks/useCacheHistory', () => ({
+  useCacheHistory: () => [],
+}));
+
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => vi.fn(),
+  useLocation: () => ({ pathname: '/dashboard', search: '', hash: '', state: null, key: 'default' }),
+}));
+
+vi.mock('../../hooks/AuthContext', () => ({
+  useAuth: () => ({
+    login: vi.fn(),
+    loginWithJWT: vi.fn(),
+    logout: vi.fn(),
+    isAuthenticated: false,
+    apiKey: '',
+    token: '',
+    role: null,
+  }),
+}));
+
 vi.mock('../../stores/useViewStore', () => ({
   useViewStore: (selector: (s: Record<string, unknown>) => unknown) => {
     const state: Record<string, unknown> = {
@@ -45,6 +66,9 @@ vi.mock('../../components/ui/Card', () => ({
   Card: ({ children, ...props }: { children: React.ReactNode; className?: string }) => (
     <div data-testid="mock-card" {...props}>{children}</div>
   ),
+}));
+vi.mock('../../components/ui/Breadcrumb', () => ({
+  Breadcrumb: () => null,
 }));
 vi.mock('../../components/charts/LineChart', () => ({
   LineChart: ({ title }: { title: string }) => <div>{title}</div>,

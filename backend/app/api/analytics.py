@@ -1,7 +1,7 @@
 """Analytics API endpoints for usage, latency, and token tracking."""
 
 from fastapi import APIRouter, Depends, Query
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 import structlog
 
@@ -268,13 +268,23 @@ async def get_token_analytics(
         }
 
     try:
-        # 获取今天的 token 使用
-        date_key = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        token_data = await redis.hgetall(f"{STATS_PREFIX}:tokens:{date_key}")
+        # 按 time_range 遍历最近 N 天，逐天读取 Redis hash 累加
+        days = _range_to_days(time_range)
+        now = datetime.now(timezone.utc)
+        date_keys = [
+            f"{STATS_PREFIX}:tokens:{(now - timedelta(days=i)).strftime('%Y-%m-%d')}"
+            for i in range(days)
+        ]
 
-        input_tokens = int(token_data.get("input", 0)) if token_data else 0
-        output_tokens = int(token_data.get("output", 0)) if token_data else 0
-        queries = int(token_data.get("queries", 0)) if token_data else 0
+        input_tokens = 0
+        output_tokens = 0
+        queries = 0
+        for key in date_keys:
+            token_data = await redis.hgetall(key)
+            if token_data:
+                input_tokens += int(token_data.get("input", 0))
+                output_tokens += int(token_data.get("output", 0))
+                queries += int(token_data.get("queries", 0))
 
         # If Redis is empty, try PostgreSQL
         if input_tokens == 0 and output_tokens == 0:

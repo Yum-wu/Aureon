@@ -12,6 +12,35 @@ interface UserRecord {
   last_login: string | null;
 }
 
+const USERS_STORAGE_KEY = 'aureon:admin:users:last';
+
+/**
+ * 从 localStorage 读取上次成功的用户列表。
+ * 用作 placeholderData，避免 F5 刷新后的 loading 闪烁。
+ */
+function getCachedUsers(): UserRecord[] | undefined {
+  try {
+    const saved = localStorage.getItem(USERS_STORAGE_KEY);
+    return saved ? JSON.parse(saved) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** debounce 写入定时器 */
+let flushTimer: ReturnType<typeof setTimeout> | null = null;
+
+function persistUsers(data: UserRecord[]): void {
+  if (flushTimer) clearTimeout(flushTimer);
+  flushTimer = setTimeout(() => {
+    try {
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(data));
+    } catch {
+      // Silent fail
+    }
+  }, 2000);
+}
+
 export function useAdminUsers() {
   return useQuery<UserRecord[]>({
     queryKey: ADMIN_QUERY_KEYS.users,
@@ -19,9 +48,15 @@ export function useAdminUsers() {
       const res = await authFetch('/api/security/users', { signal });
       if (!res.ok) return [];
       const data = await res.json();
-      return Array.isArray(data) ? data : [];
+      const users = Array.isArray(data) ? data : [];
+
+      // 成功后写入 localStorage（debounced），下次刷新可立即显示
+      persistUsers(users);
+
+      return users;
     },
     ...ADMIN_CACHE_CONFIG,
+    placeholderData: getCachedUsers,
   });
 }
 

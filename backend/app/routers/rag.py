@@ -234,8 +234,12 @@ async def rag_query_endpoint(req: RAGQueryRequest, request: Request):
         raise AureonException(status_code=500, detail=f"Query processing error: {str(e)[:100]}")
     latency_ms = int((time.time() - start_time) * 1000)
     # Record query for Dashboard stats (fire-and-forget)
-    fire_and_forget(record_query(req.query, len(result.sources), latency_ms), name="record_query")
-    _record_dashboard_metrics(latency_ms=latency_ms, tokens_out=len(result.answer.split()) if hasattr(result, 'answer') else 0)
+    input_tokens = len(req.query) + 500
+    output_tokens = len(result.answer) // 2 if hasattr(result, 'answer') else 0
+    fire_and_forget(record_query(req.query, len(result.sources), latency_ms,
+                                  input_tokens=input_tokens, output_tokens=output_tokens),
+                    name="record_query")
+    _record_dashboard_metrics(latency_ms=latency_ms, tokens_out=output_tokens)
     return result
 
 
@@ -276,8 +280,12 @@ async def rag_query_async_endpoint(req: RAGQueryRequest, request: Request):
         raise AureonException(status_code=500, detail=f"Query processing error: {str(e)[:100]}")
 
     latency_ms = int((time.time() - start_time) * 1000)
-    fire_and_forget(record_query(req.query, len(result.sources), latency_ms), name="record_query_async")
-    _record_dashboard_metrics(latency_ms=latency_ms, tokens_out=len(result.answer.split()) if hasattr(result, 'answer') else 0)
+    input_tokens = len(req.query) + 500
+    output_tokens = len(result.answer) // 2 if hasattr(result, 'answer') else 0
+    fire_and_forget(record_query(req.query, len(result.sources), latency_ms,
+                                  input_tokens=input_tokens, output_tokens=output_tokens),
+                    name="record_query_async")
+    _record_dashboard_metrics(latency_ms=latency_ms, tokens_out=output_tokens)
     return result
 
 

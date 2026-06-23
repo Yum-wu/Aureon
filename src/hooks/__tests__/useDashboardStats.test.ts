@@ -1,8 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 
-const mockFetch = vi.fn();
-vi.stubGlobal('fetch', mockFetch);
+// Mock authFetch instead of raw fetch (authFetch has 401 interceptor logic)
+const mockAuthFetch = vi.fn();
+vi.mock('../../services/authFetch', () => ({
+  authFetch: (...args: unknown[]) => mockAuthFetch(...args),
+}));
 
 import { useDashboardStats } from '../useDashboardStats';
 
@@ -18,7 +21,7 @@ describe('useDashboardStats', () => {
   });
 
   it('starts with loading state', () => {
-    mockFetch.mockReturnValue(new Promise(() => {}));
+    mockAuthFetch.mockReturnValue(new Promise(() => {}));
     const { result } = renderHook(() => useDashboardStats());
     expect(result.current.loading).toBe(true);
     expect(result.current.stats).toBeNull();
@@ -39,7 +42,7 @@ describe('useDashboardStats', () => {
       ],
     };
 
-    mockFetch
+    mockAuthFetch
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(statsData) })
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(recentData) })
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ data: [], total: 0 }) });
@@ -56,7 +59,7 @@ describe('useDashboardStats', () => {
   });
 
   it('handles stats fetch failure', async () => {
-    mockFetch
+    mockAuthFetch
       .mockResolvedValueOnce({ ok: false, status: 503, json: () => Promise.resolve({ detail: 'Redis down' }) })
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ queries: [] }) });
 
@@ -70,7 +73,7 @@ describe('useDashboardStats', () => {
   });
 
   it('handles network error', async () => {
-    mockFetch.mockRejectedValue(new Error('Network fail'));
+    mockAuthFetch.mockRejectedValue(new Error('Network fail'));
 
     const { result } = renderHook(() => useDashboardStats());
 
@@ -82,7 +85,7 @@ describe('useDashboardStats', () => {
   });
 
   it('refetch triggers new fetch', async () => {
-    mockFetch
+    mockAuthFetch
       .mockResolvedValue({ ok: true, json: () => Promise.resolve({ cache_hit_rate: 0, query_count_24h: 0, avg_retrieval_latency_ms: 0, total_indexed_docs: 0, total_chunks: 0 }) });
 
     const { result } = renderHook(() => useDashboardStats());
@@ -91,9 +94,8 @@ describe('useDashboardStats', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    mockFetch.mockClear();
-    // Re-mock for refetch
-    mockFetch
+    mockAuthFetch.mockClear();
+    mockAuthFetch
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ cache_hit_rate: 0.9, query_count_24h: 50, avg_retrieval_latency_ms: 100, total_indexed_docs: 5, total_chunks: 200 }) })
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ queries: [] }) });
 
@@ -102,7 +104,7 @@ describe('useDashboardStats', () => {
     });
 
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalled();
+      expect(mockAuthFetch).toHaveBeenCalled();
     });
   });
 });

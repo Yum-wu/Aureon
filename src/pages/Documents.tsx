@@ -2,9 +2,12 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { authFetch } from "../services/authFetch";
 import { useDocumentsQuery } from "../hooks/useDocumentsQuery";
+import { useDeleteDocument } from "../hooks/useDeleteDocument";
 import { useBlogConfig } from "../hooks/useBlogConfig";
 import { DocumentUpload } from "../components/documents/DocumentUpload";
-import { FileText, BookOpen, BarChart3 } from "lucide-react";
+import { ConfirmDialog } from "../components/admin/ConfirmDialog";
+import { FileText, BookOpen, BarChart3, Trash2 } from "lucide-react";
+import { Breadcrumb } from "../components/ui/Breadcrumb";
 
 const TYPE_BADGE: Record<string, string> = {
   md: "bg-green-100 text-green-700",
@@ -18,8 +21,10 @@ export function Documents() {
   const { t } = useTranslation();
   const { data, isLoading, error, refetch } = useDocumentsQuery();
   const { config: blogConfig } = useBlogConfig();
+  const deleteDocument = useDeleteDocument();
   const [showUpload, setShowUpload] = useState(false);
   const [filter, setFilter] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<{ source: string; title: string; chunkCount: number } | null>(null);
 
   const documents = data?.documents ?? [];
   const totalDocs = data?.totalDocs ?? 0;
@@ -59,8 +64,9 @@ export function Documents() {
 
   return (
     <div className="h-full overflow-y-auto px-4 md:px-6 py-4 md:py-6">
+      <Breadcrumb auto />
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 md:mb-6 gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 md:mb-6 gap-4 mt-4">
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-[var(--text-primary)]">{t("documents.title")}</h1>
           <p className="text-sm text-[var(--text-tertiary)] mt-1">{t("documents.subtitle")}</p>
@@ -170,6 +176,9 @@ export function Documents() {
                   <th className="text-center px-5 py-3 text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wide">
                     {t("documents.table.status")}
                   </th>
+                  <th className="text-center px-5 py-3 text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wide">
+                    {t("documents.table.actions", "操作")}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -200,6 +209,16 @@ export function Documents() {
                     <td className="px-5 py-3.5 text-center">
                       <span className="inline-block w-2 h-2 rounded-full bg-green-500" title={t("documents.status.ready")} />
                     </td>
+                    <td className="px-5 py-3.5 text-center">
+                      <button
+                        onClick={() => setDeleteTarget({ source: doc.source, title: doc.title, chunkCount: doc.chunk_count })}
+                        className="inline-flex items-center gap-1 px-2 py-1 text-xs text-[var(--error)] hover:bg-red-500/10 rounded transition-colors"
+                        title={t("documents.delete.tooltip", "删除此文档")}
+                      >
+                        <Trash2 size={14} />
+                        <span>{t("documents.delete.button", "删除")}</span>
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -224,12 +243,43 @@ export function Documents() {
                   <div className="flex items-center gap-3">
                     <span>{doc.chunk_count} {t('documents.chunks')}</span>
                     <span className="w-2 h-2 rounded-full bg-green-500" />
+                    <button
+                      onClick={() => setDeleteTarget({ source: doc.source, title: doc.title, chunkCount: doc.chunk_count })}
+                      className="inline-flex items-center gap-1 text-[var(--error)] hover:bg-red-500/10 px-1.5 py-0.5 rounded transition-colors"
+                    >
+                      <Trash2 size={12} />
+                    </button>
                   </div>
                 </div>
               </div>
             ))}
           </div>
         </>
+      )}
+
+      {/* 删除确认弹窗 */}
+      {deleteTarget && (
+        <ConfirmDialog
+          open={!!deleteTarget}
+          title={t("documents.delete.confirm_title", "删除文档")}
+          message={
+            <>
+              {t("documents.delete.confirm_msg", `确定删除「{{title}}」及其 {{count}} 个 chunks？此操作不可撤销。`, {
+                title: deleteTarget.title,
+                count: deleteTarget.chunkCount,
+              })}
+            </>
+          }
+          confirmLabel={t("documents.delete.confirm", "确认删除")}
+          cancelLabel={t("documents.delete.cancel", "取消")}
+          variant="danger"
+          onConfirm={() => {
+            deleteDocument.mutate(deleteTarget.source, {
+              onSettled: () => setDeleteTarget(null),
+            });
+          }}
+          onCancel={() => setDeleteTarget(null)}
+        />
       )}
     </div>
   );
