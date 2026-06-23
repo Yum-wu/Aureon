@@ -1,5 +1,6 @@
 import logging
 import os
+import secrets
 import sys
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -51,12 +52,18 @@ from app.startup.lifespan import lifespan
 from app.tools import ALL_TOOLS
 
 
-# ── Security headers middleware (S6: CSP) ──
+# ── Security headers middleware (S6: CSP + S12: CSP Nonce) ──
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        # S12: 为每个请求生成随机 nonce，用于 CSP nonce-based strict policy
+        nonce = secrets.token_hex(16)
+        request.state.csp_nonce = nonce
+
         response = await call_next(request)
+        # CSP header 的 script-src 使用 nonce，同时保留 'self' 允许同源脚本加载
+        # 这样既支持 nonce 又不破坏现有静态脚本加载（SPA 折中方案）
         response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; script-src 'self'; "
+            f"default-src 'self'; script-src 'self' 'nonce-{nonce}'; "
             "connect-src 'self' https://aureon-production-659a.up.railway.app; "
             "img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; "
             "font-src 'self' https://fonts.gstatic.com; "
@@ -191,6 +198,35 @@ async def aureon_exception_handler(request: Request, exc: AureonException):
     )
 
 
+# ── API 版本兼容中间件 (M8) ──
+# 将旧版 /api/ 请求内部重写为 /api/v1/，保持向后兼容。
+# 使用内部重写（而非 307 重定向）以避免：
+# 1. httpx 等客户端默认不跟随重定向导致测试失败
+# 2. POST 请求 body 在重定向中丢失
+# 3. 额外的网络往返延迟
+# 注意：此中间件在 logging_middleware 之前添加（更内层），
+# 这样 logging_middleware 看到的是原始路径，API key 认证逻辑正常工作。
+async def api_version_compat(request: Request, call_next):
+    """将旧版 /api/ 请求内部重写为 /api/v1/。
+
+    例外：/api/health 不需要版本化。
+    """
+    path = request.url.path
+    if (
+        path.startswith("/api/")
+        and not path.startswith("/api/v1/")
+        and not path.startswith("/api/health")
+    ):
+        # 内部重写 URL，不返回重定向
+        new_path = "/api/v1/" + path[5:]
+        request.scope["path"] = new_path
+        request.scope["raw_path"] = new_path.encode()
+    return await call_next(request)
+
+
+app.middleware("http")(api_version_compat)
+
+
 # ── Logging middleware (extracted to app.middleware.logging) ──
 app.middleware("http")(logging_middleware)
 
@@ -200,7 +236,7 @@ class LangGraphRunRequest(BaseModel):
     session_id: str = Field(default="", max_length=100)
 
 
-@app.post("/api/langgraph/run")
+@app.post("/api/v1/langgraph/run")
 @limiter.limit("5/minute")
 async def langgraph_run(req: LangGraphRunRequest, request: Request, user: dict = Depends(require_role(UserRole.VIEWER))):
     """Run LangGraph workflow for complex tasks."""
@@ -238,15 +274,15 @@ async def health_ready():
 
 
 # ── Core routes (always registered) ──
-app.include_router(chat_router.router, prefix="/api/chat", tags=["chat"])
-app.include_router(rag_router.router, prefix="/api/rag", tags=["rag"])
-app.include_router(crew_router.router, prefix="/api/crew", tags=["crew"])
+app.include_router(chat_router.router, prefix="/api/v1/chat", tags=["chat"])
+app.include_router(rag_router.router, prefix="/api/v1/rag", tags=["rag"])
+app.include_router(crew_router.router, prefix="/api/v1/crew", tags=["crew"])
 app.include_router(stats_router)
 app.include_router(analytics_router)
 app.include_router(feature_flags_router)
-app.include_router(observability_router, prefix="/api/observability")
-app.include_router(security_router, prefix="/api/security")
-app.include_router(audit_router, prefix="/api/audit")
+app.include_router(observability_router, prefix="/api/v1/observability")
+app.include_router(security_router, prefix="/api/v1/security")
+app.include_router(audit_router, prefix="/api/v1/audit")
 app.include_router(websocket_chat_router, tags=["websocket"])
 app.include_router(ws_dashboard_router, tags=["websocket"])
 app.include_router(users_router)
@@ -257,7 +293,7 @@ if os.environ.get("EXPERIMENTAL_MODULES", "true").lower() != "false":
     app.include_router(evaluation_router)
     app.include_router(cost_router)
     app.include_router(reliability_router)
-    app.include_router(knowledge_router, prefix="/api/knowledge")
+    app.include_router(knowledge_router, prefix="/api/v1/knowledge")
     app.include_router(ai_platform_router)
     app.include_router(integration_router)
 

@@ -13,7 +13,7 @@ from app.features import (
     evaluate_flag,
 )
 
-router = APIRouter(prefix="/api/feature-flags", tags=["Feature Flags"])
+router = APIRouter(prefix="/api/v1/feature-flags", tags=["Feature Flags"])
 
 
 @router.post("/", response_model=FeatureFlagResponse, status_code=201)

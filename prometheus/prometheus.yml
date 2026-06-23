@@ -1,0 +1,20 @@
+# Prometheus 抓取配置（参考）
+#
+# 部署时根据实际环境调整 targets 和 labels。
+# 告警规则文件 alert_rules.yml 应与本文件同目录放置。
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - alert_rules.yml
+
+scrape_configs:
+  - job_name: aureon-backend
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['localhost:8000']
+        labels:
+          service: aureon-backend
+          environment: production

@@ -16,7 +16,7 @@ from app.ai_platform import (
     get_session_context,
 )
 
-router = APIRouter(prefix="/api/ai-platform", tags=["AI Platform"])
+router = APIRouter(prefix="/api/v1/ai-platform", tags=["AI Platform"])
 
 
 # ── LLM Provider Endpoints ──

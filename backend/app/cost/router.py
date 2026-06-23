@@ -31,7 +31,7 @@ from app.multi_tenant.middleware import get_current_tenant_id
 
 logger = structlog.get_logger(__name__)
 
-router = APIRouter(prefix="/api/cost", tags=["Cost Governance"])
+router = APIRouter(prefix="/api/v1/cost", tags=["Cost Governance"])
 
 
 # ── 原有端点（SQLite 存储，保持不变） ──

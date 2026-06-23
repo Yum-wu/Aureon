@@ -24,6 +24,14 @@ from app.security.rbac import (
 from app.security.encryption import (
     encrypt_secret,
     decrypt_secret,
+    rotate_token,
+)
+
+# ── Token Revocation (S11) ──
+from app.security.token_revocation import (
+    revoke_token,
+    is_token_revoked,
+    cleanup_memory_revoked,
 )
 
 # ── PII Detection ──
@@ -70,7 +78,9 @@ __all__ = [
     "create_access_token", "verify_token", "get_user_role",
     "has_permission", "require_role",
     # Encryption
-    "encrypt_secret", "decrypt_secret",
+    "encrypt_secret", "decrypt_secret", "rotate_token",
+    # Token Revocation
+    "revoke_token", "is_token_revoked", "cleanup_memory_revoked",
     # PII
     "PIIDetector", "init_pii_detection_table", "log_pii_detection",
     # SSO

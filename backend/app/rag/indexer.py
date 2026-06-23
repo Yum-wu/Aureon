@@ -174,7 +174,14 @@ Please give a short succinct context to situate this chunk within the overall do
             return result if isinstance(result, str) else str(result)
 
     tasks = [_process_one(c, d) for c, d in chunks_with_docs]
-    return await asyncio.gather(*tasks)
+    # 使用 TaskGroup 替代 gather：任一任务失败时自动取消其他任务，错误传播更优
+    # TaskGroup 不直接返回结果列表，需保留任务引用后按创建顺序提取
+    task_refs: list[asyncio.Task[str]] = []
+    async with asyncio.TaskGroup() as tg:
+        for t in tasks:
+            task_refs.append(tg.create_task(t))
+    # TaskGroup 正常退出后所有任务已完成，按创建顺序获取结果
+    return [t.result() for t in task_refs]
 
 
 async def _add_contextual_prefixes(
@@ -397,7 +404,14 @@ async def hybrid_retrieve_async(
     else:
         vector_task = asyncio.to_thread(retrieve, query, top_k=top_k * _RETRIEVAL_MULTIPLIER, use_mmr=False, lang_filter=lang_filter)
 
-    bm25_results, vector_results = await asyncio.gather(bm25_task, vector_task)
+    # 使用 TaskGroup 替代 gather：BM25 与向量检索无依赖关系，
+    # TaskGroup 提供更清晰的错误传播（任一失败即取消另一个）
+    task_refs: list[asyncio.Task] = []
+    async with asyncio.TaskGroup() as tg:
+        task_refs.append(tg.create_task(bm25_task))
+        task_refs.append(tg.create_task(vector_task))
+    bm25_results = task_refs[0].result()
+    vector_results = task_refs[1].result()
 
     # ── Pre-RRF score filtering ──
     if vector_results:

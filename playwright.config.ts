@@ -5,7 +5,15 @@ const BASE_URL = process.env.BASE_URL || "http://localhost:5173";
 export default defineConfig({
   testDir: "./tests/e2e",
   timeout: 60_000,
-  expect: { timeout: 10_000 },
+  // 视觉回归测试截图存储目录
+  snapshotDir: "./tests/e2e/__screenshots__",
+  expect: {
+    timeout: 10_000,
+    // toHaveScreenshot 默认配置 — 允许 1% 像素差异
+    toHaveScreenshot: {
+      maxDiffPixelRatio: 0.01,
+    },
+  },
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

@@ -202,7 +202,7 @@ def _classify_intent(query: str) -> str:
         return "general_qa"
 
 
-@router.get("/api/rag/stats", response_model=StatsResponse)
+@router.get("/api/v1/rag/stats", response_model=StatsResponse)
 async def get_stats(redis=Depends(get_redis_or_none)):
     count = 0
     avg_latency = 0.0
@@ -266,7 +266,7 @@ async def get_stats(redis=Depends(get_redis_or_none)):
     )
 
 
-@router.get("/api/rag/queries/recent", response_model=RecentQueriesResponse)
+@router.get("/api/v1/rag/queries/recent", response_model=RecentQueriesResponse)
 async def get_recent_queries(limit: int = Query(5, ge=1, le=50), redis=Depends(get_redis_or_none)):
     queries = []
 
@@ -307,7 +307,7 @@ class DocumentItem(BaseModel):
     status: str
 
 
-@router.get("/api/rag/documents")
+@router.get("/api/v1/rag/documents")
 async def get_documents():
     """List all indexed documents from Qdrant vector store."""
     try:
@@ -388,7 +388,7 @@ class BenchmarkData(BaseModel):
     services: dict[str, str]
 
 
-@router.get("/api/rag/benchmark")
+@router.get("/api/v1/rag/benchmark")
 async def get_benchmark():
     """Read benchmark results from file — dynamic data source."""
     if not BENCHMARK_FILE.exists():
@@ -406,7 +406,7 @@ async def get_benchmark():
 # ── Query Volume API ──
 
 
-@router.get("/api/rag/query-volume")
+@router.get("/api/v1/rag/query-volume")
 async def get_query_volume(days: int = 7):
     """Get daily query counts for the last N days."""
     redis = get_redis_or_none()
@@ -471,7 +471,7 @@ class BlogConfig(BaseModel):
     last_synced: Optional[str] = None
 
 
-@router.get("/api/rag/blog/config")
+@router.get("/api/v1/rag/blog/config")
 async def get_blog_config():
     """Get blog sync configuration from settings."""
     from ..config import settings
@@ -482,7 +482,7 @@ async def get_blog_config():
     )
 
 
-@router.post("/api/rag/blog/sync")
+@router.post("/api/v1/rag/blog/sync")
 async def sync_blog_documents():
     """Sync documents from external blog. Placeholder for future implementation."""
     from ..config import settings

@@ -7,7 +7,12 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    // 包含 src 下的单元测试 + tests/contract 下的契约测试
+    // 注意：tests/e2e 下的 .spec.ts 是 Playwright 测试，不纳入 vitest
+    include: [
+      'src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
+      'tests/contract/**/*.test.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json-summary'],

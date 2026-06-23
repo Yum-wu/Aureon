@@ -1,0 +1,114 @@
+# SLO 基于告警规则 — Google SRE 多窗口 Burn Rate 策略
+#
+# 设计原则：
+# - 快速告警（5min 窗口）用于快速恢复，容忍较高误报率
+# - 慢速告警（1h 窗口）用于长期 SLO 趋势监控，低误报
+# - 资源告警覆盖关键依赖（Redis / Qdrant）和系统指标（内存）
+
+groups:
+  - name: aureon_slo_alerts
+    interval: 30s
+    rules:
+      # ── 请求成功率 SLO: 99.9% ──
+
+      # 快速告警：5分钟窗口内错误率 > 10%
+      - alert: HighErrorRate5m
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"5.."}[5m])) by (service)
+            /
+            sum(rate(http_requests_total[5m])) by (service)
+          ) > 0.1
+        for: 2m
+        labels:
+          severity: critical
+          slo: availability
+          burn_rate: fast
+        annotations:
+          summary: "5分钟内错误率超过10%"
+          description: "服务 {{ $labels.service }} 的 5xx 错误率达到 {{ $value | humanizePercentage }}，超过 10% 阈值"
+
+      # 慢速告警：1小时窗口内错误率 > 1%
+      - alert: HighErrorRate1h
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"5.."}[1h])) by (service)
+            /
+            sum(rate(http_requests_total[1h])) by (service)
+          ) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          slo: availability
+          burn_rate: slow
+        annotations:
+          summary: "1小时内错误率超过1%"
+          description: "服务 {{ $labels.service }} 的 5xx 错误率达到 {{ $value | humanizePercentage }}，超过 1% 阈值"
+
+      # ── 延迟 SLO: P99 < 2s ──
+
+      # P99 延迟快速告警：5分钟窗口
+      - alert: HighLatencyP99_5m
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service)
+          ) > 2
+        for: 2m
+        labels:
+          severity: critical
+          slo: latency
+          burn_rate: fast
+        annotations:
+          summary: "P99延迟超过2秒（5分钟窗口）"
+          description: "服务 {{ $labels.service }} 的 P99 延迟为 {{ $value }}s，超过 2s SLO"
+
+      # P99 延迟慢速告警：1小时窗口
+      - alert: HighLatencyP99_1h
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket[1h])) by (le, service)
+          ) > 1.5
+        for: 10m
+        labels:
+          severity: warning
+          slo: latency
+          burn_rate: slow
+        annotations:
+          summary: "P99延迟超过1.5秒（1小时窗口）"
+          description: "服务 {{ $labels.service }} 的 P99 延迟为 {{ $value }}s，接近 2s SLO"
+
+      # ── 资源告警 ──
+
+      # Redis 连接失败
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: redis
+        annotations:
+          summary: "Redis 不可用"
+          description: "Redis 实例 {{ $labels.instance }} 已离线超过 1 分钟"
+
+      # Qdrant 不可用
+      - alert: QdrantDown
+        expr: qdrant_health_check == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: qdrant
+        annotations:
+          summary: "Qdrant 向量数据库不可用"
+          description: "Qdrant 实例已离线超过 1 分钟"
+
+      # 高内存使用
+      - alert: HighMemoryUsage
+        expr: |
+          (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "内存使用率超过85%"
+          description: "节点 {{ $labels.instance }} 内存使用率为 {{ $value | humanizePercentage }}"

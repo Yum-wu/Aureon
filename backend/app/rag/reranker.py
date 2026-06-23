@@ -366,6 +366,9 @@ async def _rerank_via_api_batched(
         async with sem:
             return await _rerank_batch_async(url, api_key, model, provider_name, query=query, chunks=batch_chunks, top_k=top_k, client=client)
 
+    # 注意：此处保留 asyncio.gather + return_exceptions=True
+    # 因为 rerank 批处理需要容错（单批失败不应影响其他批次）
+    # TaskGroup 会在任一任务失败时取消所有任务，不适合此场景
     results = await asyncio.gather(*[_limited(b) for b in batches], return_exceptions=True)
 
     all_scored = []

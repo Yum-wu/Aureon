@@ -8,7 +8,7 @@ import structlog
 from app.dependencies import get_redis_or_none
 
 logger = structlog.get_logger()
-router = APIRouter(prefix="/api/rag/analytics", tags=["analytics"])
+router = APIRouter(prefix="/api/v1/rag/analytics", tags=["analytics"])
 
 STATS_PREFIX = "aureon:stats"
 

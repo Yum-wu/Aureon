@@ -19,7 +19,7 @@ from app.reliability import (
     reset_all_circuit_breakers,
 )
 
-router = APIRouter(prefix="/api/reliability", tags=["Reliability"])
+router = APIRouter(prefix="/api/v1/reliability", tags=["Reliability"])
 
 
 # ── Backup Endpoints ──

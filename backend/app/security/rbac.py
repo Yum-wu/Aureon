@@ -3,6 +3,7 @@
 import enum
 import hmac
 import os
+import uuid
 from datetime import datetime, timezone
 
 import structlog
@@ -72,6 +73,8 @@ def create_access_token(data: dict) -> str:
 
     secret = _get_jwt_secret()
     to_encode = data.copy()
+    # 添加 jti claim 用于 token 吊销
+    to_encode.setdefault("jti", str(uuid.uuid4()))
     now = datetime.now(timezone.utc)
     to_encode.setdefault("iat", int(now.timestamp()))
     to_encode.setdefault(
@@ -161,6 +164,13 @@ def require_role(min_role: UserRole):
             raise AuthenticationError("Token is required")
 
         payload = verify_token(token)
+
+        # 检查 token 是否已吊销（S11: JWT Token 吊销机制）
+        from app.security.token_revocation import is_token_revoked
+        jti = payload.get("jti", "")
+        if jti and await is_token_revoked(jti):
+            raise AuthenticationError("Token has been revoked")
+
         user_role = get_user_role(payload)
 
         if user_role < min_role:

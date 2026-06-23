@@ -14,7 +14,7 @@ from app.security.rbac import UserRole, Permission, ROLE_PERMISSIONS, require_ro
 
 logger = structlog.get_logger(__name__)
 
-router = APIRouter(prefix="/api/security/roles", tags=["roles"])
+router = APIRouter(prefix="/api/v1/security/roles", tags=["roles"])
 
 
 # ── 数据模型 ──

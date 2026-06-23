@@ -30,10 +30,16 @@ if ! python -c "from app.main import app; print('[entrypoint] App loaded success
     exit 1
 fi
 
-# 以非 root 用户运行 uvicorn（安全最佳实践）
-echo "[entrypoint] Starting uvicorn..."
-exec gosu appuser uvicorn app.main:app \
-  --host 127.0.0.1 --port 8000 \
-  --workers 1 \
-  --timeout-keep-alive 120 \
-  --timeout-graceful-shutdown 30
+# 以非 root 用户运行 gunicorn + uvicorn workers（安全最佳实践 + 生产级进程管理）
+# 注意：bind 127.0.0.1:8000，由同容器 nginx 反代对外暴露
+echo "[entrypoint] Starting gunicorn (uvicorn workers)..."
+exec gosu appuser gunicorn app.main:app \
+  --worker-class uvicorn.workers.UvicornWorker \
+  --workers 2 \
+  --bind 127.0.0.1:8000 \
+  --timeout 120 \
+  --graceful-timeout 30 \
+  --max-requests 1000 \
+  --max-requests-jitter 100 \
+  --access-logfile - \
+  --error-logfile -

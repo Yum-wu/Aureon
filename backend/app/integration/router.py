@@ -18,7 +18,7 @@ from app.integration import (
     delete_im_bot,
 )
 
-router = APIRouter(prefix="/api/integration", tags=["Integration Ecosystem"])
+router = APIRouter(prefix="/api/v1/integration", tags=["Integration Ecosystem"])
 
 
 # ── Integration Connector Endpoints ──

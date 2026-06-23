@@ -24,6 +24,39 @@ from .circuit_breaker import (
     wrap_llm_call,
 )
 
+# Phase 3: Bulkhead 隔舱模式
+from .bulkhead import (
+    Bulkhead,
+    BulkheadFullError,
+    bulkhead,
+    get_bulkhead,
+    get_all_bulkhead_stats,
+    reset_all_bulkheads,
+    redis_bulkhead,
+    qdrant_bulkhead,
+    llm_bulkhead,
+    embedding_bulkhead,
+)
+
+# Phase 3: 超时级联
+# 注意：TimeoutError 与内置冲突，以 LayerTimeoutError 别名导出
+from .timeouts import (
+    TIMEOUT_HIERARCHY,
+    with_timeout,
+    call_with_timeout,
+)
+from .timeouts import TimeoutError as LayerTimeoutError
+
+# Phase 4: Chaos Engineering
+from .chaos import (
+    ChaosConfig,
+    chaos,
+    enable_chaos,
+    disable_chaos,
+    is_chaos_enabled,
+    register_chaos_rule,
+)
+
 logger = structlog.get_logger()
 
 
@@ -450,6 +483,32 @@ __all__ = [
     "embedding_circuit_breaker",
     "reranker_circuit_breaker",
     "wrap_llm_call",
+
+    # Phase 3: Bulkhead 隔舱模式
+    "Bulkhead",
+    "BulkheadFullError",
+    "bulkhead",
+    "get_bulkhead",
+    "get_all_bulkhead_stats",
+    "reset_all_bulkheads",
+    "redis_bulkhead",
+    "qdrant_bulkhead",
+    "llm_bulkhead",
+    "embedding_bulkhead",
+
+    # Phase 3: 超时级联
+    "TIMEOUT_HIERARCHY",
+    "with_timeout",
+    "call_with_timeout",
+    "LayerTimeoutError",
+
+    # Phase 4: Chaos Engineering
+    "ChaosConfig",
+    "chaos",
+    "enable_chaos",
+    "disable_chaos",
+    "is_chaos_enabled",
+    "register_chaos_rule",
 
     # 数据库操作
     "init_reliability_tables",

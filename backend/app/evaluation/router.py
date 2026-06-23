@@ -11,7 +11,7 @@ from app.evaluation import (
     get_evaluation_summary,
 )
 
-router = APIRouter(prefix="/api/evaluation", tags=["Evaluation"])
+router = APIRouter(prefix="/api/v1/evaluation", tags=["Evaluation"])
 
 
 @router.post("/metrics", status_code=201)

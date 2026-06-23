@@ -19,7 +19,7 @@ from app.multi_tenant.middleware import get_current_tenant_id
 
 logger = structlog.get_logger(__name__)
 
-router = APIRouter(prefix="/api/security/users", tags=["users"])
+router = APIRouter(prefix="/api/v1/security/users", tags=["users"])
 
 
 # ── 数据模型 ──
