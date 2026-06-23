@@ -7,6 +7,7 @@ import os
 import threading
 from contextlib import asynccontextmanager
 
+import httpx
 import structlog
 from fastapi import FastAPI
 
@@ -35,6 +36,17 @@ async def lifespan(app: FastAPI):
             logger.warning("API_AUTH_KEY not set in production — API endpoints unauthenticated")
 
     # ── Startup ──
+    # Application-level httpx.AsyncClient with connection pooling
+    app.state.http_client = httpx.AsyncClient(
+        timeout=httpx.Timeout(30.0, connect=5.0),
+        limits=httpx.Limits(
+            max_connections=100,
+            max_keepalive_connections=20,
+            keepalive_expiry=30.0,
+        ),
+    )
+    logger.info("httpx.AsyncClient initialized (pool: 100 max, 20 keepalive)")
+
     if not settings.llm_api_key and not settings.fallback_api_key:
         logger.warning("LLM_API_KEY not set; Agent creation will fail")
     # Disable LangSmith to prevent Railway platform auto-tracing 403
@@ -132,6 +144,10 @@ async def lifespan(app: FastAPI):
     yield  # Application runs here
 
     # ── Shutdown ──
+    # Close shared httpx client (connection pool)
+    if hasattr(app.state, 'http_client'):
+        await app.state.http_client.aclose()
+
     # Cancel periodic cache cleanup
     cache_cleanup_task.cancel()
     try:

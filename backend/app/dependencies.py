@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""FastAPI dependency injection for Redis and Authentication.
+"""FastAPI dependency injection for Redis, HTTP client, and Authentication.
 
 Provides reusable dependencies for route handlers,
 eliminating duplicate imports across router modules.
@@ -7,9 +7,20 @@ eliminating duplicate imports across router modules.
 
 from typing import Any, Optional
 
-from fastapi import HTTPException
+import httpx
+from fastapi import HTTPException, Request
 
 from app.cache.redis_client import get_redis as _redis_getter
+
+
+def get_http_client(request: Request) -> httpx.AsyncClient:
+    """Dependency that returns the shared httpx.AsyncClient with connection pooling.
+
+    Use this in route handlers or background tasks that need to make
+    external HTTP calls. The client is created at startup and shared
+    across all requests for TCP connection reuse.
+    """
+    return request.app.state.http_client
 
 
 def require_redis() -> Any:

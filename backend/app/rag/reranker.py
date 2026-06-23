@@ -17,6 +17,7 @@ from typing import List, Dict, Any, Optional
 import asyncio
 import threading
 
+import httpx
 import structlog
 
 from app.config import settings
@@ -115,27 +116,20 @@ def _get_reranker():
 
 
 
-def _rerank_via_api(query: str, chunks: List[Dict[str, Any]], top_k: int = 3) -> Optional[List[Dict[str, Any]]]:
-
+def _rerank_via_api(query: str, chunks: List[Dict[str, Any]], top_k: int = 3,
+                    client: Optional[object] = None) -> Optional[List[Dict[str, Any]]]:
     """Rerank chunks via remote API. Returns None if unavailable.
 
-
-
     Provider priority (env: RERANK_PROVIDER):
-
     1. DashScope qwen3-rerank (same platform as embedding, <5ms from Singapore)
-
     2. SiliconFlow BAAI/bge-reranker-v2-m3
-
     3. Cohere rerank-multilingual-v3.0
-
     4. Jina jina-reranker-v2-base-multilingual
 
+    Args:
+        client: Optional httpx.AsyncClient for connection pooling.
+                Currently unused in sync path — reserved for async migration.
     """
-
-    import httpx
-
-
 
     texts = [c["text"] for c in chunks]
 
@@ -308,10 +302,14 @@ def _get_rerank_provider_info() -> Optional[tuple]:
 async def _rerank_batch_async(
     url: str, api_key: str, model: str, provider_name: str,
     query: str, chunks: List[Dict[str, Any]], top_k: int,
+    client: Optional[httpx.AsyncClient] = None,
 ) -> Optional[List[Dict[str, Any]]]:
-    """Single async rerank request (used by batch parallel)."""
-    import httpx
+    """Single async rerank request (used by batch parallel).
 
+    Args:
+        client: Shared httpx.AsyncClient with connection pooling.
+                If None, creates a temporary client (backward compatible).
+    """
     texts = [c["text"] for c in chunks]
     body: dict = {
         "model": model,
@@ -320,15 +318,16 @@ async def _rerank_batch_async(
         "top_n": min(top_k, len(chunks)),
     }
 
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(
-            url,
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json=body,
-            timeout=20.0,
-        )
-        resp.raise_for_status()
-        data = resp.json()
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+
+    if client is not None:
+        resp = await client.post(url, headers=headers, json=body, timeout=20.0)
+    else:
+        async with httpx.AsyncClient() as tmp_client:
+            resp = await tmp_client.post(url, headers=headers, json=body, timeout=20.0)
+
+    resp.raise_for_status()
+    data = resp.json()
 
     scored = []
     for item in data.get("results", []):
@@ -344,6 +343,7 @@ async def _rerank_batch_async(
 async def _rerank_via_api_batched(
     query: str, chunks: List[Dict[str, Any]], top_k: int = 3,
     batch_size: int = 18, max_concurrent: int = 2,
+    client: Optional[httpx.AsyncClient] = None,
 ) -> Optional[List[Dict[str, Any]]]:
     """Batch parallel reranking: split docs into batches, concurrent API calls."""
     import asyncio
@@ -355,7 +355,7 @@ async def _rerank_via_api_batched(
     url, api_key, model, provider_name = provider_info
 
     if len(chunks) <= batch_size:
-        return await _rerank_batch_async(url, api_key, model, provider_name, query=query, chunks=chunks, top_k=top_k)
+        return await _rerank_batch_async(url, api_key, model, provider_name, query=query, chunks=chunks, top_k=top_k, client=client)
 
     batches = [chunks[i:i + batch_size] for i in range(0, len(chunks), batch_size)]
     logger.info("Batch parallel rerank: %d chunks -> %d batches", len(chunks), len(batches))
@@ -364,7 +364,7 @@ async def _rerank_via_api_batched(
 
     async def _limited(batch_chunks):
         async with sem:
-            return await _rerank_batch_async(url, api_key, model, provider_name, query=query, chunks=batch_chunks, top_k=top_k)
+            return await _rerank_batch_async(url, api_key, model, provider_name, query=query, chunks=batch_chunks, top_k=top_k, client=client)
 
     results = await asyncio.gather(*[_limited(b) for b in batches], return_exceptions=True)
 
@@ -385,12 +385,13 @@ async def _rerank_via_api_batched(
 
 
 async def rerank_batched_async(query: str, chunks: List[Dict[str, Any]], top_k: int = 3,
-                               batch_size: int = 18) -> List[Dict[str, Any]]:
+                               batch_size: int = 18,
+                               client: Optional[httpx.AsyncClient] = None) -> List[Dict[str, Any]]:
     """异步批量 rerank，供 async 路径调用。"""
     if not chunks or len(chunks) <= 1:
         return chunks
     try:
-        result = await _rerank_via_api_batched(query, chunks, top_k=top_k, batch_size=batch_size)
+        result = await _rerank_via_api_batched(query, chunks, top_k=top_k, batch_size=batch_size, client=client)
         if result:
             return result
     except Exception as e:
