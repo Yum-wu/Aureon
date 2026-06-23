@@ -19,6 +19,9 @@ import time
 import uuid
 from collections import OrderedDict
 from typing import Optional, Dict, Any, Tuple, List
+
+import numpy as np
+from cachetools import TTLCache
 import structlog
 
 from app.cache.redis_client import get_redis as _shared_get_redis
@@ -76,7 +79,7 @@ class SemanticLLMCache:
 
         # In-memory caches (fallback when Redis unavailable)
         self._mem_exact_cache: OrderedDict = OrderedDict()  # LRU
-        self._mem_semantic_cache: Dict[str, Dict] = {}
+        self._mem_semantic_cache: TTLCache = TTLCache(maxsize=5000, ttl=3600)  # 5000 max, 1h TTL
         self._mem_lock = threading.Lock()
         self._stats = {
             "exact_hits": 0,
@@ -146,6 +149,10 @@ class SemanticLLMCache:
                 score_threshold=self.similarity_threshold,
             )
             if results:
+                # Check expiration before returning cached result
+                expires_at = results[0].payload.get("expires_at")
+                if expires_at and time.time() > expires_at:
+                    return None  # Entry has expired
                 return results[0].payload["response"], results[0].score
         except Exception as e:
             logger.debug("Qdrant semantic search error: %s", e)
@@ -225,26 +232,14 @@ class SemanticLLMCache:
 
     @staticmethod
     def _cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
-        """Compute cosine similarity between two vectors.
-
-        Args:
-            vec1: First embedding vector
-            vec2: Second embedding vector
-
-        Returns:
-            Cosine similarity score (0-1)
-        """
-        # Compute dot product
-        dot_product = sum(a * b for a, b in zip(vec1, vec2))
-
-        # Compute magnitudes
-        magnitude1 = sum(a * a for a in vec1) ** 0.5
-        magnitude2 = sum(b * b for b in vec2) ** 0.5
-
-        if magnitude1 == 0 or magnitude2 == 0:
+        """计算两个向量的余弦相似度（NumPy BLAS 加速）。"""
+        a = np.asarray(vec1, dtype=np.float32)
+        b = np.asarray(vec2, dtype=np.float32)
+        norm_a = np.linalg.norm(a)
+        norm_b = np.linalg.norm(b)
+        if norm_a < 1e-8 or norm_b < 1e-8:
             return 0.0
-
-        return dot_product / (magnitude1 * magnitude2)
+        return float(np.dot(a, b) / (norm_a * norm_b))
 
     def _exact_cache_key(
         self,
