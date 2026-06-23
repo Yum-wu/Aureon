@@ -5,10 +5,10 @@ Provides reusable dependencies for route handlers,
 eliminating duplicate imports across router modules.
 """
 
-from typing import Any, Optional
+from typing import Annotated, Any, Optional
 
 import httpx
-from fastapi import HTTPException, Request
+from fastapi import Depends, HTTPException, Request
 
 from app.cache.redis_client import get_redis as _redis_getter
 
@@ -21,6 +21,18 @@ def get_http_client(request: Request) -> httpx.AsyncClient:
     across all requests for TCP connection reuse.
     """
     return request.app.state.http_client
+
+
+HttpClientDep = Annotated[httpx.AsyncClient, Depends(get_http_client)]
+
+
+def get_settings():
+    """Dependency that returns the application Settings singleton."""
+    from app.config import settings
+    return settings
+
+
+SettingsDep = Annotated[Any, Depends(get_settings)]
 
 
 def require_redis() -> Any:

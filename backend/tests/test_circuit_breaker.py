@@ -25,6 +25,7 @@ def breaker():
         failure_threshold=3,
         recovery_timeout=5,
         name="test_breaker",
+        success_threshold=1,
     )
 
 
@@ -74,7 +75,8 @@ async def test_circuit_breaker_half_open_after_timeout(breaker):
     # Simulate timeout
     breaker._last_failure_time = breaker._last_failure_time - breaker.recovery_timeout - 1
 
-    # Should enter half-open state
+    # _check_timeout() transitions OPEN → HALF_OPEN
+    breaker._check_timeout()
     assert breaker.state == CircuitState.HALF_OPEN
 
 
@@ -268,3 +270,103 @@ async def test_circuit_breaker_metrics(breaker):
     assert metrics["total_failures"] == 2
     assert metrics["total_successes"] == 1
     assert metrics["consecutive_failures"] == 0  # Reset after success
+    assert metrics["success_threshold"] == 1
+    assert metrics["half_open_success_count"] == 0
+
+
+@pytest.mark.asyncio
+async def test_half_open_needs_multiple_successes():
+    """Test HALF_OPEN requires success_threshold consecutive successes to close."""
+    breaker = CircuitBreaker(
+        failure_threshold=2,
+        recovery_timeout=1,
+        name="multi_success_test",
+        success_threshold=3,
+    )
+
+    # Open the breaker
+    for _ in range(2):
+        with pytest.raises(ValueError):
+            async with breaker.context():
+                raise ValueError("fail")
+
+    assert breaker.state == CircuitState.OPEN
+
+    # Simulate timeout
+    breaker._last_failure_time -= 2
+
+    # First success in HALF_OPEN — should NOT close yet
+    async with breaker.context():
+        pass
+    assert breaker.state == CircuitState.HALF_OPEN
+    assert breaker._half_open_success_count == 1
+
+    # Second success — still not enough
+    async with breaker.context():
+        pass
+    assert breaker.state == CircuitState.HALF_OPEN
+    assert breaker._half_open_success_count == 2
+
+    # Third success — now it should close
+    async with breaker.context():
+        pass
+    assert breaker.state == CircuitState.CLOSED
+    assert breaker.failure_count == 0
+
+
+@pytest.mark.asyncio
+async def test_half_open_failure_resets_counter():
+    """Test HALF_OPEN failure resets counter and returns to OPEN."""
+    breaker = CircuitBreaker(
+        failure_threshold=2,
+        recovery_timeout=1,
+        name="half_open_fail_test",
+        success_threshold=3,
+    )
+
+    # Open the breaker
+    for _ in range(2):
+        with pytest.raises(ValueError):
+            async with breaker.context():
+                raise ValueError("fail")
+
+    # Simulate timeout
+    breaker._last_failure_time -= 2
+
+    # First success — counter increments
+    async with breaker.context():
+        pass
+    assert breaker._half_open_success_count == 1
+
+    # Failure — counter resets, back to OPEN
+    with pytest.raises(ValueError):
+        async with breaker.context():
+            raise ValueError("fail again")
+
+    assert breaker.state == CircuitState.OPEN
+    assert breaker._half_open_success_count == 0
+
+
+@pytest.mark.asyncio
+async def test_pure_state_property():
+    """Test state property is a pure read with no side effects."""
+    breaker = CircuitBreaker(
+        failure_threshold=2,
+        recovery_timeout=5,
+        name="pure_state_test",
+    )
+
+    # Open the breaker
+    for _ in range(2):
+        with pytest.raises(ValueError):
+            async with breaker.context():
+                raise ValueError("fail")
+
+    # Simulate timeout — but reading state should NOT transition
+    breaker._last_failure_time -= 10
+    _ = breaker.state
+    assert breaker._state == CircuitState.OPEN  # Still OPEN, no side effect
+
+    # Explicit _check_timeout() is required to transition
+    breaker._check_timeout()
+    assert breaker.state == CircuitState.HALF_OPEN
