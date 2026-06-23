@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 import structlog
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -48,6 +49,28 @@ from app.security.rbac import require_role, UserRole
 from app.startup import warmup
 from app.startup.lifespan import lifespan
 from app.tools import ALL_TOOLS
+
+
+# ── Security headers middleware (S6: CSP) ──
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; script-src 'self'; "
+            "connect-src 'self' https://aureon-production-659a.up.railway.app; "
+            "img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; "
+            "font-src 'self' https://fonts.gstatic.com; "
+            "frame-ancestors 'none'; base-uri 'self'"
+        )
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        return response
+
+
+# ── /metrics optional auth (S9) ──
+_METRICS_KEY = os.environ.get("METRICS_KEY", "")
 
 # ── Prometheus instrumentator FastAPI 0.137 compat patch ──
 # FastAPI 0.137 changed app.routes from flat list to tree with _IncludedRouter nodes.
@@ -136,6 +159,17 @@ app.add_middleware(
     max_age=600,
 )
 app.add_middleware(TenantMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
+
+# ── /metrics optional auth (S9: protect /metrics with X-Metrics-Key header) ──
+if _METRICS_KEY:
+    @app.middleware("http")
+    async def metrics_auth(request: Request, call_next):
+        if request.url.path == "/metrics":
+            key = request.headers.get("X-Metrics-Key", "")
+            if key != _METRICS_KEY:
+                return JSONResponse(status_code=403, content={"error": "forbidden", "detail": "Invalid or missing X-Metrics-Key"})
+        return await call_next(request)
 
 # ── Prometheus metrics ──
 Instrumentator().instrument(app).expose(app, endpoint="/metrics")

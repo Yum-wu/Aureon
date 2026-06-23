@@ -67,26 +67,22 @@ export function createWebSocket(
   let onCloseHandler: (() => void) | undefined;
   let visibilityHandler: (() => void) | null = null;
 
-  /** 获取 WebSocket 完整 URL（自动附加 API Key / JWT 认证） */
+  /** 获取 WebSocket 完整 URL（不含 token，token 通过首条消息发送） */
   function getWSUrl(): string {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.host;
-    let url = `${protocol}//${host}${path}`;
+    return `${protocol}//${host}${path}`;
+  }
 
-    // 自动附加认证 token（后端支持 ?token= 查询参数）
-    // 优先使用 JWT（SSO 登录），其次 API Key
+  /** 获取认证 token */
+  function getAuthToken(): string {
     try {
       const jwt = sessionStorage.getItem('aureon_jwt_token') || '';
       const apiKey = sessionStorage.getItem('aureon_api_key') || '';
-      const token = jwt || apiKey;
-      if (token) {
-        url += `${url.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}`;
-      }
+      return jwt || apiKey;
     } catch {
-      // sessionStorage 不可用时跳过
+      return '';
     }
-
-    return url;
   }
 
   /** 更新连接状态 */
@@ -160,6 +156,11 @@ export function createWebSocket(
       ws = new WebSocket(getWSUrl());
 
       ws.onopen = () => {
+        // S8: Send auth token as first message instead of URL query parameter
+        const token = getAuthToken();
+        if (token) {
+          ws.send(JSON.stringify({ type: 'auth', token }));
+        }
         reconnectAttempts = 0;
         setState('connected');
         startHeartbeat();
