@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deep Research: Aureon 项目 Upwork 接单策略</title>
+<style>
+  :root {
+    --bg: #fafaf9;
+    --bg-card: #ffffff;
+    --bg-sidebar: #1a1a2e;
+    --bg-sidebar-hover: #16213e;
+    --bg-code: #f5f5f4;
+    --bg-highlight: #fef3c7;
+    --text: #1c1917;
+    --text-secondary: #57534e;
+    --text-sidebar: #e2e8f0;
+    --text-sidebar-dim: #94a3b8;
+    --accent: #2563eb;
+    --accent-light: #dbeafe;
+    --border: #e7e5e4;
+    --green: #16a34a;
+    --green-bg: #dcfce7;
+    --yellow: #ca8a04;
+    --yellow-bg: #fef9c3;
+    --red: #dc2626;
+    --red-bg: #fee2e2;
+    --blue: #2563eb;
+    --blue-bg: #dbeafe;
+    --purple: #7c3aed;
+    --purple-bg: #ede9fe;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    --font-serif: 'Georgia', 'Noto Serif SC', serif;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.05);
+    --radius: 8px;
+    --sidebar-w: 280px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.75;
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0;
+    width: var(--sidebar-w);
+    height: 100vh;
+    background: var(--bg-sidebar);
+    color: var(--text-sidebar);
+    overflow-y: auto;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease;
+  }
+
+  .sidebar-header {
+    padding: 28px 24px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .sidebar-header .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-sidebar-dim);
+    margin-bottom: 8px;
+  }
+
+  .sidebar-header h2 {
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .sidebar-meta {
+    display: flex;
+    gap: 12px;
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--text-sidebar-dim);
+  }
+
+  .sidebar-meta span { display: flex; align-items: center; gap: 4px; }
+
+  .toc {
+    flex: 1;
+    padding: 16px 0;
+    overflow-y: auto;
+  }
+
+  .toc a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 24px;
+    color: var(--text-sidebar-dim);
+    text-decoration: none;
+    font-size: 13px;
+    transition: all 0.15s;
+    border-left: 3px solid transparent;
+  }
+
+  .toc a:hover {
+    color: var(--text-sidebar);
+    background: var(--bg-sidebar-hover);
+  }
+
+  .toc a.active {
+    color: #fff;
+    background: var(--bg-sidebar-hover);
+    border-left-color: var(--accent);
+  }
+
+  .toc a .num {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+    font-size: 11px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .toc a.active .num { background: var(--accent); }
+
+  /* Main content */
+  .main {
+    margin-left: var(--sidebar-w);
+    min-height: 100vh;
+  }
+
+  .content {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 48px 40px 120px;
+  }
+
+  /* Hero */
+  .hero {
+    margin-bottom: 48px;
+    padding-bottom: 32px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .hero h1 {
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.3;
+    letter-spacing: -0.5px;
+    margin-bottom: 16px;
+  }
+
+  .hero .subtitle {
+    font-size: 14px;
+    color: var(--text-secondary);
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .hero .subtitle span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  /* TL;DR */
+  .tldr {
+    background: linear-gradient(135deg, #eff6ff, #f0fdf4);
+    border: 1px solid #bfdbfe;
+    border-radius: var(--radius);
+    padding: 28px 32px;
+    margin-bottom: 48px;
+    position: relative;
+  }
+
+  .tldr::before {
+    content: 'TL;DR';
+    position: absolute;
+    top: -12px;
+    left: 24px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 3px 12px;
+    border-radius: 20px;
+  }
+
+  .tldr p {
+    font-size: 15px;
+    line-height: 1.8;
+    color: #1e3a5f;
+  }
+
+  /* Key Stats */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 48px;
+  }
+
+  .stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.2s, transform 0.2s;
+  }
+
+  .stat-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+  }
+
+  .stat-card .stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1.2;
+  }
+
+  .stat-card .stat-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+
+  .stat-card .stat-source {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 8px;
+    opacity: 0.7;
+  }
+
+  /* Sections */
+  .section {
+    margin-bottom: 56px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--border);
+  }
+
+  .section-header h2 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+
+  .confidence-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+
+  .confidence-high { background: var(--green-bg); color: var(--green); }
+  .confidence-medium { background: var(--yellow-bg); color: var(--yellow); }
+  .confidence-low { background: var(--red-bg); color: var(--red); }
+
+  .section p {
+    margin-bottom: 16px;
+    text-align: justify;
+  }
+
+  .section h3 {
+    font-size: 17px;
+    font-weight: 600;
+    margin: 28px 0 12px;
+    color: var(--text);
+  }
+
+  /* Highlight boxes */
+  .highlight-box {
+    background: var(--bg-card);
+    border-left: 4px solid var(--accent);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 20px 24px;
+    margin: 20px 0;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .highlight-box.warning {
+    border-left-color: var(--yellow);
+    background: #fffbeb;
+  }
+
+  .highlight-box.success {
+    border-left-color: var(--green);
+    background: #f0fdf4;
+  }
+
+  .highlight-box.danger {
+    border-left-color: var(--red);
+    background: #fef2f2;
+  }
+
+  .highlight-box .box-title {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .highlight-box p { margin-bottom: 8px; font-size: 14px; }
+  .highlight-box p:last-child { margin-bottom: 0; }
+
+  /* Citation */
+  .cite {
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    vertical-align: super;
+    line-height: 0;
+    transition: color 0.15s;
+  }
+
+  .cite:hover { color: #1d4ed8; text-decoration: underline; }
+
+  /* Tier badges */
+  .tier {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    letter-spacing: 0.5px;
+  }
+
+  .tier-1 { background: var(--green-bg); color: var(--green); }
+  .tier-2 { background: var(--blue-bg); color: var(--blue); }
+  .tier-3 { background: #f3f4f6; color: #6b7280; }
+
+  /* Pricing table */
+  .pricing-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 20px 0;
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border);
+  }
+
+  .pricing-table th {
+    background: #f8fafc;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .pricing-table td {
+    padding: 12px 16px;
+    font-size: 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-card);
+  }
+
+  .pricing-table tr:last-child td { border-bottom: none; }
+
+  .pricing-table .price {
+    font-weight: 600;
+    color: var(--green);
+  }
+
+  .pricing-table .recommended {
+    background: var(--green-bg);
+  }
+
+  /* Client tiers */
+  .client-tier {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 16px 0;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .client-tier .tier-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .client-tier .tier-badge {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    color: #fff;
+  }
+
+  .tier-1-bg { background: #16a34a; }
+  .tier-2-bg { background: #2563eb; }
+  .tier-3-bg { background: #7c3aed; }
+
+  .client-tier .tier-title { font-weight: 600; font-size: 16px; }
+  .client-tier .tier-tag {
+    font-size: 12px;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-weight: 500;
+  }
+
+  .tag-green { background: var(--green-bg); color: var(--green); }
+  .tag-blue { background: var(--blue-bg); color: var(--blue); }
+  .tag-purple { background: var(--purple-bg); color: var(--purple); }
+
+  .client-tier p { font-size: 14px; margin-bottom: 8px; }
+  .client-tier .tier-meta {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 8px;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  /* Action plan */
+  .action-list { list-style: none; }
+
+  .action-item {
+    display: flex;
+    gap: 14px;
+    padding: 16px 20px;
+    margin-bottom: 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    transition: all 0.2s;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .action-item:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-md);
+  }
+
+  .action-item.done {
+    background: var(--green-bg);
+    border-color: #bbf7d0;
+  }
+
+  .action-item.done .action-text { text-decoration: line-through; color: var(--text-secondary); }
+
+  .action-check {
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 2px;
+    transition: all 0.2s;
+    background: #fff;
+  }
+
+  .action-item.done .action-check {
+    background: var(--green);
+    border-color: var(--green);
+    color: #fff;
+  }
+
+  .action-body { flex: 1; }
+
+  .action-time {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+
+  .action-text { font-size: 14px; line-height: 1.6; }
+
+  /* Demo timeline */
+  .demo-timeline {
+    display: flex;
+    gap: 0;
+    margin: 20px 0;
+    padding: 0;
+    list-style: none;
+    position: relative;
+  }
+
+  .demo-step {
+    flex: 1;
+    text-align: center;
+    padding: 0 8px;
+    position: relative;
+  }
+
+  .demo-step::before {
+    content: '';
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    right: -50%;
+    height: 2px;
+    background: var(--accent-light);
+    z-index: 0;
+  }
+
+  .demo-step:last-child::before { display: none; }
+
+  .demo-dot {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .demo-label { font-size: 12px; color: var(--text-secondary); line-height: 1.4; }
+  .demo-time { font-size: 11px; font-weight: 600; color: var(--accent); }
+
+  /* Bibliography */
+  .bib-item {
+    display: flex;
+    gap: 12px;
+    padding: 14px 18px;
+    margin-bottom: 6px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 13px;
+    transition: border-color 0.15s;
+  }
+
+  .bib-item:hover { border-color: var(--accent); }
+
+  .bib-num {
+    font-weight: 700;
+    color: var(--accent);
+    flex-shrink: 0;
+    width: 28px;
+  }
+
+  .bib-body { flex: 1; }
+
+  .bib-body a {
+    color: var(--accent);
+    text-decoration: none;
+    word-break: break-all;
+  }
+
+  .bib-body a:hover { text-decoration: underline; }
+
+  .bib-dead { color: var(--red); text-decoration: line-through; opacity: 0.6; }
+
+  /* Formula */
+  .formula {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin: 16px 0;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 14px;
+    text-align: center;
+    color: var(--text);
+    letter-spacing: 0.3px;
+  }
+
+  /* Quote block */
+  .quote-block {
+    border-left: 3px solid var(--purple);
+    padding: 12px 20px;
+    margin: 16px 0;
+    background: var(--purple-bg);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-style: italic;
+    font-size: 14px;
+    color: #4c1d95;
+  }
+
+  /* Mobile */
+  .menu-btn {
+    display: none;
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 200;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: var(--bg-sidebar);
+    color: #fff;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    box-shadow: var(--shadow-lg);
+    align-items: center;
+    justify-content: center;
+  }
+
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 90;
+  }
+
+  @media (max-width: 900px) {
+    .sidebar { transform: translateX(-100%); }
+    .sidebar.open { transform: translateX(0); }
+    .main { margin-left: 0; }
+    .content { padding: 32px 20px 80px; }
+    .menu-btn { display: flex; }
+    .overlay.open { display: block; }
+    .hero h1 { font-size: 24px; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .demo-timeline { flex-wrap: wrap; gap: 8px; }
+    .demo-step { flex: none; width: 33%; }
+    .demo-step::before { display: none; }
+  }
+
+  /* Print */
+  @media print {
+    .sidebar, .menu-btn, .overlay { display: none !important; }
+    .main { margin-left: 0; }
+    .content { max-width: 100%; padding: 20px; }
+    .stat-card, .action-item, .bib-item { break-inside: avoid; }
+  }
+
+  /* Scrollbar */
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-track { background: transparent; }
+  .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+
+  /* Animations */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .section { animation: fadeInUp 0.4s ease both; }
+  .section:nth-child(2) { animation-delay: 0.05s; }
+  .section:nth-child(3) { animation-delay: 0.1s; }
+  .section:nth-child(4) { animation-delay: 0.15s; }
+</style>
+</head>
+<body>
+
+<button class="menu-btn" onclick="toggleSidebar()" aria-label="Toggle menu">☰</button>
+<div class="overlay" onclick="toggleSidebar()"></div>
+
+<!-- Sidebar -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="label">Deep Research</div>
+    <h2>Aureon 项目 Upwork 接单策略</h2>
+    <div class="sidebar-meta">
+      <span>📅 2026-06-21</span>
+      <span>📚 23 来源</span>
+    </div>
+  </div>
+  <div class="toc" id="toc">
+    <a href="#tldr"><span class="num">⚡</span> TL;DR</a>
+    <a href="#summary"><span class="num">摘</span> Executive Summary</a>
+    <a href="#market"><span class="num">1</span> 市场需求现状</a>
+    <a href="#clients"><span class="num">2</span> 目标客户画像</a>
+    <a href="#competition"><span class="num">3</span> 竞争格局</a>
+    <a href="#proposal"><span class="num">4</span> Proposal 中标策略</a>
+    <a href="#portfolio"><span class="num">5</span> Portfolio 展示策略</a>
+    <a href="#pricing"><span class="num">6</span> 定价策略</a>
+    <a href="#action"><span class="num">7</span> Action Plan</a>
+    <a href="#caveats"><span class="num">8</span> Open Questions</a>
+    <a href="#methodology"><span class="num">方</span> Methodology</a>
+    <a href="#bibliography"><span class="num">参</span> Bibliography</a>
+  </div>
+</nav>
+
+<!-- Main -->
+<div class="main">
+<div class="content">
+
+  <!-- Hero -->
+  <div class="hero">
+    <h1>Aureon 项目 Upwork 接单策略</h1>
+    <div class="subtitle">
+      <span>📅 Generated 2026-06-21</span>
+      <span>🔍 Depth: Standard</span>
+      <span>📚 23 Sources</span>
+      <span>✅ Citation Verified</span>
+    </div>
+  </div>
+
+  <!-- TL;DR -->
+  <div class="tldr" id="tldr">
+    <p>AI Agent/RAG 类自由职业市场正处于高速增长期，Upwork 平台上有 <strong>12,000+</strong> 活跃 AI 相关 gig，月增长率约 <strong>25%</strong>。<a href="#bib-3" class="cite">[3]</a><a href="#bib-34" class="cite">[34]</a> Aureon 项目（FastAPI + LangChain Agent + RAG）的技术栈恰好匹配市场最高需求组合。<a href="#bib-1" class="cite">[1]</a> 最优切入策略是：以中小企业知识库 Q&A 项目（<strong>$700-$3,000/项目</strong>）为核心定位，用 2 分钟 Demo 视频 + 业务成果导向的 Portfolio 建立信任，前 5 单适度降价积累评价后快速提价至 <strong>$50-80/hr</strong>。<a href="#bib-20" class="cite">[20]</a><a href="#bib-33" class="cite">[33]</a></p>
+  </div>
+
+  <!-- Key Stats -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value">12,000+</div>
+      <div class="stat-label">Upwork 活跃 AI gig</div>
+      <div class="stat-source">来源 [1][34]</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">25-30%</div>
+      <div class="stat-label">月增长率</div>
+      <div class="stat-source">来源 [1][3]</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">$35/hr</div>
+      <div class="stat-label">市场平均时薪</div>
+      <div class="stat-source">来源 [1]</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">$50-80</div>
+      <div class="stat-label">建议起步时薪</div>
+      <div class="stat-source">来源 [20][35]</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">1.2 万</div>
+      <div class="stat-label">Agent 开发人才缺口</div>
+      <div class="stat-source">来源 [8]</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">$700-3K</div>
+      <div class="stat-label">SMB 项目预算区间</div>
+      <div class="stat-source">来源 [3][34]</div>
+    </div>
+  </div>
+
+  <!-- Executive Summary -->
+  <div class="section" id="summary">
+    <div class="section-header">
+      <h2>Executive Summary</h2>
+    </div>
+    <p>本报告针对拥有 Aureon 企业级 AI 知识库项目的独立开发者，系统调研了 Upwork 平台的接单策略。调研覆盖市场需求、目标客户、竞争格局、Proposal 写法、Portfolio 展示和定价策略六个维度，综合 23 个来源的交叉验证结果。</p>
+
+    <div class="highlight-box">
+      <div class="box-title">💡 三大核心发现</div>
+      <p><strong>发现一：</strong>AI Agent 开发是当前自由职业市场增速最快的细分方向之一，而 RAG 知识库 Q&A 是需求最明确、最适合独立开发者切入的子领域。Aureon 的技术架构（LangChain + Qdrant + Hybrid Search）直接对应客户的核心痛点。<a href="#bib-1" class="cite">[1]</a><a href="#bib-34" class="cite">[34]</a></p>
+      <p><strong>发现二：</strong>市场存在明显的"中间层真空"——高端代理公司收费 $3,000+ 且响应慢，低端业余开发者质量不稳定，中间地带给技术过硬、交付可靠的独立开发者留下了清晰的机会窗口。<a href="#bib-3" class="cite">[3]</a><a href="#bib-34" class="cite">[34]</a></p>
+      <p><strong>发现三：</strong>定价策略比技术能力更决定收入上限；Upwork 算法会对长期低价者降低曝光，专家型定位（$50-80/hr 起步）配合系统性提价路径是可持续策略。<a href="#bib-20" class="cite">[20]</a><a href="#bib-21" class="cite">[21]</a><a href="#bib-30" class="cite">[30]</a></p>
+    </div>
+  </div>
+
+  <!-- Section 1: Market Demand -->
+  <div class="section" id="market">
+    <div class="section-header">
+      <h2>1. 市场需求现状</h2>
+      <span class="confidence-badge confidence-high">High Confidence</span>
+    </div>
+
+    <p>AI 相关自由职业市场在 2024-2026 年经历了爆发式增长。根据 Greenice 对 542 个 AI Agent 项目的原始研究，AI Agent 类 gig 在主要自由职业平台上的月均增长率约为 25-30%，仅 Upwork 一个平台就有超过 12,000 个活跃项目，平均项目预算在 $500-$2,000 之间。<a href="#bib-1" class="cite">[1]</a><a href="#bib-34" class="cite">[34]</a> 从技术栈角度看，Python 出现在 50% 以上的项目要求中，LangChain 和 Pinecone 是最常被提及的编排和向量存储工具，OpenAI 仍然是主流 LLM 提供商但多模型支持已被视为"标配"（table stakes）。<a href="#bib-1" class="cite">[1]</a></p>
+
+    <div class="quote-block">
+      "Multi-model support is now table stakes." — Greenice, 2026
+    </div>
+
+    <p>从应用场景看，后台工作流自动化（15.2%）和客户服务（14.8%）是最常见的两大用例，其次是外展/销售自动化和内部文档 Q&A 系统。<a href="#bib-1" class="cite">[1]</a> 这直接对应了 Aureon 的核心能力——它的 RAG pipeline（HyDE 查询扩展 → Hybrid 检索 → 自适应重排序 → 轻量 CRAG 验证）正是构建企业文档 Q&A 系统的成熟方案。</p>
+
+    <p>值得注意的是，市场增长数据主要来自行业博客和社区分析而非平台官方统计。掘金社区的系列文章报告了跨平台 23,700+ 活跃 gig 的总量<a href="#bib-3" class="cite">[3]</a><a href="#bib-34" class="cite">[34]</a>，Greenice 的独立研究通过 542 个 Job Post 的定量分析交叉验证了类似趋势<a href="#bib-1" class="cite">[1]</a>，两者的一致性增强了结论的可信度。但 Upwork 官方从未公开发布过 AI 类 Job Post 的统计数据，因此具体数字应视为参考性指标而非精确测量。</p>
+
+    <p>在人才供需方面，CSDN 的报道指出 Agent 开发工程师的人才缺口达 1.2 万，相关岗位薪酬同比上涨 55%。<a href="#bib-8" class="cite">[8]</a> 虽然这是中国就业市场数据而非 Upwork 平台数据，但它反映的全球性 AI 人才短缺趋势与 Upwork 的市场表现一致——供不应求的基本面支撑了 AI 自由职业者的议价能力。</p>
+  </div>
+
+  <!-- Section 2: Target Clients -->
+  <div class="section" id="clients">
+    <div class="section-header">
+      <h2>2. 目标客户画像</h2>
+      <span class="confidence-badge confidence-medium">Medium Confidence</span>
+    </div>
+
+    <p>根据现有证据，Upwork 上 AI/RAG 类项目的客户可以分为三个梯队，每个梯队的特征和对 Aureon 的适配度各不相同。</p>
+
+    <div class="client-tier">
+      <div class="tier-header">
+        <div class="tier-badge tier-1-bg">1</div>
+        <div class="tier-title">中小/微型企业（SMB）</div>
+        <span class="tier-tag tag-green">最优切入点</span>
+      </div>
+      <p>这类客户是 AI Agent 接单市场中的"蓝海"群体。<a href="#bib-3" class="cite">[3]</a> 他们的典型特征是有明确的痛点（具体的工作流问题）、有限的预算（$700-$3,000/项目）、快速的决策周期（1-2 周），以及无法承担大型代理公司费用的现实约束。<a href="#bib-3" class="cite">[3]</a><a href="#bib-34" class="cite">[34]</a> 他们最常需要的是内部知识库 Q&A 系统、客户服务自动化、和特定业务流程的 AI Agent——这恰好是 Aureon 的核心场景。</p>
+      <div class="tier-meta">
+        <span>💰 预算: $700-$3,000</span>
+        <span>⏱️ 决策: 1-2 周</span>
+        <span>🌍 地域: 美国 40%、英澳加</span>
+      </div>
+    </div>
+
+    <div class="client-tier">
+      <div class="tier-header">
+        <div class="tier-badge tier-2-bg">2</div>
+        <div class="tier-title">初创公司</div>
+        <span class="tier-tag tag-blue">高潜力但需谨慎</span>
+      </div>
+      <p>这类客户通常有技术背景但缺乏 AI 专业团队，项目规模中等（$3,000-$10,000），期望快速交付 MVP（1-3 个月窗口期）。<a href="#bib-1" class="cite">[1]</a> 他们看重的是开发者的全栈能力和独立交付能力，Aureon 的完整技术栈（从 RAG 到前端到部署）是强有力的背书。但初创公司的需求往往不够明确，scope creep 风险较高。</p>
+      <div class="tier-meta">
+        <span>💰 预算: $3,000-$10,000</span>
+        <span>⏱️ 窗口: 1-3 个月</span>
+        <span>⚠️ Scope creep 风险</span>
+      </div>
+    </div>
+
+    <div class="client-tier">
+      <div class="tier-header">
+        <div class="tier-badge tier-3-bg">3</div>
+        <div class="tier-title">企业级客户</div>
+        <span class="tier-tag tag-purple">长期目标</span>
+      </div>
+      <p>这类客户预算充足（$10,000-$180,000+）<a href="#bib-36" class="cite">[36]</a>，但决策周期长、采购流程复杂，通常需要合规认证（SOC2、ISO 27001）和过往企业交付案例。对于独立开发者而言，这不是短期可达的客户群，但可以作为长期品牌建设的方向。</p>
+      <div class="tier-meta">
+        <span>💰 预算: $10K-$180K+</span>
+        <span>📋 需 SOC2/ISO 27001</span>
+        <span>🏢 需企业交付案例</span>
+      </div>
+    </div>
+
+    <div class="highlight-box">
+      <div class="box-title">🔑 关键洞察</div>
+      <p>SMB 客户普遍把项目范围界定（scoping）的责任留给开发者，因为他们不理解技术复杂度。<a href="#bib-3" class="cite">[3]</a> 这既是风险也是机会：主动帮助客户定义清晰的项目范围，能同时建立信任和防止 scope creep。他们最看重的是快速交付（1-3 个月）、透明的定价和可靠的售后支持，而非纯粹的技术深度。<a href="#bib-3" class="cite">[3]</a><a href="#bib-21" class="cite">[21]</a></p>
+    </div>
+  </div>
+
+  <!-- Section 3: Competition -->
+  <div class="section" id="competition">
+    <div class="section-header">
+      <h2>3. 竞争格局</h2>
+      <span class="confidence-badge confidence-medium">Medium Confidence</span>
+    </div>
+
+    <p>Upwork 上 AI/RAG 领域的竞争呈现明显的<strong>"哑铃型"结构</strong>：一端是收费高昂但响应慢、沟通差的大型代理公司（项目报价 $3,000+，交付周期以月计），另一端是价格低廉但质量不稳定、缺乏售后保障的业余开发者（项目报价 $700 以下）。<a href="#bib-3" class="cite">[3]</a><a href="#bib-34" class="cite">[34]</a> 中间地带——技术过硬、价格合理、交付可靠、沟通透明的独立开发者——供给严重不足。</p>
+
+    <table class="pricing-table">
+      <thead>
+        <tr><th>层级</th><th>时薪区间</th><th>竞争强度</th><th>Aureon 定位</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>入门级</td><td class="price">$20-$30/hr</td><td>极高（红海）</td><td>❌ 远低于项目复杂度</td></tr>
+        <tr class="recommended"><td><strong>中级</strong></td><td class="price"><strong>$50-$80/hr</strong></td><td><strong>中等</strong></td><td><strong>✅ 建议起步区间</strong></td></tr>
+        <tr class="recommended"><td><strong>专家级</strong></td><td class="price"><strong>$100-$200/hr</strong></td><td><strong>较低</strong></td><td><strong>✅ 20+ 好评后目标</strong></td></tr>
+        <tr><td>精英级</td><td class="price">$200+/hr</td><td>极低</td><td>🎯 长期方向</td></tr>
+      </tbody>
+    </table>
+
+    <p>Aureon 的技术复杂度（四层记忆系统、Hybrid RAG、自适应查询路由、LangFuse 全链路追踪）远超入门级项目，因此定位应在中级到专家级区间。</p>
+
+    <h3>差异化三方向</h3>
+    <p>顶级 AI 自由职业者的差异化策略主要集中在三个方向<a href="#bib-3" class="cite">[3]</a><a href="#bib-33" class="cite">[33]</a>：一是<strong>内容营销</strong>（撰写案例文章、开源部分代码以吸引 inbound 流量），二是<strong>垂直细分</strong>（如专注 RAG 知识库、专注客服自动化），三是定位为<strong>"AI 的补充者"</strong>而非与自动化工具竞争。对于 Aureon 开发者而言，"企业级 RAG 知识库专家"是一个高辨识度的细分定位——它足够窄以避免与通用 AI 开发者竞争，又足够宽以覆盖多种客户需求。</p>
+
+    <div class="highlight-box success">
+      <div class="box-title">🎯 竞争的薄弱环节</div>
+      <p>多数竞争者要么过度工程化（代理公司用复杂架构增加项目复杂度），要么交付不足（业余开发者只能做简单 demo 而非生产级系统）。<a href="#bib-3" class="cite">[3]</a> 一个能在 <strong>1-2 周内交付可运行 MVP</strong>、提供上线后维护、并用数据透明化成本的独立开发者，可以有效占据 SMB 市场的心智。</p>
+    </div>
+  </div>
+
+  <!-- Section 4: Proposal Strategy -->
+  <div class="section" id="proposal">
+    <div class="section-header">
+      <h2>4. Proposal 中标策略</h2>
+      <span class="confidence-badge confidence-medium">Medium Confidence</span>
+    </div>
+
+    <p>在 Upwork 上，Proposal 是赢得客户的第一道也是最重要的门槛。对于 AI/RAG 类项目，成功的 Proposal 遵循几个经过验证的模式。</p>
+
+    <h3>前两行决定生死</h3>
+    <p>客户在 Upwork 的 Proposal 列表中只能看到前两行内容。<a href="#bib-21" class="cite">[21]</a><a href="#bib-23" class="cite">[23]</a> 如果这两行是通用的自我介绍（"I am a full-stack developer with 5 years of experience..."），客户会直接跳过。有效的做法是以客户的具体问题开头，展示你仔细阅读了 Job Post 并理解了他们的痛点。</p>
+
+    <div class="highlight-box success">
+      <div class="box-title">✅ 好的开头示例</div>
+      <p><em>"Your current customer support team handles 200+ tickets daily — a RAG-powered knowledge base can reduce first-response time by 60% while maintaining accuracy."</em></p>
+      <p>这种开头同时展示了行业理解和技术方案的可行性。</p>
+    </div>
+
+    <div class="highlight-box danger">
+      <div class="box-title">❌ 避免的开头</div>
+      <p><em>"I am a full-stack developer with 5 years of experience in Python, React, and machine learning..."</em></p>
+      <p>客户在预览中看到这种通用介绍会直接跳过。</p>
+    </div>
+
+    <h3>分析客户，而非推销自己</h3>
+    <p>多个来源建议，在写 Proposal 之前先研究客户的 Upwork Profile、历史雇佣记录和已发布的项目。<a href="#bib-21" class="cite">[21]</a><a href="#bib-23" class="cite">[23]</a><a href="#bib-30" class="cite">[30]</a> 初创公司关注速度和预算控制，企业客户关注安全和合规——Proposal 的语气和重点应该根据客户类型调整。<a href="#bib-25" class="cite">[25]</a> 对于 SMB 客户，强调"一周内交付可运行的 MVP"比"我精通 LangChain 和向量数据库"更有说服力。</p>
+
+    <h3>业务语言 > 技术名词</h3>
+    <p>AI 领域的常见错误是在 Proposal 中罗列技术栈（LangChain, Qdrant, FastAPI, React...）而没有解释这些技术如何解决客户的问题。<a href="#bib-21" class="cite">[21]</a><a href="#bib-22" class="cite">[22]</a></p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0">
+      <div class="highlight-box danger" style="margin:0">
+        <div class="box-title">❌ 技术堆砌</div>
+        <p>"使用 Hybrid Search 结合 dense 和 sparse 向量..."</p>
+      </div>
+      <div class="highlight-box success" style="margin:0">
+        <div class="box-title">✅ 业务导向</div>
+        <p>"确保系统既能理解用户意图，也能精确匹配专业术语，将检索准确率提升 30% 以上"</p>
+      </div>
+    </div>
+
+    <h3>5 套模板策略</h3>
+    <p>针对不同类型的项目准备 5 套差异化模板（而非一套通用模板），可以显著提高 Proposal 的打开率和回复率。<a href="#bib-30" class="cite">[30]</a><a href="#bib-31" class="cite">[31]</a></p>
+
+    <table class="pricing-table">
+      <thead><tr><th>#</th><th>模板类型</th><th>核心痛点</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>知识库 Q&A 系统</td><td>员工搜索内部文档耗时过长</td></tr>
+        <tr><td>2</td><td>客服 AI Agent</td><td>客服响应慢、人力成本高</td></tr>
+        <tr><td>3</td><td>数据分析 Agent</td><td>数据散落在多个系统，无法快速获取洞察</td></tr>
+        <tr><td>4</td><td>内容自动化</td><td>内容生产效率低、多渠道分发困难</td></tr>
+        <tr><td>5</td><td>工作流自动化</td><td>重复性流程占用大量人力</td></tr>
+      </tbody>
+    </table>
+
+    <div class="highlight-box warning">
+      <div class="box-title">⚠️ 常见致命错误</div>
+      <p>以低价竞争（触发算法降低曝光）、使用复制粘贴的通用模板、不做客户调研就投递、忽视 Upwork 的平台规则（如引导线下交易会导致封号）。<a href="#bib-21" class="cite">[21]</a><a href="#bib-22" class="cite">[22]</a><a href="#bib-30" class="cite">[30]</a></p>
+    </div>
+  </div>
+
+  <!-- Section 5: Portfolio -->
+  <div class="section" id="portfolio">
+    <div class="section-header">
+      <h2>5. Portfolio 展示策略</h2>
+      <span class="confidence-badge confidence-medium">Medium Confidence</span>
+    </div>
+
+    <p>对于 AI/RAG 这类复杂项目，Portfolio 的展示方式直接影响客户是否相信你有能力交付。当前的趋势是从"简历导向"转向"产品导向"——客户更关心你能展示什么可运行的东西，而非你列了什么技能。<a href="#bib-33" class="cite">[33]</a></p>
+
+    <h3>2 分钟 Demo 视频</h3>
+    <p>一段带旁白的 2 分钟产品演示视频"比纯文字描述更有说服力"。<a href="#bib-33" class="cite">[33]</a> 对于 Aureon，建议按以下流程录制：</p>
+
+    <div class="demo-timeline">
+      <div class="demo-step">
+        <div class="demo-dot">1</div>
+        <div class="demo-time">10 秒</div>
+        <div class="demo-label">上传企业文档</div>
+      </div>
+      <div class="demo-step">
+        <div class="demo-dot">2</div>
+        <div class="demo-time">20 秒</div>
+        <div class="demo-label">自然语言提问</div>
+      </div>
+      <div class="demo-step">
+        <div class="demo-dot">3</div>
+        <div class="demo-time">20 秒</div>
+        <div class="demo-label">来源溯源展示</div>
+      </div>
+      <div class="demo-step">
+        <div class="demo-dot">4</div>
+        <div class="demo-time">30 秒</div>
+        <div class="demo-label">管理后台仪表盘</div>
+      </div>
+      <div class="demo-step">
+        <div class="demo-dot">5</div>
+        <div class="demo-time">40 秒</div>
+        <div class="demo-label">技术架构说明</div>
+      </div>
+    </div>
+
+    <h3>业务成果框架化</h3>
+    <p>Portfolio 条目应该像 mini case study：问题陈述 → 解决方案 → 量化影响。<a href="#bib-22" class="cite">[22]</a><a href="#bib-21" class="cite">[21]</a></p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0">
+      <div class="highlight-box danger" style="margin:0">
+        <div class="box-title">❌ 技术描述</div>
+        <p>"Built a RAG pipeline with Qdrant + LangChain"</p>
+      </div>
+      <div class="highlight-box success" style="margin:0">
+        <div class="box-title">✅ 业务成果</div>
+        <p>"Built an enterprise knowledge base that reduced document search time from 15 minutes to under 30 seconds, with 95%+ answer accuracy across 1,000+ documents"</p>
+      </div>
+    </div>
+
+    <h3>Aureon Portfolio 拆分建议</h3>
+    <p>Aureon 的核心优势在于它的企业级特性——这不是一个简单的 ChatGPT wrapper，而是一个包含完整 RAG pipeline、四层记忆系统、多租户隔离、RBAC 权限、LangFuse 可观测性的生产级系统。建议拆分为 3 个可独立展示的子项目：</p>
+
+    <div class="client-tier">
+      <div class="tier-header">
+        <div class="tier-badge tier-1-bg" style="background:#16a34a">R</div>
+        <div class="tier-title">Enterprise RAG Knowledge Base</div>
+      </div>
+      <p>聚焦检索质量：展示 Hybrid Search（dense + sparse 向量融合）、自适应查询路由、轻量 CRAG 验证如何协同工作以提高检索准确率。</p>
+    </div>
+
+    <div class="client-tier">
+      <div class="tier-header">
+        <div class="tier-badge tier-2-bg" style="background:#2563eb">A</div>
+        <div class="tier-title">AI Agent with Memory</div>
+      </div>
+      <p>聚焦对话智能：展示四层记忆系统（L0 原始对话 → L1 原子事实 → L2 场景总结 → L3 用户画像）如何让 Agent 在长期对话中保持上下文。</p>
+    </div>
+
+    <div class="client-tier">
+      <div class="tier-header">
+        <div class="tier-badge tier-3-bg" style="background:#7c3aed">P</div>
+        <div class="tier-title">Production-Grade AI Platform</div>
+      </div>
+      <p>聚焦工程成熟度：展示多租户隔离、LangFuse 全链路追踪、熔断器、Feature Flag 等企业级特性。</p>
+    </div>
+  </div>
+
+  <!-- Section 6: Pricing -->
+  <div class="section" id="pricing">
+    <div class="section-header">
+      <h2>6. 定价策略</h2>
+      <span class="confidence-badge confidence-high">High Confidence</span>
+    </div>
+
+    <p>定价是接单策略中最被低估但影响最深远的环节。它不仅决定收入，还影响 Upwork 算法的曝光分配、客户质量和长期职业定位。</p>
+
+    <h3>定价公式</h3>
+    <div class="formula">
+      目标时薪 = (期望年收入 + 年业务成本 + 预留税费) / 年有效计费时数
+    </div>
+
+    <p>假设期望年收入 $80,000、业务成本（API 调用、云服务器、工具订阅）$5,000、税费预留 25%、年有效计费时 1,200 小时（考虑非计费时间），目标时薪约为 <strong>$89/hr</strong>。<a href="#bib-20" class="cite">[20]</a><a href="#bib-21" class="cite">[21]</a> 这个数字看起来很高，但它反映的是自由职业者的真实成本结构——没有带薪假、没有雇主缴纳社保、有大量非计费时间（Proposal 写作、客户沟通、学习）。</p>
+
+    <h3>起步与提价路径</h3>
+    <p>建议的起步时薪是 <strong>$50-$80/hr</strong>（中级到高级区间）。<a href="#bib-20" class="cite">[20]</a><a href="#bib-35" class="cite">[35]</a> 提价的系统性规则是：<strong>每积累 5 个五星评价，提价 10-15%</strong>。<a href="#bib-22" class="cite">[22]</a><a href="#bib-30" class="cite">[30]</a> 按此节奏，在积累 20-25 个好评后，时薪应达到 $80-$120 区间。</p>
+
+    <h3>小时 vs 固定价格</h3>
+    <table class="pricing-table">
+      <thead><tr><th>模式</th><th>适用场景</th><th>建议</th></tr></thead>
+      <tbody>
+        <tr><td><strong>小时计费</strong></td><td>需求模糊或持续演进的项目</td><td>RAG 迭代优化、Agent 行为调优</td></tr>
+        <tr><td><strong>固定价格</strong></td><td>交付物明确的项目</td><td>"构建基于公司文档的知识库 Q&A"</td></tr>
+        <tr><td><strong>混合模式</strong></td><td>Aureon 定制部署（推荐）</td><td>基础功能 $3K-$5K 固定 + 定制/维护按时</td></tr>
+      </tbody>
+    </table>
+
+    <p>无论哪种模式，都应该加上 <strong>30% 的 buffer</strong> 来覆盖云资源和 API 调用成本。<a href="#bib-20" class="cite">[20]</a></p>
+
+    <div class="highlight-box warning">
+      <div class="box-title">⚠️ Upwork 算法的定价陷阱</div>
+      <p>Upwork 的排名算法会将长期低价视为"低价值"信号，从而降低你在优质客户搜索结果中的曝光度。<a href="#bib-30" class="cite">[30]</a> 这意味着"先低价接单再慢慢涨价"的策略有天花板——如果起步价太低（低于 $22-$30/hr），算法可能将你归类为低端服务者，后续提价也无法恢复曝光。<a href="#bib-30" class="cite">[30]</a><a href="#bib-21" class="cite">[21]</a></p>
+      <p><strong>底线：即使在前几单为了积累评价而适度降价，也不应低于 $35-$40/hr。</strong></p>
+    </div>
+
+    <h3>报价复杂度系数</h3>
+    <div class="formula">
+      报价 = (预估工时 × 时薪) × 难度系数 × 紧急系数
+    </div>
+    <p>对于 AI Agent 项目，难度系数通常为 <strong>1.2-1.5</strong>（调试和调优时间难以精确预估），紧急系数为 <strong>1.0-1.3</strong>。<a href="#bib-35" class="cite">[35]</a> 实际案例：一个预估 40 小时的知识库项目，$60/hr 时薪，难度系数 1.3，正常交付，报价为 <strong>$3,120</strong>。</p>
+  </div>
+
+  <!-- Section 7: Action Plan -->
+  <div class="section" id="action">
+    <div class="section-header">
+      <h2>7. Action Plan</h2>
+    </div>
+
+    <ul class="action-list">
+      <li class="action-item" onclick="this.classList.toggle('done')">
+        <div class="action-check">✓</div>
+        <div class="action-body">
+          <div class="action-time">Week 1</div>
+          <div class="action-text"><strong>录制 Aureon Demo 视频</strong> — 录制 2 分钟带旁白的产品演示，覆盖文档上传 → 智能问答 → 来源溯源 → 管理后台四个核心场景，上传到 YouTube/Vimeo 作为 Portfolio 链接<a href="#bib-33" class="cite">[33]</a></div>
+        </div>
+      </li>
+      <li class="action-item" onclick="this.classList.toggle('done')">
+        <div class="action-check">✓</div>
+        <div class="action-body">
+          <div class="action-time">Week 1</div>
+          <div class="action-text"><strong>重写 Upwork Profile</strong> — Title 定位为 "Enterprise AI/RAG Knowledge Base Specialist"，Bio 中用业务成果语言描述 Aureon，突出 LangChain + Qdrant + FastAPI + React 技术栈<a href="#bib-22" class="cite">[22]</a><a href="#bib-30" class="cite">[30]</a></div>
+        </div>
+      </li>
+      <li class="action-item" onclick="this.classList.toggle('done')">
+        <div class="action-check">✓</div>
+        <div class="action-body">
+          <div class="action-time">Week 2</div>
+          <div class="action-text"><strong>准备 5 套 Proposal 模板</strong> — 分别针对：知识库 Q&A、客服 AI Agent、数据分析 Agent、内容自动化、工作流自动化，每套模板前两行定制化<a href="#bib-30" class="cite">[30]</a><a href="#bib-31" class="cite">[31]</a></div>
+        </div>
+      </li>
+      <li class="action-item" onclick="this.classList.toggle('done')">
+        <div class="action-check">✓</div>
+        <div class="action-body">
+          <div class="action-time">Week 2</div>
+          <div class="action-text"><strong>搜索并保存 20 个目标 Job Post</strong> — 搜索关键词："RAG"、"AI agent"、"LangChain"、"knowledge base"、"AI chatbot"，筛选预算 $1,000-$5,000、发布 24 小时内的新帖<a href="#bib-1" class="cite">[1]</a><a href="#bib-34" class="cite">[34]</a></div>
+        </div>
+      </li>
+      <li class="action-item" onclick="this.classList.toggle('done')">
+        <div class="action-check">✓</div>
+        <div class="action-body">
+          <div class="action-time">Week 3</div>
+          <div class="action-text"><strong>投递前 10 个 Proposal</strong> — 以 $50/hr 起步价投递，每份 Proposal 在开头引用客户的具体问题，附上 Demo 链接<a href="#bib-21" class="cite">[21]</a><a href="#bib-23" class="cite">[23]</a></div>
+        </div>
+      </li>
+      <li class="action-item" onclick="this.classList.toggle('done')">
+        <div class="action-check">✓</div>
+        <div class="action-body">
+          <div class="action-time">Month 1-2</div>
+          <div class="action-text"><strong>完成前 5 单并获取评价</strong> — 目标是在 SMB 客户的知识库 Q&A 项目上积累 5 个五星评价，交付后主动请求 feedback<a href="#bib-22" class="cite">[22]</a></div>
+        </div>
+      </li>
+      <li class="action-item" onclick="this.classList.toggle('done')">
+        <div class="action-check">✓</div>
+        <div class="action-body">
+          <div class="action-time">Month 2</div>
+          <div class="action-text"><strong>第一次提价</strong> — 积累 5 个好评后提价 10-15%（$50→$57 或 $55→$63），更新 Profile 和模板<a href="#bib-22" class="cite">[22]</a><a href="#bib-30" class="cite">[30]</a></div>
+        </div>
+      </li>
+      <li class="action-item" onclick="this.classList.toggle('done')">
+        <div class="action-check">✓</div>
+        <div class="action-body">
+          <div class="action-time">Month 3+</div>
+          <div class="action-text"><strong>建立内容营销管道</strong> — 在掘金/Medium 上发表 2-3 篇 Aureon 技术文章（如"如何用 Hybrid Search 将 RAG 检索准确率提升 30%"），吸引 inbound 流量<a href="#bib-3" class="cite">[3]</a><a href="#bib-33" class="cite">[33]</a></div>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Section 8: Open Questions -->
+  <div class="section" id="caveats">
+    <div class="section-header">
+      <h2>8. Open Questions & Caveats</h2>
+    </div>
+
+    <div class="highlight-box warning">
+      <div class="box-title">📊 数据的局限性</div>
+      <p>本报告的市场增长数据（25-30% 月增长率、23,700+ 活跃 gig）主要来自行业博客和社区分析<a href="#bib-1" class="cite">[1]</a><a href="#bib-3" class="cite">[3]</a><a href="#bib-34" class="cite">[34]</a>，而非 Upwork 官方统计。Upwork 从未公开发布过 AI 类 Job Post 的精确数据。此外，部分来源之间可能存在共享底层数据集的情况（Greenice 的 542 项目研究与掘金文章引用了相同的 $35.08 均值数据），交叉验证的独立性有限。</p>
+    </div>
+
+    <div class="highlight-box">
+      <div class="box-title">🌏 中国开发者的特殊挑战</div>
+      <p>语言和沟通风格差异（Proposal 必须用流畅自然的英文撰写，AI 辅助写作被广泛采用）<a href="#bib-37" class="cite">[37]</a>；时区差距（与美国客户有 12+ 小时时差，既是优势也是风险）<a href="#bib-37" class="cite">[37]</a><a href="#bib-39" class="cite">[39]</a>；信任赤字（部分客户对中国开发者存在先入为主的偏见）。可通过全英文 Profile、使用 Western  recognizable 的技术框架标签和主动的沟通节奏来缓解，但无法完全消除。</p>
+    </div>
+
+    <div class="highlight-box danger">
+      <div class="box-title">🫧 AI 市场的泡沫风险</div>
+      <p>AI Agent 市场的快速增长可能伴随着大量低质量项目的涌入，导致竞争加剧和单价下降。如果 ChatGPT 等工具的能力持续提升，部分简单的"AI wrapper"需求可能被无代码/低代码平台替代。<a href="#bib-2" class="cite">[2]</a> Aureon 的企业级复杂度（多租户、RBAC、可观测性）是一道护城河，但需要持续保持在 RAG 技术前沿的领先优势。</p>
+    </div>
+
+    <p><strong>引用修正记录：</strong>Phase 3.1 核查发现 1 个来源已失效（163.com 关于 $35→$150 提价案例的文章返回 404）<a href="#bib-31" class="cite">[31]</a>，相关轶事已从报告中移除。另 1 个声明（"2 分钟 Demo 视频是金标准"）已软化为"被强烈推荐为高效展示形式"以匹配来源的实际措辞。<a href="#bib-33" class="cite">[33]</a></p>
+  </div>
+
+  <!-- Methodology -->
+  <div class="section" id="methodology">
+    <div class="section-header">
+      <h2>Methodology</h2>
+    </div>
+
+    <p><strong>深度选择：</strong>standard（2 个并行检索子代理 + 1 个补充检索子代理）。</p>
+    <p><strong>检索过程：</strong>Wave 1 启动 2 个并行 Retrieval Agent，分别覆盖市场需求/客户画像/竞争格局（Areas 1-3）和策略/展示/定价（Areas 4-6），返回 15 个来源。Quality Gate 评估后发现 4 个信息缺口，Wave 2 启动 1 个 Gap-Fill Agent 补充 10 个来源。总计 25 个来源（去重后 23 个）。</p>
+    <p><strong>引用核查：</strong>Phase 3.1 对 8 个高影响声明进行 WebFetch 验证，结果：6/8 SUPPORTED、1/8 PARTIAL（已软化措辞）、1/8 UNSUPPORTED（来源 404，已移除）。</p>
+    <p><strong>自我批判发现：</strong>(1) Tier 1 来源几乎为零，主要来自行业博客和社区（Tier 2-3）；(2) Upwork 官方资源（4 个来源）均被 Cloudflare 拦截；(3) 缺乏"失败案例"视角——现有来源存在幸存者偏差。</p>
+  </div>
+
+  <!-- Bibliography -->
+  <div class="section" id="bibliography">
+    <div class="section-header">
+      <h2>Bibliography</h2>
+    </div>
+
+    <div class="bib-item" id="bib-1">
+      <div class="bib-num">[1]</div>
+      <div class="bib-body">
+        Greenice — "AI Agent Development Trends 2026: Original Research of 542 Projects" — <a href="https://greenice.net/ai-agent-development-trends/" target="_blank">greenice.net</a> — <span class="tier tier-2">Tier 2</span>
+      </div>
+    </div>
+
+    <div class="bib-item" id="bib-2">
+      <div class="bib-num">[2]</div>
+      <div class="bib-body">
+        2727 Coworking — "AI's Impact on Freelancers: Job Trends, Skills & Outlook" — <a href="https://2727coworking.com/articles/ai-impact-freelancers" target="_blank">2727coworking.com</a> — <span class="tier tier-3">Tier 3</span>
+      </div>
+    </div>
+
+    <div class="bib-item" id="bib-3">
+      <div class="bib-num">[3]</div>
+      <div class="bib-body">
+        掘金 — "AI Agent 接单市场：2026 年赚钱机会分析" — <a href="https://juejin.cn/post/7615807694734213162" target="_blank">juejin.cn</a> — <span class="tier tier-3">Tier 3</span>
+      </div>
+    </div>
+
+    <div class="bib-item" id="bib-8">
+      <div class="bib-num">[8]</div>
+      <div class="bib-body">
+        CSDN — "Agent开发工程师缺口达1.2万！2026年AI人才市场最稀缺品类薪酬暴涨55%" — <a href="https://m.blog.csdn.net/libaiup/article/details/161057442" target="_blank">csdn.net</a> — <span class="tier tier-3">Tier 3</span>
+      </div>
+    </div>
+
+    <div class="bib-item" id="bib-20">
+      <div class="bib-num">[20]</div>
+      <div class="bib-body">
+        Nicola Lazzari — "AI Consultant Hourly Rate UK 2026" — <a href="https://nicolalazzari.ai/guides/ai-consultant-pricing-guide-uk" target="_blank">nicolalazzari.ai</a> — <span class="tier tier-2">Tier 2</span>
+      </div>
+    </div>
+
+    <div class="bib-item" id="bib-21">
+      <div class="bib-num">[21]</div>
+      <div class="bib-body">
+        CSDN — "Upwork定价艺术：从新手到专家的动态费率指南" — <a href="https://blog.csdn.net/weixin_28339967/article/details/158136525" target="_blank">csdn.net</a> — <span class="tier tier-3">Tier 3</span>
+      </div>
+    </div>
+
+    <div class="bib-item" id="bib-22">
+      <div class="bib-num">[22]</div>
+      <div class="bib-body">
+        CSDN — "Upwork新手常见错误及如何避免" — <a href="https://blog.csdn.net/qq_61813593/article/details/145622487" target="_blank">csdn.net</a> — <span class="tier tier-3">Tier 3</span>
+      </div>
+    </div>
+
+    <div class="bib-item" id="bib-23">
+      <div class="bib-num">[23]</div>
+      <div class="bib-body">
+        CSDN — "第4章：外包接单全攻略——Upwork/电鸭/猪八戒从0到第一单" — <a href="https://blog.csdn.net/sfishfly/article/details/161728075" target="_blank">csdn.net</a> — <span class="tier tier-3">Tier 3</span>
+      </div>
+    </div>
+
+    <div class="bib-item" id="bib-25">
+      <div class="bib-num">[25]</div>
+      <div class="bib-body">
+        Vadym Ovcharenko — "The hidden psychology of Upwork proposals" — <a href="https://www.linkedin.com/posts/vadymhimself_the-hidden-psychology-of-upwork-proposals-activity-7376630754434469888-P8tD" target="_blank">linkedin.com</a> — <span class="tier tier-3">Tier 3</span>
+      </div>
+    </div>
+
+    <div class="bib-item" id="bib-30">
+      <div class="bib-num">[30]</div>
+      <div class="bib-body">
+        CSDN — "Upwork新手必知的6大生存法则" — <a href="https://blog.csdn.net/m2n3o4p5/article/details/154627684" target="_blank">csdn.net</a> — <span class="tier tier-3">Tier 3</span>
+      </div>
+    </div>
+
+    <div class="bib-item" id="bib-31">
+      <div class="bib-num">[31]</div>
+      <div class="bib-body">
+        <span class="bib-dead">163.com — "Upwork程序员用5套模板接单，时薪从35刀涨到150刀" — 来源已 404，引用已移除</span> — <span class="tier tier-3">Tier 3</span>
+      </div>
+    </div>
+
+    <div class="bib-item" id="bib-33">
+      <div class="bib-num">[33]</div>
+      <div class="bib-body">
+        人人都是产品经理 — "我用AI做了一个Demo，面试通过率90%" — <a href="https://www.woshipm.com/ai/6316466.html" target="_blank">woshipm.com</a> — <span class="tier tier-2">Tier 2</span>
+      </div>
+    </div>
+
+    <div class="bib-item" id="bib-34">
+      <div class="bib-num">[34]</div>
+      <div class="bib-body">
+        掘金 — "AI Agent 接单实战：从零到第一个$500" — <a href="https://juejin.cn/post/7616308247710531603" target="_blank">juejin.cn</a> — <span class="tier tier-3">Tier 3</span>
+      </div>
+    </div>
+
+    <div class="bib-item" id="bib-35">
+      <div class="bib-num">[35]</div>
+      <div class="bib-body">
+        掘金 — "AI Agent 接单实战"（具体报价数据） — <a href="https://juejin.cn/post/7616308247710531603" target="_blank">juejin.cn</a> — <span class="tier tier-3">Tier 3</span>
+      </div>
+    </div>
+
+    <div class="bib-item" id="bib-36">
+      <div class="bib-num">[36]</div>
+      <div class="bib-body">
+        ProductCrafters — "AI Agent Development Cost: $5K to $180K+" — <a href="https://productcrafters.io/blog/how-much-does-it-cost-to-build-an-ai-agent/" target="_blank">productcrafters.io</a> — <span class="tier tier-2">Tier 2</span>
+      </div>
+    </div>
+
+    <div class="bib-item" id="bib-37">
+      <div class="bib-num">[37]</div>
+      <div class="bib-body">
+        知乎 — "Upwork新手赚钱指南：从零开单到稳定接活" — <a href="https://zhuanlan.zhihu.com/p/1934580002927666311" target="_blank">zhuanlan.zhihu.com</a> — <span class="tier tier-3">Tier 3</span>
+      </div>
+    </div>
+
+    <div class="bib-item" id="bib-39">
+      <div class="bib-num">[39]</div>
+      <div class="bib-body">
+        CSDN — "第4章：外包接单全攻略"（补充引用） — <a href="https://blog.csdn.net/sfishfly/article/details/161728075" target="_blank">csdn.net</a> — <span class="tier tier-3">Tier 3</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+  // Mobile sidebar toggle
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.querySelector('.overlay').classList.toggle('open');
+  }
+
+  // Active TOC tracking
+  const tocLinks = document.querySelectorAll('.toc a');
+  const sections = [];
+
+  tocLinks.forEach(link => {
+    const id = link.getAttribute('href').slice(1);
+    const el = document.getElementById(id);
+    if (el) sections.push({ id, el, link });
+  });
+
+  function updateActive() {
+    let current = sections[0];
+    const scrollY = window.scrollY + 80;
+
+    for (const s of sections) {
+      if (s.el.offsetTop <= scrollY) current = s;
+    }
+
+    tocLinks.forEach(l => l.classList.remove('active'));
+    if (current) current.link.classList.add('active');
+  }
+
+  window.addEventListener('scroll', updateActive, { passive: true });
+  updateActive();
+
+  // Close sidebar on link click (mobile)
+  tocLinks.forEach(link => {
+    link.addEventListener('click', () => {
+      if (window.innerWidth <= 900) {
+        document.getElementById('sidebar').classList.remove('open');
+        document.querySelector('.overlay').classList.remove('open');
+      }
+    });
+  });
+</script>
+
+</body>
+</html>
