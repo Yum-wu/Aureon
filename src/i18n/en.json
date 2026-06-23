@@ -25,6 +25,9 @@
       "recall": "Recall",
       "latency": "Latency",
       "ttft": "TTFT"
+    },
+    "user": {
+      "demo": "Demo User"
     }
   },
   "landing": {
@@ -99,7 +102,14 @@
     "features_subtitle": "Everything you need for enterprise knowledge management",
     "trust": {
       "title": "Enterprise Security & Reliability",
-      "badges": ["SOC 2 Compliance", "End-to-End Encryption", "99.9% Availability", "Multi-Tenant Isolation", "SSO Integration", "Audit Logging"],
+      "badges": [
+        "SOC 2 Compliance",
+        "End-to-End Encryption",
+        "99.9% Availability",
+        "Multi-Tenant Isolation",
+        "SSO Integration",
+        "Audit Logging"
+      ],
       "tests": "Tests",
       "articles": "Articles",
       "chunks": "Chunks Indexed",
@@ -213,7 +223,8 @@
     "charts": {
       "latency_trend": "Latency Trend",
       "query_volume": "Query Volume",
-      "quality_trend": "Retrieval Quality Trend"
+      "quality_trend": "Quality Trend",
+      "cache_hit_rate": "Cache Hit Rate"
     },
     "alerts": {
       "title": "Recent Alerts",
@@ -226,13 +237,7 @@
     "waiting_for_data": "Waiting for WebSocket data...",
     "auth_failed_title": "Authentication Expired",
     "auth_failed_desc": "Your API Key or login credentials are invalid. Please log in with a demo account to view data.",
-    "go_login": "Go to Login",
-    "charts": {
-      "latency_trend": "Latency Trend",
-      "query_volume": "Query Volume",
-      "quality_trend": "Quality Trend",
-      "cache_hit_rate": "Cache Hit Rate"
-    }
+    "go_login": "Go to Login"
   },
   "search": {
     "title": "Enterprise AI Search",
@@ -449,6 +454,12 @@
       "confirm_msg": "Are you sure you want to delete \"{{title}}\" and its {{count}} chunks? This action cannot be undone.",
       "confirm": "Confirm Delete",
       "cancel": "Cancel"
+    },
+    "pagination": {
+      "total": "{{total}} records, page {{page}}/{{totalPages}}",
+      "per_page": "Per page",
+      "prev": "Previous",
+      "next": "Next"
     }
   },
   "analytics": {
@@ -480,9 +491,8 @@
     },
     "queries": {
       "title": "Query Distribution",
-      "intent": "Intent",
-      "count": "Count",
-      "percentage": "Share"
+      "total": "Total Queries",
+      "per_hour": "avg/hour"
     },
     "intent": {
       "document_query": "Document Query",
@@ -506,11 +516,6 @@
       "output": "Output Tokens",
       "cost": "Estimated Cost",
       "per_query": "~${cost}/query"
-    },
-    "queries": {
-      "title": "Query Distribution",
-      "total": "Total Queries",
-      "per_hour": "avg/hour"
     },
     "cache": {
       "title": "Cache Hit Rate",

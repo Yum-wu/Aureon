@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { authFetch } from "../services/authFetch";
 import { useDocumentsQuery } from "../hooks/useDocumentsQuery";
@@ -6,8 +6,11 @@ import { useDeleteDocument } from "../hooks/useDeleteDocument";
 import { useBlogConfig } from "../hooks/useBlogConfig";
 import { DocumentUpload } from "../components/documents/DocumentUpload";
 import { ConfirmDialog } from "../components/admin/ConfirmDialog";
-import { FileText, BookOpen, BarChart3, Trash2 } from "lucide-react";
+import { FileText, BookOpen, BarChart3, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Breadcrumb } from "../components/ui/Breadcrumb";
+
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+const DEFAULT_PAGE_SIZE = 20;
 
 const TYPE_BADGE: Record<string, string> = {
   md: "bg-green-100 text-green-700",
@@ -25,18 +28,35 @@ export function Documents() {
   const [showUpload, setShowUpload] = useState(false);
   const [filter, setFilter] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<{ source: string; title: string; chunkCount: number } | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   const documents = data?.documents ?? [];
   const totalDocs = data?.totalDocs ?? 0;
   const totalChunks = data?.totalChunks ?? 0;
 
-  const filtered = filter
-    ? documents.filter(
-        (d) =>
-          d.title.toLowerCase().includes(filter.toLowerCase()) ||
-          d.source.toLowerCase().includes(filter.toLowerCase())
-      )
-    : documents;
+  const filtered = useMemo(() => {
+    if (!filter) return documents;
+    const lowerFilter = filter.toLowerCase();
+    return documents.filter(
+      (d) =>
+        d.title.toLowerCase().includes(lowerFilter) ||
+        d.source.toLowerCase().includes(lowerFilter)
+    );
+  }, [documents, filter]);
+
+  // 分页计算
+  const totalPages = Math.ceil(filtered.length / pageSize);
+  const paginatedDocuments = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, page, pageSize]);
+
+  // 页码变化时重置到第一页
+  const handleFilterChange = (value: string) => {
+    setFilter(value);
+    setPage(1);
+  };
 
   // Error state
   if (error) {
@@ -128,7 +148,7 @@ export function Documents() {
         <input
           type="text"
           value={filter}
-          onChange={(e) => setFilter(e.target.value)}
+          onChange={(e) => handleFilterChange(e.target.value)}
           placeholder={t("documents.search_placeholder")}
           className="w-full px-4 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
@@ -182,7 +202,7 @@ export function Documents() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((doc, i) => (
+                {paginatedDocuments.map((doc, i) => (
                   <tr
                     key={`${doc.source}-${doc.title}-${i}`}
                     className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-inset)] transition-colors"
@@ -227,7 +247,7 @@ export function Documents() {
 
           {/* Mobile: Cards */}
           <div className="md:hidden space-y-3">
-            {filtered.map((doc, i) => (
+            {paginatedDocuments.map((doc, i) => (
               <div key={`${doc.source}-${doc.title}-${i}`} className="bg-[var(--bg-secondary)] rounded-xl border border-[var(--border)] shadow-sm p-4">
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-2 min-w-0">
@@ -254,6 +274,79 @@ export function Documents() {
               </div>
             ))}
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div data-testid="pagination" className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 px-2">
+              <div className="flex items-center gap-4">
+                <span data-testid="page-info" className="text-sm text-[var(--text-tertiary)]">
+                  {t("documents.pagination.total", { total: filtered.length, page, totalPages, interpolation: { escapeValue: false } })}
+                </span>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-[var(--text-tertiary)]">{t("documents.pagination.per_page", "每页")}</label>
+                  <select
+                    data-testid="page-size-select"
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setPage(1);
+                    }}
+                    className="px-2 py-1 rounded border border-[var(--border)] bg-[var(--bg-secondary)] text-sm"
+                  >
+                    {PAGE_SIZE_OPTIONS.map((size) => (
+                      <option key={size} value={size}>{size}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  data-testid="page-prev"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className="p-2 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-inset)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  aria-label={t("documents.pagination.prev", "上一页")}
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                  let pageNum: number;
+                  if (totalPages <= 7) {
+                    pageNum = i + 1;
+                  } else if (page <= 4) {
+                    pageNum = i + 1;
+                  } else if (page >= totalPages - 3) {
+                    pageNum = totalPages - 6 + i;
+                  } else {
+                    pageNum = page - 3 + i;
+                  }
+                  return (
+                    <button
+                      key={pageNum}
+                      data-testid={`page-${pageNum}`}
+                      onClick={() => setPage(pageNum)}
+                      className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
+                        pageNum === page
+                          ? "bg-[var(--accent)] text-white"
+                          : "text-[var(--text-secondary)] hover:bg-[var(--surface-inset)]"
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+                <button
+                  data-testid="page-next"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  className="p-2 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-inset)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  aria-label={t("documents.pagination.next", "下一页")}
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
+          )}
         </>
       )}
 
