@@ -69,9 +69,24 @@ def require_llm_key():
         )
 
 
-def sse_event(data: dict) -> str:
-    """Format a dict as an SSE data event string."""
-    return f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+def sse_event(data: dict, event: str | None = None, event_id: str | None = None) -> str:
+    """Format a dict as an SSE event string per WHATWG spec.
+
+    Args:
+        data: Payload dict (always sent as ``data:`` line).
+        event: Optional SSE event type (``event:`` field).
+        event_id: Optional SSE event ID (``id:`` field).
+
+    Returns:
+        SSE-formatted string ending with ``\\n\\n``.
+    """
+    lines: list[str] = []
+    if event_id:
+        lines.append(f"id: {event_id}")
+    if event:
+        lines.append(f"event: {event}")
+    lines.append(f"data: {json.dumps(data, ensure_ascii=False)}")
+    return "\n".join(lines) + "\n\n"
 
 
 # ── Fire-and-forget background task utility ──

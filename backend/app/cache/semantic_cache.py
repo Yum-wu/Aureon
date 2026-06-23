@@ -105,6 +105,7 @@ class SemanticLLMCache:
             from app.rag.qdrant_ops import _get_qdrant
             return _get_qdrant()
         except Exception:
+            logger.debug("qdrant_client_unavailable_for_semantic_cache")
             return None
 
     def _ensure_qdrant_collection(self):
@@ -625,6 +626,7 @@ class SemanticLLMCache:
                 info = await r.info("memory")
                 stats["redis_memory_used"] = info.get("used_memory_human", "unknown")
             except Exception as e:
+                logger.debug("redis_memory_info_failed", error=str(e))
                 stats["redis_memory_used"] = "error: %s" % e
 
         return stats
