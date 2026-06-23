@@ -93,21 +93,6 @@ def _add_to_index_qdrant(chunks: List[Dict[str, Any]]):
 
 
 
-    # Get current max ID to avoid collisions
-
-    try:
-
-        info = client.get_collection(collection_name)
-
-        existing_count = info.points_count or 0
-
-    except Exception as e:
-
-        logger.debug("get_collection_count_failed", error=str(e))
-
-        existing_count = 0
-
-
 
     # Embed texts �� ����ʹ�� DashScope combined API��dense+sparse һ�ε��ã�
 
