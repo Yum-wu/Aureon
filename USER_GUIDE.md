@@ -1,237 +1,435 @@
-# AI 聊天助手 — 使用手册
+# Aureon 用户手册
+
+**版本**: 2026-06-23  
+**在线访问**: https://aureon-production-659a.up.railway.app
+
+---
 
 ## 目录
 
-1. [启动与关闭](#1-启动与关闭)
-2. [配置说明](#2-配置说明)
-3. [聊天界面](#3-聊天界面)
-4. [工具调用](#4-工具调用)
-5. [记忆系统](#5-记忆系统)
-6. [常见问题](#6-常见问题)
-7. [开发者：添加新工具](#7-开发者添加新工具)
+1. [快速开始](#1-快速开始)
+2. [智能搜索](#2-智能搜索)
+3. [文档管理](#3-文档管理)
+4. [仪表盘](#4-仪表盘)
+5. [分析页面](#5-分析页面)
+6. [客服助手](#6-客服助手)
+7. [管理功能](#7-管理功能)
+8. [API 使用](#8-api-使用)
+9. [常见问题](#9-常见问题)
 
 ---
 
-## 1. 启动与关闭
+## 1. 快速开始
 
-### 首次启动
+### 1.1 登录
 
-需要两个终端窗口，分别运行后端和前端。
+访问 https://aureon-production-659a.up.railway.app/login
 
-**终端 1 — 后端：**
+**登录方式**：
+- **演示账号**：点击「使用演示账号登录」按钮
+- **邮箱密码**：输入邮箱和密码（需管理员配置）
+- **SSO 登录**：Google 或 GitHub 账号（需配置）
 
-```bash
-cd Aureon/backend
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
-```
+### 1.2 首次引导
 
-看到以下输出表示后端启动成功：
+首次登录后，系统会自动启动引导流程：
 
-```
-INFO:     Uvicorn running on http://127.0.0.1:8000
-INFO:     Application startup complete.
-```
+| 步骤 | 页面 | 内容 |
+|------|------|------|
+| 1/5 | 搜索 | 体验智能搜索（已预填示例查询） |
+| 2/5 | 文档 | 上传您的第一个文档 |
+| 3/5 | 搜索 | 搜索您自己的数据 |
+| 4/5 | 仪表盘 | 查看系统健康状态 |
+| 5/5 | 分析 | 了解使用模式 |
 
-**终端 2 — 前端：**
+**提示**：可随时点击「跳过」按钮跳过引导。
 
-```bash
-cd Aureon
-npm install   # 首次需要，之后可跳过
-npm run dev
-```
+---
 
-看到以下输出表示前端启动成功：
+## 2. 智能搜索
 
-```
-VITE v8.0.10  ready in 304 ms
-Local:   http://localhost:5173/
-```
+### 2.1 基本搜索
 
-### 关闭
+1. 访问 `/search` 页面
+2. 在搜索框输入问题
+3. 按 Enter 或点击搜索按钮
+4. 等待 AI 返回带来源引用的答案
 
-| 服务 | 方式 |
+**示例查询**：
+- "这个平台能做什么？"
+- "如何部署 Aureon？"
+- "支持哪些 LLM 模型？"
+
+### 2.2 搜索结果
+
+搜索结果包含：
+- **AI 答案**：基于知识库生成的精准回答
+- **来源引用**：答案中标注了 `[1]`、`[2]` 等引用标记
+- **来源列表**：右侧显示引用的文档来源和相关度评分
+
+### 2.3 搜索技巧
+
+- **具体问题**：越具体的问题，答案越精准
+- **使用关键词**：包含关键术语可提高检索准确率
+- **多语言支持**：支持中英文混合查询
+
+---
+
+## 3. 文档管理
+
+### 3.1 查看文档
+
+访问 `/documents` 页面查看所有已索引的文档。
+
+**文档列表显示**：
+- 文档名称
+- 来源
+- 格式（MD、PDF、DOCX、XLSX、TXT）
+- 片段数
+- 状态
+- 操作（删除）
+
+**分页功能**：
+- 默认每页显示 20 条
+- 可选择 10/20/50/100 条
+- 支持翻页导航
+
+### 3.2 上传文档
+
+1. 点击「上传文档」按钮
+2. 选择文件（支持拖拽）
+3. 等待上传和索引完成
+
+**支持格式**：
+| 格式 | 说明 |
 |------|------|
-| 后端 | 在终端按 Ctrl+C |
-| 前端 | 在前端终端按 Ctrl+C |
+| .md | Markdown 格式（推荐） |
+| .txt | 纯文本格式 |
+| .pdf | PDF 文档 |
+| .docx | Word 文档 |
+| .xlsx | Excel 表格 |
 
-### 重启
+**限制**：
+- 单文件最大 10MB
+- 文件名不能包含特殊字符
 
-后端 `--reload` 模式下，修改 Python 代码会自动重启。前端修改代码后 Vite 自动热更新，无需手动重启。
+### 3.3 删除文档
 
----
+1. 在文档列表中找到要删除的文档
+2. 点击「删除」按钮
+3. 确认删除操作
 
-## 2. 配置说明
+**注意**：删除操作不可撤销，文档及其所有索引片段将被永久删除。
 
-### 后端配置（`backend/.env`）
+### 3.4 搜索文档
 
-```env
-LLM_API_KEY=your_dashscope_api_key_here
-LLM_MODEL=qwen3.6-flash
-LLM_BASE_URL=https://dashscope-intl.aliyuncs.com/compatible-mode/v1
-TAVILY_API_KEY=
-DASHSCOPE_API_KEY=your_dashscope_api_key_here
-# API_AUTH_KEY=your_secure_api_key_here  # 生产环境启用认证
-```
-
-### 切换模型
-
-修改两个环境变量即可，无需改代码：
-
-| 厂商 | LLM_MODEL | LLM_BASE_URL |
-|------|-----------|-------------|
-| DashScope（默认） | `qwen3.6-flash` | `https://dashscope-intl.aliyuncs.com/compatible-mode/v1` |
-| DeepSeek | `deepseek-chat` | `https://api.deepseek.com/v1` |
-| 智谱 GLM-4-Flash | `GLM-4-Flash-250414` | `https://open.bigmodel.cn/api/paas/v4/` |
-| 通义千问 | `qwen-plus` | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
-| Claude | `claude-sonnet-4-20250514` | `https://api.anthropic.com/v1` |
-
-### 前端配置
-
-前端无需 API Key。首次打开 `http://localhost:5173/` 即可使用。
+在搜索框中输入关键词，可按文档名称或来源筛选。
 
 ---
 
-## 3. 聊天界面
+## 4. 仪表盘
 
-### 基本操作
+访问 `/dashboard` 页面查看系统实时状态。
 
-- **发送消息**：在底部输入框输入内容，按回车或点击发送按钮
-- **停止生成**：AI 回复过程中，点击停止按钮可中断
-- **清空对话**：点击清除按钮清空当前会话
-- **连续对话**：AI 记忆会在同一 session 内保持上下文
+### 4.1 Golden Signals
 
-### SSE 事件流
+四大核心指标：
 
-Agent 回复过程中，前端通过 SSE（Server-Sent Events）接收实时数据：
+| 指标 | 说明 | 正常范围 |
+|------|------|----------|
+| 延迟 | 查询响应时间 | < 1000ms |
+| 流量 | 每秒查询数 | 视业务而定 |
+| 错误率 | 失败查询比例 | < 1% |
+| 饱和度 | 系统负载 | < 80% |
 
-| 事件 | 含义 | 用户看到 |
-|------|------|---------|
-| `session` | 创建新的会话 | 不可见，自动管理 |
-| `text` | AI 回复文本片段 | 逐字输出的文字 |
-| `tool_start` | AI 开始调用工具 | "正在调用 calculator..." |
-| `tool_end` | 工具调用完成 | "calculator 完成: 56088" |
-| `done` | 本轮回复结束 | 停止打字动画 |
-| `error` | 发生错误 | 错误提示消息 |
+### 4.2 RAG 流水线
 
----
+显示检索和生成的耗时分布：
+- **检索**：BM25 + 向量检索时间
+- **重排序**：结果重排序时间
+- **生成**：LLM 生成答案时间
 
-## 4. 工具调用
+### 4.3 系统健康
 
-### 计算器（calculator）
+显示各组件状态：
+- API 服务器
+- 索引状态
+- Redis 缓存
+- Qdrant 向量库
 
-当提问涉及数学计算时，Agent 自动调用。
+### 4.4 查询量趋势
 
-**示例提问：**
+显示最近 7 天的查询量变化趋势图。
 
-```
-1 + 1 等于多少
-123 * 456
-2 的 10 次方
-sqrt(16)
-```
+### 4.5 缓存命中率
 
-**安全限制：** 计算器只支持 `math` 模块的数学函数和四则运算。`__import__`、`exec`、`eval` 等危险操作会被拒绝。
-
-### 联网搜索（web_search）
-
-需配置 `TAVILY_API_KEY` 后可用。Agent 在涉及实时信息时自动调用。
-
-**示例提问：**
-
-```
-今天天气怎么样
-最近有什么新闻
-```
-
-### 外存读取（read_ref）
-
-当工具返回结果过长时，系统会自动将完整内容写入外存文件，Agent 可通过 `read_ref` 按需读取。此过程自动完成，用户无需手动操作。
+显示缓存命中率趋势，帮助优化缓存策略。
 
 ---
 
-## 5. 记忆系统
+## 5. 分析页面
 
-系统内置 4 层记忆，跨对话保持上下文：
+访问 `/analytics` 页面查看详细使用分析。
 
-| 层级 | 名称 | 存储位置 | 作用 |
-|------|------|---------|------|
-| L0 | 原始对话 | `backend/offloads/memory.db` | 完整对话记录 |
-| L1 | 原子事实 | 同上 SQLite | 用户偏好、关键数据 |
-| L2 | 场景总结 | `backend/offloads/scenarios/*.md` | 每次会话的主题总结 |
-| L3 | 用户画像 | `backend/offloads/persona.md` | 长期记忆 |
+### 5.1 Token 消耗
+
+- **输入 Token**：查询消耗的 Token
+- **输出 Token**：答案生成的 Token
+- **总消耗**：累计 Token 使用量
+
+### 5.2 时间范围
+
+支持选择不同时间范围：
+- 最近 1 小时
+- 最近 6 小时
+- 最近 24 小时
+- 最近 7 天
+- 最近 30 天
+
+### 5.3 查询统计
+
+- 查询总数
+- 平均延迟
+- 缓存命中率
+
+### 5.4 延迟分布
+
+显示查询延迟的分布情况，帮助识别性能瓶颈。
 
 ---
 
-## 6. 常见问题
+## 6. 客服助手
 
-### Q: 前端页面空白
+### 6.1 打开客服
 
-1. 前端终端是否还在运行
-2. 终端有无报错信息
-3. 尝试刷新页面（F5）
+点击页面右下角的蓝色圆形按钮，打开客服助手面板。
 
-### Q: 发送消息后没有回复
+### 6.2 快捷回复
 
-1. 检查后端终端是否在运行
-2. 确认 `.env` 中 `LLM_API_KEY` 有效
-3. 网络连不上智谱 API 时，尝试切换模型
+客服助手提供 4 个快捷回复按钮：
+- "这个平台能做什么？"
+- "如何部署到生产环境？"
+- "支持哪些 LLM 模型？"
+- "性能指标怎么样？"
 
-### Q: 后端报 ModuleNotFoundError
+### 6.3 自由提问
+
+在输入框中输入问题，按 Enter 发送。
+
+**支持的问题类型**：
+- 平台功能咨询
+- 部署配置问题
+- API 使用问题
+- 性能优化建议
+- 故障排除
+
+### 6.4 关闭客服
+
+点击面板右上角的 × 按钮关闭客服面板。
+
+---
+
+## 7. 管理功能
+
+**注意**：以下功能仅对管理员角色可见。
+
+### 7.1 用户管理
+
+访问 `/admin` → 「用户管理」标签页。
+
+**功能**：
+- 查看用户列表
+- 邀请新用户
+- 修改用户角色
+- 禁用/启用用户
+- 删除用户
+
+**角色权限**：
+| 角色 | 权限 |
+|------|------|
+| Viewer | 只读访问 |
+| Editor | 上传、编辑、删除文档 |
+| Admin | 用户管理、系统配置 |
+
+### 7.2 审计日志
+
+访问 `/admin` → 「审计日志」标签页。
+
+**记录的操作**：
+- 用户登录/登出
+- 文档上传/删除
+- 配置变更
+- API 调用
+
+**导出功能**：支持导出为 CSV 或 JSON 格式。
+
+### 7.3 系统配置
+
+访问 `/admin` → 「系统配置」标签页。
+
+**可配置项**：
+- LLM 模型选择
+- 缓存策略
+- 速率限制
+- 安全设置
+
+---
+
+## 8. API 使用
+
+### 8.1 认证
+
+所有 API 请求需要在 Header 中添加认证信息：
 
 ```bash
-cd Aureon/backend
-pip install -r requirements.txt
+# 使用 API Key
+curl -H "X-API-Key: your-api-key" https://aureon-production-659a.up.railway.app/api/health
+
+# 使用 JWT Token
+curl -H "Authorization: Bearer your-jwt-token" https://aureon-production-659a.up.railway.app/api/health
 ```
 
-### Q: 端口被占用
+### 8.2 RAG 查询 API
 
-后端默认 8000，前端默认 5173。如果被占用：
+**流式查询**（推荐）：
 
 ```bash
-# 后端换端口
-uvicorn app.main:app --reload --port 8001
-
-# 前端换端口（自动 +1）
+curl -X POST https://aureon-production-659a.up.railway.app/api/rag/query/stream \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
+  -d '{"query": "Aureon 有什么功能？"}'
 ```
+
+**非流式查询**：
+
+```bash
+curl -X POST https://aureon-production-659a.up.railway.app/api/rag/query \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
+  -d '{"query": "Aureon 有什么功能？"}'
+```
+
+### 8.3 文档上传 API
+
+```bash
+curl -X POST https://aureon-production-659a.up.railway.app/api/rag/upload \
+  -H "X-API-Key: your-api-key" \
+  -F "file=@document.md" \
+  -F "language=zh" \
+  -F "title=文档标题"
+```
+
+### 8.4 健康检查 API
+
+```bash
+# 基本健康检查
+curl https://aureon-production-659a.up.railway.app/api/health
+
+# 就绪检查（包含 Redis/Qdrant 状态）
+curl https://aureon-production-659a.up.railway.app/health/ready
+```
+
+### 8.5 完整 API 列表
+
+| 方法 | 路径 | 说明 | 认证 |
+|------|------|------|------|
+| GET | /api/health | 健康检查 | 无 |
+| GET | /health/ready | 就绪检查 | 无 |
+| POST | /api/rag/query | RAG 查询 | API Key |
+| POST | /api/rag/query/stream | RAG 流式查询 | API Key |
+| POST | /api/rag/upload | 上传文档 | Editor+ |
+| DELETE | /api/rag/upload/{fn} | 删除文档 | Editor+ |
+| GET | /api/rag/uploads | 列出文档 | Viewer+ |
+| POST | /api/rag/index | 重建索引 | Editor+ |
+| POST | /api/rag/cache/clear | 清除缓存 | Admin |
+| GET | /api/rag/stats | RAG 统计 | API Key |
+| GET | /api/rag/health | RAG 健康 | API Key |
+| POST | /api/chat/stream | 聊天流式 | API Key |
+| GET | /metrics | Prometheus | 无 |
+| WS | /ws/chat/{id} | WebSocket 聊天 | Token |
 
 ---
 
-## 7. 开发者：添加新工具
+## 9. 常见问题
 
-### 步骤
+### 9.1 搜索没有结果
 
-1. 在 `backend/app/tools/` 下创建新文件，例如 `weather.py`：
+**可能原因**：
+1. 知识库为空 → 上传相关文档
+2. 查询太具体 → 尝试更通用的查询
+3. 语言不匹配 → 检查文档语言
 
-```python
-from langchain.tools import tool
+**解决方法**：
+- 上传相关文档到知识库
+- 使用更通用的关键词
+- 尝试同义词或相关表述
 
-@tool
-def get_weather(city: str) -> str:
-    """查询指定城市的天气。"""
-    return f"{city} 的天气是晴天，25°C"
-```
+### 9.2 上传文档失败
 
-2. 在 `backend/app/tools/__init__.py` 注册：
+**可能原因**：
+1. 文件格式不支持 → 检查文件扩展名
+2. 文件过大 → 超过 10MB 限制
+3. 权限不足 → 需要 Editor 角色
 
-```python
-from app.tools.weather import get_weather
+**解决方法**：
+- 转换为支持的格式
+- 压缩或拆分文件
+- 联系管理员提升权限
 
-ALL_TOOLS = [
-    calculator,
-    read_ref,
-    get_weather,
-]
-```
+### 9.3 LLM 响应很慢
 
-3. 重启后端即可。Agent 会自动发现新工具。
+**可能原因**：
+1. API 限流 → 检查 API Key 配额
+2. 网络延迟 → 检查网络连接
+3. 并发过高 → 等待或联系管理员
 
-### 工具编写规则
+**解决方法**：
+- 检查 API Key 配额
+- 使用缓存减少重复查询
+- 联系管理员优化配置
 
-- 必须用 `@tool` 装饰器
-- 函数必须有 docstring（作为 tool description 传给 LLM）
-- 参数必须有类型注解（作为 input schema 传给 LLM）
-- 返回值必须是字符串
+### 9.4 登录失败
+
+**可能原因**：
+1. 密码错误 → 重置密码
+2. 账号被禁用 → 联系管理员
+3. SSO 配置问题 → 检查 SSO 设置
+
+**解决方法**：
+- 使用演示账号登录
+- 联系管理员重置密码
+- 检查 SSO 配置
+
+### 9.5 页面加载很慢
+
+**可能原因**：
+1. 网络问题 → 检查网络连接
+2. 浏览器缓存 → 清除缓存
+3. 服务器负载 → 等待或联系管理员
+
+**解决方法**：
+- 刷新页面（Ctrl+Shift+R）
+- 清除浏览器缓存
+- 联系管理员检查服务器状态
+
+---
+
+## 10. 快捷键
+
+| 快捷键 | 功能 |
+|--------|------|
+| Enter | 发送消息/执行搜索 |
+| Esc | 关闭弹窗/取消操作 |
+| Ctrl+K | 打开搜索框 |
+| Ctrl+/ | 打开帮助 |
+
+---
+
+## 11. 联系支持
+
+- **客服助手**：页面右下角蓝色按钮
+- **邮箱**：support@aureon.ai
+- **文档**：https://docs.aureon.ai
 
 ---
 
@@ -239,12 +437,18 @@ ALL_TOOLS = [
 
 | 层 | 技术 |
 |----|------|
-| 前端框架 | React 19 + TypeScript + Vite 8 |
+| 前端框架 | React 19 + TypeScript + Vite |
 | 样式 | Tailwind CSS 4 |
 | 后端框架 | Python FastAPI |
-| Agent 框架 | LangChain 1.x |
-| 模型 | DashScope qwen3.6-flash / DeepSeek / 智谱 / Claude |
+| Agent 框架 | LangChain + LangGraph |
+| 模型 | Qwen 3.5 Flash / GPT-4o / Claude |
 | 向量库 | Qdrant Cloud |
 | 缓存 | Redis + In-Memory |
 | 安全 | API Key Auth + JWT RBAC + Fernet Encryption |
 | 实时通信 | SSE + WebSocket |
+
+---
+
+**文档版本**: 2026-06-23  
+**适用版本**: Aureon v1.0  
+**最后更新**: 2026-06-23
