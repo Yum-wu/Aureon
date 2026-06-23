@@ -37,6 +37,7 @@ def _get_embedding_dim() -> int:
         from app.config import settings
         return settings.embedding_dim
     except Exception:
+        logger.debug("embedding_dim_settings_unavailable", fallback=1024)
         return 1024
 
 

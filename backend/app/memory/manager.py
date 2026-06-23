@@ -1,4 +1,5 @@
 import asyncio
+import re
 import threading
 import time
 import structlog
@@ -13,6 +14,19 @@ logger = structlog.get_logger()
 # ── Constants ──
 _INACTIVE_TIMEOUT = 30 * 60        # 30 minutes → auto-finalize
 _CLEANUP_INTERVAL = 5 * 60         # check every 5 minutes
+
+
+def _extract_json_from_llm(text: str) -> str:
+    """Extract JSON from LLM output that may include markdown code blocks."""
+    # Try ```json ... ``` blocks first
+    m = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', text, re.DOTALL)
+    if m:
+        return m.group(1).strip()
+    # Try to find JSON array or object directly
+    m = re.search(r'[\[\{].*[\]\}]', text, re.DOTALL)
+    if m:
+        return m.group(0).strip()
+    return text.strip()
 
 
 class MemoryManager:
@@ -93,15 +107,9 @@ User message: {content[:500]}"""
             response = await asyncio.to_thread(llm.invoke, extraction_prompt)
             response_text = response.content if hasattr(response, 'content') else str(response)
 
-            # Parse JSON response
+            # Parse JSON response — robust extraction handles markdown code blocks
             import json
-            # Handle markdown code blocks
-            clean_text = response_text.strip()
-            if clean_text.startswith("```"):
-                clean_text = clean_text.split("\n", 1)[1] if "\n" in clean_text else clean_text[3:]
-                if clean_text.endswith("```"):
-                    clean_text = clean_text[:-3]
-                clean_text = clean_text.strip()
+            clean_text = _extract_json_from_llm(response_text)
 
             atoms = json.loads(clean_text)
             if isinstance(atoms, list):
