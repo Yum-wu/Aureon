@@ -224,7 +224,7 @@ export function Dashboard() {
         ttft_p50: metrics.ttft_p50 ?? 0,
         qps: metrics.qps ?? 0,
         error_rate: metrics.error_rate ?? 0,
-        saturation: metrics.saturation ?? 0,
+        ...('saturation' in metrics ? { saturation: (metrics as Record<string, unknown>).saturation as number ?? 0 } : {}),
         alert_count: metrics.alert_count ?? 0,
       });
     }
@@ -284,11 +284,13 @@ export function Dashboard() {
       ];
     }
 
-    return metrics ? [
-      { id: t('dashboard.latency.ttft'), data: (metrics.latency_trend ?? []).filter((v: number): v is number => v != null && v > 0).map((v: number, i: number) => ({ x: `${i}`, y: v })) },
-      { id: t('dashboard.latency.tpot'), data: (metrics.tpot_trend ?? []).filter((v: number): v is number => v != null && v > 0).map((v: number, i: number) => ({ x: `${i}`, y: v })) },
-      { id: t('dashboard.latency.e2e'), data: (metrics.e2e_trend ?? []).filter((v: number): v is number => v != null && v > 0).map((v: number, i: number) => ({ x: `${i}`, y: v })) },
-    ] : [];
+    if (!metrics || !('latency_trend' in metrics)) return [];
+    const m = metrics as { latency_trend?: number[]; tpot_trend?: number[]; e2e_trend?: number[] };
+    return [
+      { id: t('dashboard.latency.ttft'), data: (m.latency_trend ?? []).filter((v: number): v is number => v != null && v > 0).map((v: number, i: number) => ({ x: `${i}`, y: v })) },
+      { id: t('dashboard.latency.tpot'), data: (m.tpot_trend ?? []).filter((v: number): v is number => v != null && v > 0).map((v: number, i: number) => ({ x: `${i}`, y: v })) },
+      { id: t('dashboard.latency.e2e'), data: (m.e2e_trend ?? []).filter((v: number): v is number => v != null && v > 0).map((v: number, i: number) => ({ x: `${i}`, y: v })) },
+    ];
   }, [latencyHistory, metrics, t]);
 
   // Cache hit rate trend data
