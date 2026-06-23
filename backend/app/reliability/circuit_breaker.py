@@ -55,15 +55,18 @@ class CircuitBreaker:
         recovery_timeout: float = 60.0,
         name: str = "default",
         expected_exceptions: tuple = (Exception,),
+        success_threshold: int = 3,
     ):
         self.failure_threshold = failure_threshold
         self.recovery_timeout = recovery_timeout
         self.name = name
         self.expected_exceptions = expected_exceptions
+        self.success_threshold = success_threshold
 
         # State
         self._state = CircuitState.CLOSED
         self._failure_count = 0
+        self._half_open_success_count = 0
         self._last_failure_time: Optional[float] = None
         self._lock = asyncio.Lock()
 
@@ -75,12 +78,15 @@ class CircuitBreaker:
 
     @property
     def state(self) -> CircuitState:
-        """Get current circuit state, checking for automatic transitions"""
-        if self._state == CircuitState.OPEN and self._last_failure_time:
-            elapsed = time.monotonic() - self._last_failure_time
-            if elapsed >= self.recovery_timeout:
-                self._state = CircuitState.HALF_OPEN
+        """Get current circuit state (pure read, no side effects)."""
         return self._state
+
+    def _check_timeout(self) -> None:
+        """Check if OPEN timeout has elapsed, transition to HALF_OPEN."""
+        if self._state == CircuitState.OPEN and self._last_failure_time:
+            if time.monotonic() - self._last_failure_time >= self.recovery_timeout:
+                self._state = CircuitState.HALF_OPEN
+                self._half_open_success_count = 0
 
     @property
     def failure_count(self) -> int:
@@ -96,6 +102,8 @@ class CircuitBreaker:
             "failure_count": self._failure_count,
             "failure_threshold": self.failure_threshold,
             "recovery_timeout": self.recovery_timeout,
+            "success_threshold": self.success_threshold,
+            "half_open_success_count": self._half_open_success_count,
             "total_calls": self._total_calls,
             "total_failures": self._total_failures,
             "total_successes": self._total_successes,
@@ -106,8 +114,28 @@ class CircuitBreaker:
 
     async def _handle_success(self):
         """Handle successful call"""
-        self._failure_count = 0
-        self._state = CircuitState.CLOSED
+        if self._state == CircuitState.HALF_OPEN:
+            self._half_open_success_count += 1
+            if self._half_open_success_count >= self.success_threshold:
+                self._state = CircuitState.CLOSED
+                self._failure_count = 0
+                self._half_open_success_count = 0
+                logger.info(
+                    "circuit_breaker_closed_after_probes",
+                    breaker=self.name,
+                    success_threshold=self.success_threshold,
+                )
+            else:
+                logger.debug(
+                    "circuit_breaker_half_open_progress",
+                    breaker=self.name,
+                    successes=self._half_open_success_count,
+                    threshold=self.success_threshold,
+                )
+        else:
+            self._failure_count = 0
+            self._state = CircuitState.CLOSED
+
         self._total_successes += 1
 
         logger.debug(
@@ -118,6 +146,20 @@ class CircuitBreaker:
 
     async def _handle_failure(self, error: Exception):
         """Handle failed call"""
+        if self._state == CircuitState.HALF_OPEN:
+            # HALF_OPEN failure: reset counter and go back to OPEN
+            self._half_open_success_count = 0
+            self._state = CircuitState.OPEN
+            self._last_failure_time = time.monotonic()
+            self._failure_count = self.failure_threshold
+            self._total_failures += 1
+            logger.warning(
+                "circuit_breaker_reopened_from_half_open",
+                breaker=self.name,
+                error=str(error),
+            )
+            return
+
         self._failure_count += 1
         self._total_failures += 1
         self._last_failure_time = time.monotonic()
@@ -154,6 +196,7 @@ class CircuitBreaker:
     @asynccontextmanager
     async def context(self):
         """Context manager for circuit breaker protected calls"""
+        self._check_timeout()
         async with self._lock:
             current_state = self.state
 
@@ -191,6 +234,7 @@ class CircuitBreaker:
         """Reset circuit breaker to initial state"""
         self._state = CircuitState.CLOSED
         self._failure_count = 0
+        self._half_open_success_count = 0
         self._last_failure_time = None
         logger.info("circuit_breaker_reset", breaker=self.name)
 

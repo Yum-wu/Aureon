@@ -83,6 +83,7 @@ def get_sync_redis():
             socket_connect_timeout=2,
             socket_timeout=2,
             max_connections=10,
+            health_check_interval=30,
         )
         _sync_redis_pool = redis_sync.Redis(connection_pool=pool)
         _sync_redis_backoff = 0.0

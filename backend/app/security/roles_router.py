@@ -111,6 +111,21 @@ async def update_role_permissions(
             )
         new_perms.add(Permission(perm_name))
 
+    # Enforce: cannot grant permissions beyond your own role level
+    requesting_role = user.get("_role", UserRole.VIEWER)
+    if role_enum.value > requesting_role.value:
+        from app.exceptions import AuthorizationError
+        raise AuthorizationError("Cannot modify permissions of a role higher than your own")
+
+    # Enforce: cannot grant permissions you don't have
+    requesting_perms = ROLE_PERMISSIONS.get(requesting_role, set())
+    excessive_perms = new_perms - requesting_perms
+    if excessive_perms:
+        from app.exceptions import AuthorizationError
+        raise AuthorizationError(
+            f"Cannot grant permissions you don't have: {[p.value for p in excessive_perms]}"
+        )
+
     # 更新运行时权限映射
     ROLE_PERMISSIONS[role_enum] = new_perms
     logger.info(

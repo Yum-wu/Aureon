@@ -243,3 +243,65 @@ class TestJWTSecretResolution:
         with patch.dict(os.environ, {"JWT_SECRET": "different-value"}):
             second = rbac_module._get_jwt_secret()
         assert first == second
+
+
+# ── Permission boundary enforcement (EX4) ──────────────────────────────────
+# The update_role_permissions endpoint enforces that:
+# 1. You cannot modify permissions of a role higher than your own
+# 2. You cannot grant permissions you don't have
+
+
+class TestPermissionBoundaryEnforcement:
+    """Tests for the role_permission_update permission boundary checks."""
+
+    def test_editor_cannot_modify_admin_role(self, rbac_module):
+        """An EDITOR should not be able to modify ADMIN permissions."""
+        from fastapi.testclient import TestClient
+        from app.main import app
+
+        # Override all existing RBAC overrides to return EDITOR user
+        editor_user = {"sub": "editor-user", "role": "EDITOR", "_role": rbac_module.UserRole.EDITOR}
+        saved_overrides = dict(app.dependency_overrides)
+
+        async def _mock_editor():
+            return editor_user
+
+        for key in list(app.dependency_overrides):
+            app.dependency_overrides[key] = _mock_editor
+
+        try:
+            client = TestClient(app)
+            response = client.put(
+                "/api/security/roles/admin",
+                json={"permissions": ["read"]},
+            )
+            assert response.status_code == 403
+        finally:
+            app.dependency_overrides.clear()
+            app.dependency_overrides.update(saved_overrides)
+
+    def test_viewer_cannot_grant_write_permission(self, rbac_module):
+        """A VIEWER should not be able to grant WRITE permission."""
+        from fastapi.testclient import TestClient
+        from app.main import app
+
+        # Override all existing RBAC overrides to return VIEWER user
+        viewer_user = {"sub": "viewer-user", "role": "VIEWER", "_role": rbac_module.UserRole.VIEWER}
+        saved_overrides = dict(app.dependency_overrides)
+
+        async def _mock_viewer():
+            return viewer_user
+
+        for key in list(app.dependency_overrides):
+            app.dependency_overrides[key] = _mock_viewer
+
+        try:
+            client = TestClient(app)
+            response = client.put(
+                "/api/security/roles/viewer",
+                json={"permissions": ["read", "write"]},
+            )
+            assert response.status_code == 403
+        finally:
+            app.dependency_overrides.clear()
+            app.dependency_overrides.update(saved_overrides)
