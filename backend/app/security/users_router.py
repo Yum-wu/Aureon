@@ -115,7 +115,7 @@ def _row_to_user(row: dict) -> User:
 
 # ── 端点 ──
 
-@router.get("/", response_model=UserListResponse)
+@router.get("", response_model=UserListResponse)
 async def list_users(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(20, ge=1, le=100, description="每页数量"),
@@ -165,7 +165,7 @@ async def list_users(
     return UserListResponse(users=users, total=total, page=page, page_size=page_size)
 
 
-@router.post("/", response_model=User, status_code=201)
+@router.post("", response_model=User, status_code=201)
 async def invite_user(
     req: UserCreate,
     user: dict = Depends(require_role(UserRole.ADMIN)),
