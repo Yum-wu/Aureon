@@ -26,7 +26,7 @@ import { useTranslation } from 'react-i18next';
 import { useViewStore } from '../../stores/useViewStore';
 import { useAuth } from '../../hooks/AuthContext';
 import { CoachMark } from './CoachMark';
-import { ONBOARDING_STEPS, type OnboardingStep } from './steps';
+import { ONBOARDING_STEPS } from './steps';
 import { OnboardingContext } from './useOnboarding';
 
 interface OnboardingProviderProps {
