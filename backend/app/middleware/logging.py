@@ -45,17 +45,23 @@ async def logging_middleware(request: Request, call_next):
             "/api/v1/security/demo-token",
         }
         if request.url.path not in public_paths:
-            api_key = request.headers.get("X-API-Key")
-            if not api_key:
-                return JSONResponse(
-                    status_code=401,
-                    content={"error": "unauthorized", "detail": "Missing API key. Provide X-API-Key header."},
-                )
-            if not hmac.compare_digest(api_key, settings.api_auth_key):
-                return JSONResponse(
-                    status_code=403,
-                    content={"error": "forbidden", "detail": "Invalid API key."},
-                )
+            # Skip API key check if a valid JWT Bearer token is present
+            # (JWT validation is done by require_role at the endpoint level)
+            auth_header = request.headers.get("Authorization", "")
+            if auth_header.startswith("Bearer ") and len(auth_header) > 10:
+                pass
+            else:
+                api_key = request.headers.get("X-API-Key")
+                if not api_key:
+                    return JSONResponse(
+                        status_code=401,
+                        content={"error": "unauthorized", "detail": "Missing API key. Provide X-API-Key header."},
+                    )
+                if not hmac.compare_digest(api_key, settings.api_auth_key):
+                    return JSONResponse(
+                        status_code=403,
+                        content={"error": "forbidden", "detail": "Invalid API key."},
+                    )
 
     start = time.time()
     try:
