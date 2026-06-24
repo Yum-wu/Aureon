@@ -156,6 +156,9 @@ async def websocket_chat(
                         return
 
                 if message_type == "auth":
+                    # Already authenticated via query param / header
+                    if authenticated:
+                        continue
                     # Explicit auth message
                     msg_api_key = data.get("api_key", "")
                     if settings.api_auth_key and msg_api_key == settings.api_auth_key:

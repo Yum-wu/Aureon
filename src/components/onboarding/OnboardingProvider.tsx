@@ -18,6 +18,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   type ReactNode,
 } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -44,6 +45,7 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
   const onboardingCompleted = useViewStore((s) => s.onboardingCompleted);
   const completeOnboarding = useViewStore((s) => s.completeOnboarding);
   const resetOnboarding = useViewStore((s) => s.resetOnboarding);
+  const triggeredRef = useRef(false);
 
   // 根据用户角色过滤步骤
   const filteredSteps = useMemo(() => {
@@ -56,23 +58,18 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
     });
   }, [role]);
 
-  // 自动触发：首次访问 Dashboard 或 Search
+  // 自动触发：首次访问 Dashboard 或 Search（仅触发一次）
   useEffect(() => {
-    const shouldTrigger = !onboardingCompleted && !isActive && (
-      location.pathname === '/dashboard' || location.pathname === '/search'
-    );
+    if (triggeredRef.current) return;
+    if (onboardingCompleted) return;
+    if (isActive) return;
+    if (location.pathname !== '/dashboard' && location.pathname !== '/search') return;
 
-    if (shouldTrigger) {
-      // 延迟启动，等待页面渲染完成
-      const timer = setTimeout(() => {
-        setIsActive(true);
-        setCurrentStep(0);
-        // 如果第一步是搜索，导航到搜索页面
-        if (filteredSteps[0]?.page === '/search' && location.pathname !== '/search') {
-          navigate('/search');
-        }
-      }, 500);
-      return () => clearTimeout(timer);
+    triggeredRef.current = true;
+    setIsActive(true);
+    setCurrentStep(0);
+    if (filteredSteps[0]?.page === '/search' && location.pathname !== '/search') {
+      navigate('/search');
     }
   }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
