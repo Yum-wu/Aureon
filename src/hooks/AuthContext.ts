@@ -7,6 +7,8 @@ export interface AuthState {
   role: string | null;
   login: (key: string) => Promise<boolean>;
   loginWithJWT: (email: string, password: string) => Promise<boolean>;
+  /** 匿名演示登录:获取受限 VIEWER 角色的短期 JWT */
+  loginAsDemo: () => Promise<boolean>;
   logout: () => void;
 }
 
@@ -17,6 +19,7 @@ export const AuthContext = createContext<AuthState>({
   role: null,
   login: async () => false,
   loginWithJWT: async () => false,
+  loginAsDemo: async () => false,
   logout: () => {},
 });
 

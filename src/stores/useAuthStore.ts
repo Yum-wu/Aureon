@@ -34,7 +34,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   loginWithJWT: async (email: string, password: string): Promise<boolean> => {
     try {
-      const res = await fetch("/api/security/sso/login", {
+      const res = await fetch("/api/v1/security/sso/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -48,6 +48,27 @@ export const useAuthStore = create<AuthState>((set) => ({
           sessionStorage.setItem(JWT_TOKEN_STORAGE, jwt);
           sessionStorage.setItem("aureon_role", role);
           set({ token: jwt, isAuthenticated: true, role });
+          return true;
+        }
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  },
+
+  loginAsDemo: async (): Promise<boolean> => {
+    try {
+      const res = await fetch("/api/v1/security/demo-token", {
+        method: "POST",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const jwt = data.access_token;
+        if (jwt) {
+          sessionStorage.setItem(JWT_TOKEN_STORAGE, jwt);
+          sessionStorage.setItem("aureon_role", "viewer");
+          set({ token: jwt, isAuthenticated: true, role: "viewer" });
           return true;
         }
       }

@@ -16,6 +16,8 @@ export interface AuthState {
   login: (key: string) => Promise<boolean>;
   /** JWT 登录 */
   loginWithJWT: (email: string, password: string) => Promise<boolean>;
+  /** 匿名演示登录:获取受限 VIEWER 角色的短期 JWT */
+  loginAsDemo: () => Promise<boolean>;
   /** 登出 */
   logout: () => void;
 }

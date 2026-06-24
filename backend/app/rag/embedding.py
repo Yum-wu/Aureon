@@ -11,6 +11,7 @@ import threading
 import time
 from collections import OrderedDict
 
+import httpx
 import numpy as np
 from typing import List, Optional
 
@@ -26,6 +27,27 @@ VECTOR_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file
 _embed_cache: OrderedDict[str, np.ndarray] = OrderedDict()
 _EMBED_CACHE_MAX = 5000
 _embed_cache_lock = threading.Lock()  # Thread-safe access to _embed_cache
+
+# ── Shared sync httpx.Client (connection pool reuse) ──
+_http_client: httpx.Client | None = None
+_http_client_lock = threading.Lock()
+
+
+def _get_http_client() -> httpx.Client:
+    """Lazy-init thread-safe httpx.Client singleton with connection pooling.
+
+    Replaces per-call `requests.post` (which opens a new TCP connection each
+    time) with a shared client that keeps connections alive in a pool.
+    """
+    global _http_client
+    if _http_client is None:
+        with _http_client_lock:
+            if _http_client is None:
+                _http_client = httpx.Client(
+                    timeout=httpx.Timeout(connect=10.0, read=90.0, write=30.0, pool=10.0),
+                    limits=httpx.Limits(max_connections=20, max_keepalive_connections=5, keepalive_expiry=30.0),
+                )
+    return _http_client
 
 
 def _get_embedding_dim() -> int:
@@ -113,7 +135,6 @@ def _embed_api(texts: List[str], provider: str, batch_size: int = 10,
                 reuse TCP connections instead of creating new ones per request.
     """
     from app.config import settings
-    import requests
 
     if provider == "dashscope":
         url = f"{settings.dashscope_base_url.rstrip('/')}/embeddings"
@@ -148,15 +169,16 @@ def _embed_api(texts: List[str], provider: str, batch_size: int = 10,
 
         # Retry with backoff for transient SSL/connection errors
         last_err = None
+        client = _get_http_client()
         for attempt in range(3):
             try:
-                resp = requests.post(url, headers=headers, json=payload, timeout=90)
-                if not resp.ok:
+                resp = client.post(url, headers=headers, json=payload, timeout=90.0)
+                if not resp.is_success:
                     logger.error("Embedding API %s error %d: %s", provider, resp.status_code, resp.text[:300])
                 resp.raise_for_status()
                 break
-            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout,
-                    requests.exceptions.SSLError) as e:
+            except (httpx.ConnectError, httpx.TimeoutException,
+                    httpx.NetworkError) as e:
                 last_err = e
                 wait = 2 ** attempt * 5
                 logger.warning("Embedding API %s attempt %d failed: %s, retrying in %ds",
@@ -195,7 +217,6 @@ def _embed_dense_sparse_dashscope(texts: List[str], batch_size: int = 10,
         sparse 为 List[Dict[int, float]]。
     """
     from app.config import settings
-    import requests
 
     api_key = settings.dashscope_api_key
     model = settings.dashscope_model
@@ -234,15 +255,16 @@ def _embed_dense_sparse_dashscope(texts: List[str], batch_size: int = 10,
         }
 
         last_err = None
+        client = _get_http_client()
         for attempt in range(3):
             try:
-                resp = requests.post(dashscope_url, headers=ds_headers, json=ds_payload, timeout=90)
-                if not resp.ok:
+                resp = client.post(dashscope_url, headers=ds_headers, json=ds_payload, timeout=90.0)
+                if not resp.is_success:
                     logger.warning("DashScope dense&sparse API error %d: %s", resp.status_code, resp.text[:300])
                 resp.raise_for_status()
                 break
-            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout,
-                    requests.exceptions.SSLError) as e:
+            except (httpx.ConnectError, httpx.TimeoutException,
+                    httpx.NetworkError) as e:
                 last_err = e
                 wait = 2 ** attempt * 5
                 logger.warning("DashScope dense&sparse attempt %d failed: %s, retry in %ds", attempt + 1, e, wait)

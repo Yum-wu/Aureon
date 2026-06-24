@@ -1,162 +1,23 @@
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import { useDashboardData } from '../hooks/useDashboardData';
 import { useSystemHealthQuery } from '../hooks/useSystemHealthQuery';
 import { useRealtimeMetrics } from '../hooks/useRealtimeMetrics';
 import { useLatencyHistory } from '../hooks/useLatencyHistory';
 import { useCacheHistory } from '../hooks/useCacheHistory';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useViewStore } from '../stores/useViewStore';
-import { useAuth } from '../hooks/AuthContext';
 import { useDebouncedLocalStorage } from '../hooks/useDebouncedLocalStorage';
 import { Card } from '../components/ui/Card';
-import { AlertTriangle, LogIn, Sparkles } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { Breadcrumb } from '../components/ui/Breadcrumb';
-import { StatusDot } from '../components/ui/StatusDot';
 import { DashboardHeader } from '../components/dashboard/DashboardHeader';
 import { DashboardStatsGrid } from '../components/dashboard/DashboardStatsGrid';
 import { DashboardCharts } from '../components/dashboard/DashboardCharts';
-
-/* ── Types ── */
-
-interface AlertMessage {
-  id: string;
-  severity: 'critical' | 'warning' | 'info';
-  message: string;
-  timestamp: string;
-}
-
-interface ServiceHealth {
-  name: string;
-  healthy: boolean;
-  responseTime: number;
-}
-
-/* ── Inline sub-components ── */
-
-function LoadingSkeleton() {
-  return (
-    <div data-testid="dashboard-loading" className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-6 animate-pulse">
-            <div className="h-3 bg-[var(--bg-tertiary)] rounded w-20 mb-4" />
-            <div className="h-8 bg-[var(--bg-tertiary)] rounded w-16" />
-          </div>
-        ))}
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-6 animate-pulse h-64" />
-        <div className="rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-6 animate-pulse h-64" />
-      </div>
-    </div>
-  );
-}
-
-function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-  const { login } = useAuth();
-  const [isDemoLoading, setIsDemoLoading] = useState(false);
-
-  const isAuthError = /401|403|unauthor|forbidden|认证|权限|未登录|auth/i.test(message);
-
-  const handleDemoLogin = async () => {
-    setIsDemoLoading(true);
-    try {
-      const DEMO_API_KEY = '7c249a3dd6b893e04ac5a42ef338f62c73d26bcb0b8ec6655ed6aedf6f07e129';
-      const success = await login(DEMO_API_KEY);
-      if (success) {
-        window.location.reload();
-      }
-    } finally {
-      setIsDemoLoading(false);
-    }
-  };
-
-  return (
-    <div className="flex flex-col items-center justify-center py-16">
-      {isAuthError ? (
-        <>
-          <AlertTriangle size={40} className="text-[var(--warning)] mb-4" />
-          <p className="text-[var(--text-primary)] text-lg font-semibold mb-2">
-            {t('dashboard.auth_failed_title', '认证已失效')}
-          </p>
-          <p className="text-[var(--text-tertiary)] text-sm mb-6 max-w-md text-center">
-            {t('dashboard.auth_failed_desc', 'API Key 或登录凭证无效,请使用演示账号登录后查看数据。')}
-          </p>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate('/login')}
-              className="px-4 py-2 bg-[var(--accent)] text-white rounded-lg hover:bg-[var(--accent-hover)] transition-colors text-sm font-medium inline-flex items-center gap-2"
-            >
-              <LogIn size={16} /> {t('dashboard.go_login', '去登录')}
-            </button>
-            <button
-              onClick={handleDemoLogin}
-              disabled={isDemoLoading}
-              className="px-4 py-2 bg-[var(--accent-soft)] border border-[var(--accent)]/30 text-[var(--accent)] rounded-lg hover:bg-[var(--accent)]/20 transition-colors text-sm font-medium inline-flex items-center gap-2 disabled:opacity-50"
-            >
-              <Sparkles size={16} /> {isDemoLoading ? t('login.logging_in') : t('login.demo_account')}
-            </button>
-          </div>
-        </>
-      ) : (
-        <>
-          <p className="text-[var(--error)] text-lg mb-2">{t('dashboard.error_loading')}</p>
-          <p className="text-[var(--text-tertiary)] text-sm mb-4">{message}</p>
-          <button
-            onClick={onRetry}
-            className="px-4 py-2 bg-[var(--accent)] text-white rounded-lg hover:bg-[var(--accent-hover)] transition-colors text-sm font-medium"
-          >
-            {t('dashboard.retry')}
-          </button>
-        </>
-      )}
-    </div>
-  );
-}
-
-function HealthServiceCard({ service }: { service: ServiceHealth }) {
-  const { t } = useTranslation();
-  return (
-    <div className="flex items-center gap-3 px-4 py-3 rounded-lg border" style={{ background: 'var(--surface-inset)', borderColor: 'var(--border-subtle)' }}>
-      <StatusDot status={service.healthy ? 'success' : 'error'} />
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-[var(--fg)]">{service.name}</p>
-        <p className="text-xs text-[var(--fg-tertiary)]">
-          {service.healthy ? `${service.responseTime}ms` : '—'}
-        </p>
-      </div>
-      <span className={`text-xs font-medium ${service.healthy ? 'text-[var(--success)]' : 'text-[var(--error)]'}`} aria-label={service.healthy ? t('dashboard.health.healthy') : t('dashboard.health.unhealthy')}>
-        {service.healthy ? t('dashboard.health.healthy') : t('dashboard.health.unhealthy')}
-      </span>
-    </div>
-  );
-}
-
-function AlertRow({ alert }: { alert: AlertMessage }) {
-  const severityStyles: Record<string, string> = {
-    critical: 'text-red-400 bg-red-500/10 border-red-500/20',
-    warning: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20',
-    info: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
-  };
-  const severityIcons: Record<string, string> = {
-    critical: '●',
-    warning: '●',
-    info: '●',
-  };
-
-  return (
-    <div className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${severityStyles[alert.severity] || severityStyles.info}`}>
-      <span className="text-sm">{severityIcons[alert.severity] || '●'}</span>
-      <p className="flex-1 text-sm text-[var(--text-primary)]">{alert.message}</p>
-      <span className="text-xs text-[var(--text-tertiary)] shrink-0">
-        {new Date(alert.timestamp).toLocaleTimeString()}
-      </span>
-    </div>
-  );
-}
+import { DashboardLoading } from '../components/dashboard/DashboardLoading';
+import { DashboardError } from '../components/dashboard/DashboardError';
+import { HealthServiceCard } from '../components/dashboard/HealthServiceCard';
+import { AlertRow } from '../components/dashboard/AlertRow';
+import type { AlertMessage, ServiceHealth } from '../components/dashboard/types';
 
 /* ── Main container ── */
 
@@ -327,8 +188,8 @@ export function Dashboard() {
           onTimeRangeChange={setDashboardTimeRange}
         />
 
-        {loading && !stats && <LoadingSkeleton />}
-        {error && !loading && <ErrorState message={error instanceof Error ? error.message : String(error)} onRetry={refetch} />}
+        {loading && !stats && <DashboardLoading />}
+        {error && !loading && <DashboardError message={error instanceof Error ? error.message : String(error)} onRetry={refetch} />}
 
         {(stats || !loading) && !error && (
           <div className="space-y-6">

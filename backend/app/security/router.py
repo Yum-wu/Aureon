@@ -2,8 +2,10 @@
 from typing import Optional
 import os
 import structlog
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from app.security import (
     PIIDetector,
     SSOProvider,
@@ -20,6 +22,7 @@ from app.exceptions import NotFoundError, AuthenticationError
 logger = structlog.get_logger(__name__)
 
 router = APIRouter(tags=["Security"])
+limiter = Limiter(key_func=get_remote_address)
 
 # PII 检测器实例
 pii_detector = PIIDetector()
@@ -80,6 +83,50 @@ async def sso_login(req: LoginRequest):
         "Email/password login is not configured. "
         "Use API Key authentication or configure an identity provider."
     )
+
+
+# ── Demo Token (guest preview, no API key leaked to frontend) ──
+
+# Demo token: short-lived, VIEWER-only JWT for anonymous preview.
+# Replaces the previous design of hardcoding the production API_AUTH_KEY in
+# the frontend bundle (Architecture Review C3).
+_DEMO_TOKEN_EXPIRY_SECONDS = 3600  # 1 hour
+
+
+class DemoTokenResponse(BaseModel):
+    """Demo token response — limited VIEWER-role JWT for guest preview."""
+    access_token: str
+    token_type: str = "bearer"
+    role: str = "viewer"
+    demo: bool = True
+    expires_in: int = _DEMO_TOKEN_EXPIRY_SECONDS
+
+
+@router.post("/demo-token", response_model=DemoTokenResponse)
+@limiter.limit("20/minute")
+async def issue_demo_token(request: Request):
+    """Issue a short-lived, read-only (VIEWER) demo token for guest preview.
+
+    Unlike the legacy hardcoded API key, this token:
+      - carries VIEWER role only (no write/admin operations),
+      - expires after 1 hour,
+      - is rate-limited per IP to prevent abuse.
+
+    No authentication required — this is the public entry point for the
+    "体验演示账号" button. The endpoint itself is whitelisted in the API key
+    middleware so it does not require X-API-Key.
+    """
+    from datetime import datetime, timezone
+
+    now = datetime.now(timezone.utc)
+    token = create_access_token({
+        "sub": "demo-guest",
+        "role": "VIEWER",
+        "demo": True,
+        "exp": int(now.timestamp()) + _DEMO_TOKEN_EXPIRY_SECONDS,
+    })
+    logger.info("security.demo_token_issued")
+    return DemoTokenResponse(access_token=token)
 
 
 # ── PII Detection Endpoints ──

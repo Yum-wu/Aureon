@@ -29,6 +29,8 @@ const AUTH_BYPASS_PATTERNS = [
   "/api/crew/health",
   "/metrics",
   "/api/security/sso/login",
+  "/api/security/demo-token",
+  "/api/v1/security/demo-token",
 ];
 
 function isAuthBypass(url: string): boolean {
