@@ -67,11 +67,19 @@ export function createWebSocket(
   let onCloseHandler: (() => void) | undefined;
   let visibilityHandler: (() => void) | null = null;
 
-  /** 获取 WebSocket 完整 URL（不含 token，token 通过首条消息发送） */
+  /** 获取 WebSocket 完整 URL（携带 JWT token 作为查询参数）
+   *
+   * 行业最佳实践: 在 handshake 阶段用 query param 传递 token，
+   * 服务端可在 accept() 前拒绝无效连接，避免资源浪费。
+   * 参见: https://websocket.org/guides/authentication
+   *       https://fastapi.tiangolo.com/advanced/websockets/
+   */
   function getWSUrl(): string {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.host;
-    return `${protocol}//${host}${path}`;
+    const token = getAuthToken();
+    const queryToken = token ? `?token=${encodeURIComponent(token)}` : '';
+    return `${protocol}//${host}${path}${queryToken}`;
   }
 
   /** 获取认证 token */

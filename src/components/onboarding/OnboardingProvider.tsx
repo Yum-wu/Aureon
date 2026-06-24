@@ -102,23 +102,13 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
     }
   }, [isActive, currentStep, location.pathname, filteredSteps]);
 
-  // 跨页面导航
+  // 被动处理：用户被重定向到登录页 → 跳过当前步骤
   useEffect(() => {
     if (!isActive || currentStep < 0) return;
-    const step = filteredSteps[currentStep];
-    if (!step) return;
-
-    // 被重定向到登录页（受保护路由）→ 跳过当前步骤
     if (location.pathname === '/login') {
       setCurrentStep((prev) => prev + 1);
-      return;
     }
-
-    // 如果当前步骤在另一个页面，自动导航
-    if (step.page !== location.pathname) {
-      navigate(step.page);
-    }
-  }, [isActive, currentStep, location.pathname, navigate, filteredSteps]);
+  }, [isActive, currentStep, location.pathname]);
 
   const handleNext = useCallback(() => {
     setCurrentStep((prev) => prev + 1);
