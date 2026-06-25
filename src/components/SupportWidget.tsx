@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { SourceCard } from './shared/SourceCard';
 import type { Source } from './shared/SourceCard';
+import { MessageActions } from './shared/MessageActions';
 
 // Generate stable client ID for support widget (persisted in sessionStorage)
 const getSupportClientId = () => {
@@ -141,6 +142,20 @@ export function SupportWidget() {
     setStreamingText('');
     setInput('');
   }, [input, isConnected, send]);
+
+  const handleRegenerate = useCallback((assistantIdx: number) => {
+    let lastUserIdx = -1;
+    for (let i = assistantIdx - 1; i >= 0; i--) {
+      if (messages[i].role === 'user') {
+        lastUserIdx = i;
+        break;
+      }
+    }
+    if (lastUserIdx === -1) return;
+    const userMessage = messages[lastUserIdx].content;
+    setMessages(messages.slice(0, lastUserIdx));
+    handleSend(userMessage);
+  }, [messages, handleSend]);
 
   // Handle key press
   const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
@@ -287,7 +302,7 @@ export function SupportWidget() {
             {messages.map((msg: ChatMessage, idx: number) => (
               <div
                 key={idx}
-                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} group`}
                 data-testid={`support-message-${msg.role}-${idx}`}
               >
                 <div
@@ -302,6 +317,7 @@ export function SupportWidget() {
                   }}
                 >
                   <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                  <MessageActions role={msg.role} content={msg.content} onRegenerate={msg.role === 'assistant' ? () => handleRegenerate(idx) : undefined} t={t} />
                   {msg.sources && msg.sources.length > 0 && (
                     <SourceCard sources={msg.sources} t={t} />
                   )}
