@@ -791,6 +791,7 @@
     },
     "demo_mode": "当前显示演示数据，连接实时数据源后自动更新",
     "currencySymbol": "¥",
+    "exchangeRate": 7.2,
     "export_failed": "导出失败"
   },
   "onboarding": {

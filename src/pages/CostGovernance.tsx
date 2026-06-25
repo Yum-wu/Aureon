@@ -27,7 +27,8 @@ interface CostConsumer {
 /** 预算进度条 */
 function BudgetProgress({ used, total }: { used: number; total: number }) {
   const { t } = useTranslation();
-  const formatCostV = (val: number) => `${t('cost.currencySymbol')}${val.toFixed(2)}`;
+  const xr = parseFloat(t('cost.exchangeRate', '1'));
+  const fc = (v: number) => `${t('cost.currencySymbol')}${(v * xr).toFixed(2)}`;
   const percentage = total > 0 ? (used / total) * 100 : 0;
   const isWarning = percentage >= 80;
   const isCritical = percentage >= 95;
@@ -36,7 +37,7 @@ function BudgetProgress({ used, total }: { used: number; total: number }) {
     <div>
       <div className="flex items-baseline justify-between mb-1">
         <span className="text-sm font-medium text-[var(--text-primary)]">
-          {formatCostV(used)} / {formatCostV(total)}
+          {fc(used)} / {fc(total)}
         </span>
         <span className={`text-xs font-semibold ${isCritical ? 'text-red-400' : isWarning ? 'text-yellow-400' : 'text-emerald-400'}`}>
           {percentage.toFixed(1)}%
@@ -72,7 +73,9 @@ function TrendIndicator({ trend }: { trend: 'up' | 'down' | 'stable' }) {
 export function CostGovernance() {
   const { t } = useTranslation();
   const currencySymbol = t('cost.currencySymbol');
-  const formatCost = (val: number) => `${currencySymbol}${val.toFixed(2)}`;
+  const exchangeRate = parseFloat(t('cost.exchangeRate', '1'));
+  const convertCur = (val: number) => val * exchangeRate;
+  const formatCost = (val: number) => `${currencySymbol}${convertCur(val).toFixed(2)}`;
   const timeRange = useViewStore((s) => s.costTimeRange);
   const setCostTimeRange = useViewStore((s) => s.setCostTimeRange);
   const { summary, trends, breakdown, topConsumers: topConsumersData, isLoading: loading, error, refetch } = useCostDataQuery(timeRange);
@@ -99,10 +102,10 @@ export function CostGovernance() {
 
   // 所有 useMemo 必须在 early return 之前调用（React hooks 规则）
   const costTrendData = useMemo(() => trends.length > 0 ? [
-    { id: t('cost.charts.daily_cost'), data: trends.map((p, i) => ({ x: `${i + 1}`, y: p.cost })) },
-    { id: t('cost.charts.burn_rate'), data: trends.map((p, i) => ({ x: `${i + 1}`, y: p.cost * 0.9 })) },
-    { id: t('cost.charts.forecast'), data: trends.map((p, i) => ({ x: `${i + 1}`, y: p.cost * 1.1 })) },
-  ] : [], [trends, t]);
+    { id: t('cost.charts.daily_cost'), data: trends.map((p, i) => ({ x: `${i + 1}`, y: p.cost * exchangeRate })) },
+    { id: t('cost.charts.burn_rate'), data: trends.map((p, i) => ({ x: `${i + 1}`, y: p.cost * 0.9 * exchangeRate })) },
+    { id: t('cost.charts.forecast'), data: trends.map((p, i) => ({ x: `${i + 1}`, y: p.cost * 1.1 * exchangeRate })) },
+  ] : [], [trends, t, exchangeRate]);
 
   const tokenUsageData = useMemo(() => trends.length > 0 ? trends.map((p, i) => ({
     label: `${i + 1}`,
@@ -172,14 +175,14 @@ export function CostGovernance() {
   // 按工作区分解柱状图数据
   const workspaceCostData = breakdown.length > 0 ? breakdown.map((b) => ({
     label: b.category,
-    value: b.cost,
+    value: convertCur(b.cost),
   })) : [];
 
   // Top 消费者表格数据
   const topConsumers: CostConsumer[] = topConsumersData.length > 0 ? topConsumersData.map((c) => ({
     user: c.name,
     tokens: c.tokens,
-    cost: c.cost,
+    cost: convertCur(c.cost),
     query_count: 0,
     trend: 'stable' as const,
   })) : [];

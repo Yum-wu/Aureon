@@ -160,6 +160,7 @@ function OverviewTab({ latency, tokens, usage, cache, t }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   t: any;
 }) {
+  const xr = parseFloat(t('cost.exchangeRate', '1'));
   return (
     <>
       {/* Metrics Grid */}
@@ -175,7 +176,7 @@ function OverviewTab({ latency, tokens, usage, cache, t }: {
           <div className="text-[var(--fg-tertiary)] text-sm mb-2">{t('analytics.token_usage')}</div>
           <div className="text-3xl font-bold text-[var(--fg)]">{((tokens?.input || 0) / 1000).toFixed(0)}k</div>
           <div className="mt-3 text-xs text-[var(--fg-tertiary)]">
-            {t('analytics.output')}: {((tokens?.output || 0) / 1000).toFixed(0)}k · {t('analytics.cost')}: {t('cost.currencySymbol')}{tokens?.cost || 0}
+            {t('analytics.output')}: {((tokens?.output || 0) / 1000).toFixed(0)}k · {t('analytics.cost')}: {t('cost.currencySymbol')}{(tokens?.cost || 0) * xr}
           </div>
         </div>
         <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-5">
@@ -327,6 +328,7 @@ function TokensTab({ tokens, t }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   t: any;
 }) {
+  const xr = parseFloat(t('cost.exchangeRate', '1'));
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -354,8 +356,8 @@ function TokensTab({ tokens, t }: {
         </div>
         <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-6">
           <div className="text-[var(--fg-tertiary)] text-sm mb-2">{t('analytics.tokens.cost')}</div>
-          <div className="text-2xl font-bold" style={{ color: 'var(--success)' }}>{t('cost.currencySymbol')}{tokens?.cost || 0}</div>
-          <div className="mt-2 text-xs text-[var(--fg-tertiary)]">{t('analytics.tokens.per_query', { symbol: t('cost.currencySymbol'), cost: tokens?.costPerQuery || 0 })}</div>
+          <div className="text-2xl font-bold" style={{ color: 'var(--success)' }}>{t('cost.currencySymbol')}{(tokens?.cost || 0) * xr}</div>
+          <div className="mt-2 text-xs text-[var(--fg-tertiary)]">{t('analytics.tokens.per_query', { symbol: t('cost.currencySymbol'), cost: (tokens?.costPerQuery || 0) * xr })}</div>
         </div>
       </div>
     </div>

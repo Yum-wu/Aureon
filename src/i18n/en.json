@@ -790,6 +790,7 @@
     },
     "demo_mode": "Currently showing demo data. Will auto-update when connected to a live data source.",
     "currencySymbol": "$",
+    "exchangeRate": 1,
     "export_failed": "Export failed"
   },
   "onboarding": {
