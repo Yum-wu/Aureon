@@ -11,6 +11,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useWebSocket } from '../hooks/useWebSocket';
+import { SourceCard } from './shared/SourceCard';
+import type { Source } from './shared/SourceCard';
 
 // Generate stable client ID for support widget (persisted in sessionStorage)
 const getSupportClientId = () => {
@@ -27,6 +29,7 @@ const SUPPORT_CLIENT_ID = getSupportClientId();
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+  sources?: Source[];
 }
 
 export function SupportWidget() {
@@ -37,6 +40,7 @@ export function SupportWidget() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState('');
   const [wsError, setWsError] = useState<string | null>(null);
+  const [streamingSources, setStreamingSources] = useState<Source[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -72,10 +76,11 @@ export function SupportWidget() {
           setIsStreaming(false);
           setStreamingText((prev) => {
             if (prev) {
-              setMessages((msgs) => [...msgs, { role: 'assistant', content: prev }]);
+              setMessages((msgs) => [...msgs, { role: 'assistant', content: prev, sources: streamingSources }]);
             }
             return '';
           });
+          setStreamingSources([]);
         } else if (msg.type === 'error') {
           // 后端用 message 字段 — 同时结束流式状态避免永久卡住
           setWsError(msg.message || msg.content || msg.text || '连接出错');
@@ -90,6 +95,10 @@ export function SupportWidget() {
         } else if (msg.type === 'connected') {
           // 连接确认，清除错误
           setWsError(null);
+        } else if (msg.type === 'sources' && Array.isArray(msg.sources)) {
+          setStreamingSources(msg.sources);
+        } else if (msg.type === 'citation') {
+          setStreamingSources(prev => [...prev, msg.source]);
         }
       }
     },
@@ -293,6 +302,9 @@ export function SupportWidget() {
                   }}
                 >
                   <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                  {msg.sources && msg.sources.length > 0 && (
+                    <SourceCard sources={msg.sources} t={t} />
+                  )}
                 </div>
               </div>
             ))}

@@ -13,7 +13,8 @@ import { useTranslation } from 'react-i18next';
 import { useChatStore } from '../stores/useChatStore';
 import { useDocuments } from '../hooks/useDocumentsQuery';
 import { VoiceButton } from './VoiceButton';
-import { BookOpen, AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
+import { SourceCard } from './shared/SourceCard';
 
 // 消息列表最大渲染数量，防止大量历史消息导致渲染卡顿
 const MAX_VISIBLE_MESSAGES = 100;
@@ -91,24 +92,7 @@ export function ChatWidget({ className = '' }: ChatWidgetProps) {
           >
             <div className="whitespace-pre-wrap break-words">{msg.content}</div>
 
-            {/* Source citations for assistant messages */}
-            {msg.role === 'assistant' && msg.sources && msg.sources.length > 0 && (
-              <div className="mt-3 pt-2 border-t border-[var(--border)]">
-                <p className="text-xs font-medium text-[var(--text-tertiary)] mb-1 inline-flex items-center gap-1"><BookOpen size={14} /> {t('chat.sources')}:</p>
-                <div className="space-y-1">
-                  {msg.sources.map((source, sourceIdx) => (
-                    <div key={sourceIdx} className="flex items-center gap-2 text-xs">
-                      <span className="text-[var(--accent)] font-medium">{source.title}</span>
-                      {source.score !== undefined && (
-                        <span className="text-[var(--text-tertiary)]">
-                          ({(source.score * 100).toFixed(0)}%)
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <SourceCard sources={msg.sources} t={t} />
           </div>
         </div>
       )),
