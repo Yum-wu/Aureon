@@ -31,7 +31,7 @@ const getSupportClientId = () => {
 };
 const SUPPORT_CLIENT_ID = getSupportClientId();
 
-interface ChatMessage {
+export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   sources?: Source[];
@@ -75,7 +75,7 @@ export function SupportWidget() {
     },
     onMessage: (data) => {
       if (data && typeof data === 'object' && 'type' in data) {
-        const msg = data as { type: string; content?: string; text?: string; message?: string; full_response?: string };
+        const msg = data as { type: string; content?: string; text?: string; message?: string; full_response?: string; sources?: Source[]; source?: Source };
         if (msg.type === 'text' || msg.type === 'session') {
           increment();
           // 后端发送 type=text, content 字段
@@ -110,7 +110,10 @@ export function SupportWidget() {
         } else if (msg.type === 'sources' && Array.isArray(msg.sources)) {
           setStreamingSources(msg.sources);
         } else if (msg.type === 'citation') {
-          setStreamingSources(prev => [...prev, msg.source]);
+          const citation = msg.source;
+          if (citation) {
+            setStreamingSources(prev => [...prev, citation]);
+          }
         }
       }
     },

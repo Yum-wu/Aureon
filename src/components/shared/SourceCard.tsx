@@ -2,13 +2,14 @@ import { useState } from 'react';
 
 export interface Source {
   title: string;
+  slug?: string;
   score?: number;
   snippet?: string;
   url?: string;
 }
 
 interface SourceCardProps {
-  sources: Source[];
+  sources?: Source[];
   maxVisible?: number;
   t: (key: string) => string;
 }
