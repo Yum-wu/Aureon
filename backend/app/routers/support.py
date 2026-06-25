@@ -46,6 +46,6 @@ async def submit_offline_message(msg: OfflineMessage, request: Request):
             )
         logger.info("support.offline_message_saved", email=msg.email)
         return {"status": "ok", "message": "Message saved"}
-    except Exception as e:
+    except Exception:
         logger.exception("support.offline_message_error")
         raise HTTPException(status_code=500, detail="Failed to save message")

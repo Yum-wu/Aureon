@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { SupportWidget } from "../SupportWidget";
 
@@ -249,7 +249,6 @@ describe("SupportWidget - new features", () => {
   it("unread badge structure appears on FAB", () => {
     render(<SupportWidget />);
     // FAB visible, no badge since never opened
-    const fab = screen.getByTestId("support-fab");
     // Check badge is not present initially
     expect(screen.queryByTestId("support-unread-badge")).not.toBeInTheDocument();
   });
