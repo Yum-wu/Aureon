@@ -797,5 +797,32 @@
     "documents_empty": "知识库为空，点击「上传文档」开始构建您的专属知识库。",
     "dashboard_first_visit": "欢迎使用 Aureon！这里是您的系统仪表盘，查看实时状态和关键指标。",
     "admin_first_visit": "这里是管理中心，您可以管理用户、配置权限、查看审计日志。"
+  },
+  "support": {
+    "copy": "复制",
+    "copy_success": "已复制！",
+    "regenerate": "重新生成",
+    "feedback_up": "有帮助",
+    "feedback_down": "没帮助",
+    "feedback_thanks": "感谢反馈！",
+    "sources": "来源",
+    "sources_toggle": "查看更多",
+    "greeting": "你好！有什么可以帮助您？",
+    "typing": "正在输入",
+    "offline_title": "给我们留言",
+    "offline_name": "您的姓名",
+    "offline_email": "您的邮箱",
+    "offline_message": "请描述您的问题",
+    "offline_submit": "发送留言",
+    "offline_success": "感谢您的留言，我们会尽快联系您！",
+    "offline_error": "发送失败，请重试。",
+    "qr_search_tips": "怎样搜索更精准？",
+    "qr_search_filters": "支持哪些筛选条件？",
+    "qr_upload_doc": "如何上传文档？",
+    "qr_file_formats": "支持哪些文件格式？",
+    "qr_dashboard_metrics": "仪表盘指标的含义？",
+    "qr_analytics_frequency": "分析数据更新频率？",
+    "qr_admin_permissions": "如何管理用户权限？",
+    "qr_cost_calculation": "成本是怎么计算的？"
   }
 }

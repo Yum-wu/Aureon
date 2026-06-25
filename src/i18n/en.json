@@ -796,5 +796,32 @@
     "documents_empty": "Knowledge base is empty. Click \"Upload Document\" to start building your dedicated knowledge base.",
     "dashboard_first_visit": "Welcome to Aureon! This is your system dashboard for viewing real-time status and key metrics.",
     "admin_first_visit": "This is the admin center where you can manage users, configure permissions, and view audit logs."
+  },
+  "support": {
+    "copy": "Copy",
+    "copy_success": "Copied!",
+    "regenerate": "Regenerate",
+    "feedback_up": "Helpful",
+    "feedback_down": "Not helpful",
+    "feedback_thanks": "Thanks for your feedback!",
+    "sources": "Sources",
+    "sources_toggle": "Show more",
+    "greeting": "Hi! Need help?",
+    "typing": "is typing",
+    "offline_title": "Leave a message",
+    "offline_name": "Your name",
+    "offline_email": "Your email",
+    "offline_message": "How can we help?",
+    "offline_submit": "Send message",
+    "offline_success": "Thank you! We'll get back to you soon.",
+    "offline_error": "Failed to send. Please try again.",
+    "qr_search_tips": "How to search more accurately?",
+    "qr_search_filters": "What filters are supported?",
+    "qr_upload_doc": "How to upload documents?",
+    "qr_file_formats": "What file formats are supported?",
+    "qr_dashboard_metrics": "What do dashboard metrics mean?",
+    "qr_analytics_frequency": "How often is analytics data updated?",
+    "qr_admin_permissions": "How to manage user permissions?",
+    "qr_cost_calculation": "How is cost calculated?"
   }
 }
