@@ -16,6 +16,7 @@ import type { Source } from './shared/SourceCard';
 import { MessageActions } from './shared/MessageActions';
 import { useSupportMessages } from '../hooks/useSupportMessages';
 import { useSupportGreeting } from '../hooks/useSupportGreeting';
+import { getRouteQuickReplies } from '../support/quickReplyRoutes';
 
 // Generate stable client ID for support widget (persisted in sessionStorage)
 const getSupportClientId = () => {
@@ -177,9 +178,11 @@ export function SupportWidget() {
     textarea.style.height = `${Math.min(textarea.scrollHeight, 100)}px`;
   }, []);
 
-  // Get quick replies from i18n
-  const quickReplies = t('support.quickReplies', { returnObjects: true }) as string[];
-  const hasQuickReplies = Array.isArray(quickReplies) && quickReplies.length > 0;
+  // Get quick replies from i18n + page route
+  const staticReplies = t('support.quickReplies', { returnObjects: true }) as string[];
+  const routeReplies = getRouteQuickReplies(t);
+  const allReplies = [...new Set([...routeReplies, ...staticReplies])];
+  const hasQuickReplies = Array.isArray(allReplies) && allReplies.length > 0;
 
   return (
     <>
@@ -290,7 +293,7 @@ export function SupportWidget() {
                 {/* Quick Replies */}
                 {hasQuickReplies && (
                   <div className="flex flex-wrap gap-2 pt-2">
-                    {quickReplies.map((reply: string, idx: number) => (
+                    {allReplies.map((reply: string, idx: number) => (
                       <button
                         key={idx}
                         onClick={() => handleSend(reply)}
