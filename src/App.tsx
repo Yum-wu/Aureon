@@ -48,7 +48,7 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider>
         <ToastProvider>
-          <BrowserRouter>
+          <BrowserRouter useTransitions={false}>
             <AuthProvider>
               <RealtimeMetricsProvider>
                 <OnboardingProvider>
