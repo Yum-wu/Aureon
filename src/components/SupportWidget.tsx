@@ -44,6 +44,9 @@ export function SupportWidget() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState('');
   const [wsError, setWsError] = useState<string | null>(null);
+  const [offlineMode, setOfflineMode] = useState(false);
+  const [offlineStatus, setOfflineStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+  const offlineNameRef = useRef<HTMLInputElement>(null);
   const [streamingSources, setStreamingSources] = useState<Source[]>([]);
   useSupportMessages(messages, setMessages, isStreaming);
   const { showGreeting, dismissGreeting } = useSupportGreeting(isOpen);
@@ -130,7 +133,11 @@ export function SupportWidget() {
   // Handle send message
   const handleSend = useCallback((text?: string) => {
     const messageText = text || input.trim();
-    if (!messageText || !isConnected) return;
+    if (!messageText) return;
+    if (!isConnected) {
+      setOfflineMode(true);
+      return;
+    }
 
     // Add user message to local state
     setMessages((prev) => [...prev, { role: 'user', content: messageText }]);
@@ -161,6 +168,33 @@ export function SupportWidget() {
     setMessages(messages.slice(0, lastUserIdx));
     handleSend(userMessage);
   }, [messages, handleSend]);
+
+  const handleOfflineSubmit = useCallback(async () => {
+    const nameEl = document.querySelector<HTMLInputElement>('[data-testid="offline-name"]');
+    const emailEl = document.querySelector<HTMLInputElement>('[data-testid="offline-email"]');
+    const msgEl = document.querySelector<HTMLTextAreaElement>('[data-testid="offline-message"]');
+    if (!nameEl || !emailEl || !msgEl) return;
+    const name = nameEl.value.trim();
+    const email = emailEl.value.trim();
+    const message = msgEl.value.trim();
+    if (!name || !email || !message) return;
+    setOfflineStatus('sending');
+    try {
+      const res = await fetch('/api/v1/support/offline-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, message, page_url: window.location.href }),
+      });
+      if (res.ok) {
+        setOfflineStatus('success');
+        setTimeout(() => setOfflineStatus('idle'), 5000);
+      } else {
+        setOfflineStatus('error');
+      }
+    } catch {
+      setOfflineStatus('error');
+    }
+  }, []);
 
   // Handle key press
   const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
@@ -394,38 +428,83 @@ export function SupportWidget() {
 
           {/* Input Area */}
           <div className="border-t p-3 shrink-0" style={{ borderColor: 'var(--border)' }}>
-            <div className="flex items-end gap-2">
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={handleInputChange}
-                onKeyDown={handleKeyPress}
-                placeholder={isConnected ? t('support.placeholder') : t('support.connecting')}
-                disabled={!isConnected}
-                className="flex-1 resize-none rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                style={{
-                  background: 'var(--bg-primary)',
-                  borderColor: 'var(--border)',
-                  color: 'var(--text-primary)',
-                  minHeight: '40px',
-                  maxHeight: '100px',
-                }}
-                data-testid="support-input"
-                rows={1}
-              />
-              <button
-                onClick={() => handleSend()}
-                disabled={!isConnected || !input.trim()}
-                className="px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{
-                  background: input.trim() && isConnected ? 'var(--accent)' : 'var(--bg-tertiary)',
-                  color: input.trim() && isConnected ? 'white' : 'var(--text-tertiary)',
-                }}
-                data-testid="support-send"
-              >
-                {t('chat.send')}
-              </button>
-            </div>
+            {offlineMode || !isConnected ? (
+              <div>
+                <p className="text-xs font-medium mb-2" style={{ color: 'var(--text-primary)' }}>{t('support.offline_title')}</p>
+                {offlineStatus === 'idle' ? (
+                  <>
+                    <input
+                      ref={offlineNameRef}
+                      className="w-full rounded-lg border px-3 py-2 text-sm mb-2"
+                      style={{ background: 'var(--bg-primary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+                      placeholder={t('support.offline_name')}
+                      data-testid="offline-name"
+                    />
+                    <input
+                      className="w-full rounded-lg border px-3 py-2 text-sm mb-2"
+                      style={{ background: 'var(--bg-primary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+                      placeholder={t('support.offline_email')}
+                      type="email"
+                      data-testid="offline-email"
+                    />
+                    <textarea
+                      className="w-full rounded-lg border px-3 py-2 text-sm mb-2 resize-none"
+                      style={{ background: 'var(--bg-primary)', borderColor: 'var(--border)', color: 'var(--text-primary)', minHeight: '60px' }}
+                      placeholder={t('support.offline_message')}
+                      data-testid="offline-message"
+                    />
+                    <button
+                      onClick={handleOfflineSubmit}
+                      className="px-4 py-2 rounded-lg text-sm font-medium text-white"
+                      style={{ background: 'var(--accent)' }}
+                      data-testid="offline-submit"
+                    >
+                      {t('support.offline_submit')}
+                    </button>
+                  </>
+                ) : offlineStatus === 'success' ? (
+                  <p className="text-sm text-green-400">{t('support.offline_success')}</p>
+                ) : (
+                  <div>
+                    <p className="text-sm text-red-400 mb-2">{t('support.offline_error')}</p>
+                    <button onClick={() => setOfflineStatus('idle')} className="text-xs text-[var(--accent)] underline">{t('cost.retry')}</button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-end gap-2">
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={handleInputChange}
+                  onKeyDown={handleKeyPress}
+                  placeholder={isConnected ? t('support.placeholder') : t('support.connecting')}
+                  disabled={!isConnected}
+                  className="flex-1 resize-none rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  style={{
+                    background: 'var(--bg-primary)',
+                    borderColor: 'var(--border)',
+                    color: 'var(--text-primary)',
+                    minHeight: '40px',
+                    maxHeight: '100px',
+                  }}
+                  data-testid="support-input"
+                  rows={1}
+                />
+                <button
+                  onClick={() => handleSend()}
+                  disabled={!isConnected || !input.trim()}
+                  className="px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    background: input.trim() && isConnected ? 'var(--accent)' : 'var(--bg-tertiary)',
+                    color: input.trim() && isConnected ? 'white' : 'var(--text-tertiary)',
+                  }}
+                  data-testid="support-send"
+                >
+                  {t('chat.send')}
+                </button>
+              </div>
+            )}
             <p className="text-xs mt-1.5" style={{ color: 'var(--text-tertiary)' }}>
               {isConnected ? t('support.connected') : t('support.connecting')}
             </p>
