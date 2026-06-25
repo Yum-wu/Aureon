@@ -7,6 +7,7 @@ import { Tabs } from '../components/ui/Tabs';
 import { ProgressBar } from '../components/ui/ProgressBar';
 import { DataTable } from '../components/ui/DataTable';
 import { StatusDot } from '../components/ui/StatusDot';
+import { BarChart } from '../components/charts/BarChart';
 import { RefreshCw } from 'lucide-react';
 
 type AnalyticsTab = 'overview' | 'latency' | 'tokens' | 'queries';
@@ -174,7 +175,7 @@ function OverviewTab({ latency, tokens, usage, cache, t }: {
           <div className="text-[var(--fg-tertiary)] text-sm mb-2">{t('analytics.token_usage')}</div>
           <div className="text-3xl font-bold text-[var(--fg)]">{((tokens?.input || 0) / 1000).toFixed(0)}k</div>
           <div className="mt-3 text-xs text-[var(--fg-tertiary)]">
-            {t('analytics.output')}: {((tokens?.output || 0) / 1000).toFixed(0)}k · {t('analytics.cost')}: ${tokens?.cost || 0}
+            {t('analytics.output')}: {((tokens?.output || 0) / 1000).toFixed(0)}k · {t('analytics.cost')}: {t('cost.currencySymbol')}{tokens?.cost || 0}
           </div>
         </div>
         <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-5">
@@ -235,6 +236,17 @@ function LatencyTab({ latency, moduleRows, t }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   t: any;
 }) {
+  const trendUp = (latency?.trend?.avg_change ?? 0) > 0;
+  const trendDown = (latency?.trend?.avg_change ?? 0) < 0;
+
+  const breakdownData = latency?.breakdown
+    ? [
+        { module: t('analytics.latency.breakdown.retrieval', 'Retrieval'), value: latency.breakdown.retrieval },
+        { module: t('analytics.latency.breakdown.llm_first_token', 'First Token'), value: latency.breakdown.llm_first_token },
+        { module: t('analytics.latency.breakdown.llm_generation', 'Generation'), value: latency.breakdown.llm_generation },
+      ]
+    : [];
+
   const columns = [
     { key: 'module', header: t('analytics.table.module', 'Module') },
     {
@@ -255,21 +267,48 @@ function LatencyTab({ latency, moduleRows, t }: {
 
   return (
     <div className="space-y-6">
-      {/* Summary Cards */}
+      {/* Summary Cards with Trend */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-5">
           <div className="text-sm text-[var(--fg-tertiary)] mb-1">{t('analytics.latency.avg')}</div>
-          <div className="text-2xl font-bold text-[var(--fg)]">{latency?.avg || 0}<span className="text-sm text-[var(--fg-tertiary)] ml-1">ms</span></div>
+          <div className="flex items-baseline gap-2">
+            <div className="text-2xl font-bold text-[var(--fg)]">{latency?.avg || 0}<span className="text-sm text-[var(--fg-tertiary)] ml-1">ms</span></div>
+            {latency?.trend?.avg_change !== undefined && (
+              <span className={`text-xs font-semibold ${trendUp ? 'text-red-400' : trendDown ? 'text-emerald-400' : 'text-[var(--fg-tertiary)]'}`}>
+                {trendUp ? '↑' : trendDown ? '↓' : '—'} {Math.abs(latency.trend.avg_change)}%
+              </span>
+            )}
+          </div>
+          {latency?.trend?.period && (
+            <div className="mt-1 text-xs text-[var(--fg-tertiary)]">
+              {t('analytics.latency.vs_period', { period: latency.trend.period })}
+            </div>
+          )}
         </div>
         <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-5">
           <div className="text-sm text-[var(--fg-tertiary)] mb-1">{t('analytics.latency.p95')}</div>
-          <div className="text-2xl font-bold text-[var(--fg)]">{latency?.p95 || 0}<span className="text-sm text-[var(--fg-tertiary)] ml-1">ms</span></div>
+          <div className="flex items-baseline gap-2">
+            <div className="text-2xl font-bold text-[var(--fg)]">{latency?.p95 || 0}<span className="text-sm text-[var(--fg-tertiary)] ml-1">ms</span></div>
+          </div>
         </div>
         <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-5">
           <div className="text-sm text-[var(--fg-tertiary)] mb-1">{t('analytics.latency.p99')}</div>
-          <div className="text-2xl font-bold text-[var(--fg)]">{latency?.p99 || 0}<span className="text-sm text-[var(--fg-tertiary)] ml-1">ms</span></div>
+          <div className="flex items-baseline gap-2">
+            <div className="text-2xl font-bold text-[var(--fg)]">{latency?.p99 || 0}<span className="text-sm text-[var(--fg-tertiary)] ml-1">ms</span></div>
+          </div>
         </div>
       </div>
+
+      {/* Breakdown Bar Chart */}
+      {breakdownData.length > 0 && (
+        <BarChart
+          data={breakdownData}
+          keys={['value']}
+          indexBy="module"
+          title={t('analytics.latency.breakdown_title')}
+          height={250}
+        />
+      )}
 
       {/* Module Status Table */}
       <DataTable
@@ -315,8 +354,8 @@ function TokensTab({ tokens, t }: {
         </div>
         <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-6">
           <div className="text-[var(--fg-tertiary)] text-sm mb-2">{t('analytics.tokens.cost')}</div>
-          <div className="text-2xl font-bold" style={{ color: 'var(--success)' }}>${tokens?.cost || 0}</div>
-          <div className="mt-2 text-xs text-[var(--fg-tertiary)]">{t('analytics.tokens.per_query', { cost: tokens?.costPerQuery || 0 })}</div>
+          <div className="text-2xl font-bold" style={{ color: 'var(--success)' }}>{t('cost.currencySymbol')}{tokens?.cost || 0}</div>
+          <div className="mt-2 text-xs text-[var(--fg-tertiary)]">{t('analytics.tokens.per_query', { symbol: t('cost.currencySymbol'), cost: tokens?.costPerQuery || 0 })}</div>
         </div>
       </div>
     </div>

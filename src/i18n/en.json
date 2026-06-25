@@ -508,14 +508,21 @@
       "title": "Latency Distribution",
       "avg": "Avg",
       "p95": "P95",
-      "p99": "P99"
+      "p99": "P99",
+      "breakdown_title": "Latency Breakdown",
+      "breakdown": {
+        "retrieval": "Retrieval",
+        "llm_first_token": "First Token",
+        "llm_generation": "Generation"
+      },
+      "vs_period": "vs {{period}}"
     },
     "tokens": {
       "title": "Token Usage Details",
       "input": "Input Tokens",
       "output": "Output Tokens",
       "cost": "Estimated Cost",
-      "per_query": "~${cost}/query"
+      "per_query": "~{symbol}{cost}/query"
     },
     "cache": {
       "title": "Cache Hit Rate",
@@ -782,6 +789,7 @@
       "90d": "Last 90 days"
     },
     "demo_mode": "Currently showing demo data. Will auto-update when connected to a live data source.",
+    "currencySymbol": "$",
     "export_failed": "Export failed"
   },
   "onboarding": {

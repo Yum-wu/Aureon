@@ -27,6 +27,7 @@ interface CostConsumer {
 /** 预算进度条 */
 function BudgetProgress({ used, total }: { used: number; total: number }) {
   const { t } = useTranslation();
+  const formatCostV = (val: number) => `${t('cost.currencySymbol')}${val.toFixed(2)}`;
   const percentage = total > 0 ? (used / total) * 100 : 0;
   const isWarning = percentage >= 80;
   const isCritical = percentage >= 95;
@@ -35,7 +36,7 @@ function BudgetProgress({ used, total }: { used: number; total: number }) {
     <div>
       <div className="flex items-baseline justify-between mb-1">
         <span className="text-sm font-medium text-[var(--text-primary)]">
-          ${used.toFixed(2)} / ${total.toFixed(2)}
+          {formatCostV(used)} / {formatCostV(total)}
         </span>
         <span className={`text-xs font-semibold ${isCritical ? 'text-red-400' : isWarning ? 'text-yellow-400' : 'text-emerald-400'}`}>
           {percentage.toFixed(1)}%
@@ -70,6 +71,8 @@ function TrendIndicator({ trend }: { trend: 'up' | 'down' | 'stable' }) {
 
 export function CostGovernance() {
   const { t } = useTranslation();
+  const currencySymbol = t('cost.currencySymbol');
+  const formatCost = (val: number) => `${currencySymbol}${val.toFixed(2)}`;
   const timeRange = useViewStore((s) => s.costTimeRange);
   const setCostTimeRange = useViewStore((s) => s.setCostTimeRange);
   const { summary, trends, breakdown, topConsumers: topConsumersData, isLoading: loading, error, refetch } = useCostDataQuery(timeRange);
@@ -193,7 +196,7 @@ export function CostGovernance() {
       key: 'cost',
       label: t('cost.table.cost'),
       sortable: true,
-      render: (row: CostConsumer) => <span className="tabular-nums">${row.cost.toFixed(2)}</span>,
+      render: (row: CostConsumer) => <span className="tabular-nums">{formatCost(row.cost)}</span>,
     },
     {
       key: 'query_count',
@@ -261,7 +264,7 @@ export function CostGovernance() {
               {t('cost.summary.total_cost')}
             </p>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-bold text-[var(--text-primary)] tabular-nums">{totalCost !== undefined ? `$${totalCost.toFixed(2)}` : '—'}</span>
+              <span className="text-2xl font-bold text-[var(--text-primary)] tabular-nums">{totalCost !== undefined ? formatCost(totalCost) : '—'}</span>
             </div>
             <div className="flex items-center gap-1 mt-2">
               {costChange !== undefined ? (
@@ -287,7 +290,7 @@ export function CostGovernance() {
               </Tooltip>
             </p>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-bold text-[var(--text-primary)] tabular-nums">{burnRate !== undefined ? `$${burnRate.toFixed(2)}` : '—'}</span>
+              <span className="text-2xl font-bold text-[var(--text-primary)] tabular-nums">{burnRate !== undefined ? formatCost(burnRate) : '—'}</span>
               <span className="text-sm font-medium text-[var(--text-tertiary)]">/day</span>
             </div>
             <div className="flex items-center gap-1 mt-2">

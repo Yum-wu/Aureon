@@ -508,14 +508,21 @@
       "title": "延迟分布",
       "avg": "平均",
       "p95": "P95",
-      "p99": "P99"
+      "p99": "P99",
+      "breakdown_title": "延迟分项",
+      "breakdown": {
+        "retrieval": "检索",
+        "llm_first_token": "首字延迟",
+        "llm_generation": "生成"
+      },
+      "vs_period": "较{{period}}"
     },
     "tokens": {
       "title": "Token 使用详情",
       "input": "输入 Token",
       "output": "输出 Token",
       "cost": "预估成本",
-      "per_query": "~${cost}/查询"
+      "per_query": "~{symbol}{cost}/查询"
     },
     "cache": {
       "title": "缓存命中率",
@@ -783,6 +790,7 @@
       "90d": "最近 90 天"
     },
     "demo_mode": "当前显示演示数据，连接实时数据源后自动更新",
+    "currencySymbol": "¥",
     "export_failed": "导出失败"
   },
   "onboarding": {

@@ -22,7 +22,7 @@ Aureon/
 │   │   ├── models.py        # Pydantic 请求/响应
 │   │   └── query_router.py  # Adaptive-RAG 查询路由（按复杂度分配检索策略）
 │   ├── cache/        # Redis + 内存缓存、语义缓存去重
-│   ├── routers/      # API 路由（chat.py, rag.py, crew.py）
+│   ├── routers/      # API 路由（chat.py, rag.py, crew.py, support.py）
 │   ├── features/     # Feature Flag（灰度发布）
 │   ├── observability/ # Query Trace、统计
 │   │   ├── langfuse_integration.py  # LangFuse CallbackHandler 初始化/注入/关闭
@@ -39,11 +39,17 @@ Aureon/
 │   ├── config.py     # pydantic_settings（所有环境变量统一在此）
 │   ├── exceptions.py # AureonException 层级异常体系
 │   └── main.py       # FastAPI 入口 + Auth Middleware + TenantMiddleware
-├── backend/tests/     # 793 passed, 5 skipped
+├── backend/tests/     # 1008 passed (CI 2026-06-25)
 ├── src/               # React 前端
 │   ├── components/ hooks/ pages/ services/ i18n/ types/
-│   ├── hooks/AuthContext.ts    # Auth 状态定义
-│   └── hooks/AuthProvider.tsx  # Auth Provider
+│   │   ├── shared/SourceCard.tsx     # 可展开来源引用
+│   │   └── shared/MessageActions.tsx # 消息工具栏（复制/反馈/重新生成）
+│   ├── support/quickReplyRoutes.ts   # 动态快捷回复（路由匹配）
+│   ├── hooks/useSupportMessages.ts   # localStorage 持久化
+│   ├── hooks/useSupportGreeting.ts   # 10s 延迟问候
+│   ├── hooks/useUnreadCount.ts       # 未读计数（99+）
+│   ├── hooks/AuthContext.ts          # Auth 状态定义
+│   └── hooks/AuthProvider.tsx        # Auth Provider
 └── docker-compose.yml
 ```
 
@@ -60,7 +66,7 @@ Aureon/
 - Agent：`create_agent(model, tools, prompt)` → `CompiledStateGraph`
 - 输入：`{"messages": [HumanMessage(content=...)]}`
 - 流式：`graph.astream_events(..., version="v2")`
-- 测试：`tests/` + pytest + pytest-asyncio（793 passed, 5 skipped）
+- 测试：`tests/` + pytest + pytest-asyncio
 - API Key 仅存 `.env`，生产环境通过 `API_AUTH_KEY` 启用认证
 - SSO/RBAC：JWT + Fernet 加密，`require_role(min_role)` FastAPI 依赖
 - 敏感字段（SSO secret/LLM key）通过 `security/__init__.py` Fernet 加密存储
@@ -108,7 +114,8 @@ Aureon/
 - Design Token 体系（index.css :root 变量，oklch 色阶）
 - 组件：components/ui/ 通用 + components/landing/ 落地页 + components/search/ 搜索 + components/dashboard/ 仪表盘
 - Chat：容器式输入框、消息 hover 工具栏（复制/重新生成/投票）、空状态快捷提问
-- i18n：src/i18n/en.json + zh.json，useTranslation() hook
+- Support Widget：FAB 浮动按钮 → 聊天面板，含 localStorage 持久化、10s 延迟问候、打字状态、动态快捷回复、离线表单、未读徽章
+- i18n：src/i18n/en.json + zh.json，useTranslation() hook，含 34 个 support 相关键
 - SSE 事件：session/text/tool_start/tool_end/done/error
 - Toast：sonner（App.tsx 根级 Toaster）
 - API Key 从后端读取
@@ -186,7 +193,7 @@ Query → Query Router（简单/中等/复杂）→
 
 | Marker | 用途 | 运行环境 | CI |
 |--------|------|---------|-----|
-| （无） | 单元测试（793 tests） | CI + 本地 | 自动跑 |
+| （无） | 单元测试（1008 tests） | CI + 本地 | 自动跑 |
 | `integration` | 需外部服务（Qdrant/LLM API） | 本地 | 默认跳过 |
 | `benchmark` | 检索性能基准 | 本地 | 跳过 |
 | `quality` | DeepEval 质量门禁 | 本地 | 跳过 |
@@ -244,6 +251,7 @@ npx vite preview --port 5174 --host 127.0.0.1
 | GET | /api/crew/health | Crew 健康检查 |
 | GET | /api/health | 健康检查 |
 | GET | /health/ready | 就绪探针（Redis/Qdrant/索引） |
+| POST | /api/v1/support/offline-message | Support 离线消息 |
 | WS | /ws/chat/{client_id} | WebSocket 实时聊天 |
 | GET | /metrics | Prometheus 指标 |
 | * | /api/feature-flags/* | Feature Flags |
@@ -317,4 +325,3 @@ railway logs --latest
 # 生产端点验证
 curl -s https://aureon-production-659a.up.railway.app/api/health | jq .
 ```
-
