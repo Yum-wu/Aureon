@@ -250,7 +250,14 @@
     "history": "Search History",
     "empty": "Ask a question to start searching",
     "no_results": "No results found",
-    "no_sources": "No sources available"
+    "no_sources": "No sources available",
+    "suggestion_queries": [
+      "How is the RAG retrieval pipeline designed?",
+      "What are the pros and cons of BM25 vs vector search?",
+      "What is the difference between LangGraph and LangChain LCEL?",
+      "How to optimize RAG retrieval latency?",
+      "What are the considerations for enterprise AI knowledge base deployment?"
+    ]
   },
   "crew": {
     "title": "AI Content Studio",

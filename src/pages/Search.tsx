@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { authFetch } from '../services/authFetch';
 import { SearchBar } from '../components/search/SearchBar';
 import { StreamingAnswer } from '../components/search/StreamingAnswer';
 import { CitationList } from '../components/search/CitationList';
@@ -21,11 +20,11 @@ export function Search() {
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    authFetch('/api/rag/suggestions')
-      .then(r => r.json())
-      .then(d => setSuggestions(d.suggestions || []))
-      .catch(() => {});
-  }, []);
+    const raw = t('search.suggestion_queries', { returnObjects: true, defaultValue: [] }) as string[];
+    if (raw.length > 0) {
+      setSuggestions(raw.map(q => ({ query: q, category: '' })));
+    }
+  }, [t]);
 
   const handleSearch = async () => {
     const trimmed = query.trim();

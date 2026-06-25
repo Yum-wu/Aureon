@@ -250,7 +250,14 @@
     "history": "搜索历史",
     "empty": "输入问题开始搜索",
     "no_results": "未找到相关结果",
-    "no_sources": "暂无来源引用"
+    "no_sources": "暂无来源引用",
+    "suggestion_queries": [
+      "RAG 系统的检索管线是怎么设计的？",
+      "BM25 和向量检索各有什么优劣？",
+      "LangGraph 和 LangChain LCEL 有什么区别？",
+      "如何优化 RAG 系统的检索延迟？",
+      "企业 AI 知识库部署有哪些注意事项？"
+    ]
   },
   "crew": {
     "title": "AI 内容工作室",
