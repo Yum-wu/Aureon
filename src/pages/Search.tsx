@@ -18,10 +18,10 @@ export function Search() {
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  const suggestions: { query: string; category: string }[] = (() => {
-    const raw = t('search.suggestion_queries', { returnObjects: true, defaultValue: [] });
-    return Array.isArray(raw) ? raw.map((q: string) => ({ query: q, category: '' })) : [];
-  })();
+  const rawSugg = t('search.suggestion_queries', { returnObjects: true, defaultValue: [] });
+  const suggestions: { query: string; category: string }[] = Array.isArray(rawSugg)
+    ? rawSugg.filter((q): q is string => typeof q === 'string').map(q => ({ query: q, category: '' }))
+    : [];
 
   const handleSearch = async () => {
     const trimmed = query.trim();
