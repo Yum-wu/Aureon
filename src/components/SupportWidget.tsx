@@ -361,10 +361,11 @@ export function SupportWidget() {
                   className="rounded-2xl rounded-bl-none px-4 py-3"
                   style={{ background: 'var(--bg-tertiary)' }}
                 >
-                  <div className="flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full animate-bounce" style={{ background: 'var(--text-tertiary)', animationDelay: '0ms' }} />
-                    <span className="w-2 h-2 rounded-full animate-bounce" style={{ background: 'var(--text-tertiary)', animationDelay: '150ms' }} />
-                    <span className="w-2 h-2 rounded-full animate-bounce" style={{ background: 'var(--text-tertiary)', animationDelay: '300ms' }} />
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>AI {t('support.typing')}...</span>
+                    <span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: 'var(--text-tertiary)', animationDelay: '0ms' }} />
+                    <span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: 'var(--text-tertiary)', animationDelay: '150ms' }} />
+                    <span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: 'var(--text-tertiary)', animationDelay: '300ms' }} />
                   </div>
                 </div>
               </div>
