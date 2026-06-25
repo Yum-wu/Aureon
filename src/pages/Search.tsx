@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SearchBar } from '../components/search/SearchBar';
 import { StreamingAnswer } from '../components/search/StreamingAnswer';
@@ -16,15 +16,12 @@ export function Search() {
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [suggestions, setSuggestions] = useState<Array<{query: string; category: string}>>([]);
   const abortRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    const raw = t('search.suggestion_queries', { returnObjects: true, defaultValue: [] }) as string[];
-    if (raw.length > 0) {
-      setSuggestions(raw.map(q => ({ query: q, category: '' })));
-    }
-  }, [t]);
+  const suggestions: { query: string; category: string }[] = (() => {
+    const raw = t('search.suggestion_queries', { returnObjects: true, defaultValue: [] });
+    return Array.isArray(raw) ? raw.map((q: string) => ({ query: q, category: '' })) : [];
+  })();
 
   const handleSearch = async () => {
     const trimmed = query.trim();
