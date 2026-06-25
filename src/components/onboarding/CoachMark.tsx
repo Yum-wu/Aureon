@@ -122,7 +122,7 @@ export function CoachMark({
   const hasSpotlight = targetRect.width > 0;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9998]" style={{ pointerEvents: 'auto' }}>
+    <div className="fixed inset-0 z-[9998]" style={{ pointerEvents: 'none' }}>
       {/* 遮罩层 */}
       <div
         className="absolute inset-0"
@@ -164,6 +164,7 @@ export function CoachMark({
         className="z-[9999] rounded-xl p-5 max-w-xs"
         style={{
           ...floatingStyles,
+          pointerEvents: 'auto',
           background: 'var(--bg-secondary)',
           border: '1px solid var(--border)',
           boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
