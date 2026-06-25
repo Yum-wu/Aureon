@@ -105,12 +105,10 @@ class DemoTokenResponse(BaseModel):
 @router.post("/demo-token", response_model=DemoTokenResponse)
 @limiter.limit("20/minute")
 async def issue_demo_token(request: Request):
-    """Issue a short-lived, read-only (VIEWER) demo token for guest preview.
+    """Issue a demo token with admin role for full feature preview.
 
-    Unlike the legacy hardcoded API key, this token:
-      - carries VIEWER role only (no write/admin operations),
-      - expires after 1 hour,
-      - is rate-limited per IP to prevent abuse.
+    Demo token carries ADMIN role so users can explore all pages
+    including cost governance, admin panel, and analytics.
 
     No authentication required — this is the public entry point for the
     "体验演示账号" button. The endpoint itself is whitelisted in the API key
@@ -121,7 +119,7 @@ async def issue_demo_token(request: Request):
     now = datetime.now(timezone.utc)
     token = create_access_token({
         "sub": "demo-guest",
-        "role": "VIEWER",
+        "role": "ADMIN",
         "demo": True,
         "exp": int(now.timestamp()) + _DEMO_TOKEN_EXPIRY_SECONDS,
     })

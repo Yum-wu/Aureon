@@ -67,8 +67,8 @@ export const useAuthStore = create<AuthState>((set) => ({
         const jwt = data.access_token;
         if (jwt) {
           sessionStorage.setItem(JWT_TOKEN_STORAGE, jwt);
-          sessionStorage.setItem("aureon_role", "viewer");
-          set({ token: jwt, isAuthenticated: true, role: "viewer" });
+          sessionStorage.setItem("aureon_role", "admin");
+          set({ token: jwt, isAuthenticated: true, role: "admin" });
           return true;
         }
       }

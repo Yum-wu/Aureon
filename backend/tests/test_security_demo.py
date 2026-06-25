@@ -59,7 +59,7 @@ class TestDemoToken:
         token = resp.json()["access_token"]
         claims = _decode_jwt(token)
         assert claims["sub"] == "demo-guest"
-        assert claims["role"] == "VIEWER"
+        assert claims["role"] == "ADMIN"
         assert claims["demo"] is True
 
     def test_public_no_auth_required(self, client):

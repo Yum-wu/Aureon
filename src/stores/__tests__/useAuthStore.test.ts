@@ -32,9 +32,9 @@ describe('useAuthStore', () => {
       const state = useAuthStore.getState();
       expect(state.token).toBe('demo.jwt.token');
       expect(state.isAuthenticated).toBe(true);
-      expect(state.role).toBe('viewer');
+      expect(state.role).toBe('admin');
       expect(store['aureon_jwt_token']).toBe('demo.jwt.token');
-      expect(store['aureon_role']).toBe('viewer');
+      expect(store['aureon_role']).toBe('admin');
     });
 
     it('returns false on API error', async () => {
@@ -69,14 +69,14 @@ describe('useAuthStore', () => {
       });
     });
 
-    it('sets role to viewer (not admin)', async () => {
+    it('sets role to admin', async () => {
       vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
         ok: true,
         json: async () => ({ access_token: 'demo.jwt', role: 'viewer' }),
       } as Response);
 
       await useAuthStore.getState().loginAsDemo();
-      expect(useAuthStore.getState().role).toBe('viewer');
+      expect(useAuthStore.getState().role).toBe('admin');
     });
   });
 });

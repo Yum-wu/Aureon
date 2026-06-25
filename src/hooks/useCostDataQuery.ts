@@ -67,7 +67,7 @@ export function useCostDataQuery(timeRange: CostTimeRange = '30d'): CostDataResu
         queryFn: async ({ signal }: { signal: AbortSignal }) => {
           const res = await authFetch(`/api/cost/summary?period=${timeRange}`, { signal });
           if (res.status === 401 || res.status === 403) {
-            throw new Error('需要管理员权限才能查看成本数据');
+            throw new Error('Insufficient permissions to view cost data');
           }
           if (!res.ok) throw new Error(`Cost summary failed: ${res.status}`);
           const json = await res.json();
