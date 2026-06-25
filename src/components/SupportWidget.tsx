@@ -16,6 +16,7 @@ import type { Source } from './shared/SourceCard';
 import { MessageActions } from './shared/MessageActions';
 import { useSupportMessages } from '../hooks/useSupportMessages';
 import { useSupportGreeting } from '../hooks/useSupportGreeting';
+import { useUnreadCount } from '../hooks/useUnreadCount';
 import { getRouteQuickReplies } from '../support/quickReplyRoutes';
 
 // Generate stable client ID for support widget (persisted in sessionStorage)
@@ -50,6 +51,7 @@ export function SupportWidget() {
   const [streamingSources, setStreamingSources] = useState<Source[]>([]);
   useSupportMessages(messages, setMessages, isStreaming);
   const { showGreeting, dismissGreeting } = useSupportGreeting(isOpen);
+  const { increment, display: unreadDisplay } = useUnreadCount(isOpen);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -75,6 +77,7 @@ export function SupportWidget() {
       if (data && typeof data === 'object' && 'type' in data) {
         const msg = data as { type: string; content?: string; text?: string; message?: string; full_response?: string };
         if (msg.type === 'text' || msg.type === 'session') {
+          increment();
           // 后端发送 type=text, content 字段
           const text = msg.content || msg.text || '';
           if (text) {
@@ -244,6 +247,11 @@ export function SupportWidget() {
           </svg>
           {/* Pulse animation */}
           <span className="absolute inset-0 rounded-full opacity-0" style={{ background: 'var(--accent)' }} />
+          {unreadDisplay && (
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-[20px] h-5 flex items-center justify-center px-1 font-bold" data-testid="support-unread-badge">
+              {unreadDisplay}
+            </span>
+          )}
         </button>
         {showGreeting && !isOpen && (
           <div className="fixed bottom-24 right-6 z-50 animate-fade-in" onClick={dismissGreeting}>
