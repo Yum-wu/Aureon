@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { SupportWidget } from "../SupportWidget";
 
 // Mock scrollIntoView (not available in jsdom)
@@ -22,6 +22,25 @@ vi.mock("react-i18next", () => ({
         "support.connected": "Connected and ready",
         "support.close": "Close",
         "chat.send": "Send",
+        "support.quickReplies": "Quick Replies",
+        "support.copy": "Copy",
+        "support.copy_success": "Copied!",
+        "support.regenerate": "Regenerate",
+        "support.feedback_up": "Helpful",
+        "support.feedback_down": "Not helpful",
+        "support.feedback_thanks": "Thank you for your feedback",
+        "support.sources": "Sources",
+        "support.sources_toggle": "Show sources",
+        "support.greeting": "Hi! How can I help you?",
+        "support.typing": "typing",
+        "support.offline_title": "We're not available right now",
+        "support.offline_name": "Name",
+        "support.offline_email": "Email",
+        "support.offline_message": "Message",
+        "support.offline_submit": "Send message",
+        "support.offline_success": "Thank you! We'll get back to you soon.",
+        "support.offline_error": "Failed to send. Please try again.",
+        "cost.retry": "Retry",
       };
       return translations[key] || key;
     },
@@ -34,6 +53,10 @@ const mockUseWebSocket = vi.fn();
 
 vi.mock("../../hooks/useWebSocket", () => ({
   useWebSocket: () => mockUseWebSocket(),
+}));
+
+vi.mock("../../support/quickReplyRoutes", () => ({
+  getRouteQuickReplies: () => [],
 }));
 
 describe("SupportWidget", () => {
@@ -189,5 +212,100 @@ describe("SupportWidget", () => {
 
     const sendButton = screen.getByTestId("support-send");
     expect(sendButton).not.toBeDisabled();
+  });
+});
+
+describe("SupportWidget - new features", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseWebSocket.mockReturnValue({
+      isConnected: true,
+      send: mockSend,
+      lastMessage: null,
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      connectionState: "connected",
+    });
+  });
+
+  it("shows offline form when disconnected and user types", () => {
+    mockUseWebSocket.mockReturnValue({
+      isConnected: false,
+      send: mockSend,
+      lastMessage: null,
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      connectionState: "disconnected",
+    });
+
+    render(<SupportWidget />);
+    fireEvent.click(screen.getByTestId("support-fab"));
+
+    // Should show offline form
+    expect(screen.getByTestId("offline-submit")).toBeInTheDocument();
+    expect(screen.getByTestId("offline-name")).toBeInTheDocument();
+  });
+
+  it("unread badge structure appears on FAB", () => {
+    render(<SupportWidget />);
+    // FAB visible, no badge since never opened
+    const fab = screen.getByTestId("support-fab");
+    // Check badge is not present initially
+    expect(screen.queryByTestId("support-unread-badge")).not.toBeInTheDocument();
+  });
+
+  it("shows greeting bubble after delay", async () => {
+    vi.useFakeTimers();
+    sessionStorage.removeItem("aureon_support_greeted");
+    render(<SupportWidget />);
+
+    expect(screen.queryByText("Hi! How can I help you?")).not.toBeInTheDocument();
+
+    act(() => { vi.advanceTimersByTime(10000); });
+
+    expect(screen.getByText("Hi! How can I help you?")).toBeInTheDocument();
+
+    vi.useRealTimers();
+  });
+
+  it("hides greeting after clicking it (dismiss)", () => {
+    vi.useFakeTimers();
+    sessionStorage.removeItem("aureon_support_greeted");
+    render(<SupportWidget />);
+
+    act(() => { vi.advanceTimersByTime(10000); });
+
+    const greeting = screen.getByText("Hi! How can I help you?");
+    expect(greeting).toBeInTheDocument();
+
+    fireEvent.click(greeting);
+
+    expect(screen.queryByText("Hi! How can I help you?")).not.toBeInTheDocument();
+
+    vi.useRealTimers();
+  });
+
+  it("does not show greeting if panel was opened", () => {
+    vi.useFakeTimers();
+    sessionStorage.removeItem("aureon_support_greeted");
+    render(<SupportWidget />);
+
+    fireEvent.click(screen.getByTestId("support-fab"));
+
+    act(() => { vi.advanceTimersByTime(10000); });
+
+    expect(screen.queryByText("Hi! How can I help you?")).not.toBeInTheDocument();
+
+    vi.useRealTimers();
+  });
+
+  it("shows improved typing indicator text", () => {
+    render(<SupportWidget />);
+    fireEvent.click(screen.getByTestId("support-fab"));
+
+    // Send a message to trigger streaming
+    fireEvent.click(screen.getByTestId("quick-reply-0"));
+
+    expect(screen.getByTestId("support-loading")).toHaveTextContent("typing");
   });
 });
