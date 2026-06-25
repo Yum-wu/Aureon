@@ -43,6 +43,7 @@ from app.reliability.router import router as reliability_router
 from app.routers import chat as chat_router
 from app.routers import crew as crew_router
 from app.routers import rag as rag_router
+from app.routers.support import router as support_router
 from app.security.roles_router import router as roles_router
 from app.security.router import router as security_router
 from app.security.users_router import router as users_router
@@ -287,6 +288,7 @@ app.include_router(websocket_chat_router, tags=["websocket"])
 app.include_router(ws_dashboard_router, tags=["websocket"])
 app.include_router(users_router)
 app.include_router(roles_router)
+app.include_router(support_router)
 
 # ── Experimental routes (conditional on EXPERIMENTAL_MODULES env var) ──
 if os.environ.get("EXPERIMENTAL_MODULES", "true").lower() != "false":
