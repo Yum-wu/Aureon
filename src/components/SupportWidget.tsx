@@ -14,6 +14,7 @@ import { useWebSocket } from '../hooks/useWebSocket';
 import { SourceCard } from './shared/SourceCard';
 import type { Source } from './shared/SourceCard';
 import { MessageActions } from './shared/MessageActions';
+import { useSupportMessages } from '../hooks/useSupportMessages';
 
 // Generate stable client ID for support widget (persisted in sessionStorage)
 const getSupportClientId = () => {
@@ -42,6 +43,7 @@ export function SupportWidget() {
   const [streamingText, setStreamingText] = useState('');
   const [wsError, setWsError] = useState<string | null>(null);
   const [streamingSources, setStreamingSources] = useState<Source[]>([]);
+  useSupportMessages(messages, setMessages, isStreaming);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
