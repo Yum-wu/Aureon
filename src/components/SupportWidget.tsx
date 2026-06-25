@@ -15,6 +15,7 @@ import { SourceCard } from './shared/SourceCard';
 import type { Source } from './shared/SourceCard';
 import { MessageActions } from './shared/MessageActions';
 import { useSupportMessages } from '../hooks/useSupportMessages';
+import { useSupportGreeting } from '../hooks/useSupportGreeting';
 
 // Generate stable client ID for support widget (persisted in sessionStorage)
 const getSupportClientId = () => {
@@ -44,6 +45,7 @@ export function SupportWidget() {
   const [wsError, setWsError] = useState<string | null>(null);
   const [streamingSources, setStreamingSources] = useState<Source[]>([]);
   useSupportMessages(messages, setMessages, isStreaming);
+  const { showGreeting, dismissGreeting } = useSupportGreeting(isOpen);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -206,6 +208,14 @@ export function SupportWidget() {
           {/* Pulse animation */}
           <span className="absolute inset-0 rounded-full opacity-0" style={{ background: 'var(--accent)' }} />
         </button>
+        {showGreeting && !isOpen && (
+          <div className="fixed bottom-24 right-6 z-50 animate-fade-in" onClick={dismissGreeting}>
+            <div className="relative bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl px-4 py-3 shadow-lg max-w-[200px]">
+              <p className="text-sm" style={{ color: 'var(--text-primary)' }}>{t('support.greeting')}</p>
+              <div className="absolute bottom-[-6px] right-6 w-3 h-3 bg-[var(--bg-secondary)] border-r border-b border-[var(--border)] rotate-45" />
+            </div>
+          </div>
+        )}
       )}
 
       {/* Expanded Panel */}
@@ -418,6 +428,15 @@ export function SupportWidget() {
           </div>
         </div>
       )}
+      <style>{`
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out;
+}
+`}</style>
     </>
   );
 }
