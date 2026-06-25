@@ -147,7 +147,7 @@ function AppLayout() {
         {/* Add top padding on mobile when sidebar is shown (for the fixed hamburger bar) */}
         <div className={showSidebar ? 'md:pt-0 pt-12' : ''}>
           <Suspense fallback={<PageFallback />}>
-            <Routes>
+            <Routes key={location.pathname}>
               <Route path="/" element={<Landing />} />
               <Route path="/login" element={<Login />} />
               <Route path="/dashboard" element={<Dashboard />} />
