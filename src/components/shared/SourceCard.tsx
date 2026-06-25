@@ -15,9 +15,10 @@ interface SourceCardProps {
 
 export function SourceCard({ sources, maxVisible = 2, t }: SourceCardProps) {
   const [expanded, setExpanded] = useState(false);
-  const visible = expanded ? sources : sources.slice(0, maxVisible);
 
   if (!sources || sources.length === 0) return null;
+
+  const visible = expanded ? sources : sources.slice(0, maxVisible);
 
   return (
     <div className="mt-3 pt-2 border-t border-[var(--border)]">
