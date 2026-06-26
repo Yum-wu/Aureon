@@ -529,6 +529,7 @@
       "latency": "延迟"
     },
     "queries": {
+      "title": "查询分布",
       "intent": "意图",
       "count": "次数",
       "percentage": "占比"

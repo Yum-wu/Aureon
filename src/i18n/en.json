@@ -529,6 +529,7 @@
       "latency": "Latency"
     },
     "queries": {
+      "title": "Query Distribution",
       "intent": "Intent",
       "count": "Count",
       "percentage": "Share"
