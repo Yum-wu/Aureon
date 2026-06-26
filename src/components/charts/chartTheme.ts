@@ -99,7 +99,7 @@ export function useChartTheme(): PartialTheme {
 }
 
 /** 通用图表默认边距 */
-export const DEFAULT_MARGIN = { top: 12, right: 16, bottom: 40, left: 48 };
+export const DEFAULT_MARGIN = { top: 12, right: 16, bottom: 48, left: 52 };
 
 /** 通用图表配置默认值 */
 export const CHART_DEFAULTS = {

@@ -116,10 +116,10 @@ function LineChartInner({
           yFormat={yFormat}
           axisBottom={{
             tickSize: 4,
-            tickPadding: 6,
-            tickRotation: -30,
+            tickPadding: 8,
+            tickRotation: 0,
             legend: xAxisLabel,
-            legendOffset: 32,
+            legendOffset: 36,
             legendPosition: 'middle',
           }}
           axisLeft={{

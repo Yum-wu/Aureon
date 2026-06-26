@@ -124,8 +124,8 @@ function BarChartInner<T extends BarDatum = BarDatum>({
             layout === 'vertical'
               ? {
                   tickSize: 4,
-                  tickPadding: 6,
-                  tickRotation: -30,
+                  tickPadding: 8,
+                  tickRotation: 0,
                 }
               : null
           }

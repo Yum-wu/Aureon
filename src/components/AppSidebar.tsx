@@ -19,10 +19,12 @@ import {
   PanelLeftOpen,
   LogIn,
   User,
+  HelpCircle,
 } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { LanguageSwitcher } from '../i18n/LanguageSwitcher';
 import { useAuth } from '../hooks/AuthContext';
+import { useOnboarding } from './onboarding/useOnboarding';
 
 interface SidebarItem {
   path: string;
@@ -48,6 +50,7 @@ export function AppSidebar({ collapsed, onToggleCollapse }: AppSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, role } = useAuth();
+  const { start } = useOnboarding();
 
   const groups: SidebarGroup[] = useMemo(() => [
     {
@@ -289,6 +292,28 @@ export function AppSidebar({ collapsed, onToggleCollapse }: AppSidebarProps) {
           }}
         >
           <ThemeToggle />
+          {!collapsed && (
+            <button
+              onClick={() => { start(); navigate('/search'); }}
+              title={t('app.sidebar.help')}
+              aria-label={t('app.sidebar.help')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 28,
+                height: 28,
+                borderRadius: 'var(--radius-sm)',
+                border: 'none',
+                background: 'none',
+                color: 'var(--fg-tertiary)',
+                cursor: 'pointer',
+                transition: 'all var(--duration-fast) var(--ease-out)',
+              }}
+            >
+              <HelpCircle size={16} />
+            </button>
+          )}
           {!collapsed && <LanguageSwitcher />}
           {!collapsed && (
             <button

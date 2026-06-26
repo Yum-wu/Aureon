@@ -30,6 +30,7 @@ interface TooltipProps {
 
 export function Tooltip({ content, children, placement = 'top' }: TooltipProps) {
   const [open, setOpen] = useState(false);
+  const [positioned, setPositioned] = useState(false);
   const arrowRef = useRef<SVGSVGElement>(null);
 
   const { refs, context, floatingStyles } = useFloating({
@@ -70,6 +71,16 @@ export function Tooltip({ content, children, placement = 'top' }: TooltipProps) 
     dismiss,
   ]);
 
+  // Wait for Floating UI to compute position before showing
+  useEffect(() => {
+    if (open) {
+      const raf = requestAnimationFrame(() => setPositioned(true));
+      return () => cancelAnimationFrame(raf);
+    } else {
+      setPositioned(false);
+    }
+  }, [open]);
+
   // ESC 键关闭
   useEffect(() => {
     if (!open) return;
@@ -102,8 +113,9 @@ export function Tooltip({ content, children, placement = 'top' }: TooltipProps) 
               border: '1px solid var(--border)',
               boxShadow: 'var(--shadow-lg)',
               width: 'max-content',
-              opacity: 1,
-              animation: 'tooltipFadeIn 150ms ease-out',
+              opacity: positioned ? 1 : 0,
+              pointerEvents: positioned ? 'auto' : 'none',
+              transition: 'opacity 100ms ease-out',
             }}
             {...getFloatingProps()}
           >

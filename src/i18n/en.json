@@ -19,7 +19,8 @@
       "platform": "Platform",
       "administration": "Administration",
       "expand": "Expand sidebar",
-      "collapse": "Collapse sidebar"
+      "collapse": "Collapse sidebar",
+      "help": "Help"
     },
     "badges": {
       "recall": "Recall",
@@ -140,6 +141,8 @@
       "cache_hit": "Cache Hit Rate"
     },
     "health": {
+      "healthy": "Healthy",
+      "unhealthy": "Unhealthy",
       "api_server": "API Server",
       "index": "Index",
       "tools": "Tools"
@@ -555,7 +558,7 @@
         "llm_first_token": "First Token",
         "llm_generation": "Generation"
       },
-      "vs_period": "vs {{{period}}}"
+      "vs_period": "vs {{period}}"
     },
     "tokens": {
       "title": "Token Usage Details",

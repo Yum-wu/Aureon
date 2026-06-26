@@ -19,7 +19,8 @@
       "platform": "平台",
       "administration": "管理",
       "expand": "展开侧边栏",
-      "collapse": "收起侧边栏"
+      "collapse": "收起侧边栏",
+      "help": "帮助"
     },
     "badges": {
       "recall": "召回率",
@@ -140,6 +141,8 @@
       "cache_hit": "缓存命中率"
     },
     "health": {
+      "healthy": "正常",
+      "unhealthy": "异常",
       "api_server": "API Server",
       "index": "Index",
       "tools": "Tools"
@@ -555,7 +558,7 @@
         "llm_first_token": "首字延迟",
         "llm_generation": "生成"
       },
-      "vs_period": "较{{{period}}}"
+      "vs_period": "较{{period}}"
     },
     "tokens": {
       "title": "Token 使用详情",
