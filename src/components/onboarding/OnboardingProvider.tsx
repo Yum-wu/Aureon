@@ -140,6 +140,15 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
     toast.success(t('onboarding.toast_finish'));
   }, [finishGuide, t]);
 
+  // 步骤切换时自动导航到对应页面
+  useEffect(() => {
+    if (!isActive || currentStep < 0) return;
+    const step = filteredSteps[currentStep];
+    if (step && step.page !== location.pathname) {
+      navigate(step.page);
+    }
+  }, [isActive, currentStep, filteredSteps, location.pathname, navigate]);
+
   // 当 currentStep 越界（被跳过或自然走完）→ 自动完成引导
   useEffect(() => {
     if (isActive && currentStep >= filteredSteps.length) {

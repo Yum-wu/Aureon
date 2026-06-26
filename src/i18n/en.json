@@ -560,6 +560,9 @@
       },
       "vs_period": "vs {{period}}"
     },
+    "periods": {
+      "vs_previous": "previous period"
+    },
     "tokens": {
       "title": "Token Usage Details",
       "input": "Input Tokens",

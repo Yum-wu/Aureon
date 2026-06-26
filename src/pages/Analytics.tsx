@@ -240,6 +240,10 @@ function LatencyTab({ latency, moduleRows, t }: {
   const trendUp = (latency?.trend?.avg_change ?? 0) > 0;
   const trendDown = (latency?.trend?.avg_change ?? 0) < 0;
 
+  const periodLabels: Record<string, string> = {
+    'vs previous period': t('analytics.periods.vs_previous'),
+  };
+
   const breakdownData = latency?.breakdown
     ? [
         { module: t('analytics.latency.breakdown.retrieval', 'Retrieval'), value: latency.breakdown.retrieval },
@@ -282,7 +286,7 @@ function LatencyTab({ latency, moduleRows, t }: {
           </div>
           {latency?.trend?.period && (
             <div className="mt-1 text-xs text-[var(--fg-tertiary)]">
-              {t('analytics.latency.vs_period', { period: latency.trend.period })}
+              {t('analytics.latency.vs_period', { period: periodLabels[latency.trend.period] ?? latency.trend.period })}
             </div>
           )}
         </div>

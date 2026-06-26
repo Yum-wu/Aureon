@@ -560,6 +560,9 @@
       },
       "vs_period": "较{{period}}"
     },
+    "periods": {
+      "vs_previous": "上一周期"
+    },
     "tokens": {
       "title": "Token 使用详情",
       "input": "输入 Token",
