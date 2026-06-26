@@ -33,10 +33,10 @@
   "landing": {
     "hero": {
       "badge": "生产就绪",
-      "title": "企业 AI 知识库平台",
-      "subtitle": "96.5% 检索准确率 · 100% 负面检测 · 亚秒级响应",
-      "cta_search": "开始搜索",
-      "cta_architecture": "查看架构"
+      "title": "上传文档，问任何问题",
+      "subtitle": "上传文档，用自然语言提问，即可获得精准答案和引用来源。无需配置，即开即用。",
+      "cta_search": "立即体验",
+      "cta_architecture": "了解原理"
     },
     "metrics": {
       "recall": {
@@ -45,41 +45,41 @@
         "detail": "Hybrid Recall@3 (192 QA pairs)"
       },
       "ttft": {
-        "value": "~310ms",
-        "label": "首字延迟",
-        "detail": "Streaming RAG TTFT"
+        "value": "<1秒",
+        "label": "响应速度",
+        "detail": "首字延迟"
       },
       "cost": {
-        "value": "~$0.001",
+        "value": "$0.0003",
         "label": "每次查询成本",
-        "detail": "Qwen pricing"
+        "detail": "按用量计费"
       }
     },
     "features_title": "核心功能",
     "features": [
       {
-        "title": "混合检索",
-        "desc": "BM25 + Dense RRF 融合，Recall@3 96.5%，Recall@10 100%"
+        "title": "智能搜索",
+        "desc": "用自然语言提问，获得精准答案和引用来源"
       },
       {
-        "title": "流式响应",
-        "desc": "SSE 实时推送，首字延迟 ~310ms，每次查询仅 1 次 LLM 调用"
+        "title": "极速响应",
+        "desc": "流式输出，不到一秒开始显示答案"
       },
       {
-        "title": "负面检测",
-        "desc": "100% 检测率，LLM classifier + 检索阈值双重防御"
+        "title": "诚实可靠",
+        "desc": "找不到相关信息时，不会编造答案，明确告知用户"
       },
       {
-        "title": "企业级部署",
-        "desc": "Docker + CI/CD + Railway，24h 标准部署，RBAC + 审计"
+        "title": "简单易用",
+        "desc": "上传文档即可开始搜索，无需任何配置"
       },
       {
         "title": "知识库",
-        "desc": "99 篇文章，1214 chunks，192 QA 基准测试对"
+        "desc": "99 篇文章已索引，1214 个可搜索内容片段"
       },
       {
-        "title": "分析仪表盘",
-        "desc": "延迟、Token 使用、缓存性能、查询分布"
+        "title": "使用分析",
+        "desc": "实时追踪查询量、响应质量和成本"
       }
     ],
     "benchmark": {
@@ -99,7 +99,7 @@
       "desc": "所有指标来自生产环境实测",
       "link": "查看完整性能数据 →"
     },
-    "features_subtitle": "企业知识管理所需的全部能力",
+    "features_subtitle": "将文档变成可搜索知识库所需的一切",
     "trust": {
       "title": "企业级安全与可靠性",
       "badges": [
@@ -117,8 +117,8 @@
     }
   },
   "dashboard": {
-    "title": "系统总览",
-    "subtitle": "实时指标与系统健康监控",
+    "title": "仪表盘",
+    "subtitle": "系统状态和使用概览",
     "last_updated": "最后更新",
     "loading": "加载中",
     "error_loading": "加载失败",
@@ -140,17 +140,9 @@
       "cache_hit": "缓存命中率"
     },
     "health": {
-      "title": "系统健康",
-      "llm": "LLM",
-      "vector_db": "向量数据库",
-      "embedding": "Embedding",
-      "cache": "缓存",
-      "tracing": "链路追踪",
-      "redis": "Redis",
-      "qdrant": "Qdrant",
-      "llm_api": "LLM API",
-      "healthy": "正常",
-      "unhealthy": "异常"
+      "api_server": "API Server",
+      "index": "Index",
+      "tools": "Tools"
     },
     "recent_queries": {
       "title": "最近查询",
@@ -240,9 +232,9 @@
     "go_login": "去登录"
   },
   "search": {
-    "title": "企业级 AI 搜索",
-    "subtitle": "AI 驱动的知识库智能搜索",
-    "placeholder": "搜索企业知识...",
+    "title": "AI 搜索",
+    "subtitle": "搜索知识库中的任何内容",
+    "placeholder": "输入问题...",
     "error_max_length": "查询内容不能超过 {{max}} 个字符（当前 {{current}} 个）",
     "suggested": "推荐问题",
     "sources": "来源",
@@ -260,14 +252,20 @@
     ]
   },
   "crew": {
-    "title": "AI 内容工作室",
-    "inputPlaceholder": "输入文章主题...",
-    "generate": "生成文章",
-    "generating": "生成中..."
+    "title": "内容工作室",
+    "subtitle": "AI Agent 协作生成内容",
+    "agentProgress": "Agent 进度",
+    "errorShort": "生成失败",
+    "topic": "主题",
+    "retry": "重试",
+    "starting": "启动中...",
+    "pipeline": "流程",
+    "completedIn": "完成于",
+    "seconds": "秒"
   },
   "admin": {
-    "title": "企业管理",
-    "subtitle": "企业管理控制台",
+    "title": "管理",
+    "subtitle": "管理用户、角色和设置",
     "tabs": {
       "overview": "总览",
       "workspaces": "工作空间",
@@ -413,11 +411,45 @@
     "confirm": {
       "cancel": "取消",
       "ok": "确认"
+    },
+    "featureFlags": {
+      "title": "功能开关",
+      "description": "管理灰度发布与功能开关",
+      "create": "新建开关",
+      "name": "名称",
+      "status": "状态",
+      "enabled": "已启用",
+      "percentage": "灰度比例",
+      "actions": "操作",
+      "noFlags": "暂无功能开关",
+      "createNew": "创建新开关",
+      "rolloutPercentage": "灰度比例",
+      "confirmDelete": "确认删除此开关？"
+    },
+    "evaluation": {
+      "title": "评估指标",
+      "description": "RAG 系统质量评估",
+      "recallAt3": "Recall@3",
+      "faithfulness": "Faithfulness",
+      "hallucinationRate": "幻觉率",
+      "totalRuns": "总运行次数",
+      "metrics": "历史指标",
+      "metricName": "指标",
+      "value": "值",
+      "type": "类型",
+      "createdAt": "创建时间",
+      "noMetrics": "暂无指标数据",
+      "benchmarkRuns": "Benchmark 运行",
+      "runId": "运行 ID",
+      "benchmarkSet": "基准集",
+      "status": "状态",
+      "startedAt": "开始时间",
+      "noBenchmarks": "暂无 Benchmark 运行记录"
     }
   },
   "documents": {
     "title": "文档管理",
-    "subtitle": "已索引的知识库文档",
+    "subtitle": "管理您的知识库",
     "error_loading": "加载文档失败",
     "retry": "重试",
     "table": {
@@ -471,7 +503,7 @@
   },
   "analytics": {
     "title": "分析",
-    "subtitle": "系统性能与使用分析",
+    "subtitle": "使用模式和性能洞察",
     "refresh": "刷新数据",
     "retry": "重试",
     "error_loading": "加载分析数据失败",
@@ -481,8 +513,8 @@
     "cache_hit_rate": "缓存命中率",
     "output": "输出",
     "cost": "成本",
-    "avg_per_hour": "平均 {count}/小时",
-    "saves": "节省 {count} 次查询",
+    "avg_per_hour": "平均 {{count}}/小时",
+    "saves": "节省 {{count}} 次查询",
     "no_data": "暂无数据",
     "tabs": {
       "overview": "概览",
@@ -497,9 +529,9 @@
       "latency": "延迟"
     },
     "queries": {
-      "title": "查询分布",
-      "total": "查询总量",
-      "per_hour": "平均/小时"
+      "intent": "意图",
+      "count": "次数",
+      "percentage": "占比"
     },
     "intent": {
       "document_query": "文档查询",
@@ -522,14 +554,14 @@
         "llm_first_token": "首字延迟",
         "llm_generation": "生成"
       },
-      "vs_period": "较{{period}}"
+      "vs_period": "较{{{period}}}"
     },
     "tokens": {
       "title": "Token 使用详情",
       "input": "输入 Token",
       "output": "输出 Token",
       "cost": "预估成本",
-      "per_query": "~{symbol}{cost}/查询"
+      "per_query": "~{{symbol}}{{cost}}/查询"
     },
     "cache": {
       "title": "缓存命中率",
@@ -562,7 +594,8 @@
     "after_optimization": "优化后",
     "ttft_improvement_detail": "提升 61%：检索-生成并行化 + 缓存预热 + 流式架构",
     "retrieval_accuracy": "检索准确率",
-    "qa_benchmark_detail": "192 QA Pairs 基准测试 · Recall@3: 96.5%"
+    "qa_benchmark_detail": "192 QA Pairs 基准测试 · Recall@3: 96.5%",
+    "internal_metrics": "内部评估指标"
   },
   "architecture": {
     "title": "架构与性能",
@@ -595,8 +628,10 @@
       "ttft": "首字延迟",
       "cache_hit_rate": "缓存命中率",
       "cost_per_query": "每次查询成本",
-      "retrieval_latency": "检索延迟"
-    }
+      "retrieval_latency": "检索延迟",
+      "retrieval_accuracy": "检索准确率"
+    },
+    "tech_stack": "技术栈"
   },
   "portfolio": {
     "hero": {
@@ -614,7 +649,7 @@
   },
   "login": {
     "email": "邮箱",
-    "email_hint": "企业邮箱或管理员账号",
+    "email_hint": "您的邮箱地址",
     "password": "密码",
     "password_hint": "至少 8 位字符",
     "remember_me": "记住我",
@@ -639,46 +674,12 @@
     "login": "去登录"
   },
   "chat": {
-    "title": "Aureon 对话",
-    "clear": "清空",
-    "emptyTitle": "今天有什么可以帮你的？",
-    "emptySubtitle": "问我任何关于知识库的问题",
-    "emptyHint": "我可以搜索文档、分析数据、生成报告",
-    "inputPlaceholder": "随便问点什么...",
+    "title": "对话",
+    "inputPlaceholder": "输入消息...",
     "send": "发送",
-    "stop": "停止",
-    "copy": "复制",
-    "copied": "已复制！",
-    "regenerate": "重新生成",
-    "attach": "添加附件",
-    "upload": "上传",
-    "uploading": "上传中...",
-    "upload_success": "{{filename}} 上传成功，已创建 {{chunks}} 个片段",
-    "upload_failed": "上传失败",
-    "unsupported_format": "不支持的格式: {{ext}}",
-    "file_too_large": "文件大小超过 10MB 限制",
-    "remove_file": "移除文件",
-    "welcome": "欢迎使用 Aureon",
-    "welcome_subtitle": "在下方输入消息开始对话",
-    "placeholder": "输入消息...（Enter 发送，Shift+Enter 换行）",
-    "streaming": "思考中...",
-    "ready": "准备就绪",
-    "processing": "处理中...",
-    "sources": "来源",
-    "disclaimer": "内容由 AI 生成，请核对引用来源",
-    "quickStart": [
-      "帮我搜索最新的技术文档",
-      "分析当前系统的性能指标",
-      "解释 RAG 检索的工作原理",
-      "生成一份项目总结报告"
-    ],
-    "suggestions": {
-      "title": "试试这样问",
-      "summarize_latest": "总结一下最新上传的文档",
-      "key_risks": "这份文档的关键风险点是什么？",
-      "summarize_doc": "总结一下《{{title}}》的关键点",
-      "about_doc": "《{{title}}》的主要内容是什么？"
-    }
+    "calling": "调用工具中...",
+    "completed": "完成",
+    "stopped": "已停止"
   },
   "support": {
     "copy": "复制",
@@ -689,7 +690,7 @@
     "feedback_thanks": "感谢反馈！",
     "sources": "来源",
     "sources_toggle": "查看更多",
-    "greeting": "你好！有什么可以帮助您？",
+    "greeting": "需要帮助？",
     "typing": "正在输入",
     "offline_title": "给我们留言",
     "offline_name": "您的姓名",
@@ -708,9 +709,9 @@
     "qr_cost_calculation": "成本是怎么计算的？",
     "quickReplies": [
       "这个平台能做什么？",
-      "如何部署到生产环境？",
+      "如何上传文档？",
       "支持哪些 LLM 模型？",
-      "性能指标怎么样？"
+      "搜索是怎么工作的？"
     ],
     "title": "Aureon 支持",
     "welcome": "欢迎！有什么可以帮助您？",
@@ -718,12 +719,12 @@
     "offline": "离线",
     "placeholder": "输入您的问题...",
     "connecting": "连接中...",
-    "connected": "已连接",
+    "connected": "已准备好帮助您",
     "close": "关闭"
   },
   "cost": {
-    "title": "成本治理",
-    "subtitle": "追踪支出、管理预算、优化成本",
+    "title": "成本",
+    "subtitle": "追踪使用量和支出",
     "error_loading": "加载成本数据失败",
     "retry": "重试",
     "export": "导出 CSV",
@@ -812,31 +813,136 @@
     "toast_finish": "🎉 引导完成！探索更多功能吧",
     "steps": {
       "search-first": {
-        "title": "立即体验智能搜索",
-        "description": "这是 Aureon 的核心价值！输入任何问题，系统会自动检索知识库，返回带来源引用的精准答案。试试下面的示例查询，感受 AI 搜索的威力。"
+        "title": "立即体验搜索",
+        "description": "这是 Aureon 的核心功能！输入任何问题，即可获得带来源引用的答案。试试下面的示例。"
       },
       "documents-upload": {
-        "title": "上传您的知识库",
-        "description": "上传文档让 Aureon 学习您的知识。支持 .md、.txt、.pdf、.docx、.xlsx 格式。上传后系统会自动索引，立即可用于搜索。"
+        "title": "上传文档",
+        "description": "上传文档构建您的知识库。支持 .md、.txt、.pdf、.docx、.xlsx 格式。"
       },
       "search-own-data": {
         "title": "搜索您自己的数据",
-        "description": "现在试试搜索您刚上传的文档内容！Aureon 会基于您的知识库返回精准答案。这是平台真正的价值所在。"
+        "description": "现在试试搜索您刚上传的文档！Aureon 会找到相关答案。"
       },
       "dashboard-overview": {
-        "title": "系统健康一目了然",
-        "description": "这里展示 Aureon 的实时状态。延迟、流量、错误率、饱和度四大指标帮助您快速了解系统运行状况。"
+        "title": "系统状态一目了然",
+        "description": "在仪表盘查看实时系统状态和关键指标。"
       },
       "analytics-insight": {
-        "title": "洞察使用模式",
-        "description": "Analytics 页面展示查询量、延迟分布、Token 消耗等数据，帮助您优化使用策略和控制成本。"
+        "title": "追踪使用情况",
+        "description": "查看查询量、响应质量和成本，优化使用体验。"
       }
     }
   },
   "help": {
-    "search_no_results": "没有找到相关结果？尝试更通用的查询，或上传相关文档到知识库。",
-    "documents_empty": "知识库为空，点击「上传文档」开始构建您的专属知识库。",
-    "dashboard_first_visit": "欢迎使用 Aureon！这里是您的系统仪表盘，查看实时状态和关键指标。",
-    "admin_first_visit": "这里是管理中心，您可以管理用户、配置权限、查看审计日志。"
+    "search_no_results": "没有找到结果？试试更简单的问题，或上传相关文档到知识库。",
+    "documents_empty": "还没有文档。点击「上传文档」开始构建您的知识库。",
+    "dashboard_first_visit": "欢迎！这是您的仪表盘，用于查看系统状态和使用情况。",
+    "admin_first_visit": "在这里管理用户、配置权限、查看操作日志。"
+  },
+  "common": {
+    "loading": "加载中...",
+    "dismiss": "关闭",
+    "delete": "删除",
+    "cancel": "取消",
+    "create": "创建",
+    "clear": "清除"
+  },
+  "demoIntro": {
+    "hero": {
+      "title": "企业 AI 知识库平台",
+      "subtitle": "Production 级 RAG 系统，可验证的 Benchmark 数据。96.5% 召回率，实时流式，企业就绪。"
+    },
+    "capabilities": [
+      {
+        "icon": "Search",
+        "title": "智能检索",
+        "description": "混合检索 + Rerank，精准定位相关内容"
+      },
+      {
+        "icon": "Zap",
+        "title": "实时流式",
+        "description": "SSE 流式输出，首字延迟 <500ms"
+      },
+      {
+        "icon": "BarChart3",
+        "title": "可观测性",
+        "description": "全链路追踪，延迟/召回/成本可视化"
+      },
+      {
+        "icon": "Shield",
+        "title": "企业安全",
+        "description": "SSO/RBAC/PII 脱敏，审计日志，多租户隔离"
+      }
+    ],
+    "differentiators": [
+      {
+        "icon": "Brain",
+        "title": "四层记忆",
+        "description": "从对话记录到用户画像，真正的持久记忆"
+      },
+      {
+        "icon": "GitBranch",
+        "title": "LangGraph 编排",
+        "description": "条件分支+并行节点+人机协同，告别线性 Chain"
+      },
+      {
+        "icon": "PieChart",
+        "title": "成本治理",
+        "description": "按模型/租户/时段精细追踪，预算预警闭环"
+      },
+      {
+        "icon": "Gauge",
+        "title": "自适应 RAG",
+        "description": "查询路由+轻量 CRAG+HyDE，按需调配检索策略"
+      }
+    ],
+    "cta": {
+      "chat": "开始对话",
+      "rag": "测试 RAG 检索",
+      "crew": "内容工作室"
+    }
+  },
+  "systemStatus": {
+    "title": "系统状态",
+    "metrics": "指标",
+    "unreachable": "后端无法连接",
+    "noBenchmark": "无 Benchmark 数据，请先运行评估",
+    "services": "服务",
+    "noData": "连接后端以查看状态",
+    "actions": "操作",
+    "openLangSmith": "打开 LangSmith",
+    "checkHealth": "检查健康"
+  },
+  "errorBoundary": {
+    "title": "出了点问题",
+    "description": "发生了意外错误",
+    "retry": "重试"
+  },
+  "rag": {
+    "title": "RAG 检索",
+    "description": "从知识库检索相关内容",
+    "upload": {
+      "toggle": "上传文档",
+      "deleted": "已删除",
+      "badFormat": "不支持的格式",
+      "success": "上传成功",
+      "uploading": "上传中...",
+      "hint": "支持 .md, .txt, .pdf, .docx, .xlsx",
+      "formats": "支持格式",
+      "files": "已上传文件",
+      "delete": "删除"
+    },
+    "inputPlaceholder": "输入问题...",
+    "ask": "提问",
+    "examples": [
+      "RAG 系统如何工作？",
+      "如何优化检索延迟？"
+    ],
+    "sources": "来源",
+    "score": "相关性",
+    "noQuery": "输入问题开始检索",
+    "asking": "正在检索...",
+    "error": "检索失败"
   }
 }

@@ -33,10 +33,10 @@
   "landing": {
     "hero": {
       "badge": "Production Ready",
-      "title": "Enterprise AI Knowledge Base Platform",
-      "subtitle": "96.5% retrieval accuracy · 100% negative detection · Sub-second response",
-      "cta_search": "Start Searching",
-      "cta_architecture": "View Architecture"
+      "title": "Ask Anything, Get Answers with Sources",
+      "subtitle": "Upload your documents, ask questions in natural language, and get precise answers with cited sources. No setup required.",
+      "cta_search": "Try It Now",
+      "cta_architecture": "See How It Works"
     },
     "metrics": {
       "recall": {
@@ -45,41 +45,41 @@
         "detail": "Hybrid Recall@3 (192 QA pairs)"
       },
       "ttft": {
-        "value": "~310ms",
-        "label": "Time to First Token",
-        "detail": "Streaming RAG TTFT"
+        "value": "<1s",
+        "label": "Response Speed",
+        "detail": "Time to first answer"
       },
       "cost": {
-        "value": "~$0.001",
+        "value": "$0.0003",
         "label": "Cost per Query",
-        "detail": "Qwen pricing"
+        "detail": "Pay only for what you use"
       }
     },
     "features_title": "Core Capabilities",
     "features": [
       {
-        "title": "Hybrid Search",
-        "desc": "BM25 + Dense RRF fusion, 96.5% Recall@3, 100% Recall@10"
+        "title": "Smart Search",
+        "desc": "Ask questions in natural language, get precise answers with source citations"
       },
       {
-        "title": "Streaming Response",
-        "desc": "SSE real-time push, ~310ms TTFT, single LLM call per query"
+        "title": "Instant Answers",
+        "desc": "Streaming responses start appearing in under a second"
       },
       {
-        "title": "Negative Detection",
-        "desc": "100% detection rate, LLM classifier + retrieval threshold dual defense"
+        "title": "Knows When It Doesn't Know",
+        "desc": "Won't make up answers — tells you when it can't find relevant information"
       },
       {
-        "title": "Enterprise Deploy",
-        "desc": "Docker + CI/CD + Railway, 24h standard deployment, RBAC + audit"
+        "title": "Easy Setup",
+        "desc": "Upload documents and start searching in minutes, no configuration needed"
       },
       {
         "title": "Knowledge Base",
-        "desc": "99 articles, 1214 chunks, 192 QA benchmark pairs"
+        "desc": "99 articles indexed, 1214 searchable chunks of content"
       },
       {
-        "title": "Analytics Dashboard",
-        "desc": "Latency, token usage, cache performance, query distribution"
+        "title": "Usage Analytics",
+        "desc": "Track query volume, response quality, and cost in real-time"
       }
     ],
     "benchmark": {
@@ -99,7 +99,7 @@
       "desc": "All metrics measured in production",
       "link": "View full benchmark →"
     },
-    "features_subtitle": "Everything you need for enterprise knowledge management",
+    "features_subtitle": "Everything you need to turn your documents into searchable knowledge",
     "trust": {
       "title": "Enterprise Security & Reliability",
       "badges": [
@@ -117,8 +117,8 @@
     }
   },
   "dashboard": {
-    "title": "System Dashboard",
-    "subtitle": "Real-time metrics and system health monitoring",
+    "title": "Dashboard",
+    "subtitle": "System status and usage overview",
     "last_updated": "Last updated",
     "loading": "Loading",
     "error_loading": "Failed to load",
@@ -140,17 +140,9 @@
       "cache_hit": "Cache Hit Rate"
     },
     "health": {
-      "title": "System Health",
-      "llm": "LLM",
-      "vector_db": "Vector DB",
-      "embedding": "Embedding",
-      "cache": "Cache",
-      "tracing": "Tracing",
-      "redis": "Redis",
-      "qdrant": "Qdrant",
-      "llm_api": "LLM API",
-      "healthy": "Healthy",
-      "unhealthy": "Unhealthy"
+      "api_server": "API Server",
+      "index": "Index",
+      "tools": "Tools"
     },
     "recent_queries": {
       "title": "Recent Queries",
@@ -240,9 +232,9 @@
     "go_login": "Go to Login"
   },
   "search": {
-    "title": "Enterprise AI Search",
-    "subtitle": "AI-powered search across your knowledge base",
-    "placeholder": "Search enterprise knowledge...",
+    "title": "AI Search",
+    "subtitle": "Ask anything about your knowledge base",
+    "placeholder": "Ask a question...",
     "error_max_length": "Query cannot exceed {{max}} characters (currently {{current}})",
     "suggested": "Suggested",
     "sources": "Sources",
@@ -260,14 +252,20 @@
     ]
   },
   "crew": {
-    "title": "AI Content Studio",
-    "inputPlaceholder": "Enter article topic...",
-    "generate": "Generate",
-    "generating": "Generating..."
+    "title": "Content Studio",
+    "subtitle": "AI Agent collaboration",
+    "agentProgress": "Agent Progress",
+    "errorShort": "Generation failed",
+    "topic": "Topic",
+    "retry": "Retry",
+    "starting": "Starting...",
+    "pipeline": "Pipeline",
+    "completedIn": "Completed in",
+    "seconds": "s"
   },
   "admin": {
-    "title": "Enterprise Admin",
-    "subtitle": "Enterprise Management Console",
+    "title": "Admin",
+    "subtitle": "Manage users, roles, and settings",
     "tabs": {
       "overview": "Overview",
       "workspaces": "Workspaces",
@@ -413,11 +411,45 @@
     "confirm": {
       "cancel": "Cancel",
       "ok": "Confirm"
+    },
+    "featureFlags": {
+      "title": "Feature Flags",
+      "description": "Manage rollout and feature toggles",
+      "create": "Create Flag",
+      "name": "Name",
+      "status": "Status",
+      "enabled": "Enabled",
+      "percentage": "Rollout %",
+      "actions": "Actions",
+      "noFlags": "No feature flags",
+      "createNew": "Create New Flag",
+      "rolloutPercentage": "Rollout Percentage",
+      "confirmDelete": "Delete this flag?"
+    },
+    "evaluation": {
+      "title": "Evaluation",
+      "description": "RAG quality evaluation metrics",
+      "recallAt3": "Recall@3",
+      "faithfulness": "Faithfulness",
+      "hallucinationRate": "Hallucination Rate",
+      "totalRuns": "Total Runs",
+      "metrics": "History",
+      "metricName": "Metric",
+      "value": "Value",
+      "type": "Type",
+      "createdAt": "Created",
+      "noMetrics": "No metrics available",
+      "benchmarkRuns": "Benchmark Runs",
+      "runId": "Run ID",
+      "benchmarkSet": "Benchmark Set",
+      "status": "Status",
+      "startedAt": "Started",
+      "noBenchmarks": "No benchmark runs recorded"
     }
   },
   "documents": {
     "title": "Documents",
-    "subtitle": "Indexed knowledge base documents",
+    "subtitle": "Manage your knowledge base",
     "error_loading": "Failed to load documents",
     "retry": "Retry",
     "table": {
@@ -471,7 +503,7 @@
   },
   "analytics": {
     "title": "Analytics",
-    "subtitle": "System performance and usage analytics",
+    "subtitle": "Usage patterns and performance insights",
     "refresh": "Refresh data",
     "retry": "Retry",
     "error_loading": "Failed to load analytics data",
@@ -481,8 +513,8 @@
     "cache_hit_rate": "Cache Hit Rate",
     "output": "Output",
     "cost": "Cost",
-    "avg_per_hour": "avg {count}/hour",
-    "saves": "{count} queries saved",
+    "avg_per_hour": "avg {{count}}/hour",
+    "saves": "{{count}} queries saved",
     "no_data": "No data available",
     "tabs": {
       "overview": "Overview",
@@ -497,9 +529,9 @@
       "latency": "Latency"
     },
     "queries": {
-      "title": "Query Distribution",
-      "total": "Total Queries",
-      "per_hour": "avg/hour"
+      "intent": "Intent",
+      "count": "Count",
+      "percentage": "Share"
     },
     "intent": {
       "document_query": "Document Query",
@@ -522,14 +554,14 @@
         "llm_first_token": "First Token",
         "llm_generation": "Generation"
       },
-      "vs_period": "vs {{period}}"
+      "vs_period": "vs {{{period}}}"
     },
     "tokens": {
       "title": "Token Usage Details",
       "input": "Input Tokens",
       "output": "Output Tokens",
       "cost": "Estimated Cost",
-      "per_query": "~{symbol}{cost}/query"
+      "per_query": "~{{symbol}}{{cost}}/query"
     },
     "cache": {
       "title": "Cache Hit Rate",
@@ -562,7 +594,8 @@
     "after_optimization": "After",
     "ttft_improvement_detail": "61% improvement: retrieval-generation parallelization + cache warmup + streaming architecture",
     "retrieval_accuracy": "Retrieval Accuracy",
-    "qa_benchmark_detail": "192 QA Pairs benchmark · Recall@3: 96.5%"
+    "qa_benchmark_detail": "192 QA Pairs benchmark · Recall@3: 96.5%",
+    "internal_metrics": "Internal Evaluation Metrics"
   },
   "architecture": {
     "title": "Architecture & Performance",
@@ -595,8 +628,10 @@
       "ttft": "TTFT",
       "cache_hit_rate": "Cache Hit Rate",
       "cost_per_query": "Cost/Query",
-      "retrieval_latency": "Retrieval Latency"
-    }
+      "retrieval_latency": "Retrieval Latency",
+      "retrieval_accuracy": "Retrieval Accuracy"
+    },
+    "tech_stack": "Tech Stack"
   },
   "portfolio": {
     "hero": {
@@ -614,7 +649,7 @@
   },
   "login": {
     "email": "Email",
-    "email_hint": "Corporate email or admin account",
+    "email_hint": "Your email address",
     "password": "Password",
     "password_hint": "At least 8 characters",
     "remember_me": "Remember me",
@@ -639,45 +674,12 @@
     "login": "Go to Login"
   },
   "chat": {
-    "title": "Aureon Chat",
-    "clear": "Clear",
-    "emptyTitle": "How can I help you today?",
-    "emptySubtitle": "Ask me anything about your knowledge base",
-    "emptyHint": "I can search documents, analyze data, and generate reports",
-    "inputPlaceholder": "Ask anything...",
+    "title": "Chat",
+    "inputPlaceholder": "Type a message...",
     "send": "Send",
-    "stop": "Stop",
-    "copy": "Copy",
-    "copied": "Copied!",
-    "regenerate": "Regenerate",
-    "attach": "Attach file",
-    "upload": "Upload",
-    "uploading": "Uploading...",
-    "upload_success": "{{filename}} uploaded successfully, {{chunks}} chunks created",
-    "upload_failed": "Upload failed",
-    "unsupported_format": "Unsupported format: {{ext}}",
-    "file_too_large": "File size exceeds 10MB limit",
-    "remove_file": "Remove file",
-    "welcome": "Welcome to Aureon",
-    "welcome_subtitle": "Start a conversation by typing a message below.",
-    "placeholder": "Type your message... (Enter to send, Shift+Enter for new line)",
-    "streaming": "Streaming...",
-    "ready": "Ready to chat",
-    "processing": "Processing...",
-    "sources": "Sources",
-    "quickStart": [
-      "Search latest technical docs",
-      "Analyze system performance metrics",
-      "Explain how RAG retrieval works",
-      "Generate a project summary report"
-    ],
-    "suggestions": {
-      "title": "Try asking",
-      "summarize_latest": "Summarize the latest uploaded document",
-      "key_risks": "What are the key risks in this document?",
-      "summarize_doc": "Summarize the key points of \"{{title}}\"",
-      "about_doc": "What are the main contents of \"{{title}}\"?"
-    }
+    "calling": "Calling tool...",
+    "completed": "Completed",
+    "stopped": "Stopped"
   },
   "support": {
     "copy": "Copy",
@@ -688,14 +690,14 @@
     "feedback_thanks": "Thanks for your feedback!",
     "sources": "Sources",
     "sources_toggle": "Show more",
-    "greeting": "Hi! Need help?",
+    "greeting": "Need help?",
     "typing": "is typing",
     "offline_title": "Leave a message",
     "offline_name": "Your name",
     "offline_email": "Your email",
     "offline_message": "How can we help?",
     "offline_submit": "Send message",
-    "offline_success": "Thank you! We'll get back to you soon.",
+    "offline_success": "Thanks! We'll get back to you soon.",
     "offline_error": "Failed to send. Please try again.",
     "qr_search_tips": "How to search more accurately?",
     "qr_search_filters": "What filters are supported?",
@@ -707,9 +709,9 @@
     "qr_cost_calculation": "How is cost calculated?",
     "quickReplies": [
       "What can this platform do?",
-      "How to deploy to production?",
-      "Which LLM models are supported?",
-      "What are the performance metrics?"
+      "How to upload documents?",
+      "What LLM models are supported?",
+      "How does search work?"
     ],
     "title": "Aureon Support",
     "welcome": "Welcome! How can I help?",
@@ -717,12 +719,12 @@
     "offline": "Offline",
     "placeholder": "Type your question...",
     "connecting": "Connecting...",
-    "connected": "Connected and ready",
+    "connected": "Ready to help",
     "close": "Close"
   },
   "cost": {
-    "title": "Cost Governance",
-    "subtitle": "Track spending, manage budgets, optimize costs",
+    "title": "Cost",
+    "subtitle": "Track usage and spending",
     "error_loading": "Failed to load cost data",
     "retry": "Retry",
     "export": "Export CSV",
@@ -811,31 +813,136 @@
     "toast_finish": "🎉 Tour complete! Explore more features.",
     "steps": {
       "search-first": {
-        "title": "Experience Smart Search Now",
-        "description": "This is Aureon's core value! Type any question and the system will automatically search the knowledge base, returning precise answers with source citations. Try the example query below to feel the power of AI search."
+        "title": "Try Searching Now",
+        "description": "This is Aureon's core feature! Type any question and get answers with sources. Try the example below."
       },
       "documents-upload": {
-        "title": "Upload Your Knowledge Base",
-        "description": "Upload documents to teach Aureon your knowledge. Supports .md, .txt, .pdf, .docx, .xlsx formats. After upload, the system automatically indexes them for immediate search."
+        "title": "Upload Your Documents",
+        "description": "Upload documents to build your knowledge base. Supports .md, .txt, .pdf, .docx, .xlsx formats."
       },
       "search-own-data": {
         "title": "Search Your Own Data",
-        "description": "Now try searching the documents you just uploaded! Aureon will return precise answers based on your knowledge base. This is where the platform truly shines."
+        "description": "Now try searching the documents you just uploaded! Aureon will find relevant answers."
       },
       "dashboard-overview": {
         "title": "System Health at a Glance",
-        "description": "This dashboard shows Aureon's real-time status. The four Golden Signals — Latency, Traffic, Errors, and Saturation — help you quickly understand system health."
+        "description": "View real-time system status and key metrics on the dashboard."
       },
       "analytics-insight": {
-        "title": "Insight Usage Patterns",
-        "description": "The Analytics page shows query volume, latency distribution, token consumption and more, helping you optimize usage strategies and control costs."
+        "title": "Track Your Usage",
+        "description": "See query volume, response quality, and cost to optimize your experience."
       }
     }
   },
   "help": {
-    "search_no_results": "No results found? Try a more general query, or upload relevant documents to the knowledge base.",
-    "documents_empty": "Knowledge base is empty. Click \"Upload Document\" to start building your dedicated knowledge base.",
-    "dashboard_first_visit": "Welcome to Aureon! This is your system dashboard for viewing real-time status and key metrics.",
-    "admin_first_visit": "This is the admin center where you can manage users, configure permissions, and view audit logs."
+    "search_no_results": "No results? Try a simpler question, or upload relevant documents to the knowledge base.",
+    "documents_empty": "No documents yet. Click \"Upload Document\" to start building your knowledge base.",
+    "dashboard_first_visit": "Welcome! This is your dashboard for viewing system status and usage.",
+    "admin_first_visit": "Manage users, configure permissions, and view activity logs here."
+  },
+  "common": {
+    "loading": "Loading...",
+    "dismiss": "Dismiss",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "create": "Create",
+    "clear": "Clear"
+  },
+  "demoIntro": {
+    "hero": {
+      "title": "Enterprise AI Knowledge Base Platform",
+      "subtitle": "Production-grade RAG with verified benchmarks. 96.5% Recall, real-time streaming, enterprise-ready."
+    },
+    "capabilities": [
+      {
+        "icon": "Search",
+        "title": "Hybrid Retrieval",
+        "description": "Hybrid search + Rerank for precision"
+      },
+      {
+        "icon": "Zap",
+        "title": "Real-time Streaming",
+        "description": "SSE streaming, TTFT <500ms"
+      },
+      {
+        "icon": "BarChart3",
+        "title": "Observability",
+        "description": "End-to-end tracing, latency/recall/cost visible"
+      },
+      {
+        "icon": "Shield",
+        "title": "Enterprise Security",
+        "description": "SSO/RBAC/PII masking, audit logs, multi-tenant"
+      }
+    ],
+    "differentiators": [
+      {
+        "icon": "Brain",
+        "title": "4-Layer Memory",
+        "description": "From conversation to persona -- persistent memory"
+      },
+      {
+        "icon": "GitBranch",
+        "title": "LangGraph Orchestration",
+        "description": "Conditional branching, parallel nodes, human-in-the-loop"
+      },
+      {
+        "icon": "PieChart",
+        "title": "Cost Governance",
+        "description": "Per-model/tenant tracking with budget alerts"
+      },
+      {
+        "icon": "Gauge",
+        "title": "Adaptive RAG",
+        "description": "Query routing + lightweight CRAG + HyDE"
+      }
+    ],
+    "cta": {
+      "chat": "Start Chat",
+      "rag": "Test RAG",
+      "crew": "Content Studio"
+    }
+  },
+  "systemStatus": {
+    "title": "System Status",
+    "metrics": "Metrics",
+    "unreachable": "Backend unreachable",
+    "noBenchmark": "No benchmark data. Run eval first.",
+    "services": "Services",
+    "noData": "Connect backend to see status",
+    "actions": "Actions",
+    "openLangSmith": "Open LangSmith",
+    "checkHealth": "Check Health"
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "description": "An unexpected error occurred",
+    "retry": "Try again"
+  },
+  "rag": {
+    "title": "RAG Query",
+    "description": "Retrieve content from your knowledge base",
+    "upload": {
+      "toggle": "Upload",
+      "deleted": "Deleted",
+      "badFormat": "Unsupported format",
+      "success": "Upload successful",
+      "uploading": "Uploading...",
+      "hint": "Supports .md, .txt, .pdf, .docx, .xlsx",
+      "formats": "Supported formats",
+      "files": "Uploaded files",
+      "delete": "Delete"
+    },
+    "inputPlaceholder": "Ask anything...",
+    "ask": "Ask",
+    "examples": [
+      "How does RAG work?",
+      "How to optimize retrieval latency?"
+    ],
+    "sources": "Sources",
+    "score": "Relevance",
+    "noQuery": "Enter a question to start",
+    "asking": "Retrieving...",
+    "error": "Query failed"
   }
 }
