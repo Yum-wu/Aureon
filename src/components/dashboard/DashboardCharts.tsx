@@ -94,7 +94,13 @@ export function DashboardCharts({
             <div className="animate-pulse h-4 w-24 bg-[var(--bg-tertiary)] rounded" />
           </div>
         ) : queryVolumeChartData.length > 0 ? (
-          <BarChart data={queryVolumeChartData.map(d => ({ ...d }))} keys={['value']} indexBy="label" title={t('dashboard.charts.query_volume')} />
+          <BarChart
+            data={queryVolumeChartData.map(d => ({ ...d }))}
+            keys={['value']}
+            indexBy="label"
+            title={t('dashboard.charts.query_volume')}
+            valueScale={{ type: 'linear', min: 0 }}
+          />
         ) : (
           <NoDataPlaceholder />
         )}
@@ -118,7 +124,7 @@ export function DashboardCharts({
           )}
         </Card>
         {cacheTrendData.some((s) => s.data.length > 0) ? (
-          <LineChart data={cacheTrendData} title={t('dashboard.charts.cache_hit_rate', '缓存命中率')} />
+          <LineChart data={cacheTrendData} title={t('dashboard.charts.cache_hit_rate', '缓存命中率')} yScale={{ type: 'linear', min: 0, max: 100 }} />
         ) : (
           <NoDataPlaceholder />
         )}

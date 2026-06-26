@@ -1,0 +1,120 @@
+- generic [ref=e3]:
+  - complementary [ref=e5]:
+    - generic [ref=e6]:
+      - button "Aureon" [ref=e7] [cursor=pointer]
+      - button "收起侧边栏" [ref=e8] [cursor=pointer]:
+        - img [ref=e9]
+    - navigation [ref=e12]:
+      - generic [ref=e13]:
+        - generic [ref=e14]: 平台
+        - link "仪表盘" [ref=e15] [cursor=pointer]:
+          - /url: /dashboard
+          - img [ref=e17]
+          - generic [ref=e22]: 仪表盘
+        - link "AI 搜索" [ref=e23] [cursor=pointer]:
+          - /url: /search
+          - img [ref=e25]
+          - generic [ref=e28]: AI 搜索
+        - link "文档管理" [ref=e29] [cursor=pointer]:
+          - /url: /documents
+          - img [ref=e31]
+          - generic [ref=e34]: 文档管理
+        - link "分析" [ref=e35] [cursor=pointer]:
+          - /url: /analytics
+          - img [ref=e37]
+          - generic [ref=e39]: 分析
+      - generic [ref=e40]:
+        - generic [ref=e41]: 管理
+        - link "架构" [ref=e42] [cursor=pointer]:
+          - /url: /architecture
+          - img [ref=e44]
+          - generic [ref=e49]: 架构
+        - link "管理" [ref=e50] [cursor=pointer]:
+          - /url: /admin
+          - img [ref=e52]
+          - generic [ref=e54]: 管理
+        - link "成本治理" [ref=e55] [cursor=pointer]:
+          - /url: /cost
+          - img [ref=e57]
+          - generic [ref=e60]: 成本治理
+    - generic [ref=e61]:
+      - generic [ref=e62]:
+        - img [ref=e64]
+        - generic [ref=e67]:
+          - paragraph [ref=e68]: 演示用户
+          - paragraph [ref=e69]: admin
+      - generic [ref=e70]:
+        - button "切换到暗色模式" [ref=e71]:
+          - img [ref=e72]
+        - button "Switch to English" [ref=e74]: EN
+        - button "管理" [ref=e75] [cursor=pointer]:
+          - img [ref=e76]
+          - generic [ref=e79]: 管理
+  - generic [ref=e84]:
+    - navigation "Breadcrumb" [ref=e85]:
+      - link "Aureon" [ref=e87] [cursor=pointer]:
+        - /url: /
+      - generic [ref=e88]:
+        - img [ref=e89]
+        - generic [ref=e91]: 分析
+    - generic [ref=e92]:
+      - generic [ref=e93]:
+        - heading "分析" [level=1] [ref=e94]
+        - paragraph [ref=e95]: 系统性能与使用分析
+      - generic [ref=e96]:
+        - button "刷新数据" [ref=e97]:
+          - img [ref=e98]
+        - combobox [ref=e103]:
+          - option "最近 24 小时"
+          - option "最近 7 天" [selected]
+          - option "最近 30 天"
+    - tablist [ref=e104]:
+      - tab "概览" [selected] [ref=e105] [cursor=pointer]: 概览
+      - tab "延迟" [ref=e107] [cursor=pointer]
+      - tab "令牌" [ref=e108] [cursor=pointer]
+      - tab "查询" [ref=e109] [cursor=pointer]
+    - generic [ref=e110]:
+      - generic [ref=e111]:
+        - generic [ref=e112]: 平均延迟
+        - generic [ref=e113]: 3261.4ms
+        - generic [ref=e114]: "P95: 7720ms · P99: 7720ms"
+      - generic [ref=e115]:
+        - generic [ref=e116]: Token 消耗
+        - generic [ref=e117]: 11k
+        - generic [ref=e118]: "输出: 4k · 成本: ¥0"
+      - generic [ref=e119]:
+        - generic [ref=e120]: 查询总量
+        - generic [ref=e121]: "0"
+        - generic [ref=e122]: "平均 {count}/小时"
+      - generic [ref=e123]:
+        - generic [ref=e124]: 缓存命中率
+        - generic [ref=e125]: 20%
+        - generic [ref=e126]: "节省 {count} 次查询"
+    - generic [ref=e127]:
+      - generic [ref=e128]:
+        - heading "延迟分布" [level=3] [ref=e129]
+        - generic [ref=e130]:
+          - generic [ref=e131]:
+            - generic [ref=e132]:
+              - generic [ref=e133]: 平均
+              - generic [ref=e134]: 42%
+            - progressbar [ref=e135]
+          - generic [ref=e137]:
+            - generic [ref=e138]:
+              - generic [ref=e139]: P95
+              - generic [ref=e140]: 100%
+            - progressbar [ref=e141]
+          - generic [ref=e143]:
+            - generic [ref=e144]:
+              - generic [ref=e145]: P99
+              - generic [ref=e146]: 100%
+            - progressbar [ref=e147]
+      - generic [ref=e149]:
+        - heading "查询分布" [level=3] [ref=e150]
+        - generic [ref=e152]:
+          - generic [ref=e153]:
+            - generic [ref=e154]: 通用问答
+            - generic [ref=e155]: 0%
+          - progressbar [ref=e156]
+  - button "Open support chat" [ref=e157]:
+    - img [ref=e158]

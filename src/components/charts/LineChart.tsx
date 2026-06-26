@@ -42,6 +42,8 @@ interface LineChartProps {
   xAxisLabel?: string;
   /** Y 轴标签 */
   yAxisLabel?: string;
+  /** Y 轴刻度范围（默认 auto/auto） */
+  yScale?: { type: 'linear'; min?: number | 'auto'; max?: number | 'auto'; stacked?: boolean; reverse?: boolean };
   /** 额外类名 */
   className?: string;
 }
@@ -62,6 +64,7 @@ function LineChartInner({
   yFormat,
   xAxisLabel,
   yAxisLabel,
+  yScale: yScaleProp,
   className,
 }: LineChartProps) {
   const theme = useChartTheme();
@@ -111,7 +114,7 @@ function LineChartInner({
           enableGridX={showGrid && CHART_DEFAULTS.enableGridX}
           enableGridY={showGrid && CHART_DEFAULTS.enableGridY}
           xScale={{ type: 'point' }}
-          yScale={{ type: 'linear', min: 'auto', max: 'auto', stacked: false, reverse: false }}
+          yScale={yScaleProp ?? { type: 'linear', min: 'auto', max: 'auto', stacked: false, reverse: false }}
           xFormat={xFormat}
           yFormat={yFormat}
           axisBottom={{

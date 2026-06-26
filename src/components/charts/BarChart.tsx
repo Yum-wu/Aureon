@@ -44,6 +44,8 @@ interface BarChartProps<T extends BarDatum = BarDatum> {
   loading?: boolean;
   /** 值格式化 */
   valueFormat?: BarSvgProps<T>['valueFormat'];
+  /** 值刻度范围 */
+  valueScale?: { type: 'linear'; min?: number; max?: number };
   /** 额外类名 */
   className?: string;
 }
@@ -65,6 +67,7 @@ function BarChartInner<T extends BarDatum = BarDatum>({
   onTimeRangeChange,
   loading = false,
   valueFormat,
+  valueScale: valueScaleProp,
   className,
 }: BarChartProps<T>) {
   const theme = useChartTheme();
@@ -117,7 +120,7 @@ function BarChartInner<T extends BarDatum = BarDatum>({
           motionConfig={CHART_DEFAULTS.motionConfig}
           enableGridX={showGrid && layout === 'horizontal'}
           enableGridY={showGrid && layout === 'vertical'}
-          valueScale={{ type: 'linear' }}
+          valueScale={valueScaleProp ?? { type: 'linear' }}
           indexScale={{ type: 'band', round: true }}
           valueFormat={valueFormat}
           axisBottom={

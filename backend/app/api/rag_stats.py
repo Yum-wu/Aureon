@@ -145,6 +145,7 @@ async def record_query(
             # 按意图分类统计
             intent = _classify_intent(query)
             pipe.hincrby(f"{STATS_PREFIX}:intents", intent, 1)
+            pipe.expire(f"{STATS_PREFIX}:intents", 86400)
 
             await pipe.execute()
     except Exception as e:

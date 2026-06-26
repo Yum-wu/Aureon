@@ -209,7 +209,7 @@ function OverviewTab({ latency, tokens, usage, cache, t }: {
           <h3 className="font-semibold text-[var(--fg)] mb-4">{t('analytics.queries.title')}</h3>
           <div className="space-y-4">
             {Object.entries(usage?.byIntent || {}).map(([intent, count]) => {
-              const percentage = usage?.total ? (count / usage.total) * 100 : 0;
+              const percentage = usage?.total ? Math.min(100, (count / usage.total) * 100) : 0;
               return (
                 <ProgressBar
                   key={intent}
@@ -383,7 +383,7 @@ function QueriesTab({ usage, t }: {
   const rows: QueryRow[] = Object.entries(usage?.byIntent || {}).map(([intent, count]) => ({
     intent,
     count,
-    percentage: usage?.total ? (count / usage.total) * 100 : 0,
+    percentage: usage?.total ? Math.min(100, (count / usage.total) * 100) : 0,
   }));
 
   const columns = [

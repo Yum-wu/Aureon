@@ -79,6 +79,11 @@ async def get_usage_analytics(
         intents_raw = await redis.hgetall(f"{STATS_PREFIX}:intents")
         by_intent = {k: int(v) for k, v in intents_raw.items()} if intents_raw else {}
 
+        # 总查询数兜底：intents hash 没有 TTL 时可能比 count_24h 多
+        intent_total = sum(by_intent.values())
+        if intent_total > total:
+            total = intent_total
+
         # 计算每小时平均查询量
         datetime.now(timezone.utc)
         per_hour = round(total / 24, 1) if total > 0 else 0
