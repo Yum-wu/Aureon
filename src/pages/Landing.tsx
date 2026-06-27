@@ -1,6 +1,7 @@
 import { HeroSection } from '../components/landing/HeroSection';
 import { FeatureGrid } from '../components/landing/FeatureGrid';
 import { BenchmarkSection } from '../components/landing/BenchmarkSection';
+import { ROICalculator } from '../components/landing/ROICalculator';
 import { useTranslation } from 'react-i18next';
 import { LandingNavBar } from '../components/LandingNavBar';
 
@@ -22,6 +23,11 @@ export function Landing() {
       <div className="gradient-divider" />
       <div id="benchmark">
         <BenchmarkSection />
+      </div>
+
+      <div className="gradient-divider" />
+      <div id="roi">
+        <ROICalculator />
       </div>
 
       {/* Trust bar */}

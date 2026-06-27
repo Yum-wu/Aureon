@@ -33,72 +33,67 @@
   },
   "landing": {
     "hero": {
-      "badge": "生产就绪",
-      "title": "上传文档，问任何问题",
-      "subtitle": "上传文档，用自然语言提问，即可获得精准答案和引用来源。无需配置，即开即用。",
+      "badge": "企业级 AI 搜索",
+      "title": "一天内为你的文档搭建企业级 AI 搜索助手",
+      "subtitle": "上传文档，用自然语言搜索，不到一秒即可获得带引用来源的精准答案。安全、私有、生产就绪。",
       "cta_search": "立即体验",
-      "cta_architecture": "了解原理"
+      "cta_architecture": "了解原理",
+      "values": [
+        "引用来源",
+        "亚秒级响应",
+        "安全 & 私有部署",
+        "企业级就绪"
+      ]
     },
-    "metrics": {
-      "recall": {
-        "value": "96.5%",
-        "label": "检索准确率",
-        "detail": "Hybrid Recall@3 (192 QA pairs)"
-      },
-      "ttft": {
-        "value": "<1秒",
-        "label": "响应速度",
-        "detail": "首字延迟"
-      },
-      "cost": {
-        "value": "$0.0003",
-        "label": "每次查询成本",
-        "detail": "按用量计费"
-      }
-    },
-    "features_title": "核心功能",
+    "features_title": "核心价值",
     "features": [
       {
-        "title": "智能搜索",
-        "desc": "用自然语言提问，获得精准答案和引用来源"
+        "title": "秒级找到答案",
+        "desc": "告别翻文件夹。用自然语言提问，秒级获得带来源引用的精准答案。"
       },
       {
-        "title": "极速响应",
-        "desc": "流式输出，不到一秒开始显示答案"
+        "title": "弹性扩展",
+        "desc": "上传数千份文档，自适应检索，全部文档亚秒级搜索。"
       },
       {
-        "title": "诚实可靠",
-        "desc": "找不到相关信息时，不会编造答案，明确告知用户"
+        "title": "零幻觉",
+        "desc": "不知道就是不知道。不会编造答案，找不到相关信息时明确告知。"
       },
       {
-        "title": "简单易用",
-        "desc": "上传文档即可开始搜索，无需任何配置"
+        "title": "分钟级部署",
+        "desc": "上传文档即可开始搜索。无需 ML 专业知识，无需复杂配置。"
       },
       {
-        "title": "知识库",
-        "desc": "99 篇文章已索引，1214 个可搜索内容片段"
+        "title": "100% 数据私有",
+        "desc": "数据始终归你。企业级加密、RBAC 和多租户隔离内置。"
       },
       {
         "title": "使用分析",
-        "desc": "实时追踪查询量、响应质量和成本"
+        "desc": "从第一天起实时追踪查询量、回答质量和系统健康状态。"
       }
     ],
     "benchmark": {
-      "title": "性能基准测试",
-      "subtitle": "基于 192 组 QA 数据对混合检索流水线的评估 (13/14 达标, 92.9%)",
-      "vs_baseline": "对比基线",
-      "optimized": "已优化",
-      "reduced": "已降低",
-      "optimizing": "优化中",
-      "test_scale": "192 QA pairs · DeepEval LLM-as-Judge · 99 articles knowledge base",
-      "optimization_story": "优化历程",
-      "cache_hit_rate": "缓存命中率",
-      "cost_per_query": "每次查询成本"
+      "title": "可靠性能",
+      "subtitle": "基于 192 组 QA 数据，LLM-as-Judge 评估验证",
+      "view_full": "查看完整基准测试 →"
     },
-    "credibility": {
-      "title": "技术可信度",
-      "desc": "所有指标来自生产环境实测",
-      "link": "查看完整性能数据 →"
+    "roi": {
+      "title": "计算你的 ROI",
+      "subtitle": "看看你的团队通过 AI 企业搜索能节省多少",
+      "team_size": "团队人数",
+      "search_hours": "每人每周搜索时间",
+      "hourly_rate": "人均时薪（全负担）",
+      "annual_savings": "预估年节省",
+      "roi": "投资回报率",
+      "payback": "回本周期",
+      "payback_less_than_month": "<1 个月",
+      "payback_month": "{{count}}个月",
+      "disclaimer": "基于搜索时间降低 50% · 预估 $15/人/月",
+      "cta": "开始免费试用 →",
+      "without": "使用前",
+      "with": "使用后",
+      "hours_per_year": "小时/年 被浪费",
+      "savings_per_year": "年节省"
     },
     "features_subtitle": "将文档变成可搜索知识库所需的一切",
     "trust": {

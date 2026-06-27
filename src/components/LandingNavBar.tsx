@@ -8,6 +8,7 @@ import { LanguageSwitcher } from '../i18n/LanguageSwitcher';
 const ANCHOR_LINKS = [
   { id: 'features', labelKey: 'landing.features_title' },
   { id: 'benchmark', labelKey: 'landing.benchmark.title' },
+  { id: 'roi', labelKey: 'landing.roi.title' },
   { id: 'trust', labelKey: 'landing.trust.title' },
 ] as const;
 

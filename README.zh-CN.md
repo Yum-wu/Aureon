@@ -1,6 +1,6 @@
 # Aureon
 
-生产级企业 AI 搜索和知识智能平台。
+一天内为你的文档搭建企业级 AI 搜索助手。上传文档，用自然语言搜索，不到一秒即可获得带引用来源的精准答案。安全、私有、生产就绪。
 
 [![CI](https://github.com/Yum-wu/Aureon/actions/workflows/ci.yml/badge.svg)](https://github.com/Yum-wu/Aureon/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)

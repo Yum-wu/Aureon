@@ -1,6 +1,6 @@
 # Aureon
 
-Production-grade enterprise AI search and knowledge intelligence platform.
+Build an enterprise AI search assistant for your documents in one day. Upload documents, search in natural language, and get precise answers with cited sources — in under a second. Secure, private, production-ready.
 
 [![CI](https://github.com/Yum-wu/Aureon/actions/workflows/ci.yml/badge.svg)](https://github.com/Yum-wu/Aureon/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)

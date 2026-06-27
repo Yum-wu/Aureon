@@ -33,72 +33,68 @@
   },
   "landing": {
     "hero": {
-      "badge": "Production Ready",
-      "title": "Ask Anything, Get Answers with Sources",
-      "subtitle": "Upload your documents, ask questions in natural language, and get precise answers with cited sources. No setup required.",
+      "badge": "Enterprise AI Search",
+      "title": "Build an Enterprise AI Search Assistant for your documents in one day",
+      "subtitle": "Upload your documents, search in natural language, and get precise answers with cited sources — in under a second. Secure, private, production-ready.",
       "cta_search": "Try It Now",
-      "cta_architecture": "See How It Works"
+      "cta_architecture": "See How It Works",
+      "values": [
+        "Source Citations",
+        "Sub-second Response",
+        "Secure & Private",
+        "Enterprise Ready"
+      ]
     },
-    "metrics": {
-      "recall": {
-        "value": "96.5%",
-        "label": "Retrieval Accuracy",
-        "detail": "Hybrid Recall@3 (192 QA pairs)"
-      },
-      "ttft": {
-        "value": "<1s",
-        "label": "Response Speed",
-        "detail": "Time to first answer"
-      },
-      "cost": {
-        "value": "$0.0003",
-        "label": "Cost per Query",
-        "detail": "Pay only for what you use"
-      }
-    },
-    "features_title": "Core Capabilities",
+    "features_title": "What You Get",
     "features": [
       {
-        "title": "Smart Search",
-        "desc": "Ask questions in natural language, get precise answers with source citations"
+        "title": "Find Answers in Seconds",
+        "desc": "Stop digging through folders. Ask questions in natural language and get instant answers with cited sources."
       },
       {
-        "title": "Instant Answers",
-        "desc": "Streaming responses start appearing in under a second"
+        "title": "Built to Scale",
+        "desc": "Upload thousands of documents. Search across them all in under a second with adaptive retrieval."
       },
       {
-        "title": "Knows When It Doesn't Know",
-        "desc": "Won't make up answers — tells you when it can't find relevant information"
+        "title": "Zero Hallucinations",
+        "desc": "Knows when it doesn't know. Won't make up answers — tells you when it can't find relevant information."
       },
       {
-        "title": "Easy Setup",
-        "desc": "Upload documents and start searching in minutes, no configuration needed"
+        "title": "Deploy in Minutes",
+        "desc": "Upload your documents and start searching. No ML expertise, no complex configuration needed."
       },
       {
-        "title": "Knowledge Base",
-        "desc": "99 articles indexed, 1214 searchable chunks of content"
+        "title": "100% Private",
+        "desc": "Your data stays yours. Enterprise-grade encryption, RBAC, and multi-tenant isolation built in."
       },
       {
         "title": "Usage Analytics",
-        "desc": "Track query volume, response quality, and cost in real-time"
+        "desc": "Track query volume, response quality, and system health in real-time from day one."
       }
     ],
     "benchmark": {
-      "title": "Performance Benchmark",
-      "subtitle": "Evaluated on 192 QA pairs with hybrid retrieval pipeline (13/14 pass, 92.9%)",
-      "vs_baseline": "vs baseline",
-      "optimized": "optimized",
-      "reduced": "reduced",
-      "optimizing": "Optimizing",
-      "test_scale": "192 QA pairs · DeepEval LLM-as-Judge · 99 articles knowledge base",
-      "optimization_story": "Optimization Story",
-      "cache_hit_rate": "Cache Hit Rate",
-      "cost_per_query": "Cost/Query"
+      "title": "Proven Performance",
+      "subtitle": "Verified by 192 QA pairs with LLM-as-Judge evaluation",
+      "view_full": "View Full Benchmark →"
     },
-    "credibility": {
-      "title": "Technical Credibility",
-      "desc": "All metrics measured in production",
-      "link": "View full benchmark →"
+    "roi": {
+      "title": "Calculate Your ROI",
+      "subtitle": "See how much your team saves with AI-powered enterprise search",
+      "team_size": "Team Size",
+      "search_hours": "Search Time / Week / Person",
+      "hourly_rate": "Avg Hourly Cost (Fully Loaded)",
+      "annual_savings": "Estimated Annual Savings",
+      "roi": "ROI",
+      "payback": "Payback Period",
+      "payback_less_than_month": "<1 month",
+      "payback_month": "{{count}} month",
+      "payback_month_plural": "{{count}} months",
+      "disclaimer": "Based on 50% search time reduction · $15/user/mo estimated",
+      "cta": "Start Free Trial →",
+      "without": "Without Aureon",
+      "with": "With Aureon",
+      "hours_per_year": "hours/year wasted",
+      "savings_per_year": "savings per year"
     },
     "features_subtitle": "Everything you need to turn your documents into searchable knowledge",
     "trust": {

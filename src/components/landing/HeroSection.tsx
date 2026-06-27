@@ -66,16 +66,16 @@ export function HeroSection() {
           </button>
         </div>
 
-        {/* Metrics row — elevated cards */}
-        <div className="flex gap-5 justify-center animate-fade-up delay-300">
-          {[
-            { value: t('landing.metrics.recall.value'), label: t('landing.metrics.recall.label') },
-            { value: t('landing.metrics.ttft.value'), label: t('landing.metrics.ttft.label') },
-            { value: t('landing.metrics.cost.value'), label: t('landing.metrics.cost.label') },
-          ].map((m) => (
-            <div key={m.label} className="metric-card text-center px-8 py-5">
-              <p className="metric-value text-2xl">{m.value}</p>
-              <p className="metric-label">{m.label}</p>
+        {/* Value props — checkmark row */}
+        <div className="flex flex-wrap gap-x-8 gap-y-3 justify-center animate-fade-up delay-300">
+          {(t('landing.hero.values', { returnObjects: true }) as string[]).map((v: string) => (
+            <div key={v} className="flex items-center gap-2">
+              <span className="w-4 h-4 rounded-full bg-[var(--success)]/20 flex items-center justify-center flex-shrink-0">
+                <svg className="w-2.5 h-2.5 text-[var(--success)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </span>
+              <span className="text-sm text-[var(--text-secondary)]">{v}</span>
             </div>
           ))}
         </div>

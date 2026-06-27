@@ -24,6 +24,7 @@ const Admin = lazy(() => import("./pages/Admin"));
 const CostGovernance = lazy(() => import("./pages/CostGovernance").then(m => ({ default: m.CostGovernance })));
 const Architecture = lazy(() => import("./pages/Architecture").then(m => ({ default: m.Architecture })));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const Benchmark = lazy(() => import("./pages/Benchmark"));
 const SupportWidget = lazy(() => import("./components/SupportWidget").then(m => ({ default: m.SupportWidget })));
 
 function PageFallback() {
@@ -158,7 +159,8 @@ function AppLayout() {
               <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
               {/* Admin routes — require auth + admin gate */}
               <Route path="/architecture" element={<AdminGate><Architecture /></AdminGate>} />
-              <Route path="/portfolio" element={<Navigate to="/architecture" replace />} />
+              <Route path="/benchmark" element={<Benchmark />} />
+              <Route path="/portfolio" element={<Navigate to="/benchmark" replace />} />
               <Route path="/admin" element={<AdminGate><Admin /></AdminGate>} />
               <Route path="/cost" element={<AdminGate><CostGovernance /></AdminGate>} />
               {/* Catch-all 404 route */}
