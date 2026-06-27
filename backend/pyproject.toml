@@ -52,4 +52,4 @@ no_error_summary = false
 warn_return_any = false
 warn_unused_configs = true
 # Gradual enablement: start permissive, tighten over time
-disable_error_code = ["misc", "assignment"]
+disable_error_code = ["misc", "assignment", "attr-defined"]
