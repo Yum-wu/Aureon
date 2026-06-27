@@ -7,5 +7,12 @@ export type {
   RealtimeMetrics,
   PipelineStages,
   MetricAlert,
-  UseRealtimeMetricsReturn,
 } from '../providers/RealtimeMetricsProvider';
+
+export interface UseRealtimeMetricsReturn {
+  metrics: import('../providers/RealtimeMetricsProvider').RealtimeMetrics;
+  alerts: import('../providers/RealtimeMetricsProvider').MetricAlert[];
+  isConnected: boolean;
+  connectionState: import('../services/ws').WSConnectionState;
+  lastUpdated: number | null;
+}
