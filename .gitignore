@@ -89,6 +89,16 @@ backend/=*
 # Brainstorming visual companion mockups (local only)
 .superpowers/
 
+# Onboarding/mockup screenshots (local only)
+onboarding-*.png
+onboarding-*.jpg
+new-onboarding-*.jpg
+
+# AI tool workspace configs
+.claude/
+.qoder/
+.workbuddy/
+
 # 临时调试文件
 _*.py
 !__init__.py
