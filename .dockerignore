@@ -45,6 +45,9 @@ backend/offloads/
 # 允许 articles 目录（RAG 知识库）
 !backend/data/articles/
 
+# 允许 benchmark 结果文件（Architecture 页面运行时指标）
+!backend/data/benchmark_results.json
+
 # ── Docker 自身 ──
 Dockerfile*
 docker-compose*.yml

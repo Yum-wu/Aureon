@@ -78,9 +78,6 @@ COPY --chown=nonroot:nonroot backend/app /app/app
 COPY --from=builder --chown=nonroot:nonroot /app/data /app/data
 COPY --from=builder --chown=nonroot:nonroot /app/offloads /app/offloads
 
-# 复制 benchmark 结果（供 /api/rag/benchmark 端点使用）
-COPY --chown=nonroot:nonroot backend/data/benchmark_results.json /app/data/benchmark_results.json
-
 # 非 root 运行（distroless :nonroot 默认 UID=65532，显式声明以明确意图）
 USER nonroot
 
