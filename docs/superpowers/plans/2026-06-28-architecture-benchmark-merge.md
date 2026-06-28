@@ -1,3 +1,27 @@
+# 架构与基准测试页合并 实施计划
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task.
+
+**Goal:** 将 `/architecture` 和 `/benchmark` 合并为一个页面，删除冗余路由，使用真实 R19 数据，移除内部指标模块
+
+**Architecture:** 重写 `Architecture.tsx`：保留 ArchitectureFlow + OptimizationStory，新增 Hero 指标卡片、TTFT 进度条、检索准确率进度条、技术栈详情。侧边栏标题更新。删除 `Benchmark.tsx`。
+
+**Tech Stack:** React 19, TypeScript, Tailwind CSS 4, react-i18next, react-router-dom
+
+---
+
+### Task 1: 重写 Architecture.tsx
+
+**Files:**
+- Modify: `src/pages/Architecture.tsx`
+
+**变更说明：**
+- 删除 MetricGrid 导入和使用
+- 新增区块：Hero 卡片（从真实数据读取 priority 0-3 的 customer_facing 指标）、TTFT 优化进度条、检索准确率进度条、技术栈详情
+- 使用 Design Token 变量体系（不引入 Benchmark 页的多彩渐变）
+- 进度条使用 theme 标准色（green / amber）
+
+```tsx
 import { useTranslation } from 'react-i18next';
 import { useBenchmark } from '../hooks/useBenchmark';
 import { ArchitectureFlow } from '../components/architecture/ArchitectureFlow';
@@ -16,6 +40,7 @@ export function Architecture() {
   const ttftP95 = benchmark?.metrics?.find(m => m.label === 'TTFT P95')?.value ?? '1,866ms';
   const e2eP50 = benchmark?.metrics?.find(m => m.label === 'E2E P50')?.value ?? '856ms';
   const e2eP99 = benchmark?.metrics?.find(m => m.label === 'E2E P99')?.value ?? '2,263ms';
+
   const recall5 = benchmark?.metrics?.find(m => m.label === 'Recall@5')?.value ?? '100.0%';
   const mrr = benchmark?.metrics?.find(m => m.label === 'MRR')?.value ?? '0.968';
 
@@ -36,7 +61,7 @@ export function Architecture() {
   const services = benchmark?.services ?? {};
 
   return (
-    <div className="min-h-screen overflow-y-auto bg-[var(--bg-primary)]">
+    <div className="min-h-screen bg-[var(--bg-primary)]">
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2 text-[var(--text-primary)]">{t('architecture.title')}</h1>
@@ -44,6 +69,7 @@ export function Architecture() {
         </div>
 
         <div className="space-y-12">
+          {/* Hero cards */}
           <section>
             <h2 className="text-2xl font-semibold mb-6 text-[var(--text-primary)]">{t('architecture.runtime_metrics')}</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -61,12 +87,15 @@ export function Architecture() {
             </div>
           </section>
 
+          {/* RAG Pipeline */}
           <section>
             <h2 className="text-2xl font-semibold mb-6 text-[var(--text-primary)]">{t('architecture.rag_pipeline')}</h2>
             <ArchitectureFlow />
           </section>
 
+          {/* Latency & Accuracy */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* TTFT Optimization */}
             <div className="bg-[var(--bg-secondary)] rounded-xl border border-[var(--border)] p-6">
               <h3 className="font-semibold text-[var(--text-primary)] mb-4">{t('architecture.ttft_optimization')}</h3>
               <div className="space-y-4">
@@ -88,6 +117,7 @@ export function Architecture() {
               </div>
             </div>
 
+            {/* Retrieval Accuracy */}
             <div className="bg-[var(--bg-secondary)] rounded-xl border border-[var(--border)] p-6">
               <h3 className="font-semibold text-[var(--text-primary)] mb-4">{t('architecture.retrieval_accuracy')}</h3>
               <div className="space-y-4">
@@ -110,11 +140,13 @@ export function Architecture() {
             </div>
           </div>
 
+          {/* Optimization Story */}
           <section>
             <h2 className="text-2xl font-semibold mb-6 text-[var(--text-primary)]">{t('architecture.optimization_story')}</h2>
             <OptimizationStory />
           </section>
 
+          {/* Tech Stack */}
           <section>
             <h3 className="text-2xl font-semibold mb-4 text-[var(--text-primary)]">{t('architecture.tech_stack')}</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
@@ -137,3 +169,90 @@ export function Architecture() {
     </div>
   );
 }
+```
+
+### Task 2: 删除 Benchmark.tsx
+
+**Files:**
+- Delete: `src/pages/Benchmark.tsx`
+
+```bash
+Remove-Item -LiteralPath "src/pages/Benchmark.tsx"
+```
+
+### Task 3: 删除 /benchmark 和 /portfolio 路由
+
+**Files:**
+- Modify: `src/App.tsx:162-163`
+
+删除两行：
+```tsx
+<Route path="/benchmark" element={<Benchmark />} />
+<Route path="/portfolio" element={<Navigate to="/benchmark" replace />} />
+```
+
+同时移除文件顶部的 `Benchmark` 导入（如果存在）和 `Navigate` 导入（如果不再使用）。
+
+### Task 4: 更新 Landing 页 BenchmarkSection 链接
+
+**Files:**
+- Modify: `src/components/landing/BenchmarkSection.tsx:42`
+
+```tsx
+// 改前：
+onClick={() => navigate('/benchmark')}
+
+// 改后：
+onClick={() => navigate('/architecture')}
+```
+
+### Task 5: 更新侧边栏 i18n 标签
+
+**Files:**
+- Modify: `src/i18n/en.json:10`
+- Modify: `src/i18n/zh.json:10`
+
+```json
+// en.json: "architecture": "Architecture" → "architecture": "Architecture & Performance",
+// zh.json: "architecture": "架构" → "architecture": "架构与性能",
+```
+
+### Task 6: 添加缺失的 i18n 键
+
+**Files:**
+- Modify: `src/i18n/en.json`
+- Modify: `src/i18n/zh.json`
+
+在 `architecture` 段落（en.json ~603-617, zh.json ~602-616）添加两个新键：
+
+```json
+// en.json — 在 architecture 段落末尾（}, 行之前）插入:
+    "ttft_optimization": "TTFT Optimization",
+    "retrieval_accuracy": "Retrieval Accuracy"
+
+// zh.json — 在 architecture 段落末尾插入:
+    "ttft_optimization": "TTFT 优化",
+    "retrieval_accuracy": "检索准确率"
+```
+
+### Task 7: 验证构建
+
+- [ ] 运行 TypeScript 类型检查
+
+```bash
+npx tsc --noEmit
+```
+
+- [ ] 运行测试
+
+```bash
+npm test -- --run
+```
+
+- [ ] 构建生产版本
+
+```bash
+npm run build
+```
+
+预期：全部通过，没有类型错误，构建成功。

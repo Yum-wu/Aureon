@@ -48,15 +48,15 @@ vi.mock('../../components/ui/Card', () => ({
   Card: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-import Benchmark from '../Benchmark';
+import { Architecture } from '../Architecture';
 import Admin from '../Admin';
 
 describe('Page Scroll Behavior', () => {
-  describe('Benchmark Page', () => {
+  describe('Architecture Page', () => {
     it('should have scrollable container', () => {
       const { container } = render(
         <BrowserRouter>
-          <Benchmark />
+          <Architecture />
         </BrowserRouter>
       );
 
@@ -68,7 +68,7 @@ describe('Page Scroll Behavior', () => {
     it('should allow vertical scrolling when content overflows', () => {
       const { container } = render(
         <BrowserRouter>
-          <Benchmark />
+          <Architecture />
         </BrowserRouter>
       );
 

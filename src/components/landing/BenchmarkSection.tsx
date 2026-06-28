@@ -39,7 +39,7 @@ export function BenchmarkSection() {
 
         {/* CTA */}
         <button
-          onClick={() => navigate('/benchmark')}
+          onClick={() => navigate('/architecture')}
           className="glow-btn-outline px-7 py-3 text-sm"
         >
           {t('landing.benchmark.view_full')}

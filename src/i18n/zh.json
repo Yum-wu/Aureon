@@ -7,7 +7,7 @@
       "analytics": "分析",
       "benchmark": "架构与性能",
       "admin": "管理",
-      "architecture": "架构",
+      "architecture": "架构与性能",
       "crew": "内容工作室",
       "portfolio": "作品集",
       "cost": "成本治理",
@@ -605,6 +605,8 @@
     "runtime_metrics": "运行时指标",
     "rag_pipeline": "RAG 流水线",
     "optimization_story": "优化历程",
+    "ttft_optimization": "TTFT 优化",
+    "retrieval_accuracy": "检索准确率",
     "flow": {
       "user_query": "用户查询",
       "user_query_desc": "自然语言输入",

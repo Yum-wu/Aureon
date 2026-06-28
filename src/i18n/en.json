@@ -7,7 +7,7 @@
       "analytics": "Analytics",
       "benchmark": "Architecture",
       "admin": "Admin",
-      "architecture": "Architecture",
+      "architecture": "Architecture & Performance",
       "crew": "Content Studio",
       "portfolio": "Portfolio",
       "cost": "Cost",
@@ -606,6 +606,8 @@
     "runtime_metrics": "Runtime Metrics",
     "rag_pipeline": "RAG Pipeline",
     "optimization_story": "Optimization Story",
+    "ttft_optimization": "TTFT Optimization",
+    "retrieval_accuracy": "Retrieval Accuracy",
     "flow": {
       "user_query": "User Query",
       "user_query_desc": "Natural language input",
