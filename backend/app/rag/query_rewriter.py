@@ -112,55 +112,78 @@ def expand_queries_rules(query: str) -> List[str]:
 # Gao et al., 2022: "Precise Zero-Shot Dense Retrieval without Relevance Labels"
 # Generates a hypothetical answer to improve retrieval accuracy.
 
-_HYDE_PROMPT_ZH = """你是一个知识库助手。请根据以下问题，生成一个详细、准确的回答。
+_HYDE_NUM_DOCS = 5
+
+_HYDE_PROMPT_ZH = """你是一个知识库助手。请根据以下问题，从不同角度生成5个不同的假设性回答。
 
 要求：
-1. 回答应该像一篇真实文档中的内容
+1. 每个回答应该像一篇真实文档中的内容
 2. 包含具体的技术细节和解释
 3. 使用专业但易懂的语言
-4. 长度约100-200字
+4. 每个回答长度约100-200字
+5. 每个回答必须以[SEP]开头并独占一行
 
 问题：{query}
 
-回答："""
+回答：
+[SEP]
+[SEP]
+[SEP]
+[SEP]
+[SEP]"""
 
-_HYDE_PROMPT_EN = """You are a knowledge base assistant. Generate a detailed and accurate answer for the following question.
+_HYDE_PROMPT_EN = """You are a knowledge base assistant. Generate 5 different hypothetical answers from different perspectives for the following question.
 
 Requirements:
-1. The answer should read like content from a real document
+1. Each answer should read like content from a real document
 2. Include specific technical details and explanations
 3. Use professional but accessible language
-4. Length: approximately 100-200 words
+4. Each answer length: approximately 100-200 words
+5. Each answer must start with [SEP] on its own line
 
 Question: {query}
 
-Answer:"""
+Answer:
+[SEP]
+[SEP]
+[SEP]
+[SEP]
+[SEP]"""
 
 
 def generate_hypothetical_answer(
     query: str,
     llm_call_fn,
     lang: str = "zh",
+    num_docs: int = 5,
 ) -> str:
-    """Generate a hypothetical answer using LLM for HyDE retrieval.
+    """Generate hypothetical answers using LLM for HyDE retrieval.
+
+    Generates multiple distinct hypothetical answers from different perspectives
+    to improve retrieval coverage. Answers are concatenated with double-newline separator.
 
     Args:
         query: User query text
         llm_call_fn: LLM invocation function (messages -> response)
         lang: Language ("zh" or "en")
+        num_docs: Number of hypothetical documents to generate (default 5)
 
     Returns:
-        Hypothetical answer text
+        Hypothetical answer text(s) joined with "\\n\\n" separator
     """
     prompt = _HYDE_PROMPT_EN if lang == "en" else _HYDE_PROMPT_ZH
     messages = [{"role": "user", "content": prompt.format(query=query)}]
 
     try:
         response = llm_call_fn(messages)
-        # Handle both string and object responses
         if hasattr(response, "content"):
-            return response.content.strip()
-        return str(response).strip()
+            text = response.content
+        else:
+            text = str(response)
+        answers = [a.strip() for a in text.split("[SEP]") if a.strip()]
+        if len(answers) > 1:
+            return "\n\n".join(answers[:num_docs])
+        return answers[0] if answers else ""
     except Exception as e:
         logger.warning("HyDE: failed to generate hypothetical answer: %s", e)
         return ""

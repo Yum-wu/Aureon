@@ -15,6 +15,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel, Field
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from app.rate_limit import limiter
 
 
 # ── CrossEncoder safety patch (MUST be early — patches sentence_transformers) ──
@@ -97,8 +98,6 @@ structlog.configure(
 )
 
 logger = structlog.get_logger()
-
-from app.rate_limit import limiter
 
 app = FastAPI(
     title="Aureon API",

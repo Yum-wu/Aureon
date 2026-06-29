@@ -7,6 +7,7 @@ import structlog
 from app.memory import l2_scenario
 from app.memory import l3_persona
 from app.memory import offload
+from app.memory.l1_atom import decay_stale_atoms
 from app.memory.storage import get_backend
 
 logger = structlog.get_logger()
@@ -34,6 +35,7 @@ class MemoryManager:
         self._sessions: dict[str, dict] = {}
         self._sessions_lock = threading.Lock()
         self._scenario_task: asyncio.Task | None = None
+        self._decay_task: asyncio.Task | None = None
 
     # ── Session lifecycle ──
 
@@ -154,14 +156,23 @@ User message: {content[:500]}"""
     # ── Background tasks ──
 
     def init_background_tasks(self):
-        """Start the periodic inactivity-checker task."""
-        if self._scenario_task is not None:
+        """Start the periodic inactivity-checker and decay tasks."""
+        if self._scenario_task is None:
+            self._scenario_task = asyncio.create_task(self._periodic_cleanup())
+            logger.info("Background scenario cleanup task started")
+        self._init_decay_task()
+
+    def _init_decay_task(self):
+        if self._decay_task is not None:
             return
-        self._scenario_task = asyncio.create_task(self._periodic_cleanup())
-        logger.info("Background scenario cleanup task started")
+        self._decay_task = asyncio.create_task(self._periodic_decay())
+        logger.info("Background decay task started")
 
     def flush_all_scenarios(self):
-        """Finalize scenarios for all active sessions (called on shutdown)."""
+        """Finalize scenarios for all active sessions and cancel decay task (called on shutdown)."""
+        if self._decay_task is not None:
+            self._decay_task.cancel()
+            self._decay_task = None
         with self._sessions_lock:
             session_ids = list(self._sessions.keys())
         for sid in session_ids:
@@ -170,6 +181,18 @@ User message: {content[:500]}"""
                 logger.info(f"Flushed scenario for session {sid}")
             except Exception as e:
                 logger.error(f"Failed to flush scenario for session {sid}: {e}")
+
+    async def _periodic_decay(self):
+        """Periodically decay stale atom confidence every 24 hours."""
+        try:
+            while True:
+                await asyncio.sleep(86400)
+                affected = await asyncio.to_thread(decay_stale_atoms)
+                logger.info(f"Decayed {affected} stale atoms")
+        except asyncio.CancelledError:
+            logger.info("Decay task cancelled — graceful shutdown")
+        except Exception as e:
+            logger.error(f"Decay task error: {e}")
 
     async def _periodic_cleanup(self):
         """Periodically check for inactive sessions and auto-finalize."""

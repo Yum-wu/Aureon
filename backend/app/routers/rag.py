@@ -563,8 +563,15 @@ async def rag_upload_endpoint(
     except Exception as e:
         raise AureonException(status_code=500, detail=f"File save failed: {str(e)}")
 
-    # Incremental index
-    result = run_incremental_index(dest)
+    # Incremental index (with optional Contextual Retrieval)
+    llm_call_fn = None
+    try:
+        from app.agent.llm import create_llm
+        llm = create_llm(temperature=0.0, streaming=False, max_tokens=150)
+        llm_call_fn = llm.invoke
+    except Exception:
+        logger.info("LLM not available, skipping Contextual Retrieval for incremental index")
+    result = run_incremental_index(dest, llm_call_fn=llm_call_fn)
 
     # Update metadata with provided language and title
     if language in ("zh", "en") and result.get("metadata"):

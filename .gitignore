@@ -102,6 +102,7 @@ new-onboarding-*.jpg
 # 临时调试文件
 _*.py
 !__init__.py
+!rag/_pipeline.py
 _*.bat
 _eslint_*
 process.exit*

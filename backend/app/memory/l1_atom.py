@@ -48,16 +48,60 @@ def save_atom(
     source_ref: int | None = None,
     confidence: float = 0.5,
 ):
-    """Save a single atomic fact to L1 table."""
+    """Save a single atomic fact to L1 table with conflict detection.
+
+    If an atom with the same session_id, subject, and predicate already
+    exists, updates object and takes the max confidence.
+    """
     _ensure_fts()
     conn = get_db()
-    conn.execute(
-        "INSERT INTO atoms (session_id, subject, predicate, object, source_ref, confidence) "
-        "VALUES (?, ?, ?, ?, ?, ?)",
-        (session_id, subject, predicate, obj, source_ref, confidence),
-    )
+    existing = conn.execute(
+        "SELECT id, confidence FROM atoms WHERE session_id = ? AND subject = ? AND predicate = ?",
+        (session_id, subject, predicate),
+    ).fetchone()
+
+    if existing:
+        new_conf = max(existing["confidence"], confidence)
+        conn.execute(
+            "UPDATE atoms SET object = ?, confidence = ?, source_ref = ?, updated_at = CURRENT_TIMESTAMP "
+            "WHERE id = ?",
+            (obj, new_conf, source_ref, existing["id"]),
+        )
+    else:
+        conn.execute(
+            "INSERT INTO atoms (session_id, subject, predicate, object, source_ref, confidence, updated_at, last_accessed) "
+            "VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+            (session_id, subject, predicate, obj, source_ref, confidence),
+        )
     conn.commit()
     logger.debug(f"L1 atom: {subject} {predicate} {obj}")
+
+
+def touch_atom(atom_id: int):
+    """Update last_accessed to now for the given atom."""
+    conn = get_db()
+    conn.execute(
+        "UPDATE atoms SET last_accessed = CURRENT_TIMESTAMP WHERE id = ?",
+        (atom_id,),
+    )
+    conn.commit()
+
+
+def decay_stale_atoms(days: int = 30, decay_factor: float = 0.9) -> int:
+    """Decay confidence of atoms not accessed in N days.
+
+    Returns the number of affected rows.
+    """
+    conn = get_db()
+    conn.execute(
+        "UPDATE atoms SET confidence = MAX(confidence * ?, 0.01), updated_at = CURRENT_TIMESTAMP "
+        "WHERE last_accessed IS NOT NULL AND julianday('now') - julianday(last_accessed) > ?",
+        (decay_factor, days),
+    )
+    conn.commit()
+    affected = conn.total_changes
+    logger.info(f"decayed {affected} stale atoms (days={days}, factor={decay_factor})")
+    return affected
 
 
 def search_atoms(session_id: str, query: str, limit: int = 10):

@@ -53,10 +53,13 @@ _VECTOR_MAX_CONTRIB = settings.vector_max_contrib
 _VECTOR_CONFIDENCE_THRESHOLD = settings.vector_confidence_threshold
 
 
-def run_incremental_index(filepath: str) -> dict:
+def run_incremental_index(filepath: str, llm_call_fn = None) -> dict:
     """Incremental index for a single uploaded file.
 
-    Loads → splits → adds to existing Chroma collection (does NOT rebuild).
+    Loads → splits → [contextual prefix] → adds to existing index (does NOT rebuild).
+
+    When llm_call_fn is provided, each chunk gets an LLM-generated context
+    prefix explaining its source document and position (Contextual Retrieval).
     """
     start = time.time()
 
@@ -80,24 +83,35 @@ def run_incremental_index(filepath: str) -> dict:
     # 2. Build chunks via the new ingestion pipeline
     chunks = build_chunks(Path(filepath))
 
-    # 3. 删除该文件的旧块，避免重复索引
+    # 3. Contextual Retrieval: add LLM-generated context prefix to each chunk
+    contextual_count = 0
+    if llm_call_fn and chunks:
+        chunk_dicts = chunks_to_dicts(chunks)
+        docs = [doc]
+        chunk_dicts = asyncio.run(_add_contextual_prefixes(chunk_dicts, docs, llm_call_fn))
+        contextual_count = sum(1 for c in chunk_dicts if c.get("metadata", {}).get("contextual_prefix"))
+    else:
+        chunk_dicts = chunks_to_dicts(chunks)
+
+    # 4. 删除该文件的旧块，避免重复索引
     from app.rag.vector_store import add_to_index, delete_from_index
     filename = os.path.basename(filepath)
     delete_from_index(filename)
     logger.info("Deleted old chunks for '%s' before re-indexing", filename)
 
-    # 4. Add to existing index (incremental) — convert ChunkRecord → dict
-    add_to_index(chunks_to_dicts(chunks))
+    # 5. Add to existing index (incremental)
+    add_to_index(chunk_dicts)
 
     elapsed = time.time() - start
     fname = os.path.basename(filepath).encode("ascii", errors="replace").decode("ascii")
-    logger.info("rag.incremental_index", file=fname, chunks=len(chunks), elapsed_s=round(elapsed, 1))
+    logger.info("rag.incremental_index", file=fname, chunks=len(chunks), contextual=contextual_count, elapsed_s=round(elapsed, 1))
 
     return {
         "status": "ok",
         "filename": os.path.basename(filepath),
         "documents_indexed": 1,
         "chunks_created": len(chunks),
+        "contextual_prefixes": contextual_count,
         "elapsed_seconds": round(elapsed, 1),
     }
 

@@ -64,12 +64,25 @@ def close_db():
 # -- Schema Versioning --
 # Lightweight migration mechanism for raw SQLite (no Alembic/SQLAlchemy needed).
 # Each migration is a function that receives a connection and bumps the version.
-_SCHEMA_VERSION = 1  # Current target version
+_SCHEMA_VERSION = 2  # Current target version
+
+
+def _migrate_v2(conn):
+    """Add updated_at and last_accessed columns to atoms table.
+
+    Idempotent: skips columns that already exist (fresh DB with CREATE TABLE),
+    adds them for databases created before v2.
+    """
+    for col in ("updated_at", "last_accessed"):
+        try:
+            conn.execute(f"ALTER TABLE atoms ADD COLUMN {col} TIMESTAMP")
+        except sqlite3.OperationalError:
+            pass  # Column already exists — fresh DB includes it in CREATE TABLE
+    conn.commit()
+
 
 _SCHEMA_MIGRATIONS = {
-    # version: migration_function
-    # Example:
-    # 2: lambda conn: conn.execute("ALTER TABLE conversations ADD COLUMN user_id TEXT"),
+    2: _migrate_v2,
 }
 
 
@@ -124,7 +137,9 @@ def init_db():
                     object TEXT NOT NULL,
                     source_ref INTEGER,
                     confidence REAL DEFAULT 0.5,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP,
+                    last_accessed TIMESTAMP
                 );
                 CREATE INDEX IF NOT EXISTS idx_conv_session ON conversations(session_id);
                 CREATE INDEX IF NOT EXISTS idx_conv_session_created ON conversations(session_id, created_at DESC);
