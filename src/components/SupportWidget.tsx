@@ -49,6 +49,8 @@ export function SupportWidget() {
   const [offlineStatus, setOfflineStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const offlineNameRef = useRef<HTMLInputElement>(null);
   const [streamingSources, setStreamingSources] = useState<Source[]>([]);
+  const streamingSourcesRef = useRef(streamingSources);
+  useEffect(() => { streamingSourcesRef.current = streamingSources; }, [streamingSources]);
   useSupportMessages(messages, setMessages, isStreaming);
   const { showGreeting, dismissGreeting } = useSupportGreeting(isOpen);
   const { increment, display: unreadDisplay } = useUnreadCount(isOpen);
@@ -88,7 +90,7 @@ export function SupportWidget() {
           setIsStreaming(false);
           setStreamingText((prev) => {
             if (prev) {
-              setMessages((msgs) => [...msgs, { role: 'assistant', content: prev, sources: streamingSources }]);
+              setMessages((msgs) => [...msgs, { role: 'assistant', content: prev, sources: streamingSourcesRef.current }]);
             }
             return '';
           });
