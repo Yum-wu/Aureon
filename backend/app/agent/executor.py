@@ -38,7 +38,10 @@ async def stream_agent(
 
     # 获取 Langfuse callback handler
     langfuse_handler = get_langfuse_handler()
-    stream_config = {"callbacks": [langfuse_handler]} if langfuse_handler else None
+    base_config = {"recursion_limit": 50}
+    if langfuse_handler:
+        base_config["callbacks"] = [langfuse_handler]
+    stream_config = base_config
 
     try:
         async for event in agent_graph.astream_events(

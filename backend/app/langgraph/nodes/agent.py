@@ -67,7 +67,10 @@ def run_agent_node(query: str, context: str = "", model: str = None) -> tuple:
         full_query = f"{_AGENT_SYSTEM_PREFIX.format(context=context)}\n\n用户问题：{query}"
 
     try:
-        result = agent.invoke({"messages": [HumanMessage(content=full_query)]})
+        result = agent.invoke(
+            {"messages": [HumanMessage(content=full_query)]},
+            {"recursion_limit": 50},
+        )
         output = result.get("output", str(result)) if isinstance(result, dict) else str(result)
         return output, []
     except Exception as e:
