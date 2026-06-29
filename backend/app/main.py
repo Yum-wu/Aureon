@@ -27,7 +27,6 @@ from app.api.websocket_chat import router as websocket_chat_router
 from app.api.ws_dashboard import router as ws_dashboard_router
 from app.audit.router import router as audit_router
 from app.config import settings
-from app.cost.router import router as cost_router
 from app.exceptions import AureonException
 from app.middleware.logging import logging_middleware
 from app.multi_tenant.middleware import TenantMiddleware
