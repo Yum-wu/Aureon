@@ -18,45 +18,46 @@ function generateId(): string {
 
 const SESSION_KEY = "search_session_id";
 
-// ── SSE Text Buffer (60ms debounce, reduces high-frequency set() calls) ──
-const SSE_FLUSH_INTERVAL = 60;
-let _textBuffer = "";
-let _flushTimer: ReturnType<typeof setTimeout> | null = null;
-let _currentAssistantId = "";
 
-function _flushBuffer(set: (fn: (state: ChatState) => Partial<ChatState>) => void) {
-  if (_flushTimer) {
-    clearTimeout(_flushTimer);
-    _flushTimer = null;
-  }
-  if (!_textBuffer) return;
-  const text = _textBuffer;
-  _textBuffer = "";
-  const aid = _currentAssistantId;
-  set((state) => {
-    const messages = [...state.messages];
-    const last = messages[messages.length - 1];
-    if (last && last.role === "assistant" && last.id === aid) {
-      messages[messages.length - 1] = { ...last, content: last.content + text };
-    }
-    return { messages };
-  });
-}
-
-function _scheduleFlush(set: (fn: (state: ChatState) => Partial<ChatState>) => void) {
-  if (_flushTimer) return;
-  _flushTimer = setTimeout(() => {
-    _flushTimer = null;
-    _flushBuffer(set);
-  }, SSE_FLUSH_INTERVAL);
-}
-
-function _appendText(chunk: string, set: (fn: (state: ChatState) => Partial<ChatState>) => void) {
-  _textBuffer += chunk;
-  _scheduleFlush(set);
-}
 
 export const useChatStore = create<ChatState>((set, get) => {
+  const SSE_FLUSH_INTERVAL = 60;
+  let _textBuffer = "";
+  let _flushTimer: ReturnType<typeof setTimeout> | null = null;
+  let _currentAssistantId = "";
+
+  const _flushBuffer = () => {
+    if (_flushTimer) {
+      clearTimeout(_flushTimer);
+      _flushTimer = null;
+    }
+    if (!_textBuffer) return;
+    const text = _textBuffer;
+    _textBuffer = "";
+    const aid = _currentAssistantId;
+    set((state) => {
+      const messages = [...state.messages];
+      const last = messages[messages.length - 1];
+      if (last && last.role === "assistant" && last.id === aid) {
+        messages[messages.length - 1] = { ...last, content: last.content + text };
+      }
+      return { messages };
+    });
+  };
+
+  const _scheduleFlush = () => {
+    if (_flushTimer) return;
+    _flushTimer = setTimeout(() => {
+      _flushTimer = null;
+      _flushBuffer();
+    }, SSE_FLUSH_INTERVAL);
+  };
+
+  const _appendText = (chunk: string) => {
+    _textBuffer += chunk;
+    _scheduleFlush();
+  };
+
   let abortController: AbortController | null = null;
   let sending = false;
   let sessionId: string | null = localStorage.getItem(SESSION_KEY);
@@ -71,12 +72,12 @@ export const useChatStore = create<ChatState>((set, get) => {
       }
       case "text": {
         const chunk = event.content as string;
-        _appendText(chunk, set);
+        _appendText(chunk);
         break;
       }
       case "tool_start":
       case "tool_end": {
-        _flushBuffer(set);
+        _flushBuffer();
         const info = event.content as Record<string, unknown>;
         const toolName = String(info.tool ?? "");
         set((state) => {
@@ -103,7 +104,7 @@ export const useChatStore = create<ChatState>((set, get) => {
         break;
       }
       case "sources": {
-        _flushBuffer(set);
+        _flushBuffer();
         const srcList = event.sources ?? (event.content as Array<{ title: string; slug: string; score?: number }>);
         if (srcList) {
           set((state) => {
@@ -118,7 +119,7 @@ export const useChatStore = create<ChatState>((set, get) => {
         break;
       }
       case "intent": {
-        _flushBuffer(set);
+        _flushBuffer();
         const intentData = event.content as { intent: string; confidence: number };
         set((state) => {
           const messages = [...state.messages];
@@ -131,7 +132,7 @@ export const useChatStore = create<ChatState>((set, get) => {
         break;
       }
       case "error": {
-        _flushBuffer(set);
+        _flushBuffer();
         const err = event.content as { message: string };
         set({ error: err.message });
         break;
@@ -193,7 +194,7 @@ export const useChatStore = create<ChatState>((set, get) => {
         signal: abortController.signal,
       });
 
-      _flushBuffer(set);
+      _flushBuffer();
 
       // 流结束：保存消息
       const { messages } = get();
@@ -205,7 +206,7 @@ export const useChatStore = create<ChatState>((set, get) => {
     },
 
     clearChat: () => {
-      _flushBuffer(set);
+      _flushBuffer();
       abortController?.abort();
       clearStorage();
       set({ messages: [], isLoading: false, error: null });
@@ -213,7 +214,7 @@ export const useChatStore = create<ChatState>((set, get) => {
     },
 
     stopGeneration: () => {
-      _flushBuffer(set);
+      _flushBuffer();
       abortController?.abort();
       set((state) => {
         const messages = [...state.messages];
