@@ -21,7 +21,11 @@ async def logging_middleware(request: Request, call_next):
 
     request_id = str(uuid.uuid4())[:8]
     structlog.contextvars.clear_contextvars()
-    structlog.contextvars.bind_contextvars(request_id=request_id)
+    structlog.contextvars.bind_contextvars(
+        request_id=request_id,
+        method=request.method,
+        path=request.url.path,
+    )
 
     # API Key authentication (skip when API_AUTH_KEY is not configured)
     # SSO login + demo-token endpoints are public — skip API key check
@@ -79,12 +83,7 @@ async def logging_middleware(request: Request, call_next):
         )
     elapsed = int((time.time() - start) * 1000)
 
-    # Security headers
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["X-XSS-Protection"] = "1; mode=block"
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
+
 
     logger.info(
         "request_completed",
