@@ -20,7 +20,17 @@ Aureon/
 │   │   ├── guardrails.py    # Prompt Injection 检测
 │   │   ├── evaluator.py     # Recall + Faithfulness + 延迟
 │   │   ├── models.py        # Pydantic 请求/响应
-│   │   └── query_router.py  # Adaptive-RAG 查询路由（按复杂度分配检索策略）
+│   │   ├── query_router.py  # Adaptive-RAG 查询路由（按复杂度分配检索策略）
+│   │   ├── loader.py        # 文档加载（load_single_document + 遗留包装函数 load_pdf/load_docx/load_excel）
+│   │   ├── indexer.py       # 索引管线（run_incremental_index / run_index_pipeline + contextual retrieval）
+│   │   ├── index_manager.py # Qdrant 索引 CRUD（add_to_index / delete_from_index）
+│   │   ├── ingestion/       # 文档摄取管线（按类型抽取 → 归一化 → 分块 → 质量门禁）
+│   │   │   ├── extractors.py    # 5 类型抽取（md/txt/pdf/docx/xlsx）
+│   │   │   ├── normalizer.py    # 文本归一化（空白/换行）
+│   │   │   ├── models.py        # 中间数据模型（IngestedDocument / ChunkRecord）
+│   │   │   ├── policy.py        # 分块策略（段落聚合 + section_path 跟踪）
+│   │   │   ├── quality.py       # 质量门禁（is_valid_chunk / is_informative_chunk / deduplicate_chunks）
+│   │   │   └── pipeline.py      # 编排入口（build_chunks / chunks_to_dicts）
 │   ├── cache/        # Redis + 内存缓存、语义缓存去重
 │   ├── routers/      # API 路由（chat.py, rag.py, crew.py, support.py）
 │   ├── features/     # Feature Flag（灰度发布）
@@ -39,7 +49,7 @@ Aureon/
 │   ├── config.py     # pydantic_settings（所有环境变量统一在此）
 │   ├── exceptions.py # AureonException 层级异常体系
 │   └── main.py       # FastAPI 入口 + Auth Middleware + TenantMiddleware
-├── backend/tests/     # 1008 passed (CI 2026-06-25)
+├── backend/tests/     # 1010 passed (CI 2026-06-29)
 ├── src/               # React 前端
 │   ├── components/ hooks/ pages/ services/ i18n/ types/
 │   │   ├── shared/SourceCard.tsx     # 可展开来源引用
