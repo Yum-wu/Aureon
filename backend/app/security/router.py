@@ -4,8 +4,7 @@ import os
 import structlog
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
-from slowapi import Limiter
-from slowapi.util import get_remote_address
+from app.rate_limit import limiter
 from app.security import (
     PIIDetector,
     SSOProvider,
@@ -22,7 +21,6 @@ from app.exceptions import NotFoundError, AuthenticationError
 logger = structlog.get_logger(__name__)
 
 router = APIRouter(tags=["Security"])
-limiter = Limiter(key_func=get_remote_address)
 
 # PII 检测器实例
 pii_detector = PIIDetector()

@@ -14,17 +14,15 @@ import time
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 import structlog
 
 from app.config import settings
 from app.common import SSE_HEADERS
+from app.rate_limit import limiter
 
 logger = structlog.get_logger()
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
 
 
 class CrewGenerateRequest(BaseModel):

@@ -19,8 +19,6 @@ import time
 
 from fastapi import APIRouter, Request, UploadFile, File, Form, Depends
 from fastapi.responses import StreamingResponse
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 import structlog
 
 from app.api.models import StatusResponse
@@ -53,11 +51,11 @@ from app.rag.test_data import TEST_QA_PAIRS
 from app.rag.vector_store import retrieve, get_bm25_stats
 from app.audit.decorator import audit_action
 from app.multi_tenant.middleware import get_current_tenant_id
+from app.rate_limit import limiter
 
 logger = structlog.get_logger()
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
 
 
 def _record_dashboard_metrics(

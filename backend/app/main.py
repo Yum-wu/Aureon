@@ -13,9 +13,8 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel, Field
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 from starlette.routing import Match, Mount
 
 # ── CrossEncoder safety patch (MUST be early — patches sentence_transformers) ──
@@ -135,8 +134,7 @@ structlog.configure(
 
 logger = structlog.get_logger()
 
-# ── Rate limiter ──
-limiter = Limiter(key_func=get_remote_address)
+from app.rate_limit import limiter
 
 app = FastAPI(
     title="Aureon API",
@@ -148,7 +146,6 @@ app = FastAPI(
 executor = ThreadPoolExecutor(max_workers=64)
 app.state.executor = executor
 
-app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS allowed headers whitelist (not ["*"] to prevent header forgery)

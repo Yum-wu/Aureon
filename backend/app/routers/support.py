@@ -3,13 +3,11 @@ import structlog
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from app.database.connection import get_db_pool
+from app.rate_limit import limiter
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/api/v1/support", tags=["Support"])
-limiter = Limiter(key_func=get_remote_address)
 
 
 class OfflineMessage(BaseModel):

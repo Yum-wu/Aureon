@@ -17,12 +17,12 @@ from app.rag.classifier import (
     classify_query_answerable,
     classify_query_answerable_sync,
     _NEGATIVE_DETECTION_ENABLED,
-    _HIGH_SCORE_SKIP_THRESHOLD,
     _CONTEXT_COMPRESSION_THRESHOLD,
 )
 from app.rag.retriever import multi_query_retrieve, hybrid_retrieve
 from app.utils.lang_detect import detect_language, lang_instruction
 from app.config import settings
+from app.rag._pipeline import should_use_hyde, should_skip_negative_detection
 from app.observability.prompt_manager import register_prompt, get_prompt
 
 import structlog
@@ -289,7 +289,7 @@ def rag_query(
     from app.rag.query_classifier import route_retrieval
     route = route_retrieval(query)
 
-    if _HYDE_ENABLED and route in ("medium", "complex"):
+    if should_use_hyde(route):
         logger.info("HyDE enabled for %s query: using hypothetical answer for retrieval", route)
         chunks = hyde_retrieve(
             query,
@@ -321,18 +321,17 @@ def rag_query(
     #    classification when retrieval confidence is very high.
     if _NEGATIVE_DETECTION_ENABLED and chunks:
         top_score = max(c.get("score", 0) for c in chunks) if chunks else 0
-        if top_score < _HIGH_SCORE_SKIP_THRESHOLD:
-            if not classify_query_answerable_sync(query, llm_call_fn):
-                return RAGQueryResponse(
-                    answer=(
-                        "抱歉，该问题超出了知识库的覆盖范围。"
-                        if lang == "zh"
-                        else "Sorry, this question is outside the scope of the knowledge base."
-                    ),
-                    sources=[],
-                )
-        else:
-            logger.info("Skipping negative detection (top_score=%.4f >= %.4f)", top_score, _HIGH_SCORE_SKIP_THRESHOLD)
+        if should_skip_negative_detection(top_score):
+            logger.info("Skipping negative detection (top_score=%.4f >= %.4f)", top_score, settings.high_score_skip_threshold)
+        elif not classify_query_answerable_sync(query, llm_call_fn):
+            return RAGQueryResponse(
+                answer=(
+                    "抱歉，该问题超出了知识库的覆盖范围。"
+                    if lang == "zh"
+                    else "Sorry, this question is outside the scope of the knowledge base."
+                ),
+                sources=[],
+            )
 
     # 1b. Context compression: filter chunks by embedding similarity to query
     #     Skip for simple queries with high retrieval confidence (already optimal)
@@ -480,7 +479,7 @@ async def rag_query_astream(
         )
     else:
         # 复杂查询：完整 pipeline + HyDE
-        if _HYDE_ENABLED:
+        if should_use_hyde(route):
             logger.info("HyDE enabled for complex query in streaming mode")
             from app.rag.query_rewriter import hyde_retrieve_async
             async def _llm_call_fn(messages):
@@ -532,7 +531,9 @@ async def rag_query_astream(
     # This saves one LLM call per high-confidence query (~50% of production traffic).
     if _NEGATIVE_DETECTION_ENABLED and chunks:
         top_score = max(c.get("score", 0) for c in chunks) if chunks else 0
-        if top_score < _HIGH_SCORE_SKIP_THRESHOLD:
+        if should_skip_negative_detection(top_score):
+            logger.info("Skipping negative detection (top_score=%.4f >= %.4f)", top_score, settings.high_score_skip_threshold)
+        else:
             answerable = await classify_query_answerable(query, model=model)
             if not answerable:
                 yield {"type": "sources", "sources": []}
@@ -543,8 +544,6 @@ async def rag_query_astream(
                 )
                 yield {"type": "text", "content": no_answer_msg}
                 return
-        else:
-            logger.info("Skipping negative detection (top_score=%.4f >= %.4f)", top_score, _HIGH_SCORE_SKIP_THRESHOLD)
 
     # 1b. Context compression: filter chunks by embedding similarity to query
     #     Skip for simple queries with high retrieval confidence (already optimal)
