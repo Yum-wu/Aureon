@@ -59,8 +59,8 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None, query_c
         from app.rag.vector_store import hybrid_search_qdrant
         return hybrid_search_qdrant(query, top_k=top_k, lang_filter=lang_filter, query_complexity=query_complexity)
 
-    bm25_results = retrieve_keyword(query, top_k=top_k * _RETRIEVAL_MULTIPLIER, lang_filter=lang_filter)
-    vector_results = retrieve(query, top_k=top_k * _RETRIEVAL_MULTIPLIER, use_mmr=False, lang_filter=lang_filter)
+    bm25_results = retrieve_keyword(query, top_k=settings.retrieval_candidates, lang_filter=lang_filter)
+    vector_results = retrieve(query, top_k=settings.retrieval_candidates, use_mmr=False, lang_filter=lang_filter)
 
     # Use all vector results — quality check removed to avoid false discards
     # on small collections where cosine scores naturally cluster together

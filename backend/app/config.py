@@ -45,6 +45,7 @@ class VectorStoreSettings(BaseModel):
     qdrant_collection: str = "aureon"
     rrf_k: int = 60
     retrieval_multiplier: int = 12  # 优化：增加检索候选数提升 Recall
+    retrieval_candidates: int = 150  # 初始检索候选数（Anthropic CR paper 推荐）
     multi_query_enabled: bool = True
     semantic_chunking_enabled: bool = True
     min_relevance_score: float = 0.003
