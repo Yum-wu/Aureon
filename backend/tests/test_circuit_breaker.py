@@ -11,9 +11,6 @@ from app.reliability.circuit_breaker import (
     get_all_circuit_breakers,
     reset_all_circuit_breakers,
     create_llm_circuit_breaker,
-    llm_circuit_breaker,
-    embedding_circuit_breaker,
-    reranker_circuit_breaker,
     wrap_llm_call,
 )
 
@@ -214,27 +211,6 @@ async def test_wrap_llm_call():
     
     # Cleanup
     reset_all_circuit_breakers()
-
-
-@pytest.mark.asyncio
-async def test_llm_circuit_breaker_singleton():
-    """Test LLM circuit breaker singleton"""
-    assert llm_circuit_breaker is not None
-    assert llm_circuit_breaker.name == "llm_api"
-
-
-@pytest.mark.asyncio
-async def test_embedding_circuit_breaker_singleton():
-    """Test embedding circuit breaker singleton"""
-    assert embedding_circuit_breaker is not None
-    assert embedding_circuit_breaker.name == "embedding_api"
-
-
-@pytest.mark.asyncio
-async def test_reranker_circuit_breaker_singleton():
-    """Test reranker circuit breaker singleton"""
-    assert reranker_circuit_breaker is not None
-    assert reranker_circuit_breaker.name == "reranker_api"
 
 
 @pytest.mark.asyncio

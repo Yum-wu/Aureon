@@ -2,7 +2,6 @@
 
 Provides backup management, incident tracking, SLO monitoring, and circuit breaker pattern.
 """
-import warnings
 from datetime import datetime, timezone
 from typing import Optional
 from pydantic import BaseModel, Field
@@ -18,43 +17,7 @@ from .circuit_breaker import (
     get_all_circuit_breakers,
     reset_all_circuit_breakers,
     create_llm_circuit_breaker,
-    llm_circuit_breaker,
-    embedding_circuit_breaker,
-    reranker_circuit_breaker,
     wrap_llm_call,
-)
-
-# Phase 3: Bulkhead 隔舱模式
-from .bulkhead import (
-    Bulkhead,
-    BulkheadFullError,
-    bulkhead,
-    get_bulkhead,
-    get_all_bulkhead_stats,
-    reset_all_bulkheads,
-    redis_bulkhead,
-    qdrant_bulkhead,
-    llm_bulkhead,
-    embedding_bulkhead,
-)
-
-# Phase 3: 超时级联
-# 注意：TimeoutError 与内置冲突，以 LayerTimeoutError 别名导出
-from .timeouts import (
-    TIMEOUT_HIERARCHY,
-    with_timeout,
-    call_with_timeout,
-)
-from .timeouts import TimeoutError as LayerTimeoutError
-
-# Phase 4: Chaos Engineering
-from .chaos import (
-    ChaosConfig,
-    chaos,
-    enable_chaos,
-    disable_chaos,
-    is_chaos_enabled,
-    register_chaos_rule,
 )
 
 logger = structlog.get_logger()
@@ -105,62 +68,6 @@ class SLOStatus(BaseModel):
     current_value: float
     is_met: bool
     error_budget_remaining: float  # 剩余错误预算百分比
-
-
-# ── Circuit Breaker ──
-# 使用 circuit_breaker 模块中的实现
-# 保留旧的 CircuitBreaker 类用于向后兼容
-
-class LegacyCircuitBreaker:
-    """旧版熔断器（已弃用）
-    
-    请使用 circuit_breaker 模块中的新实现。
-    """
-
-    def __init__(self, failure_threshold: int = 5, recovery_timeout: int = 30):
-        warnings.warn(
-            "LegacyCircuitBreaker 已弃用，请使用 circuit_breaker.CircuitBreaker",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.failure_threshold = failure_threshold
-        self.recovery_timeout = recovery_timeout
-        self.failure_count = 0
-        self.last_failure_time = None
-        self.state = "closed"  # closed/open/half-open
-
-    def record_failure(self):
-        """记录失败"""
-        self.failure_count += 1
-        self.last_failure_time = datetime.now(timezone.utc)
-
-        if self.failure_count >= self.failure_threshold:
-            self.state = "open"
-            logger.warning(
-                "circuit_breaker_opened",
-                failure_count=self.failure_count,
-            )
-
-    def record_success(self):
-        """记录成功"""
-        self.failure_count = 0
-        self.state = "closed"
-
-    def can_execute(self) -> bool:
-        """是否可以执行"""
-        if self.state == "closed":
-            return True
-
-        if self.state == "open":
-            if self.last_failure_time:
-                elapsed = (datetime.now(timezone.utc) - self.last_failure_time).seconds
-                if elapsed >= self.recovery_timeout:
-                    self.state = "half-open"
-                    return True
-            return False
-
-        # half-open 状态允许一次尝试
-        return True
 
 
 # ── Database Operations ──
@@ -473,42 +380,12 @@ __all__ = [
     "CircuitState",
     "CircuitBreaker",
     "CircuitBreakerError",
-    "LegacyCircuitBreaker",
     "circuit_breaker",
     "get_circuit_breaker",
     "get_all_circuit_breakers",
     "reset_all_circuit_breakers",
     "create_llm_circuit_breaker",
-    "llm_circuit_breaker",
-    "embedding_circuit_breaker",
-    "reranker_circuit_breaker",
     "wrap_llm_call",
-
-    # Phase 3: Bulkhead 隔舱模式
-    "Bulkhead",
-    "BulkheadFullError",
-    "bulkhead",
-    "get_bulkhead",
-    "get_all_bulkhead_stats",
-    "reset_all_bulkheads",
-    "redis_bulkhead",
-    "qdrant_bulkhead",
-    "llm_bulkhead",
-    "embedding_bulkhead",
-
-    # Phase 3: 超时级联
-    "TIMEOUT_HIERARCHY",
-    "with_timeout",
-    "call_with_timeout",
-    "LayerTimeoutError",
-
-    # Phase 4: Chaos Engineering
-    "ChaosConfig",
-    "chaos",
-    "enable_chaos",
-    "disable_chaos",
-    "is_chaos_enabled",
-    "register_chaos_rule",
 
     # 数据库操作
     "init_reliability_tables",

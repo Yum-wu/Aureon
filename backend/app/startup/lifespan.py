@@ -58,12 +58,10 @@ async def lifespan(app: FastAPI):
     backend.init()
 
     # ── Core modules (always initialized) ──
-    from app.features import init_feature_flags_table
     from app.observability import init_query_traces_table
     from app.security import init_pii_detection_table, init_sso_providers_table
     from app.audit import init_audit_tables
     from app.memory.pg import init_pg_tables
-    init_feature_flags_table()
     init_query_traces_table()
     init_pii_detection_table()
     init_sso_providers_table()
@@ -73,28 +71,12 @@ async def lifespan(app: FastAPI):
     # ── PostgreSQL asyncpg pool (parallel to existing SQLite/SQLAlchemy) ──
     await init_pg_db()
 
-    # ── Experimental modules (conditional on EXPERIMENTAL_MODULES env var) ──
-    # Default: enabled for backward compatibility.
-    # Set EXPERIMENTAL_MODULES=false to skip init and reduce startup overhead.
-    _experimental = os.environ.get("EXPERIMENTAL_MODULES", "true").lower() != "false"
-    if _experimental:
-        try:
-            from app.evaluation import init_evaluation_tables
-            from app.cost import init_cost_tables
-            from app.reliability import init_reliability_tables
-            from app.knowledge import init_knowledge_tables
-            from app.ai_platform import init_ai_platform_tables
-            from app.integration import init_integration_tables
-            init_evaluation_tables()
-            init_cost_tables()
-            init_reliability_tables()
-            init_knowledge_tables()
-            init_ai_platform_tables()
-            init_integration_tables()
-        except Exception as e:
-            logger.warning("Experimental module init failed (non-fatal): %s", e)
-    else:
-        logger.info("Experimental modules disabled (EXPERIMENTAL_MODULES=false)")
+    # ── Experimental modules ──
+    try:
+        from app.reliability import init_reliability_tables
+        init_reliability_tables()
+    except Exception as e:
+        logger.warning("Experimental module init failed (non-fatal): %s", e)
     memory_manager.init_background_tasks()
 
     # Background BM25 + ChromaDB warmup + auto-rebuild (non-blocking)

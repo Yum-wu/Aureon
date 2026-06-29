@@ -317,12 +317,6 @@ def create_llm_circuit_breaker(
     )
 
 
-# Singleton instances for common use cases
-llm_circuit_breaker = create_llm_circuit_breaker()
-embedding_circuit_breaker = create_llm_circuit_breaker(name="embedding_api")
-reranker_circuit_breaker = create_llm_circuit_breaker(name="reranker_api")
-
-
 async def wrap_llm_call(
     func: Callable[..., T],
     name: Optional[str] = None,

@@ -256,3 +256,36 @@ P3: indexer.py doc_text 截断 2000→8000, chunk_text 不截断, prompt 增加�
 6. **R19 核心突破**：动态 rerank 阈值（simple:0.55, medium:0.40, complex:0.30）成功解决了"一刀切阈值对复杂查询过度过滤"的问题，Recall@5 从 83.8% 提升到 100.0%，且未引入噪声影响其他指标
 7. **R16-R18 核心教训**：P0（rerank_top=20）和 P1（软过滤三级策略）和 P4（title boost）都导致 Contextual Relevancy/Recall 退化。**全局降低阈值会引入噪声，但按查询复杂度动态调整阈值可以避免这个问题**
 8. **DashScope API 欠费风险**：2026-06-17 发生 DashScope 欠费导致生产环境 503，benchmark 无法运行。需监控 API 余额
+
+## 2026-06-29 过度工程清理
+
+单次清理 **-5,719 行**，删除 17 个文件，编辑 6 个文件，测试 0 回归。
+
+**删除模块**（不可重新添加）：
+- `ai_platform/`, `features/`, `integration/`, `knowledge/` — 5 个 CRUD API shell，无生产消费者
+- `evaluation/router.py` — 评估 API 端点（保留 `__init__.py` 供给 `eval_runner.py` 使用）
+- `reliability/bulkhead.py`, `chaos.py`, `timeouts.py` — 被 `concurrency.py` 替代（Semaphore 模式）
+- `post_generation_reflection.py`, `threshold_tuner.py`, `reranking_ab_test.py` — 推测性代码，无生产调用
+- `vector_store_interface.py` — ABC 接口，0 个实现
+- `api/analytics_store.py` — PostgreSQL fallback，生产无 PostgreSQL
+- 旧 SQLite cost CRUD（`cost/__init__.py` 函数 + `cost/router.py` 端点）— Redis 时间序列已完全替代
+- 3 个 CB 单例（llm/embedding/reranker）— 从未被生产代码导入
+- LegacyCircuitBreaker — 已弃用的旧实现
+- `main.py` 中 5 个推测性 router import + `lifespan.py` 中 7 个 init 调用
+- 12 个对应测试文件
+
+**保留**：
+- `evaluation/__init__.py` — 给 `tests/eval_runner.py` 用
+- `cost/service.py` / `cost/models.py` / `cost/budget_engine.py` — Redis 时间序列路径
+- `TOKEN_PRICING` + `calculate_cost` — 被 `cost/service.py` 和路由引用
+- CircuitBreaker 类 + `wrap_llm_call` — 有实际调用者
+- BM25 — 仍被生产使用（标记 🔄 待废弃）
+
+## MVP 边界
+
+当前是 MVP，非生产级产品。以下原则约束所有改动：
+- **YAGNI**：不需要的功能不加。猜未来需要 = 不加，到时再加
+- **最短路径**：能用 stdlib 不用依赖，能删一行不写两行，能用原生 HTML/CSS 不写 JS
+- **不抽象**：一个实现不写接口，一个产品不写工厂，不变的值不写成配置
+- **不加候选**：历史教训——增加候选数（5→12）导致 AC -20%、E2E 13.7s。除非 benchmark 证明收益，否则不动 top_k/候选数/阈值
+- **不动稳定指标**：R19 Recall@5=100%、MRR=0.968、E2E P50=856ms 已达目标。没有新需求就别碰检索参数

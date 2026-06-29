@@ -28,12 +28,7 @@ from app.api.ws_dashboard import router as ws_dashboard_router
 from app.audit.router import router as audit_router
 from app.config import settings
 from app.cost.router import router as cost_router
-from app.evaluation.router import router as evaluation_router
 from app.exceptions import AureonException
-from app.features.router import router as feature_flags_router
-from app.integration.router import router as integration_router
-from app.knowledge.router import router as knowledge_router
-from app.ai_platform.router import router as ai_platform_router
 from app.middleware.logging import logging_middleware
 from app.multi_tenant.middleware import TenantMiddleware
 from app.observability.router import router as observability_router
@@ -248,7 +243,6 @@ app.include_router(rag_router.router, prefix="/api/v1/rag", tags=["rag"])
 app.include_router(crew_router.router, prefix="/api/v1/crew", tags=["crew"])
 app.include_router(stats_router)
 app.include_router(analytics_router)
-app.include_router(feature_flags_router)
 app.include_router(observability_router, prefix="/api/v1/observability")
 app.include_router(security_router, prefix="/api/v1/security")
 app.include_router(audit_router, prefix="/api/v1/audit")
@@ -258,14 +252,7 @@ app.include_router(users_router)
 app.include_router(roles_router)
 app.include_router(support_router)
 
-# ── Experimental routes (conditional on EXPERIMENTAL_MODULES env var) ──
-if os.environ.get("EXPERIMENTAL_MODULES", "true").lower() != "false":
-    app.include_router(evaluation_router)
-    app.include_router(cost_router)
-    app.include_router(reliability_router)
-    app.include_router(knowledge_router, prefix="/api/v1/knowledge")
-    app.include_router(ai_platform_router)
-    app.include_router(integration_router)
+app.include_router(reliability_router)
 
 # ── SPA 静态文件（必须在 API 路由之后） ──
 static_dir = os.path.join(os.path.dirname(__file__), "..", "static")

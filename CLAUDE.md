@@ -33,23 +33,18 @@ Aureon/
 │   │   │   └── pipeline.py      # 编排入口（build_chunks / chunks_to_dicts）
 │   ├── cache/        # Redis + 内存缓存、语义缓存去重
 │   ├── routers/      # API 路由（chat.py, rag.py, crew.py, support.py）
-│   ├── features/     # Feature Flag（灰度发布）
 │   ├── observability/ # Query Trace、统计
 │   │   ├── langfuse_integration.py  # LangFuse CallbackHandler 初始化/注入/关闭
 │   ├── security/     # PII、SSO（Fernet 加密）、Rate Limiting
-│   ├── evaluation/   # 评估指标、基准测试
-│   ├── cost/         # 成本追踪、Budget
+│   ├── cost/         # 成本追踪、Budget（Redis 时间序列）
 │   ├── reliability/  # 备份、事件、SLO、熔断器
-│   ├── knowledge/    # 文档版本、导出
-│   ├── ai_platform/  # LLM Router、置信度、会话记忆
-│   ├── integration/  # 企业连接器、IM Bot
 │   ├── langgraph/    # 工作流引擎 + MCP
 │   ├── api/          # 模型 + Analytics
 │   ├── common.py     # SSE_HEADERS, sse_event(), mask_secret
 │   ├── config.py     # pydantic_settings（所有环境变量统一在此）
 │   ├── exceptions.py # AureonException 层级异常体系
 │   └── main.py       # FastAPI 入口 + Auth Middleware + TenantMiddleware
-├── backend/tests/     # 1010 passed (CI 2026-06-29)
+├── backend/tests/     # 894 passed (CI 2026-06-29, -12 测试文件随清理删除)
 ├── src/               # React 前端
 │   ├── components/ hooks/ pages/ services/ i18n/ types/
 │   │   ├── shared/SourceCard.tsx     # 可展开来源引用
@@ -62,6 +57,12 @@ Aureon/
 │   └── hooks/AuthProvider.tsx        # Auth Provider
 └── docker-compose.yml
 ```
+
+## 前置要求
+
+- **改动前必读 `CONTEXT.md`**：了解领域术语、系统边界、历史教训（尤其 RAG 优化经验教训），避免重复踩坑
+- **MVP 模式 + 架构精简（2026-06-29）**：当前是 MVP，禁止过度工程化。加功能前问自己：不加会怎样？能用 stdlib 吗？能删一行吗？
+- **已删除模块禁止重新添加**（单次清理 -5719 行）：ai_platform、features、integration、knowledge、evaluation 路由、bulkhead、chaos、timeouts、post_generation_reflection、threshold_tuner、reranking_ab_test、vector_store_interface、analytics_store、旧 SQLite cost CRUD。有新增需求先在 CONTEXT.md 提 issue 讨论。
 
 ## 开发规范
 
@@ -264,15 +265,10 @@ npx vite preview --port 5174 --host 127.0.0.1
 | POST | /api/v1/support/offline-message | Support 离线消息 |
 | WS | /ws/chat/{client_id} | WebSocket 实时聊天 |
 | GET | /metrics | Prometheus 指标 |
-| * | /api/feature-flags/* | Feature Flags |
 | * | /api/observability/* | 查询追踪 |
 | * | /api/security/* | SSO/PKI 管理 |
-| * | /api/evaluation/* | 评估指标 |
 | * | /api/cost/* | 成本追踪 |
 | * | /api/reliability/* | SLO/熔断器 |
-| * | /api/knowledge/* | 文档版本 |
-| * | /api/ai-platform/* | LLM Router |
-| * | /api/integration/* | 企业连接器 |
 | * | /api/audit/* | 审计日志 |
 
 **认证**：配置 `API_AUTH_KEY` 后，所有 `/api/` 端点需 `X-API-Key` header（白名单：`/api/health`、`/api/crew/health`、`/metrics`）。SSO/RBAC 端点需 `Authorization: Bearer <JWT>` header，JWT 签名密钥由 `JWT_SECRET` 环境变量提供。
