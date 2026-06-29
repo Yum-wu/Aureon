@@ -3,12 +3,19 @@ Document loader for RAG system.
 Loads Markdown blog posts, parses frontmatter, and splits into chunks.
 """
 
-import re
 from typing import List, Dict, Any
 from pathlib import Path
 
 import structlog
 
+from app.rag.ingestion.extractors import (
+    extract_docx_document,
+    extract_markdown_document,
+    extract_pdf_document,
+    parse_frontmatter,
+    extract_text_document,
+    extract_xlsx_document,
+)
 from app.utils.lang_detect import detect_language as _detect_text_language
 
 logger = structlog.get_logger()
@@ -24,33 +31,10 @@ def detect_doc_language(content: str, frontmatter_lang: str = None) -> str:
     return _detect_text_language(content[:500])
 
 
-def parse_frontmatter(content: str) -> tuple[Dict[str, Any], str]:
-    """Parse YAML frontmatter from Markdown content. Return (metadata, body)."""
-    match = re.match(r"^---\s*\n(.*?)\n---\s*\n(.*)", content, re.DOTALL)
-    if not match:
-        return {}, content
-
-    frontmatter_text = match.group(1)
-    body = match.group(2).strip()
-
-    metadata = {}
-    for line in frontmatter_text.strip().split("\n"):
-        if ":" in line:
-            key, _, value = line.partition(":")
-            key = key.strip()
-            value = value.strip().strip('"').strip("'")
-            # Parse lists like tags: [AI, Hermes Agent]
-            if value.startswith("[") and value.endswith("]"):
-                value = [v.strip().strip('"').strip("'") for v in value[1:-1].split(",")]
-            metadata[key] = value
-
-    return metadata, body
-
-
 def load_single_document(filepath: str) -> Dict[str, Any]:
     """Load a single document and return {metadata, content}.
 
-    Supports: .md, .txt, .pdf, .docx, .xlsx/.xls
+    Supports: .md, .txt, .pdf, .docx, .xlsx
     Args:
         filepath: Absolute path to file.
     Returns:
@@ -60,140 +44,35 @@ def load_single_document(filepath: str) -> Dict[str, Any]:
     suffix = fpath.suffix.lower()
 
     if suffix == ".md":
-        content = fpath.read_text(encoding="utf-8")
-        metadata, body = parse_frontmatter(content)
-        lang = detect_doc_language(body, metadata.get("lang"))
+        doc = extract_markdown_document(fpath)
+        metadata = dict(doc.metadata)
+        metadata.pop("file_type", None)
         return {
-            "metadata": {
-                "source": fpath.name,
-                "title": metadata.get("title", fpath.stem),
-                "slug": metadata.get("slug", fpath.stem),
-                "tags": metadata.get("tags", []),
-                "category": metadata.get("category", ""),
-                "filepath": str(fpath),
-                "language": lang,
-                "uploaded": True,
-            },
-            "content": body,
+            "metadata": {**metadata, "uploaded": True},
+            "content": doc.content,
         }
     elif suffix == ".txt":
-        content = fpath.read_text(encoding="utf-8")
-        return {
-            "metadata": {
-                "source": fpath.name,
-                "title": fpath.stem,
-                "slug": fpath.stem,
-                "tags": [],
-                "category": "upload",
-                "filepath": str(fpath),
-                "language": _detect_text_language(content[:500]),
-                "uploaded": True,
-            },
-            "content": content,
-        }
+        doc = extract_text_document(fpath)
+        metadata = dict(doc.metadata)
+        metadata.pop("file_type", None)
+        return {"metadata": {**metadata, "uploaded": True}, "content": doc.content}
     elif suffix == ".pdf":
-        result = load_pdf(filepath)
-        return {
-            "metadata": {**result["metadata"], "slug": fpath.stem, "tags": [], "category": "upload", "filepath": str(fpath), "uploaded": True},
-            "content": result["content"],
-        }
+        doc = extract_pdf_document(fpath)
+        metadata = dict(doc.metadata)
+        metadata.pop("file_type", None)
+        return {"metadata": {**metadata, "uploaded": True}, "content": doc.content}
     elif suffix == ".docx":
-        result = load_docx(filepath)
-        return {
-            "metadata": {**result["metadata"], "slug": fpath.stem, "tags": [], "category": "upload", "filepath": str(fpath), "uploaded": True},
-            "content": result["content"],
-        }
-    elif suffix in (".xlsx", ".xls"):
-        result = load_excel(filepath)
-        return {
-            "metadata": {**result["metadata"], "slug": fpath.stem, "tags": [], "category": "upload", "filepath": str(fpath), "uploaded": True},
-            "content": result["content"],
-        }
+        chunks = extract_docx_document(fpath)
+        metadata = dict(chunks[0].metadata)
+        metadata.pop("file_type", None)
+        return {"metadata": {**metadata, "uploaded": True}, "content": chunks[0].text}
+    elif suffix == ".xlsx":
+        chunks = extract_xlsx_document(fpath)
+        metadata = dict(chunks[0].metadata)
+        metadata.pop("file_type", None)
+        return {"metadata": {**metadata, "uploaded": True}, "content": chunks[0].text}
     else:
         raise ValueError(f"Unsupported file type: {suffix}")
-
-
-def load_pdf(filepath: str) -> Dict[str, Any]:
-    """Load a PDF file, extract text from all pages.
-
-    Returns dict with keys: content, metadata
-    """
-    from pypdf import PdfReader
-    fpath = Path(filepath)
-    reader = PdfReader(str(fpath))
-    pages = []
-    for page in reader.pages:
-        text = page.extract_text()
-        if text:
-            pages.append(text.strip())
-    content = "\n\n".join(pages)
-    lang = _detect_text_language(content[:500]) if content else "en"
-    return {
-        "content": content,
-        "metadata": {
-            "source": fpath.name,
-            "title": fpath.stem,
-            "language": lang,
-            "file_type": "pdf",
-        },
-    }
-
-
-def load_docx(filepath: str) -> Dict[str, Any]:
-    """Load a .docx file, extract paragraph text.
-
-    Returns dict with keys: content, metadata
-    """
-    from docx import Document
-    fpath = Path(filepath)
-    doc = Document(str(fpath))
-    paragraphs = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
-    content = "\n\n".join(paragraphs)
-    lang = _detect_text_language(content[:500]) if content else "en"
-    return {
-        "content": content,
-        "metadata": {
-            "source": fpath.name,
-            "title": fpath.stem,
-            "language": lang,
-            "file_type": "docx",
-        },
-    }
-
-
-def load_excel(filepath: str) -> Dict[str, Any]:
-    """Load an Excel file, convert rows to 'col: value' text lines.
-
-    Returns dict with keys: content, metadata
-    """
-    from openpyxl import load_workbook
-    fpath = Path(filepath)
-    wb = load_workbook(str(fpath), read_only=True, data_only=True)
-    lines = []
-    for ws in wb.worksheets:
-        headers = []
-        for row in ws.iter_rows(values_only=True):
-            if not headers:
-                headers = [str(h) if h is not None else f"col{i}" for i, h in enumerate(row)]
-                continue
-            parts = []
-            for h, v in zip(headers, row):
-                if v is not None:
-                    parts.append(f"{h}: {v}")
-            if parts:
-                lines.append(", ".join(parts))
-    content = "\n".join(lines)
-    lang = _detect_text_language(content[:500]) if content else "en"
-    wb.close()
-    return {
-        "content": content,
-        "metadata": {
-            "source": fpath.name,
-            "title": fpath.stem,
-            "language": lang,
-            "file_type": "xlsx",
-        },
-    }
 
 
 def load_markdown_files(articles_dir: str) -> List[Dict[str, Any]]:
@@ -230,3 +109,33 @@ def load_markdown_files(articles_dir: str) -> List[Dict[str, Any]]:
 
     logger.info("Loaded %d documents from %s", len(docs), articles_dir)
     return docs
+
+
+# ── Legacy loader wrappers (used by tests) ──
+
+
+def load_pdf(filepath: str) -> Dict[str, Any]:
+    """Load a PDF file and return {metadata, content}.
+
+    Thin wrapper around extract_pdf_document for backward compatibility.
+    """
+    doc = extract_pdf_document(Path(filepath))
+    return {"metadata": dict(doc.metadata), "content": doc.content}
+
+
+def load_docx(filepath: str) -> Dict[str, Any]:
+    """Load a DOCX file and return {metadata, content}.
+
+    Thin wrapper around extract_docx_document for backward compatibility.
+    """
+    chunks = extract_docx_document(Path(filepath))
+    return {"metadata": dict(chunks[0].metadata), "content": chunks[0].text}
+
+
+def load_excel(filepath: str) -> Dict[str, Any]:
+    """Load an XLSX file and return {metadata, content}.
+
+    Thin wrapper around extract_xlsx_document for backward compatibility.
+    """
+    chunks = extract_xlsx_document(Path(filepath))
+    return {"metadata": dict(chunks[0].metadata), "content": chunks[0].text}

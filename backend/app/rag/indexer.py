@@ -60,11 +60,10 @@ def run_incremental_index(filepath: str) -> dict:
     """
     start = time.time()
 
+    from pathlib import Path
+
     from app.rag.loader import load_single_document
-    try:
-        from langchain.text_splitter import RecursiveCharacterTextSplitter
-    except ImportError:
-        from langchain_text_splitters import RecursiveCharacterTextSplitter
+    from app.rag.ingestion.pipeline import build_chunks, chunks_to_dicts
 
     # 1. Load single document
     doc = load_single_document(filepath)
@@ -78,31 +77,8 @@ def run_incremental_index(filepath: str) -> dict:
             "message": "文件为空或无法读取",
         }
 
-    # 2. Split into parent-child structure
-    parent_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1500,
-        chunk_overlap=100,
-        separators=["\n## ", "\n### ", "\n\n", "\n", " ", ""],
-    )
-    child_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=512,
-        chunk_overlap=80,
-        separators=["\n", " ", ""],
-    )
-
-    parents = parent_splitter.split_text(doc["content"])
-    chunks = []
-    for parent_idx, parent_text in enumerate(parents):
-        children = child_splitter.split_text(parent_text)
-        for child_text in children:
-            chunks.append({
-                "text": child_text,
-                "metadata": {
-                    **doc["metadata"],
-                    "parent_text": parent_text,
-                    "parent_idx": parent_idx,
-                },
-            })
+    # 2. Build chunks via the new ingestion pipeline
+    chunks = build_chunks(Path(filepath))
 
     # 3. 删除该文件的旧块，避免重复索引
     from app.rag.vector_store import add_to_index, delete_from_index
@@ -110,8 +86,8 @@ def run_incremental_index(filepath: str) -> dict:
     delete_from_index(filename)
     logger.info("Deleted old chunks for '%s' before re-indexing", filename)
 
-    # 4. Add to existing index (incremental)
-    add_to_index(chunks)
+    # 4. Add to existing index (incremental) — convert ChunkRecord → dict
+    add_to_index(chunks_to_dicts(chunks))
 
     elapsed = time.time() - start
     fname = os.path.basename(filepath).encode("ascii", errors="replace").decode("ascii")

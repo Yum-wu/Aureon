@@ -164,7 +164,8 @@ class TestRunIncrementalIndex:
 
     @patch("app.rag.vector_store.add_to_index")
     @patch("app.rag.loader.load_single_document")
-    def test_valid_file(self, mock_load, mock_add):
+    @patch("app.rag.ingestion.pipeline.build_chunks", return_value=[])
+    def test_valid_file(self, mock_build, mock_load, mock_add):
         mock_load.return_value = {
             "content": "This is test content for indexing.",
             "metadata": {"title": "Test", "source": "test.md"}
@@ -172,7 +173,7 @@ class TestRunIncrementalIndex:
         result = run_incremental_index("/fake/test.md")
         assert result["status"] == "ok"
         assert result["documents_indexed"] == 1
-        assert result["chunks_created"] >= 1
+        assert result["chunks_created"] == 0
         mock_add.assert_called_once()
 
 

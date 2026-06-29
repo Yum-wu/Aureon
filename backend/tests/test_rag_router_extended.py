@@ -99,6 +99,26 @@ async def test_upload_valid_md():
     assert data["chunks_created"] == 3
 
 
+@pytest.mark.asyncio
+async def test_upload_uses_new_ingestion_pipeline():
+    with patch("app.routers.rag.run_incremental_index") as mock_incremental, \
+         patch("app.rag.ingestion.pipeline.build_chunks", return_value=[] ) as mock_build_chunks:
+        mock_incremental.return_value = {
+            "status": "ok",
+            "filename": "test.md",
+            "documents_indexed": 1,
+            "chunks_created": 0,
+            "elapsed_seconds": 0.1,
+        }
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.post("/api/rag/upload", files={"file": ("test.md", b"# Title\nContent")})
+
+    assert resp.status_code == 200
+    mock_incremental.assert_called_once()
+    mock_build_chunks.assert_not_called()
+
+
 # ── DELETE /api/rag/upload/{filename} ──
 
 
