@@ -14,11 +14,9 @@ from app.rag.ingestion.extractors import (
 from app.rag.ingestion.models import ChunkRecord, IngestedDocument
 from app.rag.ingestion.policy import split_with_policy
 from app.rag.ingestion.quality import (
-    deduplicate_chunks,
     is_informative_chunk,
     is_valid_chunk,
 )
-from app.rag.ingestion.normalizer import normalize_text
 
 
 def load_ingested_document(path: Path) -> IngestedDocument | list[ChunkRecord]:
