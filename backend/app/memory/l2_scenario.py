@@ -3,8 +3,15 @@ import time
 from pathlib import Path
 from datetime import datetime
 from app.memory import l1_atom
+import re
 
 logger = structlog.get_logger()
+
+
+def _sanitize_session_id(session_id: str) -> str:
+    """防止路径遍历攻击。只保留字母、数字、下划线、连字符。"""
+    return re.sub(r'[^a-zA-Z0-9_-]', '_', session_id)
+
 
 SCENARIOS_DIR = Path("offloads/scenarios").resolve()
 MAX_SCENARIOS = 50
@@ -36,7 +43,7 @@ def finalize_scenario(session_id: str, summary: str = ""):
     """Generate and save a L2 scenario markdown file."""
     SCENARIOS_DIR.mkdir(parents=True, exist_ok=True)
     date_str = datetime.now().strftime("%Y%m%d")
-    filename = f"{session_id}_{date_str}.md"
+    filename = f"{_sanitize_session_id(session_id)}_{date_str}.md"
     filepath = SCENARIOS_DIR / filename
 
     atoms = l1_atom.get_atoms_by_session(session_id)
