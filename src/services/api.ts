@@ -186,11 +186,38 @@ async function fetchSSE(
 }
 
 /**
+ * SSE 带指数退避自动重连。
+ * 仅对网络错误（TypeError）重试，最大 3 次，退避 1s/2s/4s。
+ */
+async function fetchSSEWithRetry(
+  url: string,
+  body: Record<string, unknown>,
+  onEvent: (event: SSEEvent) => void,
+  onError: (error: string) => void,
+  signal?: AbortSignal,
+  maxRetries = 3,
+): Promise<void> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      await fetchSSE(url, body, onEvent, onError, signal);
+      return;
+    } catch (err) {
+      if (attempt === maxRetries) throw err;
+      if (err instanceof TypeError && (err as Error).message?.includes('fetch')) {
+        await new Promise(r => setTimeout(r, Math.min(1000 * 2 ** attempt, 16000)));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
+/**
  * 以 SSE 流式方式调用后端 Chat API，带背压控制
  */
 export async function streamChat(params: StreamChatParams): Promise<void> {
   const { message, sessionId, onEvent, onError, signal } = params;
-  await fetchSSE(
+  await fetchSSEWithRetry(
     API_URL,
     { message, session_id: sessionId },
     onEvent,
@@ -204,7 +231,7 @@ export async function streamChat(params: StreamChatParams): Promise<void> {
  */
 export async function streamEnhancedChat(params: StreamChatParams): Promise<void> {
   const { message, sessionId, onEvent, onError, signal } = params;
-  await fetchSSE(
+  await fetchSSEWithRetry(
     ENHANCED_API_URL,
     { message, session_id: sessionId },
     onEvent,
