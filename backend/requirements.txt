@@ -47,7 +47,7 @@ slowapi>=0.1.9,<1.0
 structlog>=24.0,<25.0
 
 # Prometheus metrics
-prometheus-fastapi-instrumentator>=6.0,<7.0
+prometheus-fastapi-instrumentator>=8.0,<9.0
 
 # Elasticsearch BM25 backend
 elasticsearch>=8.10.0
