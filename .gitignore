@@ -121,3 +121,6 @@ backend/scripts/
 # Windows reserved device names
 nul
 =nul
+
+# 客户文档（本地）
+docs/第一个客户.md

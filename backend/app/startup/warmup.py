@@ -227,51 +227,9 @@ def _incremental_update(strategy: dict, articles_dir: str):
 
         all_chunks = []
 
-        for doc in new_docs:
-
-            parent_splitter = RecursiveCharacterTextSplitter(
-
-                chunk_size=1500, chunk_overlap=100,
-
-                separators=["\n## ", "\n### ", "\n\n", "\n", " ", ""],
-
-            )
-
-            child_splitter = RecursiveCharacterTextSplitter(
-
-                chunk_size=512, chunk_overlap=50,
-
-                separators=["\n", " ", ""],
-
-            )
-
-
-
-            parents = parent_splitter.split_text(doc["content"])
-
-            for parent_idx, parent_text in enumerate(parents):
-
-                children = child_splitter.split_text(parent_text)
-
-                for child_text in children:
-
-                    all_chunks.append({
-
-                        "text": child_text,
-
-                        "metadata": {
-
-                            **doc["metadata"],
-
-                            "parent_text": parent_text,
-
-                            "parent_idx": parent_idx,
-
-                        },
-
-                    })
-
-
+        from app.rag.semantic_splitter import ParentChildSplitter
+        splitter = ParentChildSplitter(parent_size=1500, child_size=512, overlap=80)
+        all_chunks = splitter.split_documents(new_docs)
 
         if all_chunks:
 

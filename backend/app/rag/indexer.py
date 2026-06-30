@@ -255,10 +255,6 @@ async def run_index_pipeline(
     start = time.time()
 
     from app.rag.loader import load_markdown_files
-    try:
-        from langchain.text_splitter import RecursiveCharacterTextSplitter
-    except ImportError:
-        from langchain_text_splitters import RecursiveCharacterTextSplitter
 
     # 1. Load
     docs = load_markdown_files(articles_dir)
@@ -270,52 +266,12 @@ async def run_index_pipeline(
             "elapsed_seconds": 0,
             "message": "没有找到 Markdown 文件",
         }
-    logger.info("run_index_pipeline: loaded %d docs, starting chunking (semantic=%s)", len(docs), enable_semantic_chunking)
+    logger.info("run_index_pipeline: loaded %d docs, starting chunking", len(docs))
 
-    # 2. Split into parent-child structure
-    # Parent: 1500 chars (rich context for LLM)
-    # Child:  512 chars (medium chunks for balanced retrieval, 80 overlap)
-    parent_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1500,
-        chunk_overlap=100,
-        separators=["\n## ", "\n### ", "\n\n", "\n", " ", ""],
-    )
-    child_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=512,
-        chunk_overlap=80,
-        separators=["\n", " ", ""],
-    )
-
-    chunks = []
-    for doc in docs:
-        parents = parent_splitter.split_text(doc["content"])
-        for parent_idx, parent_text in enumerate(parents):
-            # Use semantic chunking if enabled, otherwise fixed-size splitting
-            if enable_semantic_chunking:
-                try:
-                    from app.rag.semantic_splitter import SemanticTextSplitter
-                    from app.rag.vector_store import embed_texts_as_list
-                    semantic_splitter = SemanticTextSplitter(
-                        embed_fn=embed_texts_as_list,
-                        breakpoint_threshold=80.0,
-                        max_chunk_size=1024,
-                        min_chunk_size=150,
-                    )
-                    children = semantic_splitter.split_text(parent_text)
-                except Exception as e:
-                    logger.warning("Semantic chunking failed for parent %d: %s, falling back to fixed", parent_idx, e)
-                    children = child_splitter.split_text(parent_text)
-            else:
-                children = child_splitter.split_text(parent_text)
-            for child_text in children:
-                chunks.append({
-                    "text": child_text,
-                    "metadata": {
-                        **doc["metadata"],
-                        "parent_text": parent_text,
-                        "parent_idx": parent_idx,
-                    },
-                })
+    # 2. Split into parent-child structure using ParentChildSplitter
+    from app.rag.semantic_splitter import ParentChildSplitter
+    splitter = ParentChildSplitter(parent_size=1500, child_size=512, overlap=80)
+    chunks = splitter.split_documents(docs)
 
     # 3. Contextual Retrieval: add LLM-generated context prefix to each chunk
     contextual_count = 0

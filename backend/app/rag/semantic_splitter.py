@@ -14,7 +14,7 @@ Reference: https://www.anthropic.com/news/contextual-retrieval
 
 import re
 import structlog
-from typing import List, Callable, Dict, Any
+from typing import List, Callable, Dict, Any, Optional
 
 import numpy as np
 
@@ -236,9 +236,9 @@ class ParentChildSplitter:
 
     def __init__(
         self,
-        parent_size: int = 800,
-        child_size: int = 200,
-        overlap: int = 50,
+        parent_size: int = 1500,
+        child_size: int = 512,
+        overlap: int = 80,
     ):
         self.parent_size = parent_size
         self.child_size = child_size
@@ -247,9 +247,9 @@ class ParentChildSplitter:
     def split_documents(
         self,
         documents: List[Dict[str, Any]],
-        parent_size: int = 800,
-        child_size: int = 200,
-        overlap: int = 50,
+        parent_size: Optional[int] = None,
+        child_size: Optional[int] = None,
+        overlap: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         """Split documents into parent-child hierarchical chunks.
 
