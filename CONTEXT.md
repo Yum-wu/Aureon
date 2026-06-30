@@ -25,6 +25,7 @@
 - **云端部署**：Railway，500MB 内存限制，本地模型不可用
 - **向量后端**：Qdrant（唯一后端，ChromaDB 已移除）
 - **Embedding**：API-only 模式（SKIP_LOCAL_EMBED=true），统一 1024d
+- **数据库**：PostgreSQL（Railway PG 插件），降级路径 SQLite
 - **目标规模**：1000+ 文档（≈5000+ chunks），阶梯扩容：100 → 500 → 1000+
 
 ## 关键约束

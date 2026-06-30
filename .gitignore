@@ -122,5 +122,35 @@ backend/scripts/
 nul
 =nul
 
+# 根目录测试截图/调试快照（防止 git 仓库臃肿）
+test-*.jpg
+prod-analytics*
+architecture-page*.png
+architecture-page*.yml
+architecture-snapshot.txt
+search-page*.jpg
+search-page*.png
+production-verify.png
+current-full.png
+current-viewport.png
+updated-full.png
+updated-viewport.png
+spa-*.png
+dashboard-*.png
+test-support-*.jpg
+test-search-*.jpg
+test-deployment-faq.jpg
+
+# 根目录一次性基准/调试文件
+pi-fingerprint*.json
+skills-lock.json
+design-system.*
+.canvas-meta.json
+_lint_debug.log
+
+# 根目录测试脚本
+/test_*.py
+/test_*.mjs
+
 # 客户文档（本地）
 docs/第一个客户.md

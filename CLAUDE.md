@@ -61,6 +61,7 @@ Aureon/
 - Agent：`create_agent(model, tools, prompt)` → `CompiledStateGraph`，输入 `{"messages": [HumanMessage(...)]}`
 - 流式：`graph.astream_events(..., version="v2")`，SSE 输出：`json.dumps(..., ensure_ascii=False)` + `sse_event()` + `SSE_HEADERS`
 - API Key 仅存 `.env`，生产通过 `API_AUTH_KEY` 启用
+- **数据库**：PostgreSQL（`DATABASE_URL` 设时自动启用 `PGStorageBackend`），否则降级 SQLite
 - SSO/RBAC：JWT + Fernet 加密 + `require_role(min_role)`
 - 多租户：JWT 签名验证 tenant_id（纯 ASGI 中间件，SSE 零缓冲）
 - 审计：user_id 从已验证 JWT 提取（不信任客户端 header）
@@ -88,8 +89,8 @@ Aureon/
 
 | 层 | 存储 | 职责 |
 |---|------|------|
-| L0 | SQLite conversations | 原始对话 |
-| L1 | SQLite atoms | 原子事实三元组 |
+| L0 | PostgreSQL conversations（`memory/pg.py`） | 原始对话 |
+| L1 | PostgreSQL atoms（`memory/pg.py`） | 原子事实三元组 |
 | L2 | offloads/scenarios/*.md | 场景总结 |
 | L3 | offloads/persona.md | 用户画像 (≤2KB) |
 | 卸载 | offloads/refs/*.md | 长工具输出外存 |
