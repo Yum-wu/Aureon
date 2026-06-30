@@ -22,6 +22,7 @@ from sqlalchemy import (
     String,
     Table,
     Text,
+    text,
 )
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -249,7 +250,7 @@ async def insert_atom(atom_data: dict[str, Any]) -> None:
         created_at=datetime.now(timezone.utc),
     )
     async with engine.begin() as conn:
-        result = await conn.execute(stmt)
+        await conn.execute(stmt)
     logger.debug("pg_atom_inserted", session_id=atom_data.get("session_id"))
 
 
@@ -287,12 +288,12 @@ async def search_atoms_by_session(session_id: str, query: str, limit: int = 10) 
     like_pattern = f"%{query}%"
     async with engine.connect() as conn:
         result = await conn.execute(
-            f"""
-            SELECT * FROM atoms WHERE session_id = $1
-            AND (subject ILIKE $2 OR predicate ILIKE $2 OR "object" ILIKE $2)
-            ORDER BY confidence DESC LIMIT $3
-            """,
-            session_id, like_pattern, limit,
+            text("""
+            SELECT * FROM atoms WHERE session_id = :sid
+            AND (subject ILIKE :q OR predicate ILIKE :q OR "object" ILIKE :q)
+            ORDER BY confidence DESC LIMIT :lim
+            """),
+            {"sid": session_id, "q": like_pattern, "lim": limit},
         )
         return [dict(r._mapping) for r in result]
 
