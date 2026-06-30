@@ -6,9 +6,16 @@ from app.config import settings
 
 _redis_url = settings.cache.redis_url
 
+if _redis_url and _redis_url.startswith("redis://"):
+    _storage_uri = f"{_redis_url}/1"
+elif _redis_url:
+    _storage_uri = f"redis://{_redis_url}/1"
+else:
+    _storage_uri = None
+
 limiter = Limiter(
     key_func=get_remote_address,
-    storage_uri=f"redis://{_redis_url}/1" if _redis_url else None,
+    storage_uri=_storage_uri,
 )
 
 # 预定义速率限制
