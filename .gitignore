@@ -155,3 +155,8 @@ _lint_debug.log
 
 # 客户文档（本地）
 docs/第一个客户.md
+
+# Playwright snapshots
+*.md.yml
+landing-page.md
+login-page-after-redirect.md
