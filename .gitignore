@@ -100,10 +100,10 @@ new-onboarding-*.jpg
 .qoder/
 .workbuddy/
 
-# 临时调试文件
-_*.py
-!__init__.py
-!rag/_pipeline.py
+# 临时调试文件（仅根目录级别）
+/backend/_*.py
+/tests/_*.py
+/backend/tests/_*.py
 _*.bat
 _eslint_*
 process.exit*
