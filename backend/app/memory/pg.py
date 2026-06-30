@@ -67,6 +67,21 @@ conversations = Table(
     Column("created_at", DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)),
 )
 
+atoms = Table(
+    "atoms",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("session_id", String(128), nullable=False),
+    Column("subject", String(256), nullable=False),
+    Column("predicate", String(256), nullable=False),
+    Column("object", Text, nullable=False),
+    Column("source_ref", Integer, nullable=True),
+    Column("confidence", Float, default=0.5),
+    Column("updated_at", DateTime(timezone=True), nullable=True),
+    Column("last_accessed", DateTime(timezone=True), nullable=True),
+    Column("created_at", DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)),
+)
+
 # -- Engine management ---------------------------------------------------
 
 _engine: Optional[AsyncEngine] = None
@@ -217,3 +232,76 @@ async def insert_conversation(conv_data: dict[str, Any]) -> None:
     async with engine.begin() as conn:
         await conn.execute(stmt)
     logger.debug("pg_conversation_inserted", session_id=conv_data.get("session_id"))
+
+
+async def insert_atom(atom_data: dict[str, Any]) -> None:
+    """Insert a row into ``atoms``."""
+    engine = get_async_engine()
+    stmt = atoms.insert().values(
+        session_id=atom_data.get("session_id", ""),
+        subject=atom_data.get("subject", ""),
+        predicate=atom_data.get("predicate", ""),
+        object=atom_data.get("object", ""),
+        source_ref=atom_data.get("source_ref"),
+        confidence=atom_data.get("confidence", 0.5),
+        updated_at=datetime.now(timezone.utc),
+        last_accessed=datetime.now(timezone.utc),
+        created_at=datetime.now(timezone.utc),
+    )
+    async with engine.begin() as conn:
+        result = await conn.execute(stmt)
+    logger.debug("pg_atom_inserted", session_id=atom_data.get("session_id"))
+
+
+async def update_atom(atom_id: int, **fields: Any) -> None:
+    """Update an atom by id."""
+    engine = get_async_engine()
+    fields.setdefault("updated_at", datetime.now(timezone.utc))
+    stmt = atoms.update().where(atoms.c.id == atom_id).values(**fields)
+    async with engine.begin() as conn:
+        await conn.execute(stmt)
+
+
+async def touch_atom(atom_id: int) -> None:
+    """Update last_accessed to now."""
+    await update_atom(atom_id, last_accessed=datetime.now(timezone.utc))
+
+
+async def decay_stale_atoms_sql(days: int = 30, decay_factor: float = 0.9) -> int:
+    """Decay confidence of atoms not accessed in N days."""
+    engine = get_async_engine()
+    async with engine.begin() as conn:
+        result = await conn.execute(
+            f"UPDATE atoms SET confidence = GREATEST(confidence * {decay_factor}, 0.01), "
+            f"updated_at = NOW() WHERE last_accessed IS NOT NULL AND "
+            f"NOW() - last_accessed > INTERVAL '{days} days'"
+        )
+    affected = result.rowcount
+    logger.info("decayed_stale_atoms", affected=affected, days=days)
+    return affected
+
+
+async def search_atoms_by_session(session_id: str, query: str, limit: int = 10) -> list[dict[str, Any]]:
+    """Search atoms by session with text match."""
+    engine = get_async_engine()
+    like_pattern = f"%{query}%"
+    async with engine.connect() as conn:
+        result = await conn.execute(
+            f"""
+            SELECT * FROM atoms WHERE session_id = $1
+            AND (subject ILIKE $2 OR predicate ILIKE $2 OR "object" ILIKE $2)
+            ORDER BY confidence DESC LIMIT $3
+            """,
+            session_id, like_pattern, limit,
+        )
+        return [dict(r._mapping) for r in result]
+
+
+async def get_atoms_by_session(session_id: str) -> list[dict[str, Any]]:
+    """Return all atoms for a session."""
+    engine = get_async_engine()
+    async with engine.connect() as conn:
+        result = await conn.execute(
+            atoms.select().where(atoms.c.session_id == session_id).order_by(atoms.c.created_at)
+        )
+        return [dict(r._mapping) for r in result]

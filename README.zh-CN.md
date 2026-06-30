@@ -9,7 +9,7 @@
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
 [![Qdrant](https://img.shields.io/badge/Qdrant-Cloud-DC2DFF?logo=qdrant&logoColor=white)](https://qdrant.tech/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
-[![Tests](https://img.shields.io/badge/Tests-793%20passed-brightgreen)](https://github.com/Yum-wu/Aureon/actions)
+[![Tests](https://img.shields.io/badge/Tests-958%20passed-brightgreen)](https://github.com/Yum-wu/Aureon/actions)
 
 **其他语言**: [English](README.md) | [在线演示](https://aureon-production-659a.up.railway.app)
 
@@ -64,7 +64,7 @@ Aureon 结合了 **Adaptive-RAG 查询路由**、**Qdrant 原生稀疏+稠密混
 - **Feature Flags** — 灰度发布、生命周期管理
 - **成本治理** — 工作区级成本追踪、预算管理
 - **1000+ 文档规模** — HNSW 量化 + 标量量化，内存减少 75%
-- **793 测试** — 全面测试覆盖 + DeepEval 质量门禁
+- **958 测试** — 全面测试覆盖 + DeepEval 质量门禁
 
 ## 性能指标
 
@@ -253,15 +253,9 @@ Aureon 实现了多层安全防护：
 
 ## 文档
 
-- [系统架构](docs/architecture/system-overview.md)
-- [基准测试与评估](docs/benchmarks/recall-evaluation.md)
-- [Docker 部署](docs/deployment/docker-setup.md)
-- [产品功能](docs/product/features.md)
-- [ADR: Qdrant HNSW 量化](docs/adr/0001-qdrant-hnsw-quantization.md)
-- [ADR: 稀疏向量](docs/adr/0002-qdrant-sparse-vectors.md)
-- [ADR: Embedding 维度 1024](docs/adr/0003-embedding-dim-1024.md)
-- [ADR: 轻量 CRAG](docs/adr/0004-lightweight-crag.md)
-- [ADR: Adaptive-RAG 查询路由](docs/adr/0005-adaptive-rag-query-routing.md)
+- [CLAUDE.md](CLAUDE.md) — 项目约定、结构、API 端点
+- [CONTEXT.md](CONTEXT.md) — 领域术语、RAG 迭代历史、MVP 边界
+- [SECURITY.md](SECURITY.md) — 漏洞报告
 
 ## 更新日志
 
@@ -289,7 +283,7 @@ Aureon 实现了多层安全防护：
 6. **推送** 并创建 **Pull Request**
 
 请确保：
-- 793+ 后端测试全部通过
+- 958+ 后端测试全部通过
 - 新代码包含类型注解（`def foo(x: int) -> str:`）
 - 异步优先（`async def` + `asyncio`）
 - 禁止裸 `except` — 至少 `logger.exception()`

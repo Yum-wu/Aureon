@@ -84,6 +84,10 @@ class StorageBackend(Protocol):
     def get_atoms_by_session(self, session_id: str) -> List[Dict[str, Any]]:
         ...
 
+    def decay_stale_atoms(self, days: int = 30, decay_factor: float = 0.9) -> int:
+        """Decay confidence of stale atoms. Returns affected count."""
+        ...
+
 
 # -- SQLite backend --
 
@@ -133,6 +137,11 @@ class SQLiteStorageBackend:
     def get_atoms_by_session(self, session_id):
         from app.memory.l1_atom import get_atoms_by_session as _get
         return _get(session_id)
+
+    # L1 - decay
+    def decay_stale_atoms(self, days=30, decay_factor=0.9):
+        from app.memory.l1_atom import decay_stale_atoms as _decay
+        return _decay(days, decay_factor)
 
 
 # -- PostgreSQL backend --
@@ -256,20 +265,31 @@ class PGStorageBackend:
 
         self._run_async(_clean())
 
-    # L1 - atoms (falls back to SQLite since pg.py lacks atoms table)
+    # L1 - atoms
     def save_atom(self, session_id, subject, predicate, obj,
                   source_ref=None, confidence=0.5):
-        logger.debug("pg_atom_fallback_to_sqlite", subject=subject)
-        from app.memory.l1_atom import save_atom as _save
-        _save(session_id, subject, predicate, obj, source_ref, confidence)
+        from app.memory.pg import insert_atom
+        self._run_async(insert_atom({
+            "session_id": session_id,
+            "subject": subject,
+            "predicate": predicate,
+            "object": obj,
+            "source_ref": source_ref,
+            "confidence": confidence,
+        }))
 
     def search_atoms(self, session_id, query, limit=10):
-        from app.memory.l1_atom import search_atoms as _search
-        return _search(session_id, query, limit)
+        from app.memory.pg import search_atoms_by_session
+        return self._run_async(search_atoms_by_session(session_id, query, limit))
 
     def get_atoms_by_session(self, session_id):
-        from app.memory.l1_atom import get_atoms_by_session as _get
-        return _get(session_id)
+        from app.memory.pg import get_atoms_by_session as _get
+        return self._run_async(_get(session_id))
+
+    # L1 - decay
+    def decay_stale_atoms(self, days=30, decay_factor=0.9):
+        from app.memory.pg import decay_stale_atoms_sql as _decay
+        return self._run_async(_decay(days, decay_factor))
 
 
 # -- Singleton accessor --

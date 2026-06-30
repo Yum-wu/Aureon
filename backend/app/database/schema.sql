@@ -1,35 +1,6 @@
 -- Aureon PostgreSQL Schema
 -- Created: 2026-06-19
-
--- 消息记录（L0）
-CREATE TABLE IF NOT EXISTS messages (
-    id BIGSERIAL PRIMARY KEY,
-    session_id VARCHAR(64) NOT NULL,
-    role VARCHAR(16) NOT NULL,
-    content TEXT NOT NULL,
-    tokens INT DEFAULT 0,
-    tool_name VARCHAR(128),
-    tool_args TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    tenant_id VARCHAR(64) DEFAULT 'default'
-);
-CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id, created_at);
-CREATE INDEX IF NOT EXISTS idx_messages_tenant ON messages(tenant_id);
-
--- 原子事实（L1）
-CREATE TABLE IF NOT EXISTS atoms (
-    id BIGSERIAL PRIMARY KEY,
-    session_id VARCHAR(64) NOT NULL,
-    subject VARCHAR(256) NOT NULL,
-    predicate VARCHAR(256) NOT NULL,
-    object TEXT NOT NULL,
-    message_id BIGINT,
-    confidence REAL DEFAULT 0.5,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    tenant_id VARCHAR(64) DEFAULT 'default'
-);
-CREATE INDEX IF NOT EXISTS idx_atoms_session ON atoms(session_id);
-CREATE INDEX IF NOT EXISTS idx_atoms_tenant ON atoms(tenant_id);
+-- Note: conversations + atoms tables are managed by memory/pg.py (SQLAlchemy metadata).
 
 -- 用户表
 CREATE TABLE IF NOT EXISTS users (

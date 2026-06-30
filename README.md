@@ -9,7 +9,7 @@ Build an enterprise AI search assistant for your documents in one day. Upload do
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
 [![Qdrant](https://img.shields.io/badge/Qdrant-Cloud-DC2DFF?logo=qdrant&logoColor=white)](https://qdrant.tech/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
-[![Tests](https://img.shields.io/badge/Tests-793%20passed-brightgreen)](https://github.com/Yum-wu/Aureon/actions)
+[![Tests](https://img.shields.io/badge/Tests-958%20passed-brightgreen)](https://github.com/Yum-wu/Aureon/actions)
 
 **Other languages**: [中文](README.zh-CN.md) | [Live Demo](https://aureon-production-659a.up.railway.app)
 
@@ -64,7 +64,7 @@ Aureon combines **Adaptive-RAG query routing**, **Qdrant native sparse+dense hyb
 - **Feature Flags** — Gradual rollout, lifecycle management
 - **Cost Governance** — Per-workspace cost tracking, budget management
 - **1000+ Document Scale** — HNSW quantization + scalar quantization, 75% memory reduction
-- **793 Backend Tests** — Comprehensive test coverage with DeepEval quality gates
+- **958 Backend Tests** — Comprehensive test coverage with DeepEval quality gates
 
 ## Performance
 
@@ -253,15 +253,9 @@ For vulnerability reporting, see [SECURITY.md](SECURITY.md).
 
 ## Documentation
 
-- [System Architecture](docs/architecture/system-overview.md)
-- [Benchmarks & Evaluation](docs/benchmarks/recall-evaluation.md)
-- [Docker Deployment](docs/deployment/docker-setup.md)
-- [Product Features](docs/product/features.md)
-- [ADR: Qdrant HNSW Quantization](docs/adr/0001-qdrant-hnsw-quantization.md)
-- [ADR: Sparse Vectors](docs/adr/0002-qdrant-sparse-vectors.md)
-- [ADR: Embedding Dimension 1024](docs/adr/0003-embedding-dim-1024.md)
-- [ADR: Lightweight CRAG](docs/adr/0004-lightweight-crag.md)
-- [ADR: Adaptive-RAG Query Routing](docs/adr/0005-adaptive-rag-query-routing.md)
+- [CLAUDE.md](CLAUDE.md) — Project conventions, structure, API endpoints
+- [CONTEXT.md](CONTEXT.md) — Domain terminology, RAG iteration history, MVP boundaries
+- [SECURITY.md](SECURITY.md) — Vulnerability reporting
 
 ## Changelog
 
@@ -289,7 +283,7 @@ Contributions are welcome! Please follow these steps:
 6. **Push** and open a **Pull Request**
 
 Please ensure:
-- All 793+ backend tests pass
+- All 958+ backend tests pass
 - New code has type annotations (`def foo(x: int) -> str:`)
 - Async-first (`async def` + `asyncio`)
 - No bare `except` — at minimum `logger.exception()`

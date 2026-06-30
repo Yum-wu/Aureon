@@ -7,7 +7,6 @@ import structlog
 from app.memory import l2_scenario
 from app.memory import l3_persona
 from app.memory import offload
-from app.memory.l1_atom import decay_stale_atoms
 from app.memory.storage import get_backend
 
 logger = structlog.get_logger()
@@ -187,7 +186,7 @@ User message: {content[:500]}"""
         try:
             while True:
                 await asyncio.sleep(86400)
-                affected = await asyncio.to_thread(decay_stale_atoms)
+                affected = await asyncio.to_thread(get_backend().decay_stale_atoms)
                 logger.info(f"Decayed {affected} stale atoms")
         except asyncio.CancelledError:
             logger.info("Decay task cancelled — graceful shutdown")

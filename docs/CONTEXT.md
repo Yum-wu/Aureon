@@ -37,16 +37,17 @@ backend/app/rag/
 | ingestion 独立子包（不分摊到 loader） | 单一职责，易于替换和测试 |
 | 类型分流抽取，不统一读入 | 保留结构信息（标题层级、表格、sheet） |
 | `ChunkRecord` dataclass + `to_dict()` | 内部用类型安全对象，外部接口用 dict |
-| 段落聚合分块（512 char）替代 parent-child | 更稳定，可预测 |
+| 段落聚合分块（512 char） | 更稳定，可预测 |
 | `run_index_pipeline` 保留旧路径 | 避免改动父块/子块/contextual prefix 链路风险 |
+| ParentChildSplitter 统一 chunking（2026-06-30） | 替代 3 处内联 parent-child 循环，统一 parent_size=1500, child_size=512, overlap=80 |
 
 ## 已知限制
 
-- `run_index_pipeline` 仍走旧 LangChain splitter，未迁移到 ingestion 管线
 - PDF 页码元数据未保留（整页合并）
 - DOCX 表格未单独成块
 - XLSX sheet 名未保留
+- `semantic_chunking` 代码路径已移除（2026-06-30，从未启用）
 
 ## 测试状态
 
-后端 1010 passed / 10 skipped，前端 287 passed (35 files) / CI auto-run。
+后端 958 passed / 5 skipped（2026-06-30），前端 287 passed (35 files) / CI auto-run。
