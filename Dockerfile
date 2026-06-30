@@ -16,7 +16,7 @@ ENV VITE_CREW_API_URL=/api/crew
 RUN rm -rf dist && npm run build && echo "[build] Frontend build completed at $(date -u +%Y-%m-%dT%H:%M:%SZ)" && ls -la dist/assets/index-*.js
 
 # ── Stage 2：后端 + nginx ──
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 WORKDIR /app
 
