@@ -47,6 +47,8 @@ async def logging_middleware(request: Request, call_next):
             "/api/v1/security/sso/login",
             "/api/security/demo-token",
             "/api/v1/security/demo-token",
+            "/api/rag/benchmark",
+            "/api/v1/rag/benchmark",
         }
         if request.url.path not in public_paths:
             # Skip API key check if a valid JWT Bearer token is present
