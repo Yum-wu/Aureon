@@ -50,17 +50,19 @@ _JWT_EXPIRY_HOURS = 24
 
 def _get_jwt_secret() -> str:
     """Lazily resolve the JWT signing secret from environment.
-
-    Raises RuntimeError if JWT_SECRET is not set (no insecure default).
+    Auto-generates a random secret when JWT_SECRET is not set.
     """
     global _JWT_SECRET
     if _JWT_SECRET is None:
         _JWT_SECRET = os.environ.get("JWT_SECRET")
         if not _JWT_SECRET:
-            raise RuntimeError(
-                "JWT_SECRET environment variable is required. "
-                "Set it before starting the application."
+            import logging
+            logging.getLogger("app.security.rbac").warning(
+                "JWT_SECRET not set — using auto-generated random secret. "
+                "Tokens invalidated on restart. Set JWT_SECRET for production."
             )
+            import secrets
+            _JWT_SECRET = secrets.token_hex(32)
     return _JWT_SECRET
 
 

@@ -1,5 +1,0 @@
-# Persona
-
-## Recent Activity
-
-- Summary

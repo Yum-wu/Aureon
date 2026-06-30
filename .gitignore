@@ -47,6 +47,7 @@ Thumbs.db
 *.db-wal
 
 # Runtime data
+offloads/
 backend/offloads/refs/
 backend/offloads/scenarios/
 backend/offloads/memory.db*

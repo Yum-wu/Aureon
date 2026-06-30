@@ -14,6 +14,7 @@ import {
   type ReactNode,
 } from 'react';
 import { useWebSocket } from '../hooks/useWebSocket';
+import { useAuth } from '../hooks/AuthContext';
 import type { WSConnectionState } from '../services/ws';
 
 export const REALTIME_STALE_THRESHOLD_MS = 15_000;
@@ -73,6 +74,7 @@ const DEFAULT_METRICS: RealtimeMetrics = {
 const RealtimeMetricsContext = createContext<RealtimeMetricsContextValue | null>(null);
 
 export function RealtimeMetricsProvider({ children }: { children: ReactNode }) {
+  const { isAuthenticated } = useAuth();
   const [metrics, setMetrics] = useState<RealtimeMetrics>(DEFAULT_METRICS);
   const [alerts, setAlerts] = useState<MetricAlert[]>([]);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
@@ -117,7 +119,8 @@ export function RealtimeMetricsProvider({ children }: { children: ReactNode }) {
     }
   }, [resetLastUpdated]);
 
-  const { isConnected, connectionState } = useWebSocket('/ws/dashboard', {
+  const wsPath = isAuthenticated ? '/ws/dashboard' : '';
+  const { isConnected, connectionState } = useWebSocket(wsPath, {
     onMessage: handleMessage,
     autoReconnect: true,
   });
