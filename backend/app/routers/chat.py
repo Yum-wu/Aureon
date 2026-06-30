@@ -181,7 +181,7 @@ async def chat_stream(req: ChatRequest, request: Request):
         memory_manager=memory_manager,
     )
     return StreamingResponse(
-        _record_stream_analytics(req.message, req.model, raw_stream),
+        _record_stream_analytics(req.message or "", req.model or "", raw_stream),
         media_type="text/event-stream",
         headers=SSE_HEADERS,
     )
@@ -217,7 +217,7 @@ async def chat_enhanced_stream(req: ChatRequest, request: Request):
             yield sse_event({'type': 'error', 'content': 'An error occurred while processing your request'})
 
     return StreamingResponse(
-        _record_stream_analytics(req.message, req.model, event_stream()),
+        _record_stream_analytics(req.message or "", req.model or "", event_stream()),
         media_type="text/event-stream",
         headers=SSE_HEADERS,
     )

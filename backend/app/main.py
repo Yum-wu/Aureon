@@ -138,11 +138,11 @@ Instrumentator(
     should_group_status_codes=True,
     should_ignore_untemplated=True,
 ).instrument(
-    app,
+    app,  # type: ignore[arg-type]
     latency_highr_buckets=[
         0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0,
     ],
-).expose(app, endpoint="/metrics")
+).expose(app, endpoint="/metrics")  # type: ignore[arg-type]
 
 
 # ── Custom exception handler (structured JSON) ──
@@ -204,7 +204,7 @@ class LangGraphRunRequest(BaseModel):
 async def langgraph_run(req: LangGraphRunRequest, request: Request, user: dict = Depends(require_role(UserRole.VIEWER))):
     """Run LangGraph workflow for complex tasks."""
     from app.langgraph.graph import run_workflow
-    result = await run_workflow(req.query, session_id=req.session_id or None)
+    result = await run_workflow(req.query, session_id=req.session_id)  # type: ignore[arg-type]
     return result
 
 
