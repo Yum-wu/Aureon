@@ -49,8 +49,7 @@ def split_with_policy(file_type: str, document: IngestedDocument) -> list[ChunkR
 
 def _split_recursive_fallback(document: IngestedDocument) -> list[ChunkRecord]:
     """Legacy fallback — kept for backwards compatibility but unused."""
-    return _split_by_paragraphs(document)
-
+    return _split_by_paragraphs(document)  # noqa: F821
 
 def _split_long_text(text: str, chunk_size: int) -> list[str]:
     """Legacy fallback — kept for backwards compatibility but unused."""

@@ -206,12 +206,9 @@ def _incremental_update(strategy: dict, articles_dir: str):
     if strategy["files_to_add"]:
 
         try:
-
-            from langchain.text_splitter import RecursiveCharacterTextSplitter
-
+            from langchain_text_splitters import RecursiveCharacterTextSplitter  # noqa: F401
         except ImportError:
-
-            from langchain_text_splitters import RecursiveCharacterTextSplitter
+            pass
 
 
 
