@@ -141,43 +141,23 @@ export function Dashboard() {
         label: item.date,
         value: item.count,
       }));
-    return raw.some(d => d.value > 0) ? raw : Array.from({ length: 7 }, (_, i) => ({
-      label: `Day ${i + 1}`,
-      value: Math.max(1, Math.round((stats?.query_count_24h || 0) / 7)),
-    }));
+    return raw.some(d => d.value > 0) ? raw : [];
   })();
+
+  const fmtTime = (ts: number) => new Date(ts).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 
   // Latency trend chart data
   const latencyChartData = useMemo(() => {
-    if (latencyHistory.length > 5) {
+    if (latencyHistory.length > 1) {
       return [
         {
           id: t('dashboard.latency.ttft'),
-          data: latencyHistory.map((p, i) => ({ x: `${i}`, y: p.ttft }))
+          data: latencyHistory.map((p) => ({ x: fmtTime(p.ts), y: p.ttft }))
         },
       ];
     }
-
-    if (!metrics || !('latency_trend' in metrics)) return [];
-    const m = metrics as { latency_trend?: number[]; tpot_trend?: number[]; e2e_trend?: number[] };
-    const rawTtft = (m.latency_trend ?? []).filter((v: number): v is number => v != null && v > 0);
-    const rawTpot = (m.tpot_trend ?? []).filter((v: number): v is number => v != null && v > 0);
-    const rawE2e = (m.e2e_trend ?? []).filter((v: number): v is number => v != null && v > 0);
-    if (rawTtft.length > 0) {
-      return [
-        { id: t('dashboard.latency.ttft'), data: rawTtft.map((v: number, i: number) => ({ x: `${i}`, y: v })) },
-        { id: t('dashboard.latency.tpot'), data: rawTpot.map((v: number, i: number) => ({ x: `${i}`, y: v })) },
-        { id: t('dashboard.latency.e2e'), data: rawE2e.map((v: number, i: number) => ({ x: `${i}`, y: v })) },
-      ];
-    }
-    const baseLatency = baseMetrics?.ttft_p50 || 200;
-    const points = 7;
-    return [
-      { id: t('dashboard.latency.ttft'), data: Array.from({ length: points }, (_, i) => ({ x: `${i}`, y: Math.round(baseLatency * (0.6 + ((i + 1) * 7 + 13) % 100 / 100 * 0.8)) })) },
-      { id: t('dashboard.latency.tpot'), data: Array.from({ length: points }, (_, i) => ({ x: `${i}`, y: Math.round(baseLatency * (0.3 + ((i + 2) * 7 + 13) % 100 / 100 * 0.5)) })) },
-      { id: t('dashboard.latency.e2e'), data: Array.from({ length: points }, (_, i) => ({ x: `${i}`, y: Math.round(baseLatency * (1.0 + ((i + 3) * 7 + 13) % 100 / 100 * 1.2)) })) },
-    ];
-  }, [latencyHistory, metrics, baseMetrics, t]);
+    return [];
+  }, [latencyHistory, t]);
 
   // Cache hit rate trend data
   const cacheTrendData: { id: string; data: { x: string; y: number }[] }[] = useMemo(() => {
@@ -185,33 +165,12 @@ export function Dashboard() {
       return [
         {
           id: t('dashboard.charts.cache_hit_rate', '缓存命中率'),
-          data: cacheHistory.map((p, i) => ({ x: `${i}`, y: p.hitRate })),
+          data: cacheHistory.map((p) => ({ x: fmtTime(p.ts), y: p.hitRate })),
         },
       ];
     }
-    if (rtMetrics.cache_hit_rate > 0) {
-      return [
-        {
-          id: t('dashboard.charts.cache_hit_rate', '缓存命中率'),
-          data: [{ x: '0', y: rtMetrics.cache_hit_rate }],
-        },
-      ];
-    }
-    if (stats?.cache_hit_rate && stats.cache_hit_rate > 0) {
-      return [
-        {
-          id: t('dashboard.charts.cache_hit_rate', '缓存命中率'),
-          data: Array.from({ length: 7 }, (_, i) => ({ x: `${i}`, y: Math.round(stats.cache_hit_rate * (0.85 + ((i + 1) * 7 + 13) % 100 / 100 * 0.3)) })),
-        },
-      ];
-    }
-    return [
-      {
-        id: t('dashboard.charts.cache_hit_rate', '缓存命中率'),
-        data: Array.from({ length: 7 }, (_, i) => ({ x: `${i}`, y: 70 + ((i + 1) * 7 + 13) % 100 / 100 * 20 })),
-      },
-    ];
-  }, [cacheHistory, rtMetrics.cache_hit_rate, stats, t]);
+    return [];
+  }, [cacheHistory, t]);
 
   return (
     <div className="min-h-screen">
