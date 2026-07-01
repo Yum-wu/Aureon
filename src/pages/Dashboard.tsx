@@ -144,7 +144,7 @@ export function Dashboard() {
     return raw.some(d => d.value > 0) ? raw : [];
   })();
 
-  const fmtTime = (ts: number) => new Date(ts).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  const fmtDate = (ts: number) => new Date(ts).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
 
   // Latency trend chart data
   const latencyChartData = useMemo(() => {
@@ -152,7 +152,7 @@ export function Dashboard() {
       return [
         {
           id: t('dashboard.latency.ttft'),
-          data: latencyHistory.map((p) => ({ x: fmtTime(p.ts), y: p.ttft }))
+          data: latencyHistory.map((p) => ({ x: fmtDate(p.ts), y: p.ttft }))
         },
       ];
     }
@@ -173,7 +173,7 @@ export function Dashboard() {
       return [
         {
           id: t('dashboard.charts.cache_hit_rate', '缓存命中率'),
-          data: cacheHistory.map((p) => ({ x: fmtTime(p.ts), y: p.hitRate })),
+          data: cacheHistory.map((p) => ({ x: fmtDate(p.ts), y: p.hitRate })),
         },
       ];
     }
