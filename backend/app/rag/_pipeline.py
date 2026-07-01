@@ -1,6 +1,6 @@
 """RAG 流水线公共逻辑。避免 rag_query 和 rag_query_astream 之间重复。"""
 
-from typing import AsyncGenerator, Optional
+
 
 from app.config import settings
 from app.rag.query_classifier import route_retrieval

@@ -1,7 +1,6 @@
 """Feature Flags API — 功能开关 CRUD + 评估"""
 
 import json
-import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
