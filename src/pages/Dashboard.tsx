@@ -144,7 +144,7 @@ export function Dashboard() {
     return raw.some(d => d.value > 0) ? raw : [];
   })();
 
-  const fmtTime = (ts: number) => new Date(ts).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  const fmtTime = (ts: number) => new Date(ts).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 
   // Latency trend chart data
   const latencyChartData = useMemo(() => {
