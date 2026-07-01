@@ -208,13 +208,15 @@
     "latency": {
       "ttft": "首字延迟",
       "tpot": "每 Token 延迟",
-      "e2e": "端到端"
+      "e2e": "端到端",
+      "recent": "最近"
     },
     "charts": {
       "latency_trend": "延迟趋势",
       "query_volume": "查询量",
       "quality_trend": "检索质量",
-      "cache_hit_rate": "缓存命中率"
+      "cache_hit_rate": "缓存命中率",
+      "latency_empty": "查询后才有数据"
     },
     "alerts": {
       "title": "最近告警",

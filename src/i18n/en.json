@@ -209,13 +209,15 @@
     "latency": {
       "ttft": "TTFT",
       "tpot": "TPOT",
-      "e2e": "E2E"
+      "e2e": "E2E",
+      "recent": "Recent"
     },
     "charts": {
       "latency_trend": "Latency Trend",
       "query_volume": "Query Volume",
       "quality_trend": "Quality Trend",
-      "cache_hit_rate": "Cache Hit Rate"
+      "cache_hit_rate": "Cache Hit Rate",
+      "latency_empty": "Data appears after making a query"
     },
     "alerts": {
       "title": "Recent Alerts",

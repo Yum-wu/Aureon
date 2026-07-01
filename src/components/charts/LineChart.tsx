@@ -34,6 +34,8 @@ interface LineChartProps {
   onTimeRangeChange?: (range: TimeRange) => void;
   /** 加载状态 */
   loading?: boolean;
+  /** 空数据时显示的提示文字，默认"暂无数据" */
+  emptyDescription?: string;
   /** X 轴格式化 */
   xFormat?: LineSvgProps<LineSeries>['xFormat'];
   /** Y 轴格式化 */
@@ -60,6 +62,7 @@ function LineChartInner({
   timeRangeSelector = false,
   onTimeRangeChange,
   loading = false,
+  emptyDescription,
   xFormat,
   yFormat,
   xAxisLabel,
@@ -84,7 +87,7 @@ function LineChartInner({
       >
         {() => (
           <div className="flex items-center justify-center h-full text-[var(--text-tertiary)] text-sm">
-            暂无数据
+            {emptyDescription ?? '暂无数据'}
           </div>
         )}
       </ChartContainer>

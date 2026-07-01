@@ -84,11 +84,11 @@ export function DashboardCharts({
     <>
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {latencyChartData.some((s) => s.data.length > 0) ? (
-          <LineChart data={latencyChartData} title={t('dashboard.charts.latency_trend')} />
-        ) : (
-          <NoDataPlaceholder />
-        )}
+        <LineChart
+          data={latencyChartData}
+          title={t('dashboard.charts.latency_trend')}
+          emptyDescription={t('dashboard.charts.latency_empty')}
+        />
         {isLoadingVolume && queryVolumeChartData.length === 0 ? (
           <div className="rounded-lg border bg-[var(--bg-secondary)] border-[var(--border)] flex items-center justify-center h-[300px]">
             <div className="animate-pulse h-4 w-24 bg-[var(--bg-tertiary)] rounded" />
@@ -100,6 +100,7 @@ export function DashboardCharts({
             indexBy="label"
             title={t('dashboard.charts.query_volume')}
             valueScale={{ type: 'linear', min: 0 }}
+            showLegend={false}
           />
         ) : (
           <NoDataPlaceholder />

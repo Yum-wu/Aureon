@@ -156,8 +156,16 @@ export function Dashboard() {
         },
       ];
     }
+    if (stats?.avg_retrieval_latency_ms) {
+      return [
+        {
+          id: t('dashboard.latency.ttft'),
+          data: [{ x: t('dashboard.latency.recent'), y: stats.avg_retrieval_latency_ms }],
+        },
+      ];
+    }
     return [];
-  }, [latencyHistory, t]);
+  }, [latencyHistory, stats, t]);
 
   // Cache hit rate trend data
   const cacheTrendData: { id: string; data: { x: string; y: number }[] }[] = useMemo(() => {
