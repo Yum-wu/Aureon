@@ -217,21 +217,19 @@ class TestJWTRoundTrip:
         assert "expired" in str(exc_info.value).lower()
 
 
-# ── _get_jwt_secret — fail-closed on missing secret ──────────────────────
-# A misconfigured deployment that omits JWT_SECRET must NOT silently fall
-# back to a default secret, or all tokens become forgeable.
+# ── _get_jwt_secret — auto-generate on missing secret ─────────────────
+# Dev/demo: auto-generate random 32-byte hex. Prod: set JWT_SECRET env.
 
 
 class TestJWTSecretResolution:
-    def test_missing_jwt_secret_raises_runtime_error(self):
-        # Reload the module with no JWT_SECRET in the environment
+    def test_missing_jwt_secret_auto_generates(self):
         env = {k: v for k, v in os.environ.items() if k != "JWT_SECRET"}
         with patch.dict(os.environ, env, clear=True):
             import app.security.rbac as rbac
-            rbac._JWT_SECRET = None  # force re-resolution
-            with pytest.raises(RuntimeError) as exc_info:
-                rbac._get_jwt_secret()
-            assert "JWT_SECRET" in str(exc_info.value)
+            rbac._JWT_SECRET = None
+            secret = rbac._get_jwt_secret()
+            assert len(secret) == 64
+            assert isinstance(secret, str)
 
     def test_jwt_secret_is_cached_after_first_read(self, rbac_module):
         """The lazy resolver caches the secret in a module-level singleton
