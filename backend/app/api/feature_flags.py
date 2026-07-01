@@ -13,7 +13,7 @@ from app.security.rbac import UserRole, require_role
 
 logger = structlog.get_logger(__name__)
 
-router = APIRouter(prefix="/api/feature-flags", tags=["feature-flags"])
+router = APIRouter(prefix="/api/v1/feature-flags", tags=["feature-flags"])
 
 
 class FeatureFlagOut(BaseModel):
@@ -99,6 +99,21 @@ async def get_flag(name: str, _=Depends(require_role(UserRole.ADMIN))):
         raise NotFoundError(f"Feature flag '{name}' not found")
     return _row_to_flag(row)
 
+
+@router.post("/{name}/toggle", response_model=FeatureFlagOut)
+async def toggle_flag(name: str, _=Depends(require_role(UserRole.ADMIN))):
+    _init_table()
+    db = get_db()
+    row = db.execute("SELECT * FROM feature_flags WHERE name = ?", (name,)).fetchone()
+    if not row:
+        from app.exceptions import NotFoundError
+        raise NotFoundError(f"Feature flag '{name}' not found")
+    now = datetime.now(timezone.utc).isoformat()
+    new_val = 0 if row["enabled"] else 1
+    db.execute("UPDATE feature_flags SET enabled = ?, updated_at = ? WHERE name = ?", (new_val, now, name))
+    db.commit()
+    row = db.execute("SELECT * FROM feature_flags WHERE name = ?", (name,)).fetchone()
+    return _row_to_flag(row)
 
 @router.post("", response_model=FeatureFlagOut, status_code=201)
 @router.post("/", response_model=FeatureFlagOut, status_code=201)

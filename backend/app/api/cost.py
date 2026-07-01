@@ -10,7 +10,7 @@ from app.security.rbac import UserRole, require_role
 
 logger = structlog.get_logger(__name__)
 
-router = APIRouter(prefix="/api/cost", tags=["cost"])
+router = APIRouter(prefix="/api/v1/cost", tags=["cost"])
 
 
 def _get_time_range_days(period: str) -> int:
