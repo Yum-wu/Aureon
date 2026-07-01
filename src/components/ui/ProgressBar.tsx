@@ -8,6 +8,7 @@ interface ProgressBarProps {
   variant?: 'brand' | 'accent' | 'success' | 'warning' | 'error';
   label?: string;
   showPercentage?: boolean;
+  valueLabel?: string; // overrides "XX%" when showPercentage is true
   height?: number;
 }
 
@@ -24,6 +25,7 @@ export function ProgressBar({
   variant = 'brand',
   label,
   showPercentage = false,
+  valueLabel,
   height = 6,
 }: ProgressBarProps) {
   const clamped = Math.min(100, Math.max(0, value));
@@ -38,7 +40,7 @@ export function ProgressBar({
           )}
           {showPercentage && (
             <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg)' }}>
-              {Math.round(clamped)}%
+              {valueLabel ?? `${Math.round(clamped)}%`}
             </span>
           )}
         </div>

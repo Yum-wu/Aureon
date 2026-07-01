@@ -1,5 +1,5 @@
 # AGENTS.md
-
+禁止不用用简体中文回复
 > **主指令文件**: [CLAUDE.md](CLAUDE.md) — 项目约定、结构、红线、环境变量、路由清单。
 > **领域上下文**: [CONTEXT.md](CONTEXT.md) — 术语表、系统边界、RAG 迭代历史、MVP 边界。
 

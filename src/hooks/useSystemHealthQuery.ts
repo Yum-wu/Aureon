@@ -20,7 +20,9 @@ interface SystemHealthData {
 }
 
 async function fetchSystemHealth(): Promise<SystemHealthData> {
+  const start = performance.now();
   const res = await authFetch('/api/health');
+  const elapsed = Math.round(performance.now() - start);
   if (!res.ok) {
     throw new Error(`Health check failed: ${res.status}`);
   }
@@ -31,19 +33,19 @@ async function fetchSystemHealth(): Promise<SystemHealthData> {
     {
       name: 'API Server',
       healthy: data.status === 'ok',
-      responseTime: 0,
+      responseTime: elapsed,
       details: data.model,
     },
     {
       name: 'Index',
       healthy: data.index_ready === true,
-      responseTime: 0,
+      responseTime: elapsed,
       details: data.index_ready ? 'Ready' : 'Not ready',
     },
     {
       name: 'Tools',
       healthy: Array.isArray(data.tools) && data.tools.length > 0,
-      responseTime: 0,
+      responseTime: elapsed,
       details: `${data.tools?.length || 0} tools available`,
     },
   ];
