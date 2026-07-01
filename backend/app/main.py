@@ -22,6 +22,8 @@ from app.rate_limit import limiter
 import app.startup.cross_encoder  # noqa: F401
 
 from app.api.analytics import router as analytics_router
+from app.api.cost import router as cost_router
+from app.api.feature_flags import router as feature_flags_router
 from app.api.rag_stats import router as stats_router
 from app.api.websocket_chat import router as websocket_chat_router
 from app.api.ws_dashboard import router as ws_dashboard_router
@@ -242,6 +244,8 @@ app.include_router(rag_router.router, prefix="/api/v1/rag", tags=["rag"])
 app.include_router(crew_router.router, prefix="/api/v1/crew", tags=["crew"])
 app.include_router(stats_router)
 app.include_router(analytics_router)
+app.include_router(cost_router)
+app.include_router(feature_flags_router)
 app.include_router(observability_router, prefix="/api/v1/observability")
 app.include_router(security_router, prefix="/api/v1/security")
 app.include_router(audit_router, prefix="/api/v1/audit")
