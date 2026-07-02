@@ -10,6 +10,7 @@
 [![Qdrant](https://img.shields.io/badge/Qdrant-Cloud-DC2DFF?logo=qdrant&logoColor=white)](https://qdrant.tech/)
 [![Tests](https://img.shields.io/badge/Tests-958%20passed-brightgreen)](https://github.com/Yum-wu/Aureon/actions)
 
+**其他语言**: [English](README.md)
 **在线演示**: [aureon-production-659a.up.railway.app](https://aureon-production-659a.up.railway.app)
 **演示账号**: `admin / Aureon`
 **截图**: [首页](screenshots/landing-page.png) | [登录](screenshots/login-page.png) | [搜索](screenshots/zh-search-page.png)

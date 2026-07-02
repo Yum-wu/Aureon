@@ -10,6 +10,7 @@ Production-ready enterprise AI knowledge base platform. Upload documents, search
 [![Qdrant](https://img.shields.io/badge/Qdrant-Cloud-DC2DFF?logo=qdrant&logoColor=white)](https://qdrant.tech/)
 [![Tests](https://img.shields.io/badge/Tests-958%20passed-brightgreen)](https://github.com/Yum-wu/Aureon/actions)
 
+**Other languages**: [中文](README.zh-CN.md)
 **Live demo**: [aureon-production-659a.up.railway.app](https://aureon-production-659a.up.railway.app)
 **Demo account**: `admin / Aureon`
 **Screenshots**: [landing](screenshots/en-landing-page.png) | [login](screenshots/en-login-page.png) | [search](screenshots/en-search-page.png)
