@@ -123,7 +123,7 @@ regex==2026.5.9
 requests==2.34.2
 requests-oauthlib==2.0.0
 requests-toolbelt==1.0.0
-rich==14.3.4
+rich==15.0.0
 safetensors==0.7.0
 scikit-learn==1.9.0
 scipy==1.17.1
