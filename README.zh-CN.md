@@ -68,8 +68,7 @@ npm run dev
 
 ## 文档
 
-- [CLAUDE.md](CLAUDE.md) - 项目约定、结构、API 端点
-- [CONTEXT.md](CONTEXT.md) - 领域术语、RAG 历史、MVP 边界
+- [docs/architecture.zh-CN.md](docs/architecture.zh-CN.md) - 公开架构说明
 - [SECURITY.md](SECURITY.md) - 安全报告
 
 ## 支持

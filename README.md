@@ -68,8 +68,7 @@ npm run dev
 
 ## Docs
 
-- [CLAUDE.md](CLAUDE.md) - project conventions, structure, API endpoints
-- [CONTEXT.md](CONTEXT.md) - domain terms, RAG history, MVP boundaries
+- [docs/architecture.md](docs/architecture.md) - public architecture overview
 - [SECURITY.md](SECURITY.md) - security reporting
 
 ## Support
