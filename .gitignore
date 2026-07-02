@@ -155,6 +155,18 @@ _lint_debug.log
 
 # 客户文档（本地）
 docs/第一个客户.md
+docs/目标.md
+docs/CONTEXT.md
+docs/superpowers/
+AGENTS.md
+CLAUDE.md
+CONTEXT.md
+
+# Internal evaluation and experiment artifacts
+backend/tests/eval_report.md
+backend/data/deepeval_*.txt
+backend/data/phase*_*.txt
+backend/data/benchmark_railway_*.md
 
 # Playwright snapshots
 *.md.yml

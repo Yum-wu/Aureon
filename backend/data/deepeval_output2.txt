@@ -1,6 +1,0 @@
-  Looking for .env at: C:\Users\Yum\Desktop\Aureon-test\backend\.env
-  Exists: True
-Judge model: qwen3.6-flash
-Algorithm: DeepEval native FaithfulnessMetric (claim-level NLI)
-
-Dataset: 40 QA pairs
