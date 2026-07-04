@@ -406,6 +406,18 @@ def make_counter(start: float, end: float, duration: float, prefix: str = "",
     if font is None:
         font = get_font("en", bold=True)
 
+    # 预计算最大文本尺寸，确保计数器 clip 宽度固定，避免宽数字被截断
+    max_val = max(abs(start), abs(end))
+    if decimals > 0:
+        max_num_str = f"{max_val:.{decimals}f}"
+    else:
+        max_num_str = f"{int(round(max_val))}"
+    max_display = f"{prefix}{max_num_str}{suffix}"
+    ref_clip = TextClip(text=max_display, font_size=font_size, color=color,
+                        font=font, text_align="left")
+    max_w, max_h = ref_clip.size
+    ref_clip.close()
+
     def make_frame(t):
         progress = min(t / max(duration, 0.01), 1.0)
         ease = 1 - (1 - progress) ** 3  # ease out cubic
@@ -419,7 +431,7 @@ def make_counter(start: float, end: float, duration: float, prefix: str = "",
         display = f"{prefix}{num_str}{suffix}"
 
         txt_clip = TextClip(text=display, font_size=font_size, color=color,
-                            font=font, text_align="left")
+                            font=font, text_align="left", size=(max_w, max_h))
         frame = txt_clip.get_frame(t)
         txt_clip.close()
         return frame
@@ -521,7 +533,8 @@ def make_data_bars_scene(data_items: list, duration: float, lang: str = "en") ->
 
         # Right: label
         label_clip = (TextClip(text=item.get("label", ""), font_size=34, color="#e2e8f0",
-                               font=get_font("en", bold=True), text_align="left")
+                               font=get_font("en", bold=True), text_align="left",
+                               size=(None, 48))
                       .with_start(delay + 0.1)
                       .with_duration(duration - delay - 0.1)
                       .with_position((right_x, item_y))
@@ -533,7 +546,7 @@ def make_data_bars_scene(data_items: list, duration: float, lang: str = "en") ->
         if desc_text:
             desc_clip = (TextClip(text=desc_text, font_size=26, color="#94a3b8",
                                   font=get_font("en"), text_align="left",
-                                  size=(desc_width, None), method="caption")
+                                  size=(desc_width, int(26 * 1.6)), method="caption")
                          .with_start(delay + 0.3)
                          .with_duration(duration - delay - 0.3)
                          .with_position((right_x, item_y + 48))
@@ -787,9 +800,10 @@ def make_ending_v2(duration: float, lang: str = "en",
     features_delay = 2.1
 
     # 品牌名 - Aureon（大号，顶部居中）
-    brand_y = VIDEO_SIZE[1] * 0.18
+    brand_y = VIDEO_SIZE[1] * 0.25
     brand_txt = (TextClip(text="Aureon", font_size=110, color="white",
-                          font=get_font("en", bold=True), text_align="center")
+                          font=get_font("en", bold=True), text_align="center",
+                          size=(None, 130))
                  .with_duration(duration - brand_delay)
                  .with_start(brand_delay)
                  .with_position(("center", int(brand_y)))
@@ -797,12 +811,13 @@ def make_ending_v2(duration: float, lang: str = "en",
     elements.append(brand_txt)
 
     # 标语 - Enterprise AI Knowledge Base（中号，品牌名下方）
-    slogan_y = VIDEO_SIZE[1] * 0.30
+    slogan_y = VIDEO_SIZE[1] * 0.38
     slogan_text = "Enterprise AI Knowledge Base"
     if lang == "zh":
         slogan_text = "企业级 AI 知识库"
     slogan_txt = (TextClip(text=slogan_text, font_size=36, color="#94a3b8",
-                           font=get_font("en"), text_align="center")
+                           font=get_font("en"), text_align="center",
+                           size=(None, 50))
                   .with_duration(duration - slogan_delay)
                   .with_start(slogan_delay)
                   .with_position(("center", int(slogan_y)))
@@ -810,7 +825,7 @@ def make_ending_v2(duration: float, lang: str = "en",
     elements.append(slogan_txt)
 
     # 脉冲按钮 - Star on GitHub
-    button_y = VIDEO_SIZE[1] * 0.45
+    button_y = VIDEO_SIZE[1] * 0.50
     button_text = "★ Star on GitHub"
     pulse_btn = make_pulse_button(
         button_text, duration, button_y,
@@ -820,12 +835,12 @@ def make_ending_v2(duration: float, lang: str = "en",
     elements.append(pulse_btn)
 
     # GitHub URL - 选中态效果
-    url_y = VIDEO_SIZE[1] * 0.58
+    url_y = VIDEO_SIZE[1] * 0.62
     url_clip = make_selected_url(github_url, duration, url_y, start_delay=url_delay)
     elements.append(url_clip)
 
     # 底部三特性 - Open Source · MIT · Production Ready
-    features_y = VIDEO_SIZE[1] * 0.74
+    features_y = VIDEO_SIZE[1] * 0.80
     features_text = "Open Source  ·  MIT  ·  Production Ready"
     if lang == "zh":
         features_text = "开源  ·  MIT 协议  ·  生产就绪"
@@ -847,7 +862,8 @@ def make_ending_v2(duration: float, lang: str = "en",
 
         # 图标
         icon_clip = (TextClip(text=icon, font_size=24, color="#facc15",
-                              font=get_font("en", bold=True), text_align="center")
+                              font=get_font("en", bold=True), text_align="center",
+                              size=(None, 36))
                      .with_duration(duration - features_delay - i * 0.15)
                      .with_start(features_delay + i * 0.15)
                      .with_position((int(item_x), int(features_y)))
@@ -856,7 +872,8 @@ def make_ending_v2(duration: float, lang: str = "en",
 
         # 文字
         label_clip = (TextClip(text=label, font_size=26, color="#cbd5e1",
-                               font=get_font("en"), text_align="center")
+                               font=get_font("en"), text_align="center",
+                               size=(None, 40))
                       .with_duration(duration - features_delay - i * 0.15 - 0.1)
                       .with_start(features_delay + i * 0.15 + 0.1)
                       .with_position((int(item_x), int(features_y + 34)))
