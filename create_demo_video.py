@@ -787,7 +787,7 @@ def make_ending_v2(duration: float, lang: str = "en",
     features_delay = 2.1
 
     # 品牌名 - Aureon（大号，顶部居中）
-    brand_y = VIDEO_SIZE[1] * 0.22
+    brand_y = VIDEO_SIZE[1] * 0.18
     brand_txt = (TextClip(text="Aureon", font_size=110, color="white",
                           font=get_font("en", bold=True), text_align="center")
                  .with_duration(duration - brand_delay)
@@ -797,7 +797,7 @@ def make_ending_v2(duration: float, lang: str = "en",
     elements.append(brand_txt)
 
     # 标语 - Enterprise AI Knowledge Base（中号，品牌名下方）
-    slogan_y = VIDEO_SIZE[1] * 0.34
+    slogan_y = VIDEO_SIZE[1] * 0.30
     slogan_text = "Enterprise AI Knowledge Base"
     if lang == "zh":
         slogan_text = "企业级 AI 知识库"
@@ -810,7 +810,7 @@ def make_ending_v2(duration: float, lang: str = "en",
     elements.append(slogan_txt)
 
     # 脉冲按钮 - Star on GitHub
-    button_y = VIDEO_SIZE[1] * 0.50
+    button_y = VIDEO_SIZE[1] * 0.45
     button_text = "★ Star on GitHub"
     pulse_btn = make_pulse_button(
         button_text, duration, button_y,
@@ -820,12 +820,12 @@ def make_ending_v2(duration: float, lang: str = "en",
     elements.append(pulse_btn)
 
     # GitHub URL - 选中态效果
-    url_y = VIDEO_SIZE[1] * 0.62
+    url_y = VIDEO_SIZE[1] * 0.58
     url_clip = make_selected_url(github_url, duration, url_y, start_delay=url_delay)
     elements.append(url_clip)
 
     # 底部三特性 - Open Source · MIT · Production Ready
-    features_y = VIDEO_SIZE[1] * 0.78
+    features_y = VIDEO_SIZE[1] * 0.74
     features_text = "Open Source  ·  MIT  ·  Production Ready"
     if lang == "zh":
         features_text = "开源  ·  MIT 协议  ·  生产就绪"
@@ -846,7 +846,7 @@ def make_ending_v2(duration: float, lang: str = "en",
         item_x = start_x + i * feature_gap + feature_gap // 2
 
         # 图标
-        icon_clip = (TextClip(text=icon, font_size=20, color="#facc15",
+        icon_clip = (TextClip(text=icon, font_size=24, color="#facc15",
                               font=get_font("en", bold=True), text_align="center")
                      .with_duration(duration - features_delay - i * 0.15)
                      .with_start(features_delay + i * 0.15)
@@ -855,11 +855,11 @@ def make_ending_v2(duration: float, lang: str = "en",
         elements.append(icon_clip)
 
         # 文字
-        label_clip = (TextClip(text=label, font_size=22, color="#cbd5e1",
+        label_clip = (TextClip(text=label, font_size=26, color="#cbd5e1",
                                font=get_font("en"), text_align="center")
                       .with_duration(duration - features_delay - i * 0.15 - 0.1)
                       .with_start(features_delay + i * 0.15 + 0.1)
-                      .with_position((int(item_x), int(features_y + 28)))
+                      .with_position((int(item_x), int(features_y + 34)))
                       .with_effects([vfx.CrossFadeIn(0.4)]))
         elements.append(label_clip)
 
