@@ -485,99 +485,73 @@ def make_progress_bar(fill_ratio: float, duration: float, bar_width: int = 600,
 
 
 def make_data_bars_scene(data_items: list, duration: float, lang: str = "en") -> CompositeVideoClip:
-    """数据指标场景：横向条形图 + 数字滚动动画。
-
-    三项数据依次出现（stagger 0.8s），每项包含：
-    - 大数字（滚动计数动画）
-    - 进度条（从左向右填充）
-    - 说明文字
-
-    Args:
-        data_items: 数据项列表，每项为 dict，包含：
-                    - value: 数值（用于进度条比例和计数）
-                    - display: 显示的数字字符串（如 "100%"、"590ms"、"$0.0003"）
-                    - label: 标签（如 "Recall@5"、"TTFT"、"per query"）
-                    - description: 说明文字
-                    - max_val: 进度条最大值（用于计算比例）
-                    - decimals: 小数位数
-                    - prefix: 前缀
-                    - suffix: 后缀
-        duration: 总时长
-        lang: 语言
-
-    Returns:
-        CompositeVideoClip: 完整的数据条形图场景
-    """
+    """数据指标场景：左侧大数字，右侧标签 + 说明。"""
     bg = ColorClip(size=VIDEO_SIZE, color=(10, 15, 35)).with_duration(duration)
-
     stagger_delay = 0.8
     anim_duration = 2.0
     n = len(data_items)
 
-    bar_total_width = 700
-    item_gap = 120
-    start_y = int(VIDEO_SIZE[1] * 0.28)
+    item_gap = 140
+    start_y = int(VIDEO_SIZE[1] * 0.22)
+    left_x = int(VIDEO_SIZE[0] * 0.18)
+    right_x = int(VIDEO_SIZE[0] * 0.45)
+    desc_width = VIDEO_SIZE[0] - right_x - 120  # ensure no truncation
 
     items = [bg]
 
     for i, item in enumerate(data_items):
         delay = i * stagger_delay
-        item_start_y = start_y + i * item_gap
+        item_y = start_y + i * item_gap
 
         fill_ratio = min(item["value"] / max(item.get("max_val", item["value"]), 0.01), 1.0)
 
+        # Left: big counter
         counter_clip = make_counter(
-            start=0,
-            end=item["value"],
-            duration=anim_duration,
-            prefix=item.get("prefix", ""),
-            suffix=item.get("suffix", ""),
+            start=0, end=item["value"], duration=anim_duration,
+            prefix=item.get("prefix", ""), suffix=item.get("suffix", ""),
             decimals=item.get("decimals", 0),
-            font_size=56,
-            color="#60a5fa",
-            font=get_font("en", bold=True),
+            font_size=56, color="#60a5fa", font=get_font("en", bold=True),
         )
         counter_clip = (counter_clip
                         .with_start(delay)
                         .with_duration(duration - delay)
-                        .with_position((int(VIDEO_SIZE[0] * 0.18), item_start_y))
+                        .with_position((left_x, item_y))
                         .with_effects([vfx.CrossFadeIn(0.3)]))
         items.append(counter_clip)
 
-        label_text = item.get("label", "")
-        if label_text:
-            label_clip = (TextClip(text=label_text, font_size=32, color="#94a3b8",
-                                   font=get_font("en"), text_align="left")
-                          .with_start(delay + 0.1)
-                          .with_duration(duration - delay - 0.1)
-                          .with_position((int(VIDEO_SIZE[0] * 0.18), item_start_y + 65))
-                          .with_effects([vfx.CrossFadeIn(0.4)]))
-            items.append(label_clip)
+        # Right: label
+        label_clip = (TextClip(text=item.get("label", ""), font_size=34, color="#e2e8f0",
+                               font=get_font("en", bold=True), text_align="left")
+                      .with_start(delay + 0.1)
+                      .with_duration(duration - delay - 0.1)
+                      .with_position((right_x, item_y))
+                      .with_effects([vfx.CrossFadeIn(0.4)]))
+        items.append(label_clip)
 
+        # Right: description
+        desc_text = item.get("description", "")
+        if desc_text:
+            desc_clip = (TextClip(text=desc_text, font_size=26, color="#94a3b8",
+                                  font=get_font("en"), text_align="left",
+                                  size=(desc_width, None), method="caption")
+                         .with_start(delay + 0.3)
+                         .with_duration(duration - delay - 0.3)
+                         .with_position((right_x, item_y + 48))
+                         .with_effects([vfx.CrossFadeIn(0.5)]))
+            items.append(desc_clip)
+
+        # Right: progress bar below description
         progress_bar = make_progress_bar(
-            fill_ratio=fill_ratio,
-            duration=anim_duration,
-            bar_width=bar_total_width,
-            bar_height=20,
+            fill_ratio=fill_ratio, duration=anim_duration,
+            bar_width=desc_width, bar_height=16,
             start_delay=delay + 0.2,
-            fill_color="#3b82f6",
-            bg_color="#1e293b",
+            fill_color="#3b82f6", bg_color="#1e293b",
         )
         progress_bar = (progress_bar
                         .with_start(0)
                         .with_duration(duration)
-                        .with_position((int(VIDEO_SIZE[0] * 0.45), item_start_y + 18)))
+                        .with_position((right_x, item_y + 92)))
         items.append(progress_bar)
-
-        desc_text = item.get("description", "")
-        if desc_text:
-            desc_clip = (TextClip(text=desc_text, font_size=26, color="#cbd5e1",
-                                  font=get_font("en"), text_align="left")
-                         .with_start(delay + 0.4)
-                         .with_duration(duration - delay - 0.4)
-                         .with_position((int(VIDEO_SIZE[0] * 0.45), item_start_y + 55))
-                         .with_effects([vfx.CrossFadeIn(0.5)]))
-            items.append(desc_clip)
 
     return CompositeVideoClip(items, size=VIDEO_SIZE)
 
