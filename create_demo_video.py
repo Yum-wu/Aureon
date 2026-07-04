@@ -309,40 +309,36 @@ def make_ken_burns_clip(img_path: Path, duration: float,
     return final_clip
 
 
-def make_caption(text: str, duration: float, lang: str = "en",
-                 position: str = "bottom") -> CompositeVideoClip:
-    """创建字幕条：半透明背景 + 居中文字。
-
-    字幕与配音独立存在——简洁、易扫描，不是逐字稿。
-
-    Args:
-        text: 字幕文字
-        duration: 持续时间
-        lang: 语言 (en/zh)
-        position: 字幕位置，"top"（距顶部40px）或 "bottom"（距底部100px）
-    """
-    font_size = 38 if lang == "en" else 42
+def make_caption(text: str, duration: float, lang: str = "en") -> CompositeVideoClip:
+    """底部居中胶囊字幕：半透明、细条、不遮挡内容。"""
+    font_size = 34 if lang == "en" else 38
     font = get_font(lang)
-    bar_height = 60
+    bar_height = 48
+    margin_x = 40
+    max_width = int(VIDEO_SIZE[0] * 0.85)
 
-    # 计算 Y 坐标
-    if position == "top":
-        y_pos = 40
-    else:
-        y_pos = VIDEO_SIZE[1] - 100
+    txt = TextClip(
+        text=text,
+        font_size=font_size,
+        color="white",
+        font=font,
+        size=(max_width - margin_x * 2, None),
+        method="caption",
+        text_align="center",
+    )
 
-    # 半透明背景条
-    bar = (ColorClip(size=(VIDEO_SIZE[0], bar_height), color=(0, 0, 0))
-           .with_opacity(0.65)
+    # Measure text size to size the pill background
+    txt_w, txt_h = txt.size
+    bar_w = min(txt_w + margin_x * 2, max_width)
+    bar_y = VIDEO_SIZE[1] - 60 - bar_height // 2  # 60px from bottom
+
+    bar = (ColorClip(size=(bar_w, bar_height), color=(0, 0, 0))
+           .with_opacity(0.55)
            .with_duration(duration)
-           .with_position(("center", y_pos)))
+           .with_position(("center", bar_y)))
 
-    # 文字叠加
-    txt = (TextClip(text=text, font_size=font_size, color="white", font=font,
-                    size=(VIDEO_SIZE[0] - 100, 50), method="caption",
-                    text_align="center")
-           .with_duration(duration)
-           .with_position(("center", y_pos + 5)))
+    txt = (txt.with_duration(duration)
+              .with_position(("center", bar_y + (bar_height - txt_h) // 2)))
 
     return CompositeVideoClip([bar, txt], size=VIDEO_SIZE).with_duration(duration)
 
@@ -1685,8 +1681,7 @@ def build_scenes(scenes: list, lang: str, v2: bool = False) -> list:
 
         # Add caption overlay (hook 场景自带文字，不需要额外字幕)
         if s["type"] != "hook":
-            caption_pos = s.get("caption_position", "bottom") if v2 else "bottom"
-            caption = make_caption(s["caption"], dur, lang, position=caption_pos)
+            caption = make_caption(s["caption"], dur, lang)
             visual = CompositeVideoClip([visual, caption], size=VIDEO_SIZE)
 
         # v2 模式：叠加品牌水印
