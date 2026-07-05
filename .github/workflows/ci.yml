@@ -35,6 +35,23 @@ jobs:
 
   test-backend:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: aureon_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d aureon_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/aureon_test
+      DATABASE__DATABASE_URL: postgresql://postgres:postgres@localhost:5432/aureon_test
     steps:
       - uses: actions/checkout@v4
 
