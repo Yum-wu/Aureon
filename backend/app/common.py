@@ -44,7 +44,7 @@ def deterministic_hash(seed: str, modulo: int = 100) -> int:
 
 
 def rows_to_models(rows: Sequence, model_class: Type[T]) -> list[T]:
-    """Convert sqlite3.Row objects to Pydantic models."""
+    """Convert database Rows to Pydantic models (works with asyncpg Records too)."""
     return [model_class(**dict(row)) for row in rows]
 
 

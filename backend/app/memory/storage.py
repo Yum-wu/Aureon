@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Unified storage backend abstraction for the Aureon memory system.
+Unified storage backend for the Aureon memory system.
 
-Provides a protocol (interface) with SQLite and PostgreSQL implementations,
-allowing L0 (conversations) and L1 (atoms) to operate against either backend
-transparently.  The active backend is selected at startup based on the
-``DATABASE_URL`` environment variable.
+Provides a PostgreSQL-based implementation for L0 (conversations) and L1 (atoms),
+accessed through ``PGStorageBackend``.  The active backend is selected at startup
+based on the ``DATABASE_URL`` environment variable.
 
 Usage::
 
@@ -26,6 +25,7 @@ logger = structlog.get_logger(__name__)
 
 
 # -- Protocol --
+
 
 @runtime_checkable
 class StorageBackend(Protocol):
@@ -89,62 +89,8 @@ class StorageBackend(Protocol):
         ...
 
 
-# -- SQLite backend --
-
-class SQLiteStorageBackend:
-    """Wraps the existing synchronous SQLite layer (``app.memory.db``)."""
-
-    def __init__(self) -> None:
-        from app.memory import db as _db
-        self._db = _db
-
-    # lifecycle
-    def init(self) -> None:
-        self._db.init_db()
-        logger.info("storage_backend_init", backend="sqlite")
-
-    def close(self) -> None:
-        self._db.close_db()
-
-    # L0
-    def record_message(self, session_id, role, content, tokens=0,
-                       tool_name=None, tool_args=None):
-        from app.memory.l0_conversation import record_message as _record
-        _record(session_id, role, content, tokens, tool_name, tool_args)
-
-    def get_conversation(self, session_id, limit=50):
-        from app.memory.l0_conversation import get_conversation as _get
-        return _get(session_id, limit)
-
-    def get_message_by_id(self, conv_id):
-        from app.memory.l0_conversation import get_message_by_id as _get
-        return _get(conv_id)
-
-    def cleanup_oldest(self, session_id, max_messages=200):
-        from app.memory.l0_conversation import cleanup_oldest as _clean
-        _clean(session_id, max_messages)
-
-    # L1
-    def save_atom(self, session_id, subject, predicate, obj,
-                  source_ref=None, confidence=0.5):
-        from app.memory.l1_atom import save_atom as _save
-        _save(session_id, subject, predicate, obj, source_ref, confidence)
-
-    def search_atoms(self, session_id, query, limit=10):
-        from app.memory.l1_atom import search_atoms as _search
-        return _search(session_id, query, limit)
-
-    def get_atoms_by_session(self, session_id):
-        from app.memory.l1_atom import get_atoms_by_session as _get
-        return _get(session_id)
-
-    # L1 - decay
-    def decay_stale_atoms(self, days=30, decay_factor=0.9):
-        from app.memory.l1_atom import decay_stale_atoms as _decay
-        return _decay(days, decay_factor)
-
-
 # -- PostgreSQL backend --
+
 
 class PGStorageBackend:
     """Async PostgreSQL backend via SQLAlchemy (``app.memory.pg``).
@@ -192,7 +138,11 @@ class PGStorageBackend:
 
     def close(self) -> None:
         if self._loop is not None:
+            from app.memory.pg import dispose_async_engine
+            self._run_async(dispose_async_engine())
             self._loop.call_soon_threadsafe(self._loop.stop)
+            self._loop = None
+            self._thread = None
 
     # L0 - async pg operations wrapped for sync callers
     def record_message(self, session_id, role, content, tokens=0,
@@ -300,9 +250,8 @@ _backend: Optional[StorageBackend] = None
 def get_backend() -> StorageBackend:
     """Return the active storage backend (created lazily).
 
-    Selection logic:
-    - ``DATABASE_URL`` set -> ``PGStorageBackend``
-    - Otherwise -> ``SQLiteStorageBackend`` (default)
+    Requires ``DATABASE_URL`` to be configured.  Raises ``RuntimeError``
+    otherwise — the SQLite fallback has been removed.
     """
     global _backend
     if _backend is not None:
@@ -311,12 +260,14 @@ def get_backend() -> StorageBackend:
     from app.config import settings
     database_url = settings.database_url
 
-    if database_url:
-        _backend = PGStorageBackend(database_url)
-        logger.info("storage_backend_selected", backend="postgresql")
-    else:
-        _backend = SQLiteStorageBackend()
-        logger.info("storage_backend_selected", backend="sqlite")
+    if not database_url:
+        raise RuntimeError(
+            "DATABASE_URL is not set. PostgreSQL is required — "
+            "set DATABASE_URL in your environment."
+        )
+
+    _backend = PGStorageBackend(database_url)
+    logger.info("storage_backend_selected", backend="postgresql")
 
     return _backend
 

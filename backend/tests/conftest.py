@@ -80,12 +80,12 @@ def worker_id():
     return os.environ.get("PYTEST_XDIST_WORKER", "master")
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def pg_client():
-    """Session-scoped TestClient with lifespan — initializes asyncpg pool once.
+    """TestClient with lifespan for PostgreSQL-backed API tests.
 
-    Shared across all test modules that require a live PostgreSQL connection.
-    Skipped automatically when DATABASE_URL is not configured.
+    Starlette/FastAPI only run lifespan inside the context manager; keep this
+    function-scoped so asyncpg pools never outlive their event loop.
     """
     from fastapi.testclient import TestClient
     from app.config import settings

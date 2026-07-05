@@ -28,6 +28,9 @@ build/
 # IDE
 .vscode/
 .idea/
+
+# Agent worktrees
+.worktrees/
 .trae/
 *.swp
 *.swo
@@ -153,14 +156,38 @@ _lint_debug.log
 /test_*.py
 /test_*.mjs
 
-# 客户文档（本地）
-docs/第一个客户.md
-docs/目标.md
-docs/CONTEXT.md
-docs/superpowers/
+# Demo video generation artifacts (local only, do not commit)
+/archive/
+/demo_output/
+/screenshots/
+/audio/
+/output/
+remotion/out/
+*.mp4
+*.mp3
+*.wav
+/create_demo_video.py
+generate_tts.py
+add_audio_to_existing.py
+temp_test_bgm_mix.mp3
+admin-flags.png
+analytics-latency-ms.png
+cost-page.md
+skills-temp/
+.playwright-cli/
+
+# Agent/LLM 指令文档 —— 本地保留，禁止提交，禁止删除
+# 这些文件包含项目约定和领域上下文，只在开发者本地维护，
+# 不应进入 git 仓库，也不应被任何自动化脚本删除。
 AGENTS.md
 CLAUDE.md
 CONTEXT.md
+docs/CONTEXT.md
+
+# 客户文档（本地）
+docs/第一个客户.md
+docs/目标.md
+docs/superpowers/
 
 # Internal evaluation and experiment artifacts
 backend/tests/eval_report.md

@@ -160,7 +160,7 @@ async def scan_document(
 
     for detection in detections:
         masked_value = pii_detector.mask(detection["value"], detection["type"])
-        log_pii_detection(
+        await log_pii_detection(
             document_id=document_id,
             pii_type=detection["type"],
             value=detection["value"],
@@ -184,7 +184,7 @@ async def create_sso_provider_endpoint(
     user: dict = Depends(require_role(UserRole.ADMIN)),
 ):
     """创建 SSO 提供商 (需要 ADMIN 角色)"""
-    return create_sso_provider(provider)
+    return await create_sso_provider(provider)
 
 
 @router.get("/sso/providers", response_model=list[SSOProvider])
@@ -192,7 +192,7 @@ async def list_sso_providers_endpoint(
     user: dict = Depends(require_role(UserRole.ADMIN)),
 ):
     """列出所有 SSO 提供商 (需要 ADMIN 角色)"""
-    return list_sso_providers()
+    return await list_sso_providers()
 
 
 @router.delete("/sso/providers/{name}", status_code=204)
@@ -201,8 +201,8 @@ async def delete_sso_provider_endpoint(
     user: dict = Depends(require_role(UserRole.ADMIN)),
 ):
     """删除 SSO 提供商 (需要 ADMIN 角色)"""
-    success = delete_sso_provider(name)
-    if not success:
+    ok = await delete_sso_provider(name)
+    if not ok:
         raise NotFoundError("SSO provider not found")
 
 

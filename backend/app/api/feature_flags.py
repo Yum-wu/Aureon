@@ -1,4 +1,4 @@
-"""Feature Flags API — 功能开关 CRUD + 评估"""
+"""Feature Flags API — 功能开关 CRUD + 评估 (PostgreSQL asyncpg)."""
 
 import json
 from datetime import datetime, timezone
@@ -8,7 +8,6 @@ import structlog
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
-from app.memory.db import get_db
 from app.security.rbac import UserRole, require_role
 
 logger = structlog.get_logger(__name__)
@@ -44,23 +43,31 @@ class FeatureFlagUpdate(BaseModel):
     conditions: Optional[dict] = None
 
 
-def _init_table():
-    db = get_db()
-    db.executescript("""
-        CREATE TABLE IF NOT EXISTS feature_flags (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL UNIQUE,
-            description TEXT,
-            status TEXT NOT NULL DEFAULT 'active',
-            enabled INTEGER NOT NULL DEFAULT 0,
-            percentage INTEGER NOT NULL DEFAULT 0,
-            conditions TEXT,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        );
-        CREATE INDEX IF NOT EXISTS idx_ff_name ON feature_flags(name);
-    """)
-    db.commit()
+async def _get_pool():
+    from app.database.connection import get_db_pool
+    pool = get_db_pool()
+    if pool is None:
+        raise RuntimeError("DATABASE_URL not configured — cannot access feature flags")
+    return pool
+
+
+async def _ensure_table():
+    """Ensure table exists (PostgreSQL — schema.sql creates it, this is a safety net)."""
+    pool = await _get_pool()
+    async with pool.acquire() as conn:
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS feature_flags (
+                id BIGSERIAL PRIMARY KEY,
+                name TEXT UNIQUE NOT NULL,
+                description TEXT,
+                status TEXT NOT NULL DEFAULT 'active',
+                enabled BOOLEAN NOT NULL DEFAULT FALSE,
+                percentage INTEGER NOT NULL DEFAULT 0,
+                conditions TEXT,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+        """)
 
 
 def _row_to_flag(row) -> FeatureFlagOut:
@@ -72,28 +79,28 @@ def _row_to_flag(row) -> FeatureFlagOut:
         enabled=bool(row["enabled"]),
         percentage=row["percentage"],
         conditions=json.loads(row["conditions"]) if row["conditions"] else None,
-        created_at=row["created_at"],
-        updated_at=row["updated_at"],
+        created_at=row["created_at"].isoformat() if hasattr(row["created_at"], "isoformat") else row["created_at"],
+        updated_at=row["updated_at"].isoformat() if hasattr(row["updated_at"], "isoformat") else row["updated_at"],
     )
 
 
 @router.get("", response_model=list[FeatureFlagOut])
 @router.get("/", response_model=list[FeatureFlagOut])
 async def list_flags(status: Optional[str] = Query(None), _=Depends(require_role(UserRole.ADMIN))):
-    _init_table()
-    db = get_db()
-    if status:
-        rows = db.execute("SELECT * FROM feature_flags WHERE status = ? ORDER BY name", (status,)).fetchall()
-    else:
-        rows = db.execute("SELECT * FROM feature_flags ORDER BY name").fetchall()
+    pool = await _get_pool()
+    async with pool.acquire() as conn:
+        if status:
+            rows = await conn.fetch("SELECT * FROM feature_flags WHERE status = $1 ORDER BY name", status)
+        else:
+            rows = await conn.fetch("SELECT * FROM feature_flags ORDER BY name")
     return [_row_to_flag(r) for r in rows]
 
 
 @router.get("/{name}", response_model=FeatureFlagOut)
 async def get_flag(name: str, _=Depends(require_role(UserRole.ADMIN))):
-    _init_table()
-    db = get_db()
-    row = db.execute("SELECT * FROM feature_flags WHERE name = ?", (name,)).fetchone()
+    pool = await _get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow("SELECT * FROM feature_flags WHERE name = $1", name)
     if not row:
         from app.exceptions import NotFoundError
         raise NotFoundError(f"Feature flag '{name}' not found")
@@ -102,75 +109,86 @@ async def get_flag(name: str, _=Depends(require_role(UserRole.ADMIN))):
 
 @router.post("/{name}/toggle", response_model=FeatureFlagOut)
 async def toggle_flag(name: str, _=Depends(require_role(UserRole.ADMIN))):
-    _init_table()
-    db = get_db()
-    row = db.execute("SELECT * FROM feature_flags WHERE name = ?", (name,)).fetchone()
-    if not row:
-        from app.exceptions import NotFoundError
-        raise NotFoundError(f"Feature flag '{name}' not found")
-    now = datetime.now(timezone.utc).isoformat()
-    new_val = 0 if row["enabled"] else 1
-    db.execute("UPDATE feature_flags SET enabled = ?, updated_at = ? WHERE name = ?", (new_val, now, name))
-    db.commit()
-    row = db.execute("SELECT * FROM feature_flags WHERE name = ?", (name,)).fetchone()
+    pool = await _get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow("SELECT * FROM feature_flags WHERE name = $1", name)
+        if not row:
+            from app.exceptions import NotFoundError
+            raise NotFoundError(f"Feature flag '{name}' not found")
+        now = datetime.now(timezone.utc)
+        new_val = not row["enabled"]
+        await conn.execute(
+            "UPDATE feature_flags SET enabled = $1, updated_at = $2 WHERE name = $3",
+            new_val, now, name,
+        )
+        row = await conn.fetchrow("SELECT * FROM feature_flags WHERE name = $1", name)
     return _row_to_flag(row)
+
 
 @router.post("", response_model=FeatureFlagOut, status_code=201)
 @router.post("/", response_model=FeatureFlagOut, status_code=201)
 async def create_flag(flag: FeatureFlagCreate, _=Depends(require_role(UserRole.ADMIN))):
-    _init_table()
-    db = get_db()
-    now = datetime.now(timezone.utc).isoformat()
+    pool = await _get_pool()
+    now = datetime.now(timezone.utc)
     try:
-        db.execute(
-            """INSERT INTO feature_flags (name, description, status, enabled, percentage, conditions, created_at, updated_at)
-               VALUES (?, ?, 'active', ?, ?, ?, ?, ?)""",
-            (flag.name, flag.description, int(flag.enabled), flag.percentage,
-             json.dumps(flag.conditions, ensure_ascii=False) if flag.conditions else None,
-             now, now),
-        )
-        db.commit()
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow(
+                """INSERT INTO feature_flags (name, description, status, enabled, percentage, conditions, created_at, updated_at)
+                   VALUES ($1, $2, 'active', $3, $4, $5, $6, $7)
+                   RETURNING *""",
+                flag.name,
+                flag.description,
+                flag.enabled,
+                flag.percentage,
+                json.dumps(flag.conditions, ensure_ascii=False) if flag.conditions else None,
+                now, now,
+            )
     except Exception as exc:
         from app.exceptions import ConflictError
         raise ConflictError(f"Flag '{flag.name}' already exists or conflict: {exc}")
-    row = db.execute("SELECT * FROM feature_flags WHERE name = ?", (flag.name,)).fetchone()
     return _row_to_flag(row)
 
 
 @router.put("/{name}", response_model=FeatureFlagOut)
 async def update_flag(name: str, update: FeatureFlagUpdate, _=Depends(require_role(UserRole.ADMIN))):
-    _init_table()
-    db = get_db()
-    row = db.execute("SELECT * FROM feature_flags WHERE name = ?", (name,)).fetchone()
-    if not row:
-        from app.exceptions import NotFoundError
-        raise NotFoundError(f"Feature flag '{name}' not found")
-    now = datetime.now(timezone.utc).isoformat()
-    fields = {}
-    if update.description is not None:
-        fields["description"] = update.description
-    if update.status is not None:
-        fields["status"] = update.status
-    if update.enabled is not None:
-        fields["enabled"] = int(update.enabled)
-    if update.percentage is not None:
-        fields["percentage"] = update.percentage
-    if update.conditions is not None:
-        fields["conditions"] = json.dumps(update.conditions, ensure_ascii=False)
-    fields["updated_at"] = now
-    set_clause = ", ".join(f"{k} = ?" for k in fields)
-    db.execute(f"UPDATE feature_flags SET {set_clause} WHERE name = ?", (*fields.values(), name))
-    db.commit()
-    row = db.execute("SELECT * FROM feature_flags WHERE name = ?", (name,)).fetchone()
+    pool = await _get_pool()
+    now = datetime.now(timezone.utc)
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow("SELECT * FROM feature_flags WHERE name = $1", name)
+        if not row:
+            from app.exceptions import NotFoundError
+            raise NotFoundError(f"Feature flag '{name}' not found")
+
+        fields = {}
+        if update.description is not None:
+            fields["description"] = update.description
+        if update.status is not None:
+            fields["status"] = update.status
+        if update.enabled is not None:
+            fields["enabled"] = update.enabled
+        if update.percentage is not None:
+            fields["percentage"] = update.percentage
+        if update.conditions is not None:
+            fields["conditions"] = json.dumps(update.conditions, ensure_ascii=False)
+        fields["updated_at"] = now
+
+        if fields:
+            set_clause = ", ".join(f"{k} = ${i+1}" for i, k in enumerate(fields))
+            values = list(fields.values()) + [name]
+            await conn.execute(
+                f"UPDATE feature_flags SET {set_clause} WHERE name = ${len(fields)+1}",
+                *values,
+            )
+
+        row = await conn.fetchrow("SELECT * FROM feature_flags WHERE name = $1", name)
     return _row_to_flag(row)
 
 
 @router.delete("/{name}", status_code=204)
 async def delete_flag(name: str, _=Depends(require_role(UserRole.ADMIN))):
-    _init_table()
-    db = get_db()
-    db.execute("DELETE FROM feature_flags WHERE name = ?", (name,))
-    db.commit()
+    pool = await _get_pool()
+    async with pool.acquire() as conn:
+        await conn.execute("DELETE FROM feature_flags WHERE name = $1", name)
 
 
 @router.get("/evaluate/{name}")
@@ -179,9 +197,11 @@ async def evaluate_flag(
     user_id: Optional[str] = Query(None),
     workspace_id: Optional[str] = Query(None),
 ):
-    _init_table()
-    db = get_db()
-    row = db.execute("SELECT * FROM feature_flags WHERE name = ? AND status = 'active'", (name,)).fetchone()
+    pool = await _get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT * FROM feature_flags WHERE name = $1 AND status = 'active'", name
+        )
     if not row:
         return {"enabled": False}
     if row["enabled"]:

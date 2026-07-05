@@ -1,21 +1,18 @@
 import pytest
-from app.memory.db import init_db
-from app.memory.l0_conversation import record_message, get_conversation
-from app.memory.l1_atom import save_atom, search_atoms
+
+from app.memory.storage import get_backend
 from app.memory.offload import offload_if_needed
 from app.memory.l2_scenario import finalize_scenario
 from app.memory.l3_persona import update_persona, get_persona
 
 
 class TestL0Conversation:
-    def setup_method(self):
-        init_db()
-
     def test_record_and_retrieve(self):
         sid = "l0_test_" + str(hash("test_record_and_retrieve"))
-        record_message(sid, "user", "hello", tokens=10)
-        record_message(sid, "assistant", "hi", tokens=5)
-        msgs = get_conversation(sid, limit=10)
+        backend = get_backend()
+        backend.record_message(sid, "user", "hello", tokens=10)
+        backend.record_message(sid, "assistant", "hi", tokens=5)
+        msgs = backend.get_conversation(sid, limit=10)
         assert len(msgs) == 2
         roles = [m["role"] for m in msgs]
         assert "user" in roles
@@ -23,12 +20,10 @@ class TestL0Conversation:
 
 
 class TestL1Atom:
-    def setup_method(self):
-        init_db()
-
     def test_save_and_search(self):
-        save_atom("test_sess", "user", "prefers", "React", confidence=0.8)
-        results = search_atoms("test_sess", "React")
+        backend = get_backend()
+        backend.save_atom("test_sess", "user", "prefers", "React", confidence=0.8)
+        results = backend.search_atoms("test_sess", "React")
         assert len(results) >= 1
         assert results[0]["subject"] == "user"
 
@@ -46,9 +41,8 @@ class TestOffload:
 
 
 class TestL2Scenario:
-    @pytest.mark.skip(reason="Flaky on Windows: SQLite FTS5 + singleton connection race")
     def test_finalize_scenario(self):
-        record_message("sess_l2", "user", "test msg")
+        get_backend().record_message("sess_l2", "user", "test msg")
         finalize_scenario("sess_l2")
         from pathlib import Path
         files = list(Path("offloads/scenarios").glob("sess_l2_*.md"))

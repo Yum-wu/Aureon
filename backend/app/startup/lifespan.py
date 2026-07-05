@@ -132,6 +132,8 @@ async def lifespan(app: FastAPI):
         logger.warning("Langfuse shutdown failed (non-fatal): %s", e)
     memory_manager.flush_all_scenarios()
     backend.close()
+    from app.memory.storage import reset_backend
+    reset_backend()
     await close_db_pool()
     await close_redis()
     close_sync_redis()

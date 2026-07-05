@@ -91,19 +91,12 @@ async def rotate_token(old_key: str) -> int:
 
     遍历 sso_providers 表，用 old_key 解密后用当前 MultiFernet 的第一个密钥重新加密。
     返回迁移计数。
-
-    注意：此函数为 async 以便在异步上下文中调用，SQLite 操作本身是同步的。
     """
     from cryptography.fernet import Fernet
 
-    from app.memory.db import get_db
-    from app.security.sso import init_sso_providers_table
+    from app.security.sso import get_all_sso_providers_raw, update_sso_provider_secret
 
-    init_sso_providers_table()
-    conn = get_db()
-
-    # 读取所有 SSO provider
-    rows = conn.execute("SELECT id, client_secret FROM sso_providers").fetchall()
+    rows = await get_all_sso_providers_raw()
 
     # 用旧密钥构造 Fernet
     old_fernet = Fernet(old_key.encode() if isinstance(old_key, str) else old_key)
@@ -120,10 +113,7 @@ async def rotate_token(old_key: str) -> int:
             # 用新密钥重新加密（MultiFernet 的第一个密钥）
             new_ciphertext = encrypt_secret(plaintext)
             # 更新数据库
-            conn.execute(
-                "UPDATE sso_providers SET client_secret = ? WHERE id = ?",
-                (new_ciphertext, row["id"]),
-            )
+            await update_sso_provider_secret(row["id"], new_ciphertext)
             migrated += 1
         except Exception as exc:
             logger.warning(

@@ -2,7 +2,6 @@ import structlog
 import time
 from pathlib import Path
 from datetime import datetime
-from app.memory import l1_atom
 import re
 
 logger = structlog.get_logger()
@@ -46,7 +45,8 @@ def finalize_scenario(session_id: str, summary: str = ""):
     filename = f"{_sanitize_session_id(session_id)}_{date_str}.md"
     filepath = SCENARIOS_DIR / filename
 
-    atoms = l1_atom.get_atoms_by_session(session_id)
+    from app.memory.storage import get_backend
+    atoms = get_backend().get_atoms_by_session(session_id)
     atom_lines = "\n".join(
         f"- {a['subject']} {a['predicate']} {a['object']} (confidence: {a['confidence']})"
         for a in atoms[:20]

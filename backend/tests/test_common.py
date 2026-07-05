@@ -100,8 +100,8 @@ class TestDeterministicHash:
 
 
 # ── rows_to_models ────────────────────────────────────────────────────────
-# Adapter from sqlite3.Row → pydantic BaseModel used by every list
-# endpoint. A bug here breaks the contract for all of them at once.
+# Adapter from DB rows (dict-like) → pydantic BaseModel used by list
+# endpoints. A bug here breaks the contract for all of them at once.
 
 
 class TestRowsToModels:

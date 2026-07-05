@@ -27,7 +27,7 @@ async def list_audit_logs(
     Returns a paginated list of audit log entries, ordered by most recent first.
     Only read operations - the audit_logs table is append-only.
     """
-    return get_audit_logs(tenant_id=tenant_id, limit=limit, offset=offset)
+    return await get_audit_logs(tenant_id=tenant_id, limit=limit, offset=offset)
 
 
 @router.get("/stats", response_model=AuditStatsResponse)
@@ -39,4 +39,4 @@ async def audit_stats(
     Includes total count, action breakdown, resource type breakdown,
     and recent activity counts (1h, 24h).
     """
-    return get_audit_stats(tenant_id=tenant_id)
+    return await get_audit_stats(tenant_id=tenant_id)

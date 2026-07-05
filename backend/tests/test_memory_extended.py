@@ -9,12 +9,12 @@ Covers:
 """
 
 import pytest
+
 import time
 from pathlib import Path
 from unittest.mock import patch
 
-from app.memory.db import init_db
-from app.memory.l1_atom import save_atom
+from app.memory.storage import get_backend
 from app.memory.l2_scenario import (
     finalize_scenario,
     get_recent_scenarios,
@@ -37,20 +37,17 @@ from app.memory.manager import MemoryManager
 
 class TestL2ScenarioExtended:
     def setup_method(self):
-        init_db()
         # Reset scenario cache to avoid stale listings between tests
         import app.memory.l2_scenario as l2_mod
         l2_mod._scenario_cache = None
         l2_mod._scenario_cache_ts = 0
 
-    @pytest.mark.skip(reason="Flaky on Windows: SQLite FTS5 + singleton connection race")
     def test_finalize_creates_file(self):
         """finalize_scenario creates a markdown file in SCENARIOS_DIR."""
         sid = "l2_ext_test_" + str(int(time.time()))
-        save_atom(sid, "user", "asked", "React tips", confidence=0.7)
+        get_backend().save_atom(sid, "user", "asked", "React tips", confidence=0.7)
         # Verify atom was saved
-        from app.memory.l1_atom import get_atoms_by_session
-        saved_atoms = get_atoms_by_session(sid)
+        saved_atoms = get_backend().get_atoms_by_session(sid)
 
         finalize_scenario(sid, summary="讨论了React技巧")
 
@@ -68,7 +65,6 @@ class TestL2ScenarioExtended:
         assert "讨论了React技巧" in content
         assert "React tips" in content
 
-    @pytest.mark.skip(reason="Flaky on Windows: SQLite FTS5 + singleton connection race")
     def test_finalize_with_empty_summary(self):
         """Empty summary falls back to default text."""
         sid = "l2_empty_" + str(int(time.time()))
@@ -103,12 +99,12 @@ class TestL2ScenarioExtended:
         # Both should return the same cached object
         assert result1 is result2
 
-    @pytest.mark.skip(reason="Flaky on Windows: SQLite FTS5 + singleton connection race")
     def test_finalize_includes_atoms(self):
         """Scenario file includes L1 atom data."""
         sid = "l2_atoms_" + str(int(time.time()))
-        save_atom(sid, "user", "prefers", "TypeScript", confidence=0.9)
-        save_atom(sid, "user", "uses", "React", confidence=0.8)
+        backend = get_backend()
+        backend.save_atom(sid, "user", "prefers", "TypeScript", confidence=0.9)
+        backend.save_atom(sid, "user", "uses", "React", confidence=0.8)
 
         finalize_scenario(sid, summary="技术偏好讨论")
 
@@ -124,9 +120,6 @@ class TestL2ScenarioExtended:
 # ── L3 Persona Tests ──
 
 class TestL3PersonaExtended:
-    def setup_method(self):
-        init_db()
-
     def test_get_persona_when_no_file(self):
         """get_persona returns empty string if no persona file."""
         with patch("app.memory.l3_persona.PERSONA_PATH") as mock_path:
@@ -245,7 +238,6 @@ class TestOffloadExtended:
 
 class TestMemoryManagerExtended:
     def setup_method(self):
-        init_db()
         import app.memory.l2_scenario as l2_mod
         l2_mod._scenario_cache = None
         l2_mod._scenario_cache_ts = 0
@@ -302,8 +294,7 @@ class TestMemoryManagerExtended:
         await self.mm.extract_atoms(sid)
 
         # Verify atoms were extracted
-        from app.memory.l1_atom import get_atoms_by_session
-        atoms = get_atoms_by_session(sid)
+        atoms = get_backend().get_atoms_by_session(sid)
         assert len(atoms) >= 1
 
     def test_session_lifecycle(self):

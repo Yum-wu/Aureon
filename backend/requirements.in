@@ -43,7 +43,6 @@ openpyxl>=3.1
 # Database
 sqlalchemy[asyncio]>=2.0
 asyncpg>=0.29
-aiosqlite>=0.20
 
 # Auth & Security
 PyJWT>=2.8

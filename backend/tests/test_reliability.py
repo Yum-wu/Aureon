@@ -1,8 +1,6 @@
 """Reliability API Tests"""
 import uuid
 import pytest
-from fastapi.testclient import TestClient
-from app.main import app
 from app.config import settings
 
 skip_no_pg = pytest.mark.skipif(
@@ -11,7 +9,7 @@ skip_no_pg = pytest.mark.skipif(
 )
 
 
-@pytest.mark.skip(reason="Requires PostgreSQL (DATABASE_URL)")
+@skip_no_pg
 class TestBackupManagement:
     def test_create_backup(self, pg_client):
         response = pg_client.post(

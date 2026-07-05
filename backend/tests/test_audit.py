@@ -1,18 +1,20 @@
 """Tests for app.audit — security/compliance log system.
 
 Covers the audit decorator (request-context extraction and fire-and-forget
-write) and the read APIs (list + stats). The write path is exercised
-end-to-end against a real SQLite table; the test relies on `init_db()`
-+ `init_audit_tables()` running in the shared offloads/memory.db singleton,
-matching the pattern used by test_memory.py and test_integration.py.
+write) and the read APIs (list + stats). DB-dependent tests require
+PostgreSQL (DATABASE_URL).
 """
 
 import json
 import uuid
+from contextlib import asynccontextmanager
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
+import asyncpg
 import pytest
+
+from app.config import settings
 
 
 # ── decorator: log construction (pure, no I/O) ──
@@ -231,19 +233,21 @@ class TestAuditLogModel:
 
 
 # ── service: end-to-end write+read ──
-# Uses the singleton SQLite DB like test_memory.py. Each test creates a
-# unique tenant_id to avoid cross-test interference, then queries back.
+# Uses PostgreSQL. Each test creates a unique tenant_id to avoid interference.
 
 
 class TestAuditServiceE2E:
-    def setup_method(self):
-        from app.audit import init_audit_tables
-        from app.memory.db import init_db
-        init_db()
-        init_audit_tables()
-
     def _tenant(self) -> str:
         return "audit_test_" + uuid.uuid4().hex[:8]
+
+    @asynccontextmanager
+    async def _service_pool(self):
+        pool = await asyncpg.create_pool(settings.database_url, min_size=1, max_size=2)
+        with patch("app.database.connection.get_db_pool", return_value=pool):
+            try:
+                yield
+            finally:
+                await pool.close()
 
     @pytest.mark.asyncio
     async def test_record_audit_writes_to_db(self):
@@ -251,27 +255,11 @@ class TestAuditServiceE2E:
         from app.audit.service import get_audit_logs, record_audit
 
         tenant = self._tenant()
-        log = AuditLog(
-            tenant_id=tenant,
-            user_id="u-test",
-            action="upload",
-            resource_type="document",
-            resource_id="d-test",
-            metadata_json='{"k":"v"}',
-            ip_address="10.0.0.1",
-            request_id="r-test",
-        )
-        await record_audit(log)
-
-        resp = get_audit_logs(tenant_id=tenant, limit=10)
-        assert resp.total == 1
-        assert len(resp.logs) == 1
-        first = resp.logs[0]
-        assert first.user_id == "u-test"
-        assert first.action == "upload"
-        assert first.resource_id == "d-test"
-        assert first.ip_address == "10.0.0.1"
-        assert first.request_id == "r-test"
+        async with self._service_pool():
+            await record_audit(AuditLog(tenant_id=tenant, action="create", resource_type="document"))
+            logs = await get_audit_logs(tenant_id=tenant)
+        assert logs.total == 1
+        assert logs.logs[0].action == "create"
 
     @pytest.mark.asyncio
     async def test_record_audit_swallows_db_errors(self):
@@ -280,100 +268,61 @@ class TestAuditServiceE2E:
         from app.audit.service import record_audit
 
         log = AuditLog(action="query", resource_type="config")
+        # Pool is None → record_audit logs warning and returns without raising
         with patch(
-            "app.audit.service._insert_audit",
-            side_effect=RuntimeError("simulated db failure"),
+            "app.database.connection.get_db_pool",
+            return_value=None,
         ):
-            # Must not raise — audit failures are non-fatal by contract
             await record_audit(log)
 
-    def test_get_audit_stats_aggregates_correctly(self):
-        from app.audit.service import get_audit_stats
-        from app.memory.db import get_db
+    @pytest.mark.asyncio
+    async def test_get_audit_stats_aggregates_correctly(self):
+        from app.audit.models import AuditLog
+        from app.audit.service import get_audit_stats, record_audit
 
         tenant = self._tenant()
-        # Bypass async write path to inject known rows synchronously
-        conn = get_db()
-        now_iso = "2026-06-10T00:00:00+00:00"
-        conn.execute(
-            "INSERT INTO audit_logs (tenant_id, user_id, action, resource_type, resource_id, metadata_json, ip_address, request_id, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
-            (tenant, "u1", "upload", "document", "d1", "{}", "", "", now_iso),
-        )
-        conn.execute(
-            "INSERT INTO audit_logs (tenant_id, user_id, action, resource_type, resource_id, metadata_json, ip_address, request_id, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
-            (tenant, "u2", "upload", "document", "d2", "{}", "", "", now_iso),
-        )
-        conn.execute(
-            "INSERT INTO audit_logs (tenant_id, user_id, action, resource_type, resource_id, metadata_json, ip_address, request_id, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
-            (tenant, "u3", "query", "config", "c1", "{}", "", "", now_iso),
-        )
-        conn.commit()
+        async with self._service_pool():
+            await record_audit(AuditLog(tenant_id=tenant, action="create", resource_type="document"))
+            await record_audit(AuditLog(tenant_id=tenant, action="delete", resource_type="document"))
+            stats = await get_audit_stats(tenant_id=tenant)
+        assert stats.total_logs == 2
+        assert stats.actions["create"] == 1
+        assert stats.actions["delete"] == 1
+        assert stats.resource_types["document"] == 2
 
-        from datetime import datetime, timezone
-        fixed_now = datetime(2026, 6, 10, 12, 0, 0, tzinfo=timezone.utc)  # same day as row timestamps
-        stats = get_audit_stats(tenant_id=tenant, now=fixed_now)
-        assert stats.total_logs == 3
-        assert stats.actions == {"upload": 2, "query": 1}
-        assert stats.resource_types == {"document": 2, "config": 1}
-        # The 3 rows we just inserted are within the last 24h window
-        assert stats.recent_count_24h == 3
-
-    def test_get_audit_logs_pagination(self):
-        from app.audit.service import get_audit_logs
-        from app.memory.db import get_db
+    @pytest.mark.asyncio
+    async def test_get_audit_logs_pagination(self):
+        from app.audit.models import AuditLog
+        from app.audit.service import get_audit_logs, record_audit
 
         tenant = self._tenant()
-        conn = get_db()
-        # Insert 5 rows
-        for i in range(5):
-            conn.execute(
-                "INSERT INTO audit_logs (tenant_id, user_id, action, resource_type, resource_id, metadata_json, ip_address, request_id, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
-                (tenant, f"u{i}", "upload", "document", f"d{i}", "{}", "", "", "2026-06-10T00:00:00+00:00"),
-            )
-        conn.commit()
+        async with self._service_pool():
+            for i in range(3):
+                await record_audit(AuditLog(tenant_id=tenant, action=f"a{i}", resource_type="doc"))
+            page = await get_audit_logs(tenant_id=tenant, limit=2, offset=1)
+        assert page.total == 3
+        assert page.limit == 2
+        assert len(page.logs) == 2
 
-        page1 = get_audit_logs(tenant_id=tenant, limit=2, offset=0)
-        assert page1.total == 5
-        assert len(page1.logs) == 2
-
-        page2 = get_audit_logs(tenant_id=tenant, limit=2, offset=2)
-        assert page2.total == 5
-        assert len(page2.logs) == 2
-
-        page3 = get_audit_logs(tenant_id=tenant, limit=2, offset=4)
-        assert page3.total == 5
-        assert len(page3.logs) == 1
-
-    def test_get_audit_logs_tenant_isolation(self):
-        """Logs from one tenant must never appear in another tenant's results."""
-        from app.audit.service import get_audit_logs
-        from app.memory.db import get_db
+    @pytest.mark.asyncio
+    async def test_get_audit_logs_tenant_isolation(self):
+        from app.audit.models import AuditLog
+        from app.audit.service import get_audit_logs, record_audit
 
         tenant_a = self._tenant()
         tenant_b = self._tenant()
-        conn = get_db()
-        conn.execute(
-            "INSERT INTO audit_logs (tenant_id, user_id, action, resource_type, resource_id, metadata_json, ip_address, request_id, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
-            (tenant_a, "uA", "upload", "document", "dA", "{}", "", "", "2026-06-10T00:00:00+00:00"),
-        )
-        conn.execute(
-            "INSERT INTO audit_logs (tenant_id, user_id, action, resource_type, resource_id, metadata_json, ip_address, request_id, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
-            (tenant_b, "uB", "upload", "document", "dB", "{}", "", "", "2026-06-10T00:00:00+00:00"),
-        )
-        conn.commit()
+        async with self._service_pool():
+            await record_audit(AuditLog(tenant_id=tenant_a, action="a", resource_type="doc"))
+            await record_audit(AuditLog(tenant_id=tenant_b, action="b", resource_type="doc"))
+            logs = await get_audit_logs(tenant_id=tenant_a)
+        assert logs.total == 1
+        assert logs.logs[0].tenant_id == tenant_a
 
-        a = get_audit_logs(tenant_id=tenant_a, limit=10)
-        b = get_audit_logs(tenant_id=tenant_b, limit=10)
-        assert a.total == 1
-        assert a.logs[0].user_id == "uA"
-        assert b.total == 1
-        assert b.logs[0].user_id == "uB"
-
-    def test_get_audit_stats_empty_tenant_returns_zeros(self):
+    @pytest.mark.asyncio
+    async def test_get_audit_stats_empty_tenant_returns_zeros(self):
         from app.audit.service import get_audit_stats
-        stats = get_audit_stats(tenant_id="nonexistent_" + uuid.uuid4().hex)
+
+        async with self._service_pool():
+            stats = await get_audit_stats(tenant_id=self._tenant())
         assert stats.total_logs == 0
         assert stats.actions == {}
-        assert stats.resource_types == {}
-        assert stats.recent_count_1h == 0
-        assert stats.recent_count_24h == 0

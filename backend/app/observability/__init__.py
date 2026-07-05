@@ -9,6 +9,17 @@ import structlog
 
 logger = structlog.get_logger()
 
+# ── Re-export insert_query_trace for callers who imported from this module ──
+
+
+async def _safe_pg_insert(trace_data: dict) -> None:
+    """Best-effort async insert into PostgreSQL query_traces table."""
+    try:
+        from app.memory.pg import insert_query_trace  # noqa: WPS433
+        await insert_query_trace(trace_data)
+    except Exception as exc:
+        logger.warning("pg_trace_insert_failed", error=str(exc))
+
 
 class QueryTrace(BaseModel):
     """查询追踪数据模型"""
@@ -128,20 +139,14 @@ class QueryTracer:
         )
 
     def record(self) -> QueryTrace:
-        """Build the trace, persist to SQLite, and asynchronously
-        write to PostgreSQL when the PG adapter is available.
+        """Build the trace, persist to PostgreSQL asynchronously
+        when the PG adapter is available.  Safe to call from sync contexts —
+        the async write is fire-and-forget.
 
         Returns the built :class:`QueryTrace`.
         """
         trace = self.build_trace()
 
-        # 1. Synchronous SQLite persist (always available)
-        try:
-            save_query_trace(trace)
-        except Exception as exc:
-            logger.warning("sqlite_trace_save_failed", error=str(exc))
-
-        # 2. Best-effort async PG write
         try:
             pg_data: dict = {
                 "request_id": trace.request_id,
@@ -177,189 +182,4 @@ async def _safe_pg_insert(trace_data: dict) -> None:
         logger.warning("pg_trace_insert_failed", error=str(exc))
 
 
-def init_query_traces_table():
-    """初始化 Query Traces 表"""
-    from app.memory.db import get_db
-
-    conn = get_db()
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS query_traces (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            request_id TEXT UNIQUE NOT NULL,
-            session_id TEXT,
-            user_id TEXT,
-            workspace_id TEXT,
-            query TEXT NOT NULL,
-            retrieval_latency_ms REAL DEFAULT 0,
-            rerank_latency_ms REAL DEFAULT 0,
-            llm_latency_ms REAL DEFAULT 0,
-            total_latency_ms REAL DEFAULT 0,
-            token_usage_input INTEGER DEFAULT 0,
-            token_usage_output INTEGER DEFAULT 0,
-            cache_hit BOOLEAN DEFAULT 0,
-            retrieved_documents TEXT,
-            cited_documents TEXT,
-            confidence_score REAL,
-            status TEXT DEFAULT 'pending',
-            error_message TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    conn.execute("""
-        CREATE INDEX IF NOT EXISTS idx_query_traces_request_id ON query_traces(request_id)
-    """)
-    conn.execute("""
-        CREATE INDEX IF NOT EXISTS idx_query_traces_created_at ON query_traces(created_at)
-    """)
-    conn.execute("""
-        CREATE INDEX IF NOT EXISTS idx_query_traces_status ON query_traces(status)
-    """)
-    conn.execute("""
-        CREATE INDEX IF NOT EXISTS idx_query_traces_status_created_at ON query_traces(status, created_at)
-    """)
-    conn.commit()
-
-
-def save_query_trace(trace: QueryTrace) -> int:
-    """保存查询追踪"""
-    from app.memory.db import get_db
-
-    conn = get_db()
-    cursor = conn.execute(
-        """
-        INSERT INTO query_traces (
-            request_id, session_id, user_id, workspace_id, query,
-            retrieval_latency_ms, rerank_latency_ms, llm_latency_ms, total_latency_ms,
-            token_usage_input, token_usage_output, cache_hit,
-            retrieved_documents, cited_documents, confidence_score,
-            status, error_message, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        (
-            trace.request_id,
-            trace.session_id,
-            trace.user_id,
-            trace.workspace_id,
-            trace.query,
-            trace.retrieval_latency_ms,
-            trace.rerank_latency_ms,
-            trace.llm_latency_ms,
-            trace.total_latency_ms,
-            trace.token_usage_input,
-            trace.token_usage_output,
-            trace.cache_hit,
-            json.dumps(trace.retrieved_documents),
-            json.dumps(trace.cited_documents),
-            trace.confidence_score,
-            trace.status,
-            trace.error_message,
-            trace.created_at,
-        ),
-    )
-    conn.commit()
-    return cursor.lastrowid
-
-
-def get_recent_traces(limit: int = 100) -> list[QueryTrace]:
-    """获取最近的查询追踪"""
-    from app.memory.db import get_db
-
-    conn = get_db()
-    rows = conn.execute(
-        "SELECT * FROM query_traces ORDER BY created_at DESC LIMIT ?",
-        (limit,),
-    ).fetchall()
-
-    return [
-        QueryTrace(
-            id=row["id"],
-            request_id=row["request_id"],
-            session_id=row["session_id"],
-            user_id=row["user_id"],
-            workspace_id=row["workspace_id"],
-            query=row["query"],
-            retrieval_latency_ms=row["retrieval_latency_ms"],
-            rerank_latency_ms=row["rerank_latency_ms"],
-            llm_latency_ms=row["llm_latency_ms"],
-            total_latency_ms=row["total_latency_ms"],
-            token_usage_input=row["token_usage_input"],
-            token_usage_output=row["token_usage_output"],
-            cache_hit=bool(row["cache_hit"]),
-            retrieved_documents=json.loads(row["retrieved_documents"]) if row["retrieved_documents"] else [],
-            cited_documents=json.loads(row["cited_documents"]) if row["cited_documents"] else [],
-            confidence_score=row["confidence_score"],
-            status=row["status"],
-            error_message=row["error_message"],
-            created_at=row["created_at"],
-        )
-        for row in rows
-    ]
-
-
-def get_trace_stats() -> dict:
-    """获取追踪统计数据"""
-    from app.memory.db import get_db
-
-    conn = get_db()
-
-    # 总请求数
-    total = conn.execute("SELECT COUNT(*) as count FROM query_traces").fetchone()["count"]
-
-    # 成功/失败数
-    success = conn.execute(
-        "SELECT COUNT(*) as count FROM query_traces WHERE status = 'completed'"
-    ).fetchone()["count"]
-    failed = conn.execute(
-        "SELECT COUNT(*) as count FROM query_traces WHERE status = 'failed'"
-    ).fetchone()["count"]
-
-    # 缓存命中率
-    cache_hits = conn.execute(
-        "SELECT COUNT(*) as count FROM query_traces WHERE cache_hit = 1"
-    ).fetchone()["count"]
-
-    # 平均延迟
-    avg_total_latency = conn.execute(
-        "SELECT AVG(total_latency_ms) as avg FROM query_traces WHERE status = 'completed'"
-    ).fetchone()["avg"] or 0
-
-    avg_retrieval_latency = conn.execute(
-        "SELECT AVG(retrieval_latency_ms) as avg FROM query_traces WHERE status = 'completed'"
-    ).fetchone()["avg"] or 0
-
-    avg_llm_latency = conn.execute(
-        "SELECT AVG(llm_latency_ms) as avg FROM query_traces WHERE status = 'completed'"
-    ).fetchone()["avg"] or 0
-
-    # P95 延迟
-    p95_total_latency = conn.execute(
-        """
-        SELECT total_latency_ms as p95 FROM query_traces
-        WHERE status = 'completed'
-        ORDER BY total_latency_ms
-        LIMIT 1 OFFSET (SELECT CAST(COUNT(*) * 0.95 AS INTEGER) FROM query_traces WHERE status = 'completed')
-        """
-    ).fetchone()
-    p95_total_latency = p95_total_latency["p95"] if p95_total_latency else 0
-
-    # Token 使用统计
-    total_tokens_input = conn.execute(
-        "SELECT SUM(token_usage_input) as total FROM query_traces WHERE status = 'completed'"
-    ).fetchone()["total"] or 0
-    total_tokens_output = conn.execute(
-        "SELECT SUM(token_usage_output) as total FROM query_traces WHERE status = 'completed'"
-    ).fetchone()["total"] or 0
-
-    return {
-        "total_requests": total,
-        "success_count": success,
-        "failed_count": failed,
-        "success_rate": (success / total * 100) if total > 0 else 0,
-        "cache_hit_rate": (cache_hits / total * 100) if total > 0 else 0,
-        "avg_total_latency_ms": round(avg_total_latency, 2),
-        "avg_retrieval_latency_ms": round(avg_retrieval_latency, 2),
-        "avg_llm_latency_ms": round(avg_llm_latency, 2),
-        "p95_total_latency_ms": round(p95_total_latency, 2),
-        "total_tokens_input": total_tokens_input,
-        "total_tokens_output": total_tokens_output,
-    }
+__all__ = ["QueryTrace", "QueryTracer", "_safe_pg_insert"]
