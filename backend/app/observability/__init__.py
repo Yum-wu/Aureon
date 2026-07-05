@@ -1,6 +1,5 @@
 """Observability Layer - Query Trace 和 Distributed Tracing"""
 import asyncio
-import json
 import time
 from datetime import datetime, timezone
 from typing import Optional

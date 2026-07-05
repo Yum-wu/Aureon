@@ -1,6 +1,5 @@
 """Observability API Router — PostgreSQL asyncpg backend."""
 
-import json
 from fastapi import APIRouter, Query
 import structlog
 

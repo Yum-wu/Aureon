@@ -122,6 +122,5 @@ async def rotate_token(old_key: str) -> int:
                 error=str(exc),
             )
 
-    conn.commit()
     logger.info("rotate_token_completed", migrated=migrated, total=len(rows))
     return migrated
