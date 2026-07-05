@@ -157,6 +157,10 @@ _lint_debug.log
 /test_*.mjs
 
 # Demo video generation artifacts (local only, do not commit)
+/remotion/
+/docs/demo-video-plan.md
+/backend/tests/test_security_demo.py
+/src/components/DemoIntro.tsx
 /archive/
 /demo_output/
 /screenshots/
