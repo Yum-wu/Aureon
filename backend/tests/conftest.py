@@ -78,3 +78,20 @@ def isolate_test_environment(tmp_path):
 def worker_id():
     """Get pytest-xdist worker ID for isolation."""
     return os.environ.get("PYTEST_XDIST_WORKER", "master")
+
+
+@pytest.fixture(scope="session")
+def pg_client():
+    """Session-scoped TestClient with lifespan — initializes asyncpg pool once.
+
+    Shared across all test modules that require a live PostgreSQL connection.
+    Skipped automatically when DATABASE_URL is not configured.
+    """
+    from fastapi.testclient import TestClient
+    from app.config import settings
+
+    if not settings.database_url:
+        pytest.skip("Requires PostgreSQL (DATABASE_URL)")
+
+    with TestClient(app) as c:
+        yield c

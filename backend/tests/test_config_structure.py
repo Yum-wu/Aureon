@@ -103,12 +103,14 @@ class TestSettingsRailwayEnvCompat:
     """Settings() must not crash when PaaS providers set empty / scalar
     placeholders for nested sub-model env vars (e.g. Railway: DATABASE='')."""
 
-    def test_empty_database_env_does_not_crash(self, monkeypatch):
+    def test_empty_database_env_does_not_crash(self, monkeypatch, tmp_path):
         # Railway may export DATABASE='' or other PaaS placeholders that
         # pydantic-settings tries to json.loads() as a complex value.
         # The config must load successfully and fall back to defaults.
+        monkeypatch.chdir(tmp_path)  # no .env file in tmp_path
         monkeypatch.setenv("DATABASE", "")
-        # Reload the module so the fresh env is re-read.
+        monkeypatch.delenv("DATABASE_URL", raising=False)
+        monkeypatch.delenv("DATABASE__DATABASE_URL", raising=False)
         import importlib
         import app.config as config_module
         importlib.reload(config_module)
@@ -117,10 +119,13 @@ class TestSettingsRailwayEnvCompat:
         assert config_module.settings.database.database_url == ""
         assert config_module.settings.qdrant_url == "http://localhost:6333"
 
-    def test_non_json_scalar_env_does_not_crash(self, monkeypatch):
+    def test_non_json_scalar_env_does_not_crash(self, monkeypatch, tmp_path):
         # Some hosts may export DATABASE='postgres' (non-JSON scalar) which
         # pydantic-settings would also try to json.loads() and fail on.
+        monkeypatch.chdir(tmp_path)
         monkeypatch.setenv("DATABASE", "postgres")
+        monkeypatch.delenv("DATABASE_URL", raising=False)
+        monkeypatch.delenv("DATABASE__DATABASE_URL", raising=False)
         import importlib
         import app.config as config_module
         importlib.reload(config_module)
@@ -128,10 +133,13 @@ class TestSettingsRailwayEnvCompat:
         # The malformed value should be ignored, defaults preserved.
         assert config_module.settings.database.database_url == ""
 
-    def test_url_valued_submodel_env_does_not_crash(self, monkeypatch):
+    def test_url_valued_submodel_env_does_not_crash(self, monkeypatch, tmp_path):
         # Railway may set DATABASE=postgres://user:pass@host:5432/db
         # which is a valid URL but not a JSON object.
+        monkeypatch.chdir(tmp_path)
         monkeypatch.setenv("DATABASE", "postgres://user:pass@host:5432/db")
+        monkeypatch.delenv("DATABASE_URL", raising=False)
+        monkeypatch.delenv("DATABASE__DATABASE_URL", raising=False)
         import importlib
         import app.config as config_module
         importlib.reload(config_module)
@@ -158,8 +166,11 @@ class TestSettingsRailwayEnvCompat:
         importlib.reload(config_module)
         assert config_module.settings is not None
 
-    def test_valid_json_dict_submodel_env_is_kept(self, monkeypatch):
+    def test_valid_json_dict_submodel_env_is_kept(self, monkeypatch, tmp_path):
         # A proper JSON object should be parsed and kept.
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.delenv("DATABASE_URL", raising=False)
+        monkeypatch.delenv("DATABASE__DATABASE_URL", raising=False)
         monkeypatch.setenv("DATABASE", '{"database_url": "sqlite:///test.db"}')
         import importlib
         import app.config as config_module

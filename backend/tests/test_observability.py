@@ -1,37 +1,30 @@
 """Observability API Tests"""
-from fastapi.testclient import TestClient
-from app.main import app
-from app.observability import init_query_traces_table
+import pytest
+from app.config import settings
+
+skip_no_pg = pytest.mark.skipif(
+    not settings.database_url,
+    reason="Requires PostgreSQL (DATABASE_URL)",
+)
 
 
-# 初始化数据库表
-init_query_traces_table()
-
-client = TestClient(app)
-
-
+@skip_no_pg
 class TestObservabilityAPI:
-    """Test Observability endpoints"""
-
-    def test_list_traces(self):
-        """Test listing traces"""
-        response = client.get("/api/observability/traces")
+    def test_list_traces(self, pg_client):
+        response = pg_client.get("/api/observability/traces")
         assert response.status_code == 200
         data = response.json()
         assert "count" in data
         assert "traces" in data
         assert isinstance(data["traces"], list)
 
-    def test_list_traces_with_limit(self):
-        """Test listing traces with limit"""
-        response = client.get("/api/observability/traces?limit=5")
+    def test_list_traces_with_limit(self, pg_client):
+        response = pg_client.get("/api/observability/traces?limit=5")
         assert response.status_code == 200
-        data = response.json()
-        assert len(data["traces"]) <= 5
+        assert len(response.json()["traces"]) <= 5
 
-    def test_observability_stats(self):
-        """Test observability stats"""
-        response = client.get("/api/observability/stats")
+    def test_observability_stats(self, pg_client):
+        response = pg_client.get("/api/observability/stats")
         assert response.status_code == 200
         data = response.json()
         assert "total_requests" in data

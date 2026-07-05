@@ -12,7 +12,6 @@ import structlog
 from fastapi import FastAPI
 
 from app.config import settings
-from app.memory.db import init_db, close_db
 from app.memory.manager import manager as memory_manager
 from app.memory.storage import get_backend
 from app.cache.redis_client import close_redis, close_sync_redis
@@ -51,35 +50,23 @@ async def lifespan(app: FastAPI):
         logger.warning("LLM_API_KEY not set; Agent creation will fail")
     # Disable LangSmith to prevent Railway platform auto-tracing 403
     os.environ["LANGCHAIN_TRACING_V2"] = "false"
-    init_db()
 
-    # Initialise unified storage backend (SQLite or PostgreSQL)
+    # Initialise unified storage backend (PostgreSQL only)
     backend = get_backend()
     backend.init()
 
-    # ── Core modules (always initialized) ──
-    from app.observability import init_query_traces_table
-    from app.security import init_pii_detection_table, init_sso_providers_table
-    from app.audit import init_audit_tables
-    from app.memory.pg import init_pg_tables
-    init_query_traces_table()
-    init_pii_detection_table()
-    init_sso_providers_table()
-    init_audit_tables()
-    await init_pg_tables()
-
-    # ── PostgreSQL asyncpg pool (parallel to existing SQLite/SQLAlchemy) ──
+    # ── PostgreSQL asyncpg pool (primary database) ──
     await init_pg_db()
 
     # ── Experimental modules ──
     try:
         from app.reliability import init_reliability_tables
-        init_reliability_tables()
+        await init_reliability_tables()
     except Exception as e:
         logger.warning("Experimental module init failed (non-fatal): %s", e)
     memory_manager.init_background_tasks()
 
-    # Background BM25 + ChromaDB warmup + auto-rebuild (non-blocking)
+    # Background BM25 warmup + auto-rebuild (non-blocking)
     threading.Thread(target=warmup_bm25, daemon=True).start()
 
     # OpenTelemetry distributed tracing
@@ -145,7 +132,6 @@ async def lifespan(app: FastAPI):
         logger.warning("Langfuse shutdown failed (non-fatal): %s", e)
     memory_manager.flush_all_scenarios()
     backend.close()
-    close_db()
     await close_db_pool()
     await close_redis()
     close_sync_redis()
