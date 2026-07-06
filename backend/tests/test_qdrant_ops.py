@@ -51,3 +51,51 @@ def test_hybrid_search_qdrant_keeps_keyword_candidates_when_sparse_enabled():
         "aureon-tenant-fix-md-80f329a.md",
         "pricing.md",
     ]
+
+
+def test_hybrid_search_qdrant_preserves_strong_keyword_hits_after_rerank():
+    keyword_doc = {
+        "text": "AUREON_TENANT_SENTINEL_MD_80F329A upload content",
+        "metadata": {
+            "source": "aureon-tenant-fix-md-80f329a.md",
+            "slug": "aureon-tenant-fix-md-80f329a",
+        },
+        "score": 0.95,
+    }
+    vector_point = SimpleNamespace(
+        id="vector-1",
+        score=0.9,
+        payload={
+            "text": "unrelated pricing content",
+            "metadata": {"source": "pricing.md", "slug": "pricing"},
+        },
+    )
+    fake_client = MagicMock()
+    fake_client.query_points.return_value = SimpleNamespace(points=[vector_point])
+    settings = SimpleNamespace(
+        sparse_enabled=True,
+        dashscope_model="text-embedding-v4",
+        hnsw_ef_search=64,
+        rerank_enabled=True,
+    )
+
+    with patch("app.rag.qdrant_ops.settings", settings), \
+         patch("app.rag.qdrant_ops._get_qdrant", return_value=fake_client), \
+         patch("app.rag.embedding._embed_dense_sparse_dashscope",
+               return_value=([np.array([0.1, 0.2, 0.3], dtype=np.float32)], [{"sentinel": 1.0}])), \
+         patch("app.rag.embedding._to_sparse_vector",
+               return_value=qmodels.SparseVector(indices=[1], values=[1.0])), \
+         patch("app.rag.bm25.retrieve_keyword", return_value=[keyword_doc]), \
+         patch("app.rag.reranker.rerank", return_value=[{
+             "text": "unrelated pricing content",
+             "metadata": {"source": "pricing.md", "slug": "pricing"},
+             "score": 0.9,
+             "rerank_score": 0.99,
+         }]):
+        results = hybrid_search_qdrant(
+            "AUREON_TENANT_SENTINEL_MD_80F329A",
+            top_k=1,
+            query_complexity="simple",
+        )
+
+    assert results[0]["metadata"]["source"] == "aureon-tenant-fix-md-80f329a.md"

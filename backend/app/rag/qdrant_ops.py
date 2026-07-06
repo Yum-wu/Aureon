@@ -781,13 +781,33 @@ def hybrid_search_qdrant(
         logger.warning("Qdrant hybrid BM25 merge failed, using vector candidates only: %s", e)
         keyword_results = []
 
+    strong_keyword_results = [
+        doc for doc in keyword_results
+        if doc.get("score", 0) >= 0.8
+    ]
+
+    def _candidate_key(doc):
+        meta = doc.get("metadata", {})
+        return meta.get("slug") or meta.get("source") or doc.get("text", "")[:80]
+
+    def _prepend_strong_keyword_hits(results):
+        if not strong_keyword_results:
+            return results[:top_k]
+        merged_results = []
+        seen_keys = set()
+        for doc in [*strong_keyword_results, *results]:
+            key = _candidate_key(doc)
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
+            merged_results.append(doc)
+            if len(merged_results) >= top_k:
+                break
+        return merged_results
+
     if keyword_results:
         merged = []
         seen = set()
-
-        def _candidate_key(doc):
-            meta = doc.get("metadata", {})
-            return meta.get("slug") or meta.get("source") or doc.get("text", "")[:80]
 
         for doc in [*keyword_results, *formatted]:
             key = _candidate_key(doc)
@@ -820,12 +840,12 @@ def hybrid_search_qdrant(
                 if filtered:
                     logger.info("Qdrant hybrid rerank (%s): %d/%d passed threshold (>=%.2f), returning top %d",
                                 query_complexity, len(filtered), len(reranked), _RERANK_SCORE_THRESHOLD, top_k)
-                    return filtered[:top_k]
+                    return _prepend_strong_keyword_hits(filtered)
                 else:
                     # 所有 rerank score < 阈值，返回 rerank top-K（避免空结果）
                     logger.warning("Qdrant hybrid rerank (%s): 0/%d passed threshold (>=%.2f), returning rerank top-%d",
                                    query_complexity, len(reranked), _RERANK_SCORE_THRESHOLD, top_k)
-                    return reranked[:top_k]
+                    return _prepend_strong_keyword_hits(reranked)
             else:
                 logger.warning("Qdrant hybrid rerank returned None, using RRF results")
         except Exception as e:
