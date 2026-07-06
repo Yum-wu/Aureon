@@ -74,6 +74,25 @@ class TestRagQuery:
         assert len(result.sources) == 1
         assert result.sources[0].title == "RAG Guide"
 
+    @patch("app.rag.query_classifier.route_retrieval", return_value="complex")
+    @patch("app.rag.generator.hyde_retrieve")
+    @patch("app.rag.generator.hybrid_retrieve")
+    def test_exact_lookup_skips_hyde(self, mock_hybrid, mock_hyde, mock_route):
+        mock_hybrid.return_value = [
+            {
+                "text": "AUREON_TENANT_SENTINEL_DOCX_80F329A upload content",
+                "metadata": {"title": "Upload DOCX", "slug": "upload-docx"},
+                "score": 1.0,
+            }
+        ]
+        llm_fn = MagicMock(return_value="found")
+
+        result = rag_query("AUREON_TENANT_SENTINEL_DOCX_80F329A", llm_fn, lang="en")
+
+        assert result.sources[0].title == "Upload DOCX"
+        mock_hyde.assert_not_called()
+        assert mock_hybrid.call_args.kwargs["query_complexity"] == "simple"
+
     @patch("app.rag.retriever.MULTI_QUERY_ENABLED", False)
     @patch("app.rag.classifier.classify_query_answerable_sync", return_value=True)
     @patch("app.rag.retriever.hybrid_retrieve")

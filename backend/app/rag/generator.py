@@ -5,6 +5,7 @@ Contains: generate_answer, rag_query, rag_query_astream, rag_query_with_cache.
 
 import json
 import asyncio
+import re
 import time
 from pathlib import Path
 
@@ -44,6 +45,11 @@ _UNANSWERABLE_PATTERNS = [
 ]
 
 _FEEDBACK_LOG = Path("data/feedback_log.jsonl")
+
+
+def _is_exact_lookup_query(query: str) -> bool:
+    tokens = re.findall(r"[A-Za-z0-9][A-Za-z0-9_.-]{5,}", query)
+    return any(any(ch.isdigit() for ch in token) or "_" in token or "-" in token for token in tokens)
 
 
 def _check_unanswerable(response_text: str) -> bool:
@@ -289,7 +295,10 @@ def rag_query(
     from app.rag.query_classifier import route_retrieval
     route = route_retrieval(query)
 
-    if should_use_hyde(route):
+    if _is_exact_lookup_query(query):
+        logger.info("Exact lookup query detected: skipping HyDE and query rewrite")
+        chunks = hybrid_retrieve(query, top_k=top_k, lang_filter=filter_lang, query_complexity="simple")
+    elif should_use_hyde(route):
         logger.info("HyDE enabled for %s query: using hypothetical answer for retrieval", route)
         chunks = hyde_retrieve(
             query,
@@ -465,32 +474,41 @@ async def rag_query_astream(
     # 1. 根据查询复杂度路由检索策略（自适应混合分类器：规则 + LLM 兜底）
     from app.rag.query_classifier import route_retrieval_adaptive
 
-    route = await route_retrieval_adaptive(query)
-    if route == "simple":
-        # 简单查询：hybrid retrieve（dense+sparse + title boost + rerank）
-        # 不再只用 sparse/keyword，因为语义匹配对很多查询至关重要
-        chunks = await asyncio.to_thread(
-            hybrid_retrieve, query, top_k=top_k, lang_filter=filter_lang, query_complexity=route
-        )
-    elif route == "medium":
-        # 中等查询：hybrid retrieve（不含 multi_query）
+    exact_lookup = _is_exact_lookup_query(query)
+    if exact_lookup:
+        route = "simple"
+        logger.info("Exact lookup query detected in stream: skipping HyDE and query rewrite")
         chunks = await asyncio.to_thread(
             hybrid_retrieve, query, top_k=top_k, lang_filter=filter_lang, query_complexity=route
         )
     else:
-        # 复杂查询：完整 pipeline + HyDE
-        if should_use_hyde(route):
-            logger.info("HyDE enabled for complex query in streaming mode")
-            from app.rag.query_rewriter import hyde_retrieve_async
-            async def _llm_call_fn(messages):
-                resp = await llm.ainvoke(messages)
-                return resp
-            chunks = await hyde_retrieve_async(query, _llm_call_fn, top_k=top_k, lang=lang, lang_filter=filter_lang)
-            if not chunks:
-                logger.info("HyDE: no results in streaming, falling back to multi_query")
-                chunks = await asyncio.to_thread(multi_query_retrieve, query, top_k=top_k, lang_filter=filter_lang)
+        route = await route_retrieval_adaptive(query)
+
+        if route == "simple":
+            # 简单查询：hybrid retrieve（dense+sparse + title boost + rerank）
+            # 不再只用 sparse/keyword，因为语义匹配对很多查询至关重要
+            chunks = await asyncio.to_thread(
+                hybrid_retrieve, query, top_k=top_k, lang_filter=filter_lang, query_complexity=route
+            )
+        elif route == "medium":
+            # 中等查询：hybrid retrieve（不含 multi_query）
+            chunks = await asyncio.to_thread(
+                hybrid_retrieve, query, top_k=top_k, lang_filter=filter_lang, query_complexity=route
+            )
         else:
-            chunks = await asyncio.to_thread(multi_query_retrieve, query, top_k=top_k, lang_filter=filter_lang)
+            # 复杂查询：完整 pipeline + HyDE
+            if should_use_hyde(route):
+                logger.info("HyDE enabled for complex query in streaming mode")
+                from app.rag.query_rewriter import hyde_retrieve_async
+                async def _llm_call_fn(messages):
+                    resp = await llm.ainvoke(messages)
+                    return resp
+                chunks = await hyde_retrieve_async(query, _llm_call_fn, top_k=top_k, lang=lang, lang_filter=filter_lang)
+                if not chunks:
+                    logger.info("HyDE: no results in streaming, falling back to multi_query")
+                    chunks = await asyncio.to_thread(multi_query_retrieve, query, top_k=top_k, lang_filter=filter_lang)
+            else:
+                chunks = await asyncio.to_thread(multi_query_retrieve, query, top_k=top_k, lang_filter=filter_lang)
 
     # 2. 轻量 CRAG 评估（基于检索分数，无需 LLM 调用）
     #    "incorrect" → 仅在 top score 极低时拒绝，否则降级为 ambiguous 继续生成
