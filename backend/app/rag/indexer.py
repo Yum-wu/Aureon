@@ -99,9 +99,13 @@ def run_incremental_index(filepath: str, llm_call_fn = None) -> dict:
     contextual_count = 0
     if llm_call_fn and chunks:
         chunk_dicts = chunks_to_dicts(chunks)
-        docs = [doc]
-        chunk_dicts = asyncio.run(_add_contextual_prefixes(chunk_dicts, docs, llm_call_fn))
-        contextual_count = sum(1 for c in chunk_dicts if c.get("metadata", {}).get("contextual_prefix"))
+        try:
+            asyncio.get_running_loop()
+            logger.info("Skipping contextual prefixes inside running event loop")
+        except RuntimeError:
+            docs = [doc]
+            chunk_dicts = asyncio.run(_add_contextual_prefixes(chunk_dicts, docs, llm_call_fn))
+            contextual_count = sum(1 for c in chunk_dicts if c.get("metadata", {}).get("contextual_prefix"))
     else:
         chunk_dicts = chunks_to_dicts(chunks)
 
