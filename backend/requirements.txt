@@ -1,88 +1,123 @@
 # Chatbot Agent Upgrade - Backend Dependencies
 # Pin major versions for stability. Requires Python 3.12
-
-langchain>=1.3,<1.4
-langchain-openai>=1.2,<1.3
-langchain-community>=0.3,<0.4
-fastapi>=0.137,<0.138
-starlette>=1.3.1,<1.4
-python-multipart>=0.0.18,<1.0
-uvicorn[standard]>=0.34,<0.35
-# Gunicorn 生产级 WSGI/ASGI 进程管理器（配合 uvicorn.workers.UvicornWorker 运行 FastAPI）
-gunicorn>=22.0,<24.0
-python-dotenv>=1.1.1
-tavily-python>=0.5,<0.6
-aiofiles>=24.1,<25.0
-pytest>=9.0,<10.0
-pytest-asyncio>=1.0,<2.0
-pytest-xdist>=3.5.0
-httpx>=0.28,<0.29
-pydantic-settings>=2.0,<3.0
-email-validator>=2.0,<3.0
-
-# RAG dependencies
-numpy>=1.26,<2.0
-langchain-text-splitters>=1.1.2,<2.0
-# Vector store backends (Qdrant is primary; ChromaDB is optional fallback)
-# chromadb>=0.5,<0.6  # Optional: pip install chromadb if using VECTOR_BACKEND=chroma
-qdrant-client>=1.12.0
-# NOTE: torch, sentence-transformers, accelerate are NOT in production requirements.
-# They are only used in local dev / GPU environments.
-# Railway deploys use API-based embedding (DashScope) and API reranker instead.
-# See backend/requirements-build.txt for the Docker build-time model download.
-jieba>=0.42
-
-# LangGraph dependencies
-langgraph>=1.2,<1.3
-
-# CrewAI (merged into main app)
-# ⚠️ crewai 与 langchain>=1.0 不兼容，安装见 crew/requirements.txt
-# crewai>=0.11.0,<1.0
-
-# Resilience & rate limiting
-tenacity>=8.0,<9.0
-slowapi>=0.1.9,<1.0
-
-# Structured logging
-structlog>=24.0,<25.0
-
-# Prometheus metrics
-prometheus-fastapi-instrumentator>=8.0,<9.0
-
-# Elasticsearch BM25 backend
-elasticsearch>=8.10.0
-
-# Redis semantic cache
-redis>=5.0,<6.0
-cachetools>=5.3,<6.0
-
-# Document format parsers
-pypdf>=6.13,<7.0
-python-docx>=1.1,<2.0
-openpyxl>=3.1,<4.0
-python-pptx>=1.0,<2.0
-
-# Evaluation frameworks moved to requirements-dev.txt
-# deepeval, ragas — install with: pip install -r requirements-dev.txt
-
-# PostgreSQL async (Task 2.1)
-sqlalchemy[asyncio]>=2.0,<3.0
-asyncpg>=0.29,<1.0
-
-# JWT Authentication (Task 4.2 - RBAC)
-PyJWT>=2.8
-
-# Secret encryption (Fernet — encrypt_secret/decrypt_secret)
-cryptography>=41.0,<50.0
-
-# OpenTelemetry (Task 5.1 - Distributed Tracing)
-opentelemetry-api>=1.20
-opentelemetry-sdk>=1.20
-opentelemetry-exporter-otlp>=1.20
-opentelemetry-instrumentation-fastapi>=0.41b0
-# Phase 3 / OB3 - 额外自动插桩（Redis 缓存 + httpx LLM 调用追踪）
-opentelemetry-instrumentation-redis>=0.41b0
-opentelemetry-instrumentation-httpx>=0.41b0
-
-# Langfuse tracing (v4 SDK - observation-centric data model)
-langfuse>=4.0,<5.0
+aiofiles==25.1.0
+aiohappyeyeballs==2.7.1
+aiohttp==3.14.1
+aiosignal==1.4.0
+annotated-types==0.7.0
+anyio==4.14.1
+asgiref==3.11.1
+asyncpg==0.31.0
+attrs==26.1.0
+backoff==2.2.1
+certifi==2026.6.17
+cffi==2.0.0
+charset-normalizer==3.4.7
+click==8.4.2
+cryptography==49.0.0
+dataclasses-json==0.6.7
+deprecated==1.3.1
+distro==1.9.0
+elastic-transport==9.4.2
+elasticsearch==9.4.1
+et-xmlfile==2.0.0
+fastapi==0.115.14
+frozenlist==1.8.0
+googleapis-common-protos==1.75.0
+greenlet==3.5.3
+grpcio==1.82.0
+h11==0.16.0
+h2==4.3.0
+hpack==4.2.0
+httpcore==1.0.9
+httptools==0.8.0
+httpx[http2]==0.28.1
+httpx-sse==0.4.3
+hyperframe==6.1.0
+idna==3.18
+jieba==0.42.1
+jiter==0.16.0
+jsonpatch==1.33
+jsonpointer==3.1.1
+langchain==1.3.11
+langchain-community==0.3.31
+langchain-core==1.4.8
+langchain-openai==1.2.2
+langchain-protocol==0.0.18
+langchain-text-splitters==1.1.2
+langfuse==4.13.0
+langgraph==1.2.7
+langgraph-checkpoint==4.1.1
+langgraph-prebuilt==1.1.0
+langgraph-sdk==0.4.2
+langsmith==0.9.7
+limits==5.8.0
+lxml==6.1.1
+marshmallow==3.26.2
+multidict==6.7.1
+mypy-extensions==1.1.0
+numpy==1.26.4
+openai==2.44.0
+openpyxl==3.1.5
+opentelemetry-api==1.43.0
+opentelemetry-exporter-otlp==1.43.0
+opentelemetry-exporter-otlp-proto-common==1.43.0
+opentelemetry-exporter-otlp-proto-grpc==1.43.0
+opentelemetry-exporter-otlp-proto-http==1.43.0
+opentelemetry-instrumentation==0.64b0
+opentelemetry-instrumentation-asgi==0.64b0
+opentelemetry-instrumentation-fastapi==0.64b0
+opentelemetry-proto==1.43.0
+opentelemetry-sdk==1.43.0
+opentelemetry-semantic-conventions==0.64b0
+opentelemetry-util-http==0.64b0
+orjson==3.11.9
+ormsgpack==1.12.2
+packaging==26.2
+pillow==12.3.0
+portalocker==3.2.0
+prometheus-client==0.25.0
+prometheus-fastapi-instrumentator==7.1.0
+propcache==0.5.2
+protobuf==7.35.1
+pycparser==3.0
+pydantic==2.13.4
+pydantic-core==2.46.4
+pydantic-settings==2.14.2
+pyjwt==2.13.0
+pypdf==6.14.2
+python-dateutil==2.9.0.post0
+python-docx==1.2.0
+python-dotenv==1.2.2
+python-multipart==0.0.32
+python-pptx==1.0.2
+pyyaml==6.0.3
+qdrant-client==1.18.0
+redis==8.0.1
+regex==2026.6.28
+requests==2.34.2
+requests-toolbelt==1.0.0
+six==1.17.0
+slowapi==0.1.10
+sniffio==1.3.1
+sqlalchemy[asyncio]==2.0.51
+starlette==0.46.2
+structlog==26.1.0
+tavily-python==0.7.26
+tenacity==9.1.4
+tiktoken==0.13.0
+tqdm==4.68.3
+typing-extensions==4.16.0
+typing-inspect==0.9.0
+typing-inspection==0.4.2
+urllib3==2.7.0
+uuid-utils==0.16.2
+uvicorn[standard]==0.50.0
+uvloop==0.22.1
+watchfiles==1.2.0
+websockets==15.0.1
+wrapt==2.2.2
+xlsxwriter==3.2.9
+xxhash==3.8.0
+yarl==1.24.2
+zstandard==0.25.0
