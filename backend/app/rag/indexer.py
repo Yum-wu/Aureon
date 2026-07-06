@@ -53,7 +53,11 @@ _VECTOR_MAX_CONTRIB = settings.vector_max_contrib
 _VECTOR_CONFIDENCE_THRESHOLD = settings.vector_confidence_threshold
 
 
-def run_incremental_index(filepath: str, llm_call_fn = None) -> dict:
+def run_incremental_index(
+    filepath: str,
+    llm_call_fn = None,
+    metadata_overrides: dict[str, Any] | None = None,
+) -> dict:
     """Incremental index for a single uploaded file.
 
     Loads → splits → [contextual prefix] → adds to existing index (does NOT rebuild).
@@ -108,6 +112,15 @@ def run_incremental_index(filepath: str, llm_call_fn = None) -> dict:
             contextual_count = sum(1 for c in chunk_dicts if c.get("metadata", {}).get("contextual_prefix"))
     else:
         chunk_dicts = chunks_to_dicts(chunks)
+
+    if metadata_overrides:
+        clean_overrides = {
+            key: value
+            for key, value in metadata_overrides.items()
+            if value is not None and value != ""
+        }
+        for chunk in chunk_dicts:
+            chunk.setdefault("metadata", {}).update(clean_overrides)
 
     # 4. 删除该文件的旧块，避免重复索引
     from app.rag.vector_store import add_to_index, delete_from_index

@@ -154,6 +154,8 @@ async def test_upload_uses_new_ingestion_pipeline(tmp_path):
 
     assert resp.status_code == 200
     mock_incremental.assert_called_once()
+    metadata_overrides = mock_incremental.call_args.kwargs["metadata_overrides"]
+    assert metadata_overrides["tenant_id"]
     mock_build_chunks.assert_not_called()
 
 

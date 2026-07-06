@@ -571,7 +571,16 @@ async def rag_upload_endpoint(
         llm_call_fn = llm.invoke
     except Exception:
         logger.info("LLM not available, skipping Contextual Retrieval for incremental index")
-    result = run_incremental_index(dest, llm_call_fn=llm_call_fn)
+    metadata_overrides = {"tenant_id": tenant_id}
+    if language in ("zh", "en"):
+        metadata_overrides["language"] = language
+    if title:
+        metadata_overrides["title"] = title
+    result = run_incremental_index(
+        dest,
+        llm_call_fn=llm_call_fn,
+        metadata_overrides=metadata_overrides,
+    )
 
     # Update metadata with provided language and title
     if language in ("zh", "en") and result.get("metadata"):

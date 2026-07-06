@@ -40,6 +40,40 @@ def test_run_incremental_index_rejects_zero_chunks(tmp_path):
     mock_add.assert_not_called()
 
 
+def test_run_incremental_index_applies_metadata_overrides_before_indexing(tmp_path):
+    md_file = tmp_path / "tenant.md"
+    md_file.write_text("Tenant upload content.", encoding="utf-8")
+    chunk = ChunkRecord(
+        text="Tenant upload content for indexing.",
+        metadata={"source": "tenant.md", "file_type": "md", "language": "unknown"},
+    )
+
+    with patch("app.rag.loader.load_single_document") as mock_load, \
+         patch("app.rag.ingestion.pipeline.build_chunks", return_value=[chunk]), \
+         patch("app.rag.vector_store.delete_from_index"), \
+         patch("app.rag.vector_store.add_to_index") as mock_add:
+        mock_load.return_value = {
+            "metadata": {"source": "tenant.md", "title": "Tenant"},
+            "content": "Tenant upload content.",
+        }
+
+        result = run_incremental_index(
+            str(md_file),
+            metadata_overrides={
+                "tenant_id": "demo-tenant",
+                "title": "Tenant Upload",
+                "language": "en",
+            },
+        )
+
+    assert result["status"] == "ok"
+    indexed_chunks = mock_add.call_args.args[0]
+    metadata = indexed_chunks[0]["metadata"]
+    assert metadata["tenant_id"] == "demo-tenant"
+    assert metadata["title"] == "Tenant Upload"
+    assert metadata["language"] == "en"
+
+
 @pytest.mark.asyncio
 async def test_run_incremental_index_skips_contextual_prefix_inside_running_loop(tmp_path):
     md_file = tmp_path / "async.md"
