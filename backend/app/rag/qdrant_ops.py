@@ -747,7 +747,17 @@ def hybrid_search_qdrant(
 
     except Exception as e:
 
-        logger.warning("hybrid_search_qdrant embedding failed, falling back to BM25-only: %s", e)
+        logger.warning("hybrid_search_qdrant embedding failed, falling back to exact/BM25 search: %s", e)
+
+        exact_results = _exact_payload_search_qdrant(
+            query,
+            top_k=top_k,
+            collection_name=collection_name,
+            tenant_id=tenant_id,
+            lang_filter=lang_filter,
+        )
+        if exact_results:
+            return exact_results
 
         # TODO(E19): 迁移到 Qdrant 稀疏向量后移除此 BM25 调用
         return retrieve_keyword(query, top_k=top_k, lang_filter=lang_filter, tenant_id=tenant_id)
