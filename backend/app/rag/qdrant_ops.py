@@ -89,6 +89,7 @@ def _exact_payload_search_qdrant(
             text = payload.get("text", "") or ""
             haystack = " ".join([
                 text,
+                str(meta.get("parent_text", "")),
                 str(meta.get("title", "")),
                 str(meta.get("source", "")),
                 str(meta.get("slug", "")),

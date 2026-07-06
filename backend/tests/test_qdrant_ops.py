@@ -153,6 +153,42 @@ def test_hybrid_search_qdrant_preserves_exact_payload_hits_after_rerank():
     assert results[0]["metadata"]["source"] == "aureon-tenant-fix-pdf-80f329a.pdf"
 
 
+def test_hybrid_search_qdrant_exact_payload_searches_parent_text():
+    exact_point = SimpleNamespace(
+        id="exact-1",
+        payload={
+            "text": "Contextual prefix without the sentinel.",
+            "metadata": {
+                "parent_text": "Workbook row contains AUREON_TENANT_SENTINEL_XLSX_80F329A.",
+                "source": "aureon-tenant-fix-xlsx-80f329a.xlsx",
+                "slug": "aureon-tenant-fix-xlsx-80f329a",
+                "tenant_id": "default",
+            },
+        },
+    )
+    fake_client = MagicMock()
+    fake_client.scroll.return_value = ([exact_point], None)
+    settings = SimpleNamespace(
+        sparse_enabled=True,
+        dashscope_model="text-embedding-v4",
+        hnsw_ef_search=64,
+        rerank_enabled=True,
+    )
+
+    with patch("app.rag.qdrant_ops.settings", settings), \
+         patch("app.rag.qdrant_ops._get_qdrant", return_value=fake_client), \
+         patch("app.rag.embedding._embed_dense_sparse_dashscope",
+               side_effect=RuntimeError("embedding rejected query")), \
+         patch("app.rag.bm25.retrieve_keyword", return_value=[]):
+        results = hybrid_search_qdrant(
+            "AUREON_TENANT_SENTINEL_XLSX_80F329A",
+            top_k=1,
+            query_complexity="simple",
+        )
+
+    assert results[0]["metadata"]["source"] == "aureon-tenant-fix-xlsx-80f329a.xlsx"
+
+
 def test_hybrid_search_qdrant_uses_exact_payload_when_embedding_fails():
     exact_point = SimpleNamespace(
         id="exact-1",

@@ -59,6 +59,7 @@ def _promote_exact_lookup_chunks(query: str, chunks: list[dict], top_k: int) -> 
         meta = chunk.get("metadata", {}) or {}
         haystack = " ".join([
             chunk.get("text", "") or "",
+            str(meta.get("parent_text", "")),
             str(meta.get("title", "")),
             str(meta.get("source", "")),
             str(meta.get("slug", "")),

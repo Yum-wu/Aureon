@@ -185,6 +185,8 @@ def _load_docs_from_qdrant(tenant_id: str = "default") -> List[tuple]:
             payload = pt.payload or {}
             text = payload.get("text", "")
             meta = payload.get("metadata", {})
+            if meta.get("parent_text"):
+                text = f"{text}\n{meta['parent_text']}"
             docs_data.append((text, meta))
         if offset is None:
             break
