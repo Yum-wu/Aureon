@@ -54,6 +54,12 @@ def _is_exact_lookup_query(query: str) -> bool:
 
 def _promote_exact_lookup_chunks(query: str, chunks: list[dict], top_k: int) -> list[dict]:
     needle = query.strip().lower()
+    import re
+    split_terms = [
+        term.lower()
+        for term in re.findall(r"[A-Za-z0-9]+", query)
+        if len(term) >= 2
+    ]
 
     def _rank_key(chunk: dict) -> tuple[int, float]:
         meta = chunk.get("metadata", {}) or {}
@@ -64,7 +70,10 @@ def _promote_exact_lookup_chunks(query: str, chunks: list[dict], top_k: int) -> 
             str(meta.get("source", "")),
             str(meta.get("slug", "")),
         ]).lower()
-        exact_match = 0 if needle and needle in haystack else 1
+        exact_match = 0 if (
+            (needle and needle in haystack)
+            or (len(split_terms) >= 2 and all(term in haystack for term in split_terms))
+        ) else 1
         return (exact_match, -float(chunk.get("score", 0) or 0))
 
     return sorted(chunks, key=_rank_key)[:top_k]

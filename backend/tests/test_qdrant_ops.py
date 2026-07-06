@@ -159,7 +159,7 @@ def test_hybrid_search_qdrant_exact_payload_searches_parent_text():
         payload={
             "text": "Contextual prefix without the sentinel.",
             "metadata": {
-                "parent_text": "Workbook row contains AUREON_TENANT_SENTINEL_XLSX_80F329A.",
+                "parent_text": "Workbook row contains AUREON TENANT SENTINEL XLSX 80F329A.",
                 "source": "aureon-tenant-fix-xlsx-80f329a.xlsx",
                 "slug": "aureon-tenant-fix-xlsx-80f329a",
                 "tenant_id": "default",

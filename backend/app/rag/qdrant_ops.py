@@ -68,6 +68,11 @@ def _exact_payload_search_qdrant(
         token.lower()
         for token in re.findall(r"[A-Za-z0-9][A-Za-z0-9_.-]{5,}", query)
     ]
+    split_terms = [
+        term.lower()
+        for term in re.findall(r"[A-Za-z0-9]+", query)
+        if len(term) >= 2
+    ]
     if not needle and not token_needles:
         return []
 
@@ -94,7 +99,11 @@ def _exact_payload_search_qdrant(
                 str(meta.get("source", "")),
                 str(meta.get("slug", "")),
             ]).lower()
-            if needle in haystack or any(token in haystack for token in token_needles):
+            if (
+                needle in haystack
+                or any(token in haystack for token in token_needles)
+                or (len(split_terms) >= 2 and all(term in haystack for term in split_terms))
+            ):
                 matches.append({
                     "id": str(point.id),
                     "text": text,
