@@ -770,6 +770,35 @@ def hybrid_search_qdrant(
             chunk["_query_embedding"] = _query_emb_array
         formatted.append(chunk)
 
+    try:
+        keyword_results = retrieve_keyword(
+            query,
+            top_k=fetch_limit,
+            lang_filter=lang_filter,
+            tenant_id=tenant_id,
+        )
+    except Exception as e:
+        logger.warning("Qdrant hybrid BM25 merge failed, using vector candidates only: %s", e)
+        keyword_results = []
+
+    if keyword_results:
+        merged = []
+        seen = set()
+
+        def _candidate_key(doc):
+            meta = doc.get("metadata", {})
+            return meta.get("slug") or meta.get("source") or doc.get("text", "")[:80]
+
+        for doc in [*keyword_results, *formatted]:
+            key = _candidate_key(doc)
+            if key in seen:
+                continue
+            seen.add(key)
+            if _query_emb_array is not None and "_query_embedding" not in doc:
+                doc = {**doc, "_query_embedding": _query_emb_array}
+            merged.append(doc)
+        formatted = merged
+
     # 5. Rerank: 对 Qdrant RRF 候选做 API rerank 精排，提升 Recall 和 Relevancy
     # 参考 Anthropic Contextual Retrieval 论文：rerank 后取 top-20 比 top-10/5 更有效
     logger.info("Qdrant hybrid: %d RRF candidates, top_k=%d, rerank_enabled=%s",
