@@ -33,7 +33,7 @@ prometheus-fastapi-instrumentator>=6.0
 
 # Search & Cache
 elasticsearch>=8.10.0
-redis>=5.0
+redis>=8.0.1
 
 # Document parsers
 pypdf>=4.0
