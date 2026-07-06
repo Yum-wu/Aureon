@@ -52,6 +52,23 @@ def _is_exact_lookup_query(query: str) -> bool:
     return any(any(ch.isdigit() for ch in token) or "_" in token or "-" in token for token in tokens)
 
 
+def _promote_exact_lookup_chunks(query: str, chunks: list[dict], top_k: int) -> list[dict]:
+    needle = query.strip().lower()
+
+    def _rank_key(chunk: dict) -> tuple[int, float]:
+        meta = chunk.get("metadata", {}) or {}
+        haystack = " ".join([
+            chunk.get("text", "") or "",
+            str(meta.get("title", "")),
+            str(meta.get("source", "")),
+            str(meta.get("slug", "")),
+        ]).lower()
+        exact_match = 0 if needle and needle in haystack else 1
+        return (exact_match, -float(chunk.get("score", 0) or 0))
+
+    return sorted(chunks, key=_rank_key)[:top_k]
+
+
 def _check_unanswerable(response_text: str) -> bool:
     """检查 LLM 输出是否表示无法回答。"""
     return any(p in response_text for p in _UNANSWERABLE_PATTERNS)
@@ -297,7 +314,13 @@ def rag_query(
 
     if _is_exact_lookup_query(query):
         logger.info("Exact lookup query detected: skipping HyDE and query rewrite")
-        chunks = hybrid_retrieve(query, top_k=top_k, lang_filter=filter_lang, query_complexity="simple")
+        chunks = hybrid_retrieve(
+            query,
+            top_k=max(top_k, 10),
+            lang_filter=filter_lang,
+            query_complexity="simple",
+        )
+        chunks = _promote_exact_lookup_chunks(query, chunks, top_k)
     elif should_use_hyde(route):
         logger.info("HyDE enabled for %s query: using hypothetical answer for retrieval", route)
         chunks = hyde_retrieve(
@@ -479,8 +502,9 @@ async def rag_query_astream(
         route = "simple"
         logger.info("Exact lookup query detected in stream: skipping HyDE and query rewrite")
         chunks = await asyncio.to_thread(
-            hybrid_retrieve, query, top_k=top_k, lang_filter=filter_lang, query_complexity=route
+            hybrid_retrieve, query, top_k=max(top_k, 10), lang_filter=filter_lang, query_complexity=route
         )
+        chunks = _promote_exact_lookup_chunks(query, chunks, top_k)
     else:
         route = await route_retrieval_adaptive(query)
 

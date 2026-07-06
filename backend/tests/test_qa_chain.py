@@ -93,6 +93,28 @@ class TestRagQuery:
         mock_hyde.assert_not_called()
         assert mock_hybrid.call_args.kwargs["query_complexity"] == "simple"
 
+    @patch("app.rag.query_classifier.route_retrieval", return_value="complex")
+    @patch("app.rag.generator.hybrid_retrieve")
+    def test_exact_lookup_promotes_matching_chunk(self, mock_hybrid, mock_route):
+        mock_hybrid.return_value = [
+            {
+                "text": "generic upload content",
+                "metadata": {"title": "Other Upload", "slug": "other-upload"},
+                "score": 1.0,
+            },
+            {
+                "text": "AUREON_TENANT_SENTINEL_XLSX_80F329A upload content",
+                "metadata": {"title": "Upload XLSX", "slug": "upload-xlsx"},
+                "score": 0.1,
+            },
+        ]
+        llm_fn = MagicMock(return_value="found")
+
+        result = rag_query("AUREON_TENANT_SENTINEL_XLSX_80F329A", llm_fn, top_k=1, lang="en")
+
+        assert result.sources[0].title == "Upload XLSX"
+        assert mock_hybrid.call_args.kwargs["top_k"] == 10
+
     @patch("app.rag.retriever.MULTI_QUERY_ENABLED", False)
     @patch("app.rag.classifier.classify_query_answerable_sync", return_value=True)
     @patch("app.rag.retriever.hybrid_retrieve")
