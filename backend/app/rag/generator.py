@@ -752,6 +752,9 @@ async def rag_query_with_cache(
     """
     from app.cache.redis_client import get_cached_with_semantic, set_cached_with_semantic, increment_cache_miss
 
+    if _is_exact_lookup_query(query):
+        return await asyncio.to_thread(rag_query, query, llm_call_fn, top_k, use_mmr, lang, filter_lang)
+
     # Layer 1+2: Two-layer cache lookup (exact → semantic)
     cached = await get_cached_with_semantic(
         query=query,

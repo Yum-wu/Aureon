@@ -274,6 +274,22 @@ class TestRunIndexPipeline:
 
 class TestRagQueryWithCache:
     @pytest.mark.asyncio
+    async def test_exact_lookup_bypasses_semantic_cache(self):
+        from app.rag.models import RAGQueryResponse, SourceItem
+
+        fresh = RAGQueryResponse(
+            answer="fresh",
+            sources=[SourceItem(title="Upload TXT", slug="upload-txt", chunk="AUREON_TENANT_SENTINEL_TXT_80F329A")],
+        )
+        with patch("app.cache.redis_client.get_cached_with_semantic", new_callable=AsyncMock) as mock_get_cached, \
+             patch("app.rag.generator.rag_query", return_value=fresh) as mock_rag:
+            result = await rag_query_with_cache("AUREON_TENANT_SENTINEL_TXT_80F329A", MagicMock(), lang="en")
+
+        assert result.sources[0].title == "Upload TXT"
+        mock_get_cached.assert_not_called()
+        mock_rag.assert_called_once()
+
+    @pytest.mark.asyncio
     async def test_miss_then_cache_stores_sources(self):
         with patch("app.cache.redis_client.get_redis", return_value=None), \
              patch("app.cache.redis_client.set_cached", new_callable=AsyncMock) as mock_set_cached, \
