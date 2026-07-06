@@ -84,6 +84,16 @@ def run_incremental_index(filepath: str, llm_call_fn = None) -> dict:
 
     # 2. Build chunks via the new ingestion pipeline
     chunks = build_chunks(Path(filepath))
+    if not chunks:
+        return {
+            "status": "error",
+            "filename": os.path.basename(filepath),
+            "documents_indexed": 0,
+            "chunks_created": 0,
+            "elapsed_seconds": round(time.time() - start, 1),
+            "message": "No indexable chunks produced from uploaded file",
+            "warnings": warnings,
+        }
 
     # 3. Contextual Retrieval: add LLM-generated context prefix to each chunk
     contextual_count = 0

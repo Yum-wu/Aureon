@@ -5,7 +5,7 @@ from unittest.mock import patch
 from app.rag.indexer import run_incremental_index
 
 
-def test_run_incremental_index_uses_ingestion_pipeline(tmp_path):
+def test_run_incremental_index_rejects_zero_chunks(tmp_path):
     md_file = tmp_path / "pipeline.md"
     md_file.write_text("---\ntitle: Pipeline\n---\n\nBody content.", encoding="utf-8")
 
@@ -29,7 +29,9 @@ def test_run_incremental_index_uses_ingestion_pipeline(tmp_path):
 
         result = run_incremental_index(str(md_file))
 
-    assert result["status"] == "ok"
+    assert result["status"] == "error"
+    assert result["chunks_created"] == 0
+    assert "No indexable chunks" in result["message"]
     mock_load.assert_called_once()
     mock_build.assert_called_once()
-    mock_add.assert_called_once_with([])
+    mock_add.assert_not_called()

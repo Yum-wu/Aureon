@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 
 DEFAULT_MIN_CHUNK_LEN = 100
 DEFAULT_MIN_UNIQUE_RATIO = 0.3  # at least 30% distinct chars
@@ -23,6 +25,11 @@ def is_informative_chunk(
     stripped = text.strip()
     if not stripped:
         return False
+
+    tokens = re.findall(r"[\w\u4e00-\u9fff]+", stripped.lower())
+    if len(set(tokens)) >= 5:
+        return True
+
     unique = len(set(stripped))
     return (unique / len(stripped)) >= min_unique_ratio
 

@@ -3,12 +3,14 @@
 import pytest
 
 from app.rag.ingestion.extractors import (
+    extract_csv_document,
     extract_docx_document,
     extract_markdown_document,
     extract_pdf_document,
     extract_text_document,
     extract_xlsx_document,
 )
+from app.rag.ingestion.pipeline import build_chunks
 from app.rag.ingestion.models import ChunkRecord, IngestedDocument
 from app.rag.ingestion.normalizer import normalize_text
 from app.rag.ingestion.policy import split_with_policy
@@ -108,3 +110,38 @@ class TestIngestionPrimitives:
 
         assert len(chunks) == 1
         assert chunks[0].metadata["chunk_idx"] == 0
+
+    def test_build_chunks_keeps_normal_english_upload_text(self, tmp_path):
+        txt_file = tmp_path / "customer-feedback.txt"
+        txt_file.write_text(
+            (
+                "Voice of the Customer research captures unsolicited customer feedback "
+                "from support conversations, surveys, and social media posts. "
+                "Product teams use these signals to prioritize roadmap decisions, "
+                "identify churn risk, and improve onboarding for enterprise accounts. "
+            )
+            * 8,
+            encoding="utf-8",
+        )
+
+        chunks = build_chunks(txt_file)
+
+        assert chunks
+        assert "Voice of the Customer" in chunks[0].text
+
+    def test_csv_extractor_batches_rows_into_indexable_chunks(self, tmp_path):
+        csv_file = tmp_path / "sales.csv"
+        rows = ["region,customer,product,revenue"]
+        rows.extend(
+            f"Central,{index},Paseo,{1000 + index}"
+            for index in range(120)
+        )
+        csv_file.write_text("\n".join(rows), encoding="utf-8")
+
+        chunks = extract_csv_document(csv_file)
+
+        assert len(chunks) == 3
+        assert chunks[0].metadata["row_start"] == 2
+        assert chunks[0].metadata["row_end"] == 51
+        assert chunks[-1].metadata["row_start"] == 102
+        assert chunks[-1].metadata["row_end"] == 121

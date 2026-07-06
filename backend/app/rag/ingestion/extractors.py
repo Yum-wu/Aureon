@@ -191,43 +191,62 @@ def extract_csv_document(path: Path) -> list[ChunkRecord]:
 
     reader = csv.DictReader(StringIO(content), dialect=dialect)
     headers = [str(header) for header in (reader.fieldnames or []) if header is not None]
+    chunks: list[ChunkRecord] = []
     lines = []
+    rows_per_chunk = 50
     row_count = 0
+    row_start = 2
 
     for row in reader:
         row_count += 1
+        file_row_number = row_count + 1
         parts = []
         for header in headers:
             value = row.get(header)
             if value not in (None, ""):
                 parts.append(f"{header}: {value}")
         if parts:
+            if not lines:
+                row_start = file_row_number
             lines.append(", ".join(parts))
+        if len(lines) >= rows_per_chunk:
+            chunks.append(_make_csv_chunk(path, headers, row_start, file_row_number, lines, dialect.delimiter))
+            lines = []
 
+    if lines:
+        row_end = row_count + 1
+        chunks.append(_make_csv_chunk(path, headers, row_start, row_end, lines, dialect.delimiter))
+
+    return chunks
+
+
+def _make_csv_chunk(
+    path: Path,
+    headers: list[str],
+    row_start: int,
+    row_end: int,
+    lines: list[str],
+    delimiter: str,
+) -> ChunkRecord:
     text = normalize_text("\n".join(lines))
     lang = _detect_text_language(text[:500]) if text else "en"
-    row_start = 2 if headers and row_count else 0
-    row_end = row_start + row_count - 1 if row_start else 0
-
-    return [
-        ChunkRecord(
-            text=text,
-            metadata={
-                "source": path.name,
-                "title": path.stem,
-                "slug": path.stem,
-                "tags": [],
-                "category": "upload",
-                "filepath": str(path),
-                "language": lang,
-                "file_type": "csv",
-                "headers": headers,
-                "row_start": row_start,
-                "row_end": row_end,
-                "delimiter": dialect.delimiter,
-            },
-        )
-    ]
+    return ChunkRecord(
+        text=text,
+        metadata={
+            "source": path.name,
+            "title": path.stem,
+            "slug": path.stem,
+            "tags": [],
+            "category": "upload",
+            "filepath": str(path),
+            "language": lang,
+            "file_type": "csv",
+            "headers": headers,
+            "row_start": row_start,
+            "row_end": row_end,
+            "delimiter": delimiter,
+        },
+    )
 
 
 def _pptx_table_to_text(table) -> str:
