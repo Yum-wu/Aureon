@@ -79,6 +79,36 @@ def _promote_exact_lookup_chunks(query: str, chunks: list[dict], top_k: int) -> 
     return sorted(chunks, key=_rank_key)[:top_k]
 
 
+def _retrieve_exact_lookup_chunks(query: str, top_k: int, lang_filter: str | None) -> list[dict]:
+    try:
+        from app.multi_tenant.middleware import get_current_tenant_id
+        from app.rag.qdrant_ops import _exact_payload_search_qdrant, _get_qdrant_collection_name
+
+        return _exact_payload_search_qdrant(
+            query,
+            top_k=top_k,
+            collection_name=_get_qdrant_collection_name(),
+            tenant_id=get_current_tenant_id(),
+            lang_filter=lang_filter,
+        )
+    except Exception as exc:
+        logger.debug("Exact payload lookup skipped: %s", exc)
+        return []
+
+
+def _merge_lookup_chunks(primary: list[dict], secondary: list[dict]) -> list[dict]:
+    merged: list[dict] = []
+    seen: set[str] = set()
+    for chunk in [*primary, *secondary]:
+        meta = chunk.get("metadata", {}) or {}
+        key = str(meta.get("slug") or meta.get("source") or chunk.get("id") or chunk.get("text", "")[:80])
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append(chunk)
+    return merged
+
+
 def _check_unanswerable(response_text: str) -> bool:
     """检查 LLM 输出是否表示无法回答。"""
     return any(p in response_text for p in _UNANSWERABLE_PATTERNS)
@@ -330,6 +360,8 @@ def rag_query(
             lang_filter=filter_lang,
             query_complexity="simple",
         )
+        exact_chunks = _retrieve_exact_lookup_chunks(query, max(top_k, 10), filter_lang)
+        chunks = _merge_lookup_chunks(exact_chunks, chunks)
         chunks = _promote_exact_lookup_chunks(query, chunks, top_k)
     elif should_use_hyde(route):
         logger.info("HyDE enabled for %s query: using hypothetical answer for retrieval", route)
@@ -514,6 +546,10 @@ async def rag_query_astream(
         chunks = await asyncio.to_thread(
             hybrid_retrieve, query, top_k=max(top_k, 10), lang_filter=filter_lang, query_complexity=route
         )
+        exact_chunks = await asyncio.to_thread(
+            _retrieve_exact_lookup_chunks, query, max(top_k, 10), filter_lang
+        )
+        chunks = _merge_lookup_chunks(exact_chunks, chunks)
         chunks = _promote_exact_lookup_chunks(query, chunks, top_k)
     else:
         route = await route_retrieval_adaptive(query)

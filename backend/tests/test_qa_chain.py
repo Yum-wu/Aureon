@@ -115,6 +115,31 @@ class TestRagQuery:
         assert result.sources[0].title == "Upload XLSX"
         assert mock_hybrid.call_args.kwargs["top_k"] == 10
 
+    @patch("app.rag.query_classifier.route_retrieval", return_value="complex")
+    @patch("app.rag.generator._retrieve_exact_lookup_chunks")
+    @patch("app.rag.generator.hybrid_retrieve")
+    def test_exact_lookup_merges_payload_hits(self, mock_hybrid, mock_exact, mock_route):
+        mock_hybrid.return_value = [
+            {
+                "text": "generic upload content",
+                "metadata": {"title": "Upload CSV", "slug": "upload-csv"},
+                "score": 1.0,
+            },
+        ]
+        mock_exact.return_value = [
+            {
+                "text": "AUREON_TENANT_SENTINEL_DOCX_80F329A upload content",
+                "metadata": {"title": "Upload DOCX", "slug": "upload-docx"},
+                "score": 1.0,
+            },
+        ]
+        llm_fn = MagicMock(return_value="found")
+
+        result = rag_query("AUREON_TENANT_SENTINEL_DOCX_80F329A", llm_fn, top_k=1, lang="en")
+
+        assert result.sources[0].title == "Upload DOCX"
+        mock_exact.assert_called_once_with("AUREON_TENANT_SENTINEL_DOCX_80F329A", 10, None)
+
     @patch("app.rag.retriever.MULTI_QUERY_ENABLED", False)
     @patch("app.rag.classifier.classify_query_answerable_sync", return_value=True)
     @patch("app.rag.retriever.hybrid_retrieve")
