@@ -15,7 +15,7 @@ interface DocumentUploadProps {
   onUploadSuccess?: () => void;
 }
 
-const ALLOWED_EXTENSIONS = new Set([".md", ".txt", ".pdf", ".docx", ".xlsx"]);
+const ALLOWED_EXTENSIONS = new Set([".md", ".txt", ".pdf", ".docx", ".xlsx", ".csv", ".pptx"]);
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 export function DocumentUpload({ onUploadSuccess }: DocumentUploadProps) {
@@ -199,7 +199,7 @@ export function DocumentUpload({ onUploadSuccess }: DocumentUploadProps) {
           ref={fileInputRef}
           data-testid="upload-file-input"
           type="file"
-          accept=".md,.txt,.pdf,.docx,.xlsx"
+          accept=".md,.txt,.pdf,.docx,.xlsx,.csv,.pptx"
           onChange={handleFileChange}
           className="hidden"
         />

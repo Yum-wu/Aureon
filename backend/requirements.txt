@@ -60,6 +60,7 @@ cachetools>=5.3,<6.0
 pypdf>=6.13,<7.0
 python-docx>=1.1,<2.0
 openpyxl>=3.1,<4.0
+python-pptx>=1.0,<2.0
 
 # Evaluation frameworks moved to requirements-dev.txt
 # deepeval, ragas — install with: pip install -r requirements-dev.txt

@@ -471,7 +471,7 @@
     "upload": {
       "button": "Upload Document",
       "drop_text": "Drag and drop a file here, or click to select",
-      "supported_formats": "Supports .md, .txt, .pdf, .docx, .xlsx formats",
+      "supported_formats": "Supports .md, .txt, .pdf, .docx, .xlsx, .csv, .pptx formats",
       "uploading": "Uploading and indexing...",
       "success": "{{filename}} uploaded successfully, {{chunks}} chunks created",
       "upload_another": "Upload another",
@@ -825,7 +825,7 @@
       },
       "documents-upload": {
         "title": "Upload Your Documents",
-        "description": "Upload documents to build your knowledge base. Supports .md, .txt, .pdf, .docx, .xlsx formats."
+        "description": "Upload documents to build your knowledge base. Supports .md, .txt, .pdf, .docx, .xlsx, .csv, .pptx formats."
       },
       "search-own-data": {
         "title": "Search Your Own Data",
@@ -935,7 +935,7 @@
       "badFormat": "Unsupported format",
       "success": "Upload successful",
       "uploading": "Uploading...",
-      "hint": "Supports .md, .txt, .pdf, .docx, .xlsx",
+      "hint": "Supports .md, .txt, .pdf, .docx, .xlsx, .csv, .pptx",
       "formats": "Supported formats",
       "files": "Uploaded files",
       "delete": "Delete"

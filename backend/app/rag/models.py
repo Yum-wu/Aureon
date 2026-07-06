@@ -55,3 +55,4 @@ class RAGUploadResponse(BaseModel):
     documents_indexed: int = 1
     chunks_created: int
     elapsed_seconds: float
+    warnings: list[str] = []

@@ -69,6 +69,19 @@ class TestLoadPdf:
         assert "Beijing" in result["content"]
         assert result["metadata"]["file_type"] == "xlsx"
 
+    def test_load_csv_converts_rows_with_metadata(self, tmp_path):
+        from app.rag.loader import load_csv
+
+        csv_path = tmp_path / "sales.csv"
+        csv_path.write_text("region,revenue\nAPAC,1200\nEMEA,900", encoding="utf-8")
+
+        result = load_csv(str(csv_path))
+
+        assert "region: APAC" in result["content"]
+        assert "revenue: 1200" in result["content"]
+        assert result["metadata"]["file_type"] == "csv"
+        assert result["metadata"]["source"] == "sales.csv"
+
     def test_load_single_document_dispatches_docx(self, tmp_path):
         """load_single_document should handle .docx files."""
         from docx import Document
@@ -104,9 +117,124 @@ class TestLoadPdf:
         """Unsupported file types should raise ValueError."""
         from app.rag.loader import load_single_document
 
-        path = str(tmp_path / "test.csv")
+        path = str(tmp_path / "test.exe")
         with open(path, "w") as f:
             f.write("a,b,c")
 
         with pytest.raises(ValueError, match="Unsupported"):
             load_single_document(path)
+
+    def test_load_single_document_dispatches_pptx(self, tmp_path):
+        from pptx import Presentation
+        from app.rag.loader import load_single_document
+
+        prs = Presentation()
+        slide = prs.slides.add_slide(prs.slide_layouts[5])
+        slide.shapes.title.text = "Quarterly Review"
+        textbox = slide.shapes.add_textbox(0, 0, 3000000, 1000000)
+        textbox.text_frame.text = "Revenue grew in APAC."
+        path = tmp_path / "review.pptx"
+        prs.save(path)
+
+        result = load_single_document(str(path))
+
+        assert result["metadata"]["source"] == "review.pptx"
+        assert result["metadata"]["file_type"] == "pptx"
+        assert "Quarterly Review" in result["content"]
+        assert "APAC" in result["content"]
+
+    def test_pptx_extracts_tables_and_notes(self, tmp_path):
+        from pptx import Presentation
+        from app.rag.ingestion.extractors import extract_pptx_document
+
+        prs = Presentation()
+        slide = prs.slides.add_slide(prs.slide_layouts[5])
+        slide.shapes.title.text = "Pipeline Review"
+        table = slide.shapes.add_table(2, 2, 0, 0, 3000000, 1000000).table
+        table.cell(0, 0).text = "Stage"
+        table.cell(0, 1).text = "Owner"
+        table.cell(1, 0).text = "Discovery"
+        table.cell(1, 1).text = "Sales"
+        slide.notes_slide.notes_text_frame.text = "Mention rollout risk."
+        path = tmp_path / "pipeline.pptx"
+        prs.save(path)
+
+        chunks = extract_pptx_document(path)
+
+        assert chunks
+        assert chunks[0].metadata["slide_number"] == 1
+        assert chunks[0].metadata["slide_title"] == "Pipeline Review"
+        assert "Stage | Owner" in chunks[0].text
+        assert "Discovery | Sales" in chunks[0].text
+        assert "Speaker notes" in chunks[0].text
+        assert "rollout risk" in chunks[0].text
+
+    def test_empty_pptx_raises_value_error(self, tmp_path):
+        from pptx import Presentation
+        from app.rag.loader import load_pptx
+
+        prs = Presentation()
+        path = tmp_path / "empty.pptx"
+        prs.save(path)
+
+        with pytest.raises(ValueError, match="no extractable text"):
+            load_pptx(str(path))
+
+    def test_docx_extracts_table_content(self, tmp_path):
+        from docx import Document
+        from app.rag.ingestion.extractors import extract_docx_document
+
+        doc = Document()
+        doc.add_heading("Pricing", level=1)
+        table = doc.add_table(rows=2, cols=2)
+        table.cell(0, 0).text = "Plan"
+        table.cell(0, 1).text = "Price"
+        table.cell(1, 0).text = "Pro"
+        table.cell(1, 1).text = "$99"
+        path = tmp_path / "pricing.docx"
+        doc.save(path)
+
+        chunks = extract_docx_document(path)
+
+        assert any("Plan | Price" in chunk.text for chunk in chunks)
+        assert any("Pro | $99" in chunk.text for chunk in chunks)
+        assert any(chunk.metadata.get("element_type") == "table" for chunk in chunks)
+        assert any(chunk.metadata.get("heading_path") == "Pricing" for chunk in chunks)
+
+    def test_xlsx_preserves_sheet_and_row_metadata(self, tmp_path):
+        from openpyxl import Workbook
+        from app.rag.ingestion.extractors import extract_xlsx_document
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Pipeline"
+        ws.append(["Stage", "Owner"])
+        ws.append(["Discovery", "Sales"])
+        ws.append(["Delivery", "CS"])
+        path = tmp_path / "pipeline.xlsx"
+        wb.save(path)
+
+        chunks = extract_xlsx_document(path)
+
+        assert chunks
+        assert chunks[0].metadata["sheet_name"] == "Pipeline"
+        assert chunks[0].metadata["row_start"] == 2
+        assert chunks[0].metadata["row_end"] == 3
+        assert chunks[0].metadata["headers"] == ["Stage", "Owner"]
+        assert "Stage: Discovery" in chunks[0].text
+
+    def test_pdf_extracts_page_metadata_for_blank_pdf(self, tmp_path):
+        from pypdf import PdfWriter
+        from app.rag.ingestion.extractors import extract_pdf_document
+
+        writer = PdfWriter()
+        writer.add_blank_page(width=612, height=792)
+        path = tmp_path / "blank.pdf"
+        with open(path, "wb") as f:
+            writer.write(f)
+
+        doc = extract_pdf_document(path)
+
+        assert doc.metadata["file_type"] == "pdf"
+        assert doc.metadata["page_count"] == 1
+        assert "warnings" in doc.metadata

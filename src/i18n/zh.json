@@ -470,7 +470,7 @@
     "upload": {
       "button": "上传文档",
       "drop_text": "拖拽文件到此处，或点击选择",
-      "supported_formats": "支持 .md、.txt、.pdf、.docx、.xlsx 格式",
+      "supported_formats": "支持 .md、.txt、.pdf、.docx、.xlsx、.csv、.pptx 格式",
       "uploading": "正在上传并索引...",
       "success": "{{filename}} 上传成功，已创建 {{chunks}} 个片段",
       "upload_another": "继续上传",
@@ -824,7 +824,7 @@
       },
       "documents-upload": {
         "title": "上传文档",
-        "description": "上传文档构建您的知识库。支持 .md、.txt、.pdf、.docx、.xlsx 格式。"
+        "description": "上传文档构建您的知识库。支持 .md、.txt、.pdf、.docx、.xlsx、.csv、.pptx 格式。"
       },
       "search-own-data": {
         "title": "搜索您自己的数据",
@@ -934,7 +934,7 @@
       "badFormat": "不支持的格式",
       "success": "上传成功",
       "uploading": "上传中...",
-      "hint": "支持 .md, .txt, .pdf, .docx, .xlsx",
+      "hint": "支持 .md、.txt、.pdf、.docx、.xlsx、.csv、.pptx",
       "formats": "支持格式",
       "files": "已上传文件",
       "delete": "删除"

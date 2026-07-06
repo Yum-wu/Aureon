@@ -68,10 +68,28 @@ async def test_upload_no_filename():
 
 
 @pytest.mark.asyncio
+async def test_upload_accepts_csv(tmp_path):
+    with patch("app.routers.rag.UPLOADS_DIR", str(tmp_path)), \
+         patch("app.routers.rag.run_incremental_index", return_value={
+             "status": "ok",
+             "filename": "test.csv",
+             "documents_indexed": 1,
+             "chunks_created": 1,
+             "elapsed_seconds": 0.1,
+         }):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.post("/api/rag/upload", files={"file": ("test.csv", b"a,b\n1,2")})
+
+    assert resp.status_code == 200
+    assert resp.json()["filename"] == "test.csv"
+
+
+@pytest.mark.asyncio
 async def test_upload_invalid_extension():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        resp = await ac.post("/api/rag/upload", files={"file": ("test.csv", b"a,b,c")})
+        resp = await ac.post("/api/rag/upload", files={"file": ("test.exe", b"binary")})
     assert resp.status_code == 400
     assert "Unsupported" in resp.json()["detail"]
 
@@ -85,11 +103,12 @@ async def test_upload_path_traversal():
 
 
 @pytest.mark.asyncio
-async def test_upload_valid_md():
-    with patch("app.routers.rag.run_incremental_index", return_value={
-        "status": "ok", "filename": "test.md", "documents_indexed": 1,
-        "chunks_created": 3, "elapsed_seconds": 0.1
-    }):
+async def test_upload_valid_md(tmp_path):
+    with patch("app.routers.rag.UPLOADS_DIR", str(tmp_path)), \
+         patch("app.routers.rag.run_incremental_index", return_value={
+             "status": "ok", "filename": "test.md", "documents_indexed": 1,
+             "chunks_created": 3, "elapsed_seconds": 0.1
+         }):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             resp = await ac.post("/api/rag/upload", files={"file": ("test.md", b"# Title\nContent")})
@@ -100,8 +119,27 @@ async def test_upload_valid_md():
 
 
 @pytest.mark.asyncio
-async def test_upload_uses_new_ingestion_pipeline():
-    with patch("app.routers.rag.run_incremental_index") as mock_incremental, \
+async def test_upload_accepts_pptx(tmp_path):
+    with patch("app.routers.rag.UPLOADS_DIR", str(tmp_path)), \
+         patch("app.routers.rag.run_incremental_index", return_value={
+             "status": "ok",
+             "filename": "deck.pptx",
+             "documents_indexed": 1,
+             "chunks_created": 2,
+             "elapsed_seconds": 0.1,
+         }):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.post("/api/rag/upload", files={"file": ("deck.pptx", b"pptx")})
+
+    assert resp.status_code == 200
+    assert resp.json()["filename"] == "deck.pptx"
+
+
+@pytest.mark.asyncio
+async def test_upload_uses_new_ingestion_pipeline(tmp_path):
+    with patch("app.routers.rag.UPLOADS_DIR", str(tmp_path)), \
+         patch("app.routers.rag.run_incremental_index") as mock_incremental, \
          patch("app.rag.ingestion.pipeline.build_chunks", return_value=[] ) as mock_build_chunks:
         mock_incremental.return_value = {
             "status": "ok",

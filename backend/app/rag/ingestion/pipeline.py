@@ -5,9 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 
 from app.rag.ingestion.extractors import (
+    extract_csv_document,
     extract_docx_document,
     extract_markdown_document,
     extract_pdf_document,
+    extract_pptx_document,
     extract_text_document,
     extract_xlsx_document,
 )
@@ -27,6 +29,10 @@ def load_ingested_document(path: Path) -> IngestedDocument | list[ChunkRecord]:
         return extract_text_document(path)
     if suffix == ".pdf":
         return extract_pdf_document(path)
+    if suffix == ".csv":
+        return extract_csv_document(path)
+    if suffix == ".pptx":
+        return extract_pptx_document(path)
     if suffix == ".docx":
         return extract_docx_document(path)
     if suffix == ".xlsx":
@@ -42,7 +48,14 @@ def build_chunks(path: Path) -> list[ChunkRecord]:
         chunks = loaded
 
     # Quality gates
-    chunks = [c for c in chunks if is_valid_chunk(c.text) and is_informative_chunk(c.text)]
+    structured_table_types = {"csv", "pptx", "xlsx"}
+    filtered_chunks = []
+    for chunk in chunks:
+        file_type = str(chunk.metadata.get("file_type", "")).lower()
+        min_len = 1 if file_type in structured_table_types else 100
+        if is_valid_chunk(chunk.text, min_len=min_len) and is_informative_chunk(chunk.text):
+            filtered_chunks.append(chunk)
+    chunks = filtered_chunks
 
     return chunks
 

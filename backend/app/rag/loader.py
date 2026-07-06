@@ -9,9 +9,11 @@ from pathlib import Path
 import structlog
 
 from app.rag.ingestion.extractors import (
+    extract_csv_document,
     extract_docx_document,
     extract_markdown_document,
     extract_pdf_document,
+    extract_pptx_document,
     parse_frontmatter,
     extract_text_document,
     extract_xlsx_document,
@@ -34,7 +36,7 @@ def detect_doc_language(content: str, frontmatter_lang: str = None) -> str:
 def load_single_document(filepath: str) -> Dict[str, Any]:
     """Load a single document and return {metadata, content}.
 
-    Supports: .md, .txt, .pdf, .docx, .xlsx
+    Supports: .md, .txt, .pdf, .docx, .xlsx, .csv, .pptx
     Args:
         filepath: Absolute path to file.
     Returns:
@@ -71,6 +73,19 @@ def load_single_document(filepath: str) -> Dict[str, Any]:
         metadata = dict(chunks[0].metadata)
         metadata.pop("file_type", None)
         return {"metadata": {**metadata, "uploaded": True}, "content": chunks[0].text}
+    elif suffix == ".csv":
+        chunks = extract_csv_document(fpath)
+        return {"metadata": {**chunks[0].metadata, "uploaded": True}, "content": chunks[0].text}
+    elif suffix == ".pptx":
+        chunks = extract_pptx_document(fpath)
+        if not chunks:
+            raise ValueError("PPTX contains no extractable text")
+        metadata = dict(chunks[0].metadata)
+        metadata.pop("file_type", None)
+        return {
+            "metadata": {**metadata, "uploaded": True, "file_type": "pptx"},
+            "content": "\n\n".join(chunk.text for chunk in chunks),
+        }
     else:
         raise ValueError(f"Unsupported file type: {suffix}")
 
@@ -139,3 +154,26 @@ def load_excel(filepath: str) -> Dict[str, Any]:
     """
     chunks = extract_xlsx_document(Path(filepath))
     return {"metadata": dict(chunks[0].metadata), "content": chunks[0].text}
+
+
+def load_csv(filepath: str) -> Dict[str, Any]:
+    """Load a CSV file and return {metadata, content}.
+
+    Thin wrapper around extract_csv_document for backward compatibility.
+    """
+    chunks = extract_csv_document(Path(filepath))
+    return {"metadata": dict(chunks[0].metadata), "content": chunks[0].text}
+
+
+def load_pptx(filepath: str) -> Dict[str, Any]:
+    """Load a PPTX file and return {metadata, content}.
+
+    Thin wrapper around extract_pptx_document for backward compatibility.
+    """
+    chunks = extract_pptx_document(Path(filepath))
+    if not chunks:
+        raise ValueError("PPTX contains no extractable text")
+    return {
+        "metadata": dict(chunks[0].metadata),
+        "content": "\n\n".join(chunk.text for chunk in chunks),
+    }

@@ -5,7 +5,7 @@ import { authFetch } from "../services/authFetch";
 import type { KeyboardEvent } from "react";
 
 /** 支持的文件类型（与后端一致） */
-const ALLOWED_EXTENSIONS = [".md", ".txt", ".pdf", ".docx", ".xlsx"];
+const ALLOWED_EXTENSIONS = [".md", ".txt", ".pdf", ".docx", ".xlsx", ".csv", ".pptx"];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 interface InputAreaProps {

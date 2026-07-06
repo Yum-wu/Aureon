@@ -35,7 +35,7 @@ def mem_get(query: str, tenant_id: str = "default") -> Optional[str]:
     if entry is None:
         return None
     value, expires_at = entry
-    if time.monotonic() > expires_at:
+    if time.monotonic() >= expires_at:
         del _mem_cache[full_key]
         return None
     return value

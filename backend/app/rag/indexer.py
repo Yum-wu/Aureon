@@ -70,6 +70,7 @@ def run_incremental_index(filepath: str, llm_call_fn = None) -> dict:
 
     # 1. Load single document
     doc = load_single_document(filepath)
+    warnings = doc.get("metadata", {}).get("warnings", []) if doc else []
     if not doc or not doc.get("content", "").strip():
         return {
             "status": "error",
@@ -78,6 +79,7 @@ def run_incremental_index(filepath: str, llm_call_fn = None) -> dict:
             "chunks_created": 0,
             "elapsed_seconds": 0,
             "message": "文件为空或无法读取",
+            "warnings": warnings,
         }
 
     # 2. Build chunks via the new ingestion pipeline
@@ -113,6 +115,7 @@ def run_incremental_index(filepath: str, llm_call_fn = None) -> dict:
         "chunks_created": len(chunks),
         "contextual_prefixes": contextual_count,
         "elapsed_seconds": round(elapsed, 1),
+        "warnings": warnings,
     }
 
 

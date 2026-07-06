@@ -31,6 +31,14 @@ describe("DocumentUpload", () => {
     expect(screen.getByTestId("upload-file-input")).toBeInTheDocument();
   });
 
+  it("accepts csv and pptx files", () => {
+    render(<DocumentUpload onUploadSuccess={mockOnUploadSuccess} />);
+
+    const input = screen.getByTestId("upload-file-input");
+
+    expect(input).toHaveAttribute("accept", ".md,.txt,.pdf,.docx,.xlsx,.csv,.pptx");
+  });
+
   it("handles file selection", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,

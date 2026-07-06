@@ -1,7 +1,5 @@
 """Tests for app.rag.loader — parse_frontmatter, load_single_document, load_markdown_files."""
 
-import pytest
-
 from app.rag.loader import parse_frontmatter, load_single_document, load_markdown_files
 
 
@@ -64,12 +62,17 @@ class TestLoadSingleDocument:
         assert result["metadata"]["category"] == "upload"
         assert result["content"] == "Plain text content."
 
-    def test_unsupported_extension_raises(self, tmp_path):
+    def test_load_csv_file(self, tmp_path):
         csv_file = tmp_path / "data.csv"
-        csv_file.write_text("a,b,c\n1,2,3", encoding="utf-8")
+        csv_file.write_text("name,score\nAlice,98\nBob,87", encoding="utf-8")
 
-        with pytest.raises(ValueError, match="Unsupported file type"):
-            load_single_document(str(csv_file))
+        result = load_single_document(str(csv_file))
+
+        assert result["metadata"]["source"] == "data.csv"
+        assert result["metadata"]["file_type"] == "csv"
+        assert result["metadata"]["uploaded"] is True
+        assert "Alice" in result["content"]
+        assert "score" in result["content"]
 
     def test_md_without_frontmatter_uses_stem_as_title(self, tmp_path):
         md_file = tmp_path / "no-fm.md"
