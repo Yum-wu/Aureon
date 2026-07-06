@@ -12,12 +12,13 @@ Extracted from vector_store.py.
 
 
 
+import re
 import time
 import threading
 
 import numpy as np
 
-from typing import List, Dict
+from typing import Any, List, Dict
 
 
 
@@ -35,6 +36,75 @@ logger = structlog.get_logger()
 # ── tenant_id 检查缓存（避免每次查询都 scroll） ──
 _tenant_id_cache: dict = {"value": None, "updated_at": 0.0}
 _TENANT_ID_CACHE_TTL = 300  # 5 分钟
+
+
+def _looks_like_exact_lookup(query: str) -> bool:
+    tokens = re.findall(r"[A-Za-z0-9][A-Za-z0-9_.-]{5,}", query)
+    return any(any(ch.isdigit() for ch in token) or "_" in token or "-" in token for token in tokens)
+
+
+def _metadata_matches_filters(meta: dict[str, Any], tenant_id: str | None, lang_filter: str | None) -> bool:
+    if tenant_id and tenant_id != "default" and meta.get("tenant_id") != tenant_id:
+        return False
+    if lang_filter and meta.get("language") != lang_filter:
+        return False
+    return True
+
+
+def _exact_payload_search_qdrant(
+    query: str,
+    *,
+    top_k: int,
+    collection_name: str,
+    tenant_id: str | None = None,
+    lang_filter: str | None = None,
+) -> List[Dict[str, Any]]:
+    if not _looks_like_exact_lookup(query):
+        return []
+
+    client = _get_qdrant()
+    needle = query.strip().lower()
+    token_needles = [
+        token.lower()
+        for token in re.findall(r"[A-Za-z0-9][A-Za-z0-9_.-]{5,}", query)
+    ]
+    if not needle and not token_needles:
+        return []
+
+    matches: list[dict[str, Any]] = []
+    offset = None
+    while True:
+        points, offset = client.scroll(
+            collection_name=collection_name,
+            limit=128,
+            offset=offset,
+            with_payload=True,
+            with_vectors=False,
+        )
+        for point in points:
+            payload = point.payload or {}
+            meta = payload.get("metadata", {}) or {}
+            if not _metadata_matches_filters(meta, tenant_id, lang_filter):
+                continue
+            text = payload.get("text", "") or ""
+            haystack = " ".join([
+                text,
+                str(meta.get("title", "")),
+                str(meta.get("source", "")),
+                str(meta.get("slug", "")),
+            ]).lower()
+            if needle in haystack or any(token in haystack for token in token_needles):
+                matches.append({
+                    "id": str(point.id),
+                    "text": text,
+                    "metadata": meta,
+                    "score": 1.0,
+                })
+                if len(matches) >= top_k:
+                    return matches
+        if offset is None:
+            break
+    return matches
 
 
 
@@ -781,8 +851,20 @@ def hybrid_search_qdrant(
         logger.warning("Qdrant hybrid BM25 merge failed, using vector candidates only: %s", e)
         keyword_results = []
 
+    try:
+        exact_results = _exact_payload_search_qdrant(
+            query,
+            top_k=top_k,
+            collection_name=collection_name,
+            tenant_id=tenant_id,
+            lang_filter=lang_filter,
+        )
+    except Exception as e:
+        logger.warning("Qdrant exact payload fallback failed: %s", e)
+        exact_results = []
+
     strong_keyword_results = [
-        doc for doc in keyword_results
+        doc for doc in [*exact_results, *keyword_results]
         if doc.get("score", 0) >= 0.8
     ]
 
@@ -805,11 +887,11 @@ def hybrid_search_qdrant(
                 break
         return merged_results
 
-    if keyword_results:
+    if exact_results or keyword_results:
         merged = []
         seen = set()
 
-        for doc in [*keyword_results, *formatted]:
+        for doc in [*exact_results, *keyword_results, *formatted]:
             key = _candidate_key(doc)
             if key in seen:
                 continue

@@ -163,9 +163,12 @@ def _add_to_index_qdrant(chunks: List[Dict[str, Any]]):
 
     logger.info("Added %d chunks to Qdrant ('%s')", len(chunks), collection_name)
 
-    if not settings.sparse_enabled:
-
-        _build_kw_index(force=True)
+    tenant_ids = {
+        (chunk.get("metadata", {}) or {}).get("tenant_id", "default")
+        for chunk in chunks
+    } or {"default"}
+    for tenant_id in tenant_ids:
+        _build_kw_index(tenant_id=tenant_id, force=True)
 
     _invalidate_stats_cache()
 
@@ -226,6 +229,7 @@ def _delete_from_index_qdrant(source_filename: str):
     # Scroll to find points with matching source
 
     ids_to_delete = []
+    affected_tenant_ids = set()
 
     offset = None
 
@@ -252,6 +256,7 @@ def _delete_from_index_qdrant(source_filename: str):
             if meta.get("source") == source_filename:
 
                 ids_to_delete.append(pt.id)
+                affected_tenant_ids.add(meta.get("tenant_id", "default"))
 
         if offset is None:
 
@@ -275,9 +280,8 @@ def _delete_from_index_qdrant(source_filename: str):
 
     logger.info("Deleted %d chunks for '%s' from Qdrant ('%s')", len(ids_to_delete), safe_name, collection_name)
 
-    if not settings.sparse_enabled:
-
-        _build_kw_index(force=True)
+    for tenant_id in (affected_tenant_ids or {"default"}):
+        _build_kw_index(tenant_id=tenant_id, force=True)
 
     _invalidate_stats_cache()
 

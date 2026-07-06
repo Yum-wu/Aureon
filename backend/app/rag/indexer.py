@@ -355,6 +355,7 @@ async def hybrid_retrieve_async(
     query: str,
     top_k: int = 3,
     lang_filter: str = None,
+    tenant_id: str | None = None,
 ) -> List[Dict[str, Any]]:
     """Async hybrid retrieval: BM25 + Vector in parallel via asyncio.gather.
 
@@ -371,14 +372,40 @@ async def hybrid_retrieve_async(
     """
     import asyncio
 
+    if tenant_id is None:
+        try:
+            from app.multi_tenant.middleware import get_current_tenant_id
+            tenant_id = get_current_tenant_id()
+        except Exception:
+            tenant_id = "default"
+
     # Run both retrievers in parallel
-    bm25_task = asyncio.to_thread(retrieve_keyword, query, top_k=top_k * _RETRIEVAL_MULTIPLIER, lang_filter=lang_filter)
+    bm25_task = asyncio.to_thread(
+        retrieve_keyword,
+        query,
+        top_k=top_k * _RETRIEVAL_MULTIPLIER,
+        lang_filter=lang_filter,
+        tenant_id=tenant_id,
+    )
 
     from app.config import settings
     if settings.vector_backend == "qdrant":
-        vector_task = asyncio.to_thread(retrieve, query, top_k=top_k * _RETRIEVAL_MULTIPLIER, lang_filter=lang_filter)
+        vector_task = asyncio.to_thread(
+            retrieve,
+            query,
+            top_k=top_k * _RETRIEVAL_MULTIPLIER,
+            lang_filter=lang_filter,
+            tenant_id=tenant_id,
+        )
     else:
-        vector_task = asyncio.to_thread(retrieve, query, top_k=top_k * _RETRIEVAL_MULTIPLIER, use_mmr=False, lang_filter=lang_filter)
+        vector_task = asyncio.to_thread(
+            retrieve,
+            query,
+            top_k=top_k * _RETRIEVAL_MULTIPLIER,
+            use_mmr=False,
+            lang_filter=lang_filter,
+            tenant_id=tenant_id,
+        )
 
     # 使用 TaskGroup 替代 gather：BM25 与向量检索无依赖关系，
     # TaskGroup 提供更清晰的错误传播（任一失败即取消另一个）

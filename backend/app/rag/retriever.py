@@ -40,7 +40,23 @@ _VECTOR_MAX_CONTRIB = settings.vector_max_contrib
 _VECTOR_CONFIDENCE_THRESHOLD = settings.vector_confidence_threshold
 
 
-def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None, query_complexity: str = "simple") -> List[Dict[str, Any]]:
+def _resolve_tenant_id(tenant_id: str | None = None) -> str:
+    if tenant_id:
+        return tenant_id
+    try:
+        from app.multi_tenant.middleware import get_current_tenant_id
+        return get_current_tenant_id()
+    except Exception:
+        return "default"
+
+
+def hybrid_retrieve(
+    query: str,
+    top_k: int = 3,
+    lang_filter: str = None,
+    query_complexity: str = "simple",
+    tenant_id: str | None = None,
+) -> List[Dict[str, Any]]:
     """Hybrid retrieval: BM25 keyword + vector search, fused via RRF.
 
     Runs both retrievers and combines results using Reciprocal Rank Fusion.
@@ -55,12 +71,31 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None, query_c
         query_complexity: 查询复杂度（"simple"/"medium"/"complex"），影响 rerank 阈值
     """
     # 当 sparse 向量启用时，优先使用 Qdrant 原生混合搜索
+    resolved_tenant_id = _resolve_tenant_id(tenant_id)
+
     if settings.sparse_enabled:
         from app.rag.vector_store import hybrid_search_qdrant
-        return hybrid_search_qdrant(query, top_k=top_k, lang_filter=lang_filter, query_complexity=query_complexity)
+        return hybrid_search_qdrant(
+            query,
+            top_k=top_k,
+            lang_filter=lang_filter,
+            query_complexity=query_complexity,
+            tenant_id=resolved_tenant_id,
+        )
 
-    bm25_results = retrieve_keyword(query, top_k=settings.retrieval_candidates, lang_filter=lang_filter)
-    vector_results = retrieve(query, top_k=settings.retrieval_candidates, use_mmr=False, lang_filter=lang_filter)
+    bm25_results = retrieve_keyword(
+        query,
+        top_k=settings.retrieval_candidates,
+        lang_filter=lang_filter,
+        tenant_id=resolved_tenant_id,
+    )
+    vector_results = retrieve(
+        query,
+        top_k=settings.retrieval_candidates,
+        use_mmr=False,
+        lang_filter=lang_filter,
+        tenant_id=resolved_tenant_id,
+    )
 
     # Use all vector results — quality check removed to avoid false discards
     # on small collections where cosine scores naturally cluster together
@@ -229,7 +264,12 @@ def hybrid_retrieve(query: str, top_k: int = 3, lang_filter: str = None, query_c
     return selected
 
 
-def multi_query_retrieve(query: str, top_k: int = 3, lang_filter: str = None) -> List[Dict[str, Any]]:
+def multi_query_retrieve(
+    query: str,
+    top_k: int = 3,
+    lang_filter: str = None,
+    tenant_id: str | None = None,
+) -> List[Dict[str, Any]]:
     """Multi-query retrieval for cross-article queries.
 
     Detects cross-article queries (comparisons, contrasts, etc.) and expands
@@ -251,8 +291,16 @@ def multi_query_retrieve(query: str, top_k: int = 3, lang_filter: str = None) ->
         List of top_k document chunks, deduplicated by slug with diversity
     """
     # Fast path: skip expansion for simple queries or when disabled
+    resolved_tenant_id = _resolve_tenant_id(tenant_id)
+
     if not MULTI_QUERY_ENABLED or not is_cross_article_query(query):
-        return hybrid_retrieve(query, top_k=top_k, query_complexity="complex")
+        return hybrid_retrieve(
+            query,
+            top_k=top_k,
+            lang_filter=lang_filter,
+            query_complexity="complex",
+            tenant_id=resolved_tenant_id,
+        )
 
     # Cross-article path: expand into variants and retrieve each
     variants = expand_queries_rules(query)
@@ -260,7 +308,13 @@ def multi_query_retrieve(query: str, top_k: int = 3, lang_filter: str = None) ->
     # Collect all results with their source variant for RRF scoring
     all_results: List[Dict[str, Any]] = []
     for variant in variants:
-        variant_results = hybrid_retrieve(variant, top_k=top_k * 2, query_complexity="complex")
+        variant_results = hybrid_retrieve(
+            variant,
+            top_k=top_k * 2,
+            lang_filter=lang_filter,
+            query_complexity="complex",
+            tenant_id=resolved_tenant_id,
+        )
         all_results.append(variant_results)
 
     # RRF fusion across all variant result lists
