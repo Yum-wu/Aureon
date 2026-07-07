@@ -95,7 +95,12 @@ def thresholds():
 @pytest.fixture(scope="module")
 def llm():
     """创建 LLM 实例。"""
+    from app.config import settings
     from app.agent.llm import create_llm
+
+    _placeholder = {"", "your_api_key_here", "sk-placeholder", "YOUR_API_KEY"}
+    if not settings.llm_api_key or settings.llm_api_key in _placeholder:
+        pytest.skip("无有效 LLM API Key — 跳过 DeepEval 质量门禁")
     return create_llm()
 
 
