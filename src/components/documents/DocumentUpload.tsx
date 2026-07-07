@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, type DragEvent, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { authFetch } from "../../services/authFetch";
+import { uploadRagFile } from "../../services/ragUpload";
 import { Upload, FileText, Check, X } from "lucide-react";
 
 type UploadStatus = "idle" | "uploading" | "success" | "error";
@@ -67,20 +67,7 @@ export function DocumentUpload({ onUploadSuccess }: DocumentUploadProps) {
       progressTimersRef.current = [];
 
       try {
-        const formData = new FormData();
-        formData.append("file", file);
-
-        const res = await authFetch("/api/rag/upload", {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!res.ok) {
-          const data = await res.json().catch(() => null);
-          throw new Error(data?.detail || `HTTP ${res.status}`);
-        }
-
-        const data = await res.json();
+        const data = await uploadRagFile(file);
         setProgress(100);
         progressTimersRef.current.forEach(clearTimeout);
         progressTimersRef.current = [];

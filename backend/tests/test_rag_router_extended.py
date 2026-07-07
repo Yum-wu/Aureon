@@ -86,6 +86,61 @@ async def test_upload_accepts_csv(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_large_upload_returns_job_without_sync_index(tmp_path):
+    with patch("app.routers.rag.UPLOADS_DIR", str(tmp_path)), \
+         patch("app.routers.rag._ASYNC_UPLOAD_MIN_BYTES", 10), \
+         patch("app.routers.rag.start_upload_job") as mock_start, \
+         patch("app.routers.rag.run_incremental_index") as mock_index:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.post("/api/rag/upload", files={"file": ("large.md", b"x" * 20)})
+
+    assert resp.status_code == 202
+    data = resp.json()
+    assert data["status"] == "queued"
+    assert data["filename"] == "large.md"
+    assert data["documents_indexed"] == 0
+    assert data["chunks_created"] == 0
+    assert data["job_id"]
+    assert data["queued"] is True
+    mock_index.assert_not_called()
+    mock_start.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_upload_status_returns_job_for_viewer():
+    with patch("app.routers.rag.get_upload_job", return_value={
+        "job_id": "job-1",
+        "status": "ok",
+        "filename": "large.md",
+        "documents_indexed": 1,
+        "chunks_created": 4,
+        "elapsed_seconds": 12.3,
+        "warnings": [],
+        "error": None,
+    }):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.get("/api/rag/upload/status/job-1")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "ok"
+    assert data["chunks_created"] == 4
+
+
+@pytest.mark.asyncio
+async def test_upload_status_404_for_missing_job():
+    with patch("app.routers.rag.get_upload_job", return_value=None):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.get("/api/rag/upload/status/missing")
+
+    assert resp.status_code == 404
+    assert "Upload job not found" in resp.json()["detail"]
+
+
+@pytest.mark.asyncio
 async def test_upload_invalid_extension():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:

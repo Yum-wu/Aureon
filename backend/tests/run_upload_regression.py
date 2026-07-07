@@ -87,6 +87,10 @@ def _upload_all(base_url: str, headers: dict[str, str], files: dict[str, Path]) 
                 )
             response.raise_for_status()
             payload = response.json()
+            if payload.get("job_id") and payload.get("status") in {"queued", "processing"}:
+                payload = _wait_upload_job(base_url, headers, payload["job_id"])
+                if payload.get("status") == "error":
+                    raise RuntimeError(payload.get("error") or "Upload indexing failed")
             uploads.append({
                 "file_type": case.file_type,
                 "filename": payload.get("filename"),
@@ -95,6 +99,25 @@ def _upload_all(base_url: str, headers: dict[str, str], files: dict[str, Path]) 
                 "warnings": payload.get("warnings", []),
             })
     return uploads
+
+
+def _wait_upload_job(
+    base_url: str,
+    headers: dict[str, str],
+    job_id: str,
+    *,
+    timeout_s: int = 600,
+) -> dict[str, Any]:
+    deadline = time.monotonic() + timeout_s
+    with httpx.Client(timeout=30, headers=headers) as client:
+        while time.monotonic() < deadline:
+            response = client.get(f"{base_url}/api/rag/upload/status/{job_id}")
+            response.raise_for_status()
+            payload = response.json()
+            if payload.get("status") in {"ok", "error"}:
+                return payload
+            time.sleep(2)
+    raise TimeoutError(f"Upload job timed out: {job_id}")
 
 
 def _clear_cache(base_url: str, headers: dict[str, str]) -> None:

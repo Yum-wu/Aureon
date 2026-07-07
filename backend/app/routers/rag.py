@@ -17,7 +17,7 @@ import json
 import os
 import time
 
-from fastapi import APIRouter, Request, UploadFile, File, Form, Depends
+from fastapi import APIRouter, Request, UploadFile, File, Form, Depends, BackgroundTasks, Response
 from fastapi.responses import StreamingResponse
 import structlog
 
@@ -37,6 +37,7 @@ from app.rag.models import (
     RAGQueryResponse,
     RAGIndexResponse,
     RAGUploadResponse,
+    RAGUploadJobStatusResponse,
 )
 from app.rag.qa_chain import (
     rag_query_with_cache,
@@ -49,6 +50,7 @@ from app.rag.evaluator import run_full_evaluation
 from app.rag.prompt_experiment import run_experiment
 from app.rag.test_data import TEST_QA_PAIRS
 from app.rag.vector_store import retrieve, get_bm25_stats
+from app.rag.upload_jobs import create_upload_job, get_upload_job, start_upload_job
 from app.audit.decorator import audit_action
 from app.multi_tenant.middleware import get_current_tenant_id
 from app.rate_limit import limiter
@@ -56,6 +58,12 @@ from app.rate_limit import limiter
 logger = structlog.get_logger()
 
 router = APIRouter()
+
+_ASYNC_UPLOAD_MIN_BYTES = 1 * 1024 * 1024
+
+
+def _should_index_async(file_size: int) -> bool:
+    return file_size >= _ASYNC_UPLOAD_MIN_BYTES
 
 
 def _record_dashboard_metrics(
@@ -499,6 +507,8 @@ async def rag_index_status():
 @router.post("/upload", response_model=RAGUploadResponse)
 @audit_action("upload", "document")
 async def rag_upload_endpoint(
+    background_tasks: BackgroundTasks,
+    response: Response,
     file: UploadFile = File(...),
     language: str = Form(None),
     title: str = Form(None),
@@ -572,6 +582,27 @@ async def rag_upload_endpoint(
         metadata_overrides["language"] = language
     if title:
         metadata_overrides["title"] = title
+
+    if _should_index_async(len(content)):
+        job = create_upload_job(
+            filename=safe_filename,
+            filepath=dest,
+            tenant_id=tenant_id,
+        )
+        response.status_code = 202
+        background_tasks.add_task(start_upload_job, job.job_id, dest, metadata_overrides)
+        return {
+            "status": "queued",
+            "filename": safe_filename,
+            "documents_indexed": 0,
+            "chunks_created": 0,
+            "elapsed_seconds": 0.0,
+            "warnings": [],
+            "job_id": job.job_id,
+            "queued": True,
+            "message": "Upload accepted; indexing continues in background.",
+        }
+
     try:
         result = run_incremental_index(
             dest,
@@ -610,6 +641,16 @@ async def rag_upload_endpoint(
         )
 
     return result
+
+
+@router.get("/upload/status/{job_id}", response_model=RAGUploadJobStatusResponse)
+async def rag_upload_status(job_id: str, _user: dict = Depends(require_role(UserRole.VIEWER))):
+    """Return background upload indexing job status."""
+    tenant_id = get_current_tenant_id()
+    job = get_upload_job(job_id, tenant_id=tenant_id)
+    if job is None:
+        raise AureonException(status_code=404, detail="Upload job not found")
+    return job
 
 
 @router.get("/uploads")

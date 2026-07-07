@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "../utils/toast";
-import { authFetch } from "../services/authFetch";
+import { uploadRagFile } from "../services/ragUpload";
 import type { KeyboardEvent } from "react";
 
 /** 支持的文件类型（与后端一致） */
@@ -76,29 +76,15 @@ export function InputArea({ onSend, isLoading, onStop }: InputAreaProps) {
 
     setIsUploading(true);
     try {
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-
-      const res = await authFetch("/api/rag/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        const chunks = data.chunks_created ?? data.metadata?.chunks ?? 0;
-        toast.success(t("chat.upload_success", { filename: selectedFile.name, chunks }));
-        setSelectedFile(null);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
-      } else {
-        const errData = await res.json().catch(() => null);
-        const msg = errData?.detail || t("chat.upload_failed");
-        toast.error(msg);
+      const data = await uploadRagFile(selectedFile);
+      const chunks = data.chunks_created ?? 0;
+      toast.success(t("chat.upload_success", { filename: selectedFile.name, chunks }));
+      setSelectedFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
       }
-    } catch {
-      toast.error(t("chat.upload_failed"));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("chat.upload_failed"));
     } finally {
       setIsUploading(false);
     }
