@@ -30,7 +30,7 @@ jobs:
         run: |
           cd backend
           pip install -r requirements.txt
-          pip install deepeval
+          pip install deepeval pytest-timeout
 
       - name: Run RAG Quality Gate
         env:
