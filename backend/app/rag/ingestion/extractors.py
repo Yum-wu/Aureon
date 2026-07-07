@@ -13,8 +13,8 @@ from app.utils.lang_detect import detect_language as _detect_text_language
 
 
 STRUCTURED_CHUNK_MAX_CHARS = 6000
-STRUCTURED_CHUNK_MAX_ESTIMATED_TOKENS = 240
-STRUCTURED_CHUNK_TARGET_ESTIMATED_TOKENS = 216
+STRUCTURED_CHUNK_MAX_ESTIMATED_TOKENS = 1800
+STRUCTURED_CHUNK_TARGET_ESTIMATED_TOKENS = 1536
 
 
 def _estimate_embedding_tokens(text: str) -> int:
