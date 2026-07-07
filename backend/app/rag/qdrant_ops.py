@@ -48,6 +48,11 @@ def _provider_safe_embedding_text(text: str) -> str:
     return text[:_EMBED_PROVIDER_SAFE_CHARS] if len(text) > _EMBED_PROVIDER_SAFE_CHARS else text
 
 
+def _embed_texts_one_by_one(embed_fn: Any, texts: list[str]) -> np.ndarray:
+    embeddings = [embed_fn([text], batch_size=1)[0] for text in texts]
+    return np.array(embeddings, dtype=np.float32)
+
+
 def _iter_embedding_ranges(
     chunks: List[Dict],
     *,
@@ -615,7 +620,7 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
 
                 from app.rag.sparse_embed import embed_sparse
 
-                batch_embeddings = embed_texts_llm(embedding_texts, batch_size=1)
+                batch_embeddings = _embed_texts_one_by_one(embed_texts_llm, embedding_texts)
 
                 batch_sparse = embed_sparse(embedding_texts) if settings.sparse_enabled else [{}] * len(batch_texts)
 
@@ -627,7 +632,7 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
 
 
 
-            batch_embeddings = embed_texts_llm(embedding_texts, batch_size=1)
+            batch_embeddings = _embed_texts_one_by_one(embed_texts_llm, embedding_texts)
 
 
 
