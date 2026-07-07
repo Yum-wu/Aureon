@@ -12,7 +12,7 @@ from app.rag.ingestion.normalizer import normalize_text
 from app.utils.lang_detect import detect_language as _detect_text_language
 
 
-STRUCTURED_CHUNK_MAX_CHARS = 32000
+STRUCTURED_CHUNK_MAX_CHARS = 16000
 
 
 def _pick_csv_delimiter(sample: str, fallback: str) -> str:
