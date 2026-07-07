@@ -243,19 +243,23 @@ def extract_csv_document(path: Path) -> list[ChunkRecord]:
     row_start = 2
     row_end = 1
     current_chars = 0
+    header_line = _format_csv_header(headers, delimiter)
+    max_row_chars = max(1, STRUCTURED_CHUNK_MAX_CHARS - len(header_line) - 1)
 
     for row in reader:
         row_count += 1
         file_row_number = row_count + 1
-        parts = []
+        values = []
         for header in headers:
             value = row.get(header)
             if value not in (None, ""):
-                parts.append(f"{header}: {value}")
-        if parts:
-            for line_part in _split_long_line(", ".join(parts)):
+                values.append(str(value).strip().replace("\r", " ").replace("\n", " "))
+            else:
+                values.append("")
+        if any(values):
+            for line_part in _split_long_line(_format_csv_row(values, delimiter), max_row_chars):
                 line_len = len(line_part) + 1
-                if lines and current_chars + line_len > STRUCTURED_CHUNK_MAX_CHARS:
+                if lines and len(header_line) + 1 + current_chars + line_len > STRUCTURED_CHUNK_MAX_CHARS:
                     chunks.append(_make_csv_chunk(path, headers, row_start, row_end, lines, delimiter))
                     lines = []
                     current_chars = 0
@@ -272,6 +276,16 @@ def extract_csv_document(path: Path) -> list[ChunkRecord]:
     return chunks
 
 
+def _format_csv_header(headers: list[str], delimiter: str) -> str:
+    separator = f"{delimiter} " if delimiter != "\t" else "\t"
+    return "Columns: " + separator.join(headers)
+
+
+def _format_csv_row(values: list[str], delimiter: str) -> str:
+    separator = f"{delimiter} " if delimiter != "\t" else "\t"
+    return separator.join(values)
+
+
 def _make_csv_chunk(
     path: Path,
     headers: list[str],
@@ -280,7 +294,7 @@ def _make_csv_chunk(
     lines: list[str],
     delimiter: str,
 ) -> ChunkRecord:
-    text = normalize_text("\n".join(lines))
+    text = normalize_text("\n".join([_format_csv_header(headers, delimiter), *lines]))
     lang = _detect_text_language(text[:500]) if text else "en"
     return ChunkRecord(
         text=text,
