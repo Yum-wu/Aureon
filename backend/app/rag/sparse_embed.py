@@ -5,6 +5,7 @@ from typing import Dict, List
 from app.config import settings
 
 logger = structlog.get_logger()
+_SPARSE_PROVIDER_SAFE_CHARS = 900
 
 
 def embed_sparse(texts: List[str]) -> List[Dict[int, float]]:
@@ -35,7 +36,10 @@ def _embed_sparse_siliconflow(texts: List[str]) -> List[Dict[int, float]]:
     sparse_vectors = []
     batch_size = 1
     for i in range(0, len(texts), batch_size):
-        batch = texts[i:i + batch_size]
+        batch = [
+            text[:_SPARSE_PROVIDER_SAFE_CHARS] if len(text) > _SPARSE_PROVIDER_SAFE_CHARS else text
+            for text in texts[i:i + batch_size]
+        ]
         payload = {
             "model": settings.sparse_model,
             "input": batch,
