@@ -17,7 +17,7 @@ from app.rag.vector_store import (
     rerank,
 )
 from app.rag.query_rewriter import is_cross_article_query, hyde_retrieve_async
-from app.rag.models import RAGQueryResponse, SourceItem
+from app.rag.models import RAGQueryResponse, SourceItem, public_source_metadata
 from app.rag.ensemble_reranker import get_ensemble_reranker
 from app.rag.classifier import (
     _extract_title_keywords,
@@ -108,8 +108,11 @@ def run_incremental_index(
             logger.info("Skipping contextual prefixes inside running event loop")
         except RuntimeError:
             docs = [doc]
-            chunk_dicts = asyncio.run(_add_contextual_prefixes(chunk_dicts, docs, llm_call_fn))
-            contextual_count = sum(1 for c in chunk_dicts if c.get("metadata", {}).get("contextual_prefix"))
+            try:
+                chunk_dicts = asyncio.run(_add_contextual_prefixes(chunk_dicts, docs, llm_call_fn))
+                contextual_count = sum(1 for c in chunk_dicts if c.get("metadata", {}).get("contextual_prefix"))
+            except Exception as exc:
+                logger.warning("Contextual prefix generation failed; indexing upload without prefixes", error=str(exc))
     else:
         chunk_dicts = chunks_to_dicts(chunks)
 
@@ -684,6 +687,7 @@ async def rag_query_async(
             score=c.get("score"),
             chunk_id=c.get("id", c["metadata"].get("chunk_id", "")),
             chunk_text_snippet=c["text"],  # 完整文本，供 benchmark 评估用
+            metadata=public_source_metadata(c.get("metadata")),
         )
         for c in chunks
     ]

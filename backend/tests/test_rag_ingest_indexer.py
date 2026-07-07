@@ -8,6 +8,28 @@ from app.rag.indexer import run_incremental_index
 from app.rag.ingestion.models import ChunkRecord
 
 
+def test_run_incremental_index_rejects_blank_pdf_without_indexing(tmp_path):
+    from pypdf import PdfWriter
+
+    pdf_file = tmp_path / "blank.pdf"
+    writer = PdfWriter()
+    writer.add_blank_page(width=612, height=792)
+    with open(pdf_file, "wb") as f:
+        writer.write(f)
+
+    with patch("app.rag.vector_store.delete_from_index") as mock_delete, \
+         patch("app.rag.vector_store.add_to_index") as mock_add:
+        result = run_incremental_index(str(pdf_file))
+
+    assert result["status"] == "error"
+    assert result["chunks_created"] == 0
+    assert result["warnings"] == [
+        "PDF contains little or no extractable text; it may be scanned or image-based."
+    ]
+    mock_delete.assert_not_called()
+    mock_add.assert_not_called()
+
+
 def test_run_incremental_index_rejects_zero_chunks(tmp_path):
     md_file = tmp_path / "pipeline.md"
     md_file.write_text("---\ntitle: Pipeline\n---\n\nBody content.", encoding="utf-8")
@@ -72,6 +94,34 @@ def test_run_incremental_index_applies_metadata_overrides_before_indexing(tmp_pa
     assert metadata["tenant_id"] == "demo-tenant"
     assert metadata["title"] == "Tenant Upload"
     assert metadata["language"] == "en"
+
+
+def test_run_incremental_index_falls_back_when_contextual_prefix_fails(tmp_path):
+    md_file = tmp_path / "fallback.md"
+    md_file.write_text("Fallback upload content.", encoding="utf-8")
+    chunk = ChunkRecord(
+        text="Fallback upload content for indexing.",
+        metadata={"source": "fallback.md", "file_type": "md"},
+    )
+
+    with patch("app.rag.loader.load_single_document") as mock_load, \
+         patch("app.rag.ingestion.pipeline.build_chunks", return_value=[chunk]), \
+         patch("app.rag.vector_store.delete_from_index"), \
+         patch("app.rag.vector_store.add_to_index") as mock_add:
+        mock_load.return_value = {
+            "metadata": {"source": "fallback.md", "title": "Fallback"},
+            "content": "Fallback upload content.",
+        }
+
+        result = run_incremental_index(
+            str(md_file),
+            llm_call_fn=lambda _: (_ for _ in ()).throw(RuntimeError("llm failed")),
+        )
+
+    assert result["status"] == "ok"
+    assert result["contextual_prefixes"] == 0
+    indexed_chunks = mock_add.call_args.args[0]
+    assert indexed_chunks[0]["text"] == "Fallback upload content for indexing."
 
 
 @pytest.mark.asyncio

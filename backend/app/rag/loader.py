@@ -23,6 +23,14 @@ from app.utils.lang_detect import detect_language as _detect_text_language
 logger = structlog.get_logger()
 
 
+def _require_chunks(chunks: list, file_type: str) -> list:
+    if not chunks:
+        if file_type == "csv":
+            raise ValueError("CSV contains no header row or extractable text")
+        raise ValueError(f"{file_type.upper()} contains no extractable text")
+    return chunks
+
+
 def detect_doc_language(content: str, frontmatter_lang: str = None) -> str:
     """Detect document language, preferring frontmatter over auto-detection.
 
@@ -64,22 +72,20 @@ def load_single_document(filepath: str) -> Dict[str, Any]:
         metadata.pop("file_type", None)
         return {"metadata": {**metadata, "uploaded": True}, "content": doc.content}
     elif suffix == ".docx":
-        chunks = extract_docx_document(fpath)
+        chunks = _require_chunks(extract_docx_document(fpath), "docx")
         metadata = dict(chunks[0].metadata)
         metadata.pop("file_type", None)
         return {"metadata": {**metadata, "uploaded": True}, "content": chunks[0].text}
     elif suffix == ".xlsx":
-        chunks = extract_xlsx_document(fpath)
+        chunks = _require_chunks(extract_xlsx_document(fpath), "xlsx")
         metadata = dict(chunks[0].metadata)
         metadata.pop("file_type", None)
         return {"metadata": {**metadata, "uploaded": True}, "content": chunks[0].text}
     elif suffix == ".csv":
-        chunks = extract_csv_document(fpath)
+        chunks = _require_chunks(extract_csv_document(fpath), "csv")
         return {"metadata": {**chunks[0].metadata, "uploaded": True}, "content": chunks[0].text}
     elif suffix == ".pptx":
-        chunks = extract_pptx_document(fpath)
-        if not chunks:
-            raise ValueError("PPTX contains no extractable text")
+        chunks = _require_chunks(extract_pptx_document(fpath), "pptx")
         metadata = dict(chunks[0].metadata)
         metadata.pop("file_type", None)
         return {
@@ -143,7 +149,7 @@ def load_docx(filepath: str) -> Dict[str, Any]:
 
     Thin wrapper around extract_docx_document for backward compatibility.
     """
-    chunks = extract_docx_document(Path(filepath))
+    chunks = _require_chunks(extract_docx_document(Path(filepath)), "docx")
     return {"metadata": dict(chunks[0].metadata), "content": chunks[0].text}
 
 
@@ -152,7 +158,7 @@ def load_excel(filepath: str) -> Dict[str, Any]:
 
     Thin wrapper around extract_xlsx_document for backward compatibility.
     """
-    chunks = extract_xlsx_document(Path(filepath))
+    chunks = _require_chunks(extract_xlsx_document(Path(filepath)), "xlsx")
     return {"metadata": dict(chunks[0].metadata), "content": chunks[0].text}
 
 
@@ -161,7 +167,7 @@ def load_csv(filepath: str) -> Dict[str, Any]:
 
     Thin wrapper around extract_csv_document for backward compatibility.
     """
-    chunks = extract_csv_document(Path(filepath))
+    chunks = _require_chunks(extract_csv_document(Path(filepath)), "csv")
     return {"metadata": dict(chunks[0].metadata), "content": chunks[0].text}
 
 
@@ -170,9 +176,7 @@ def load_pptx(filepath: str) -> Dict[str, Any]:
 
     Thin wrapper around extract_pptx_document for backward compatibility.
     """
-    chunks = extract_pptx_document(Path(filepath))
-    if not chunks:
-        raise ValueError("PPTX contains no extractable text")
+    chunks = _require_chunks(extract_pptx_document(Path(filepath)), "pptx")
     return {
         "metadata": dict(chunks[0].metadata),
         "content": "\n\n".join(chunk.text for chunk in chunks),

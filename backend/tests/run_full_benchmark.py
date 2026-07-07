@@ -1002,7 +1002,11 @@ def phase2_evaluate(raw_path: Path = None) -> Path:
 # Phase 3: 汇总报告（8 维度）
 # ==============================================================
 
-def phase3_report(summary_path: Path = None, eval_path: Path = None) -> None:
+def phase3_report(
+    summary_path: Path = None,
+    eval_path: Path = None,
+    upload_regression: dict | None = None,
+) -> None:
     """汇总生成企业级 Benchmark 报告"""
     _print_header("Phase 3: 汇总报告")
 
@@ -1078,6 +1082,11 @@ def phase3_report(summary_path: Path = None, eval_path: Path = None) -> None:
             ("Answer Correctness", f"{gq.get('answer_correctness',0):.3f}", ">=0.70", _pass(gq.get('answer_correctness',0), 0.70)),
         ]),
     ]
+    if upload_regression:
+        rows.append(("6. 上传文件回归", [
+            ("Upload Recall@K", f"{upload_regression.get('recall_at_k',0)*100:.1f}%", "100%", _pass(upload_regression.get("recall_at_k", 0), 1.0)),
+            ("Upload Rank@1", f"{upload_regression.get('rank1_rate',0)*100:.1f}%", "100%", _pass(upload_regression.get("rank1_rate", 0), 1.0)),
+        ]))
 
     total_ok, total_metrics = 0, 0
     for section_name, metrics in rows:
@@ -1100,6 +1109,7 @@ def phase3_report(summary_path: Path = None, eval_path: Path = None) -> None:
         "retrieval": ret,
         "generation": gq,
         "latency": lat,
+        "upload_regression": upload_regression or {},
         "total_pass": total_ok,
         "total_metrics": total_metrics,
     }
@@ -1118,6 +1128,11 @@ def main():
     parser.add_argument("--level", choices=["quick", "detailed", "full"], default="detailed",
                         help="验证级别：quick=10条, detailed=50条, full=全部")
     parser.add_argument("--seed", type=int, default=42, help="固定随机种子")
+    parser.add_argument(
+        "--include-upload-regression",
+        action="store_true",
+        help="额外上传 7 类 golden 文件并断言哨兵词 Rank@1（会写入目标环境）",
+    )
     args = parser.parse_args()
 
     print()
@@ -1141,6 +1156,7 @@ def main():
     raw_path = None
     summary_path = None
     eval_out_path = None
+    upload_regression = None
 
     if args.phase is None or args.phase == 1:
         raw_path, summary_path = asyncio.run(phase1_collect(level=args.level, seed=args.seed))
@@ -1148,8 +1164,23 @@ def main():
     if args.phase is None or args.phase == 2:
         eval_out_path = phase2_evaluate(raw_path)
 
+    if args.include_upload_regression:
+        from tests.run_upload_regression import run_upload_regression
+
+        _print_header("Upload Golden Regression")
+        upload_report = run_upload_regression(
+            base_url=BASE_URL,
+            token=None,
+            output_dir=DATA_DIR,
+        )
+        upload_regression = upload_report["metrics"]
+        print(
+            f"  Upload Rank@1: {upload_regression['rank1_rate']*100:.1f}% "
+            f"({upload_regression['rank1']}/{upload_regression['total']})"
+        )
+
     if args.phase is None or args.phase == 3:
-        phase3_report(summary_path, eval_out_path)
+        phase3_report(summary_path, eval_out_path, upload_regression)
 
     elapsed = time.time() - start
     _print_header(f"全部完成 (耗时 {elapsed:.0f}s)")

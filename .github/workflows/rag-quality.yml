@@ -30,7 +30,7 @@ jobs:
         run: |
           cd backend
           pip install -r requirements.txt
-          pip install deepeval
+          pip install deepeval pytest-timeout
 
       - name: Run RAG Quality Gate
         env:
@@ -41,7 +41,7 @@ jobs:
           LLM_MODEL: "deepseek-v4-flash"
         run: |
           cd backend
-          python -m pytest tests/test_rag_quality.py -v --timeout=300
+          python -m pytest tests/benchmark_enterprise.py -m quality -v --timeout=300
 
       - name: Run Full Evaluation (on main)
         if: github.ref == 'refs/heads/main'

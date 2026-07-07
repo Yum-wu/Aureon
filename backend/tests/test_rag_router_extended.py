@@ -159,6 +159,46 @@ async def test_upload_uses_new_ingestion_pipeline(tmp_path):
     mock_build_chunks.assert_not_called()
 
 
+@pytest.mark.asyncio
+async def test_upload_does_not_create_llm_for_incremental_index(tmp_path):
+    with patch("app.routers.rag.UPLOADS_DIR", str(tmp_path)), \
+         patch("app.agent.llm.create_llm") as mock_create_llm, \
+         patch("app.routers.rag.run_incremental_index") as mock_incremental:
+        mock_incremental.return_value = {
+            "status": "ok",
+            "filename": "test.md",
+            "documents_indexed": 1,
+            "chunks_created": 1,
+            "elapsed_seconds": 0.1,
+        }
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.post("/api/rag/upload", files={"file": ("test.md", b"# Title\nContent")})
+
+    assert resp.status_code == 200
+    mock_create_llm.assert_not_called()
+    assert mock_incremental.call_args.kwargs["llm_call_fn"] is None
+
+
+@pytest.mark.asyncio
+async def test_upload_rolls_back_saved_file_when_indexing_fails(tmp_path):
+    with patch("app.routers.rag.UPLOADS_DIR", str(tmp_path)), \
+         patch("app.routers.rag.run_incremental_index", return_value={
+             "status": "error",
+             "filename": "broken.docx",
+             "documents_indexed": 0,
+             "chunks_created": 0,
+             "elapsed_seconds": 0.1,
+             "message": "Index failed",
+         }):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.post("/api/rag/upload", files={"file": ("broken.docx", b"not-a-real-docx")})
+
+    assert resp.status_code == 500
+    assert not (tmp_path / "broken.docx").exists()
+
+
 # ── DELETE /api/rag/upload/{filename} ──
 
 

@@ -4,6 +4,8 @@ import { authFetch } from "../../services/authFetch";
 
 const RAG_UPLOAD_URL =
   (import.meta.env.VITE_API_RAG_URL as string)?.replace(/\/query$/, "") || "/api/rag/upload";
+const SUPPORTED_UPLOAD_EXTENSIONS = ["md", "txt", "pdf", "docx", "xlsx", "csv", "pptx"];
+const SUPPORTED_UPLOAD_ACCEPT = SUPPORTED_UPLOAD_EXTENSIONS.map((ext) => `.${ext}`).join(",");
 
 interface RagUploadPanelProps {
   open: boolean;
@@ -62,7 +64,7 @@ export function RagUploadPanel({ open }: RagUploadPanelProps) {
   const handleUpload = useCallback(
     async (file: File) => {
       const ext = file.name.split(".").pop()?.toLowerCase();
-      if (ext !== "md" && ext !== "txt") {
+      if (!ext || !SUPPORTED_UPLOAD_EXTENSIONS.includes(ext)) {
         setUploadMessage({ type: "error", text: t("rag.upload.badFormat") });
         return;
       }
@@ -85,12 +87,16 @@ export function RagUploadPanel({ open }: RagUploadPanelProps) {
         }
 
         const data = await res.json();
+        const warnings = Array.isArray(data.warnings)
+          ? data.warnings.filter((warning: unknown) => typeof warning === "string")
+          : [];
+        const successText = t("rag.upload.success", {
+          filename: file.name,
+          chunks: data.chunks_created,
+        });
         setUploadMessage({
           type: "success",
-          text: t("rag.upload.success", {
-            filename: file.name,
-            chunks: data.chunks_created,
-          }),
+          text: warnings.length ? `${successText}\n${warnings.join("\n")}` : successText,
         });
         fetchUploadedFiles();
       } catch (err) {
@@ -142,7 +148,7 @@ export function RagUploadPanel({ open }: RagUploadPanelProps) {
         <input
           id="rag-upload-input"
           type="file"
-          accept=".md,.txt"
+          accept={SUPPORTED_UPLOAD_ACCEPT}
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0];
@@ -165,7 +171,7 @@ export function RagUploadPanel({ open }: RagUploadPanelProps) {
             {dragOver && (
               <div className="absolute inset-0 flex items-center justify-center bg-blue-500/10 rounded-xl">
                 <span className="text-blue-600 font-semibold text-sm">
-                  ? ÊÍ·ÅÒÔÉÏ´«
+                  é‡Šæ”¾ä»¥ä¸Šä¼ 
                 </span>
               </div>
             )}

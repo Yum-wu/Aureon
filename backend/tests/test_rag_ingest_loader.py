@@ -145,3 +145,11 @@ class TestIngestionPrimitives:
         assert chunks[0].metadata["row_end"] == 51
         assert chunks[-1].metadata["row_start"] == 102
         assert chunks[-1].metadata["row_end"] == 121
+
+    def test_build_chunks_does_not_index_csv_without_header(self, tmp_path):
+        csv_file = tmp_path / "no-header.csv"
+        csv_file.write_text("APAC,1200\nEMEA,900\n", encoding="utf-8")
+
+        chunks = build_chunks(csv_file)
+
+        assert chunks == []
