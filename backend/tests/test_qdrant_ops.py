@@ -44,14 +44,10 @@ def test_iter_embedding_ranges_respects_item_limit():
     ]
 
 
-def test_iter_embedding_ranges_default_batches_ten_large_structured_chunks():
+def test_iter_embedding_ranges_default_splits_oversized_structured_chunks():
     chunks = [{"text": "a" * 24000} for _ in range(25)]
 
-    assert _iter_embedding_ranges(chunks) == [
-        (0, 10),
-        (10, 20),
-        (20, 25),
-    ]
+    assert _iter_embedding_ranges(chunks) == [(i, i + 1) for i in range(25)]
 
 
 def test_hybrid_search_qdrant_keeps_keyword_candidates_when_sparse_enabled():

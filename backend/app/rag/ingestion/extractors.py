@@ -12,7 +12,14 @@ from app.rag.ingestion.normalizer import normalize_text
 from app.utils.lang_detect import detect_language as _detect_text_language
 
 
-STRUCTURED_CHUNK_MAX_CHARS = 16000
+STRUCTURED_CHUNK_MAX_CHARS = 6000
+STRUCTURED_CHUNK_MAX_ESTIMATED_TOKENS = 480
+
+
+def _estimate_embedding_tokens(text: str) -> int:
+    cjk_chars = sum(1 for ch in text if "\u4e00" <= ch <= "\u9fff")
+    other_chars = max(0, len(text) - cjk_chars)
+    return cjk_chars + (max(1, other_chars // 4) if other_chars else 0)
 
 
 def _pick_csv_delimiter(sample: str, fallback: str) -> str:
@@ -40,12 +47,22 @@ def _looks_like_csv_header(sample: str, dialect: csv.Dialect, delimiter: str) ->
     return True
 
 
-def _split_long_line(line: str, max_chars: int = STRUCTURED_CHUNK_MAX_CHARS) -> list[str]:
-    if len(line) <= max_chars:
+def _split_long_line(
+    line: str,
+    max_chars: int = STRUCTURED_CHUNK_MAX_CHARS,
+    max_estimated_tokens: int = STRUCTURED_CHUNK_MAX_ESTIMATED_TOKENS,
+) -> list[str]:
+    if len(line) <= max_chars and _estimate_embedding_tokens(line) <= max_estimated_tokens:
         return [line]
     parts = []
-    for start in range(0, len(line), max_chars):
-        parts.append(line[start:start + max_chars])
+    start = 0
+    while start < len(line):
+        end = min(len(line), start + max_chars)
+        while end > start + 1 and _estimate_embedding_tokens(line[start:end]) > max_estimated_tokens:
+            span = end - start
+            end = start + max(1, span * max_estimated_tokens // _estimate_embedding_tokens(line[start:end]))
+        parts.append(line[start:end])
+        start = end
     return parts
 
 
@@ -243,8 +260,11 @@ def extract_csv_document(path: Path) -> list[ChunkRecord]:
     row_start = 2
     row_end = 1
     current_chars = 0
+    current_tokens = 0
     header_line = _format_csv_header(headers, delimiter)
+    header_tokens = _estimate_embedding_tokens(header_line)
     max_row_chars = max(1, STRUCTURED_CHUNK_MAX_CHARS - len(header_line) - 1)
+    max_row_tokens = max(1, STRUCTURED_CHUNK_MAX_ESTIMATED_TOKENS - header_tokens)
 
     for row in reader:
         row_count += 1
@@ -257,16 +277,21 @@ def extract_csv_document(path: Path) -> list[ChunkRecord]:
             else:
                 values.append("")
         if any(values):
-            for line_part in _split_long_line(_format_csv_row(values, delimiter), max_row_chars):
+            for line_part in _split_long_line(_format_csv_row(values, delimiter), max_row_chars, max_row_tokens):
                 line_len = len(line_part) + 1
-                if lines and len(header_line) + 1 + current_chars + line_len > STRUCTURED_CHUNK_MAX_CHARS:
+                line_tokens = _estimate_embedding_tokens(line_part)
+                would_exceed_chars = len(header_line) + 1 + current_chars + line_len > STRUCTURED_CHUNK_MAX_CHARS
+                would_exceed_tokens = header_tokens + current_tokens + line_tokens > STRUCTURED_CHUNK_MAX_ESTIMATED_TOKENS
+                if lines and (would_exceed_chars or would_exceed_tokens):
                     chunks.append(_make_csv_chunk(path, headers, row_start, row_end, lines, delimiter))
                     lines = []
                     current_chars = 0
+                    current_tokens = 0
                 if not lines:
                     row_start = file_row_number
                 lines.append(line_part)
                 current_chars += line_len
+                current_tokens += line_tokens
                 row_end = file_row_number
 
     if lines:
@@ -396,6 +421,7 @@ def extract_xlsx_document(path: Path) -> list[ChunkRecord]:
         row_start = 2
         row_end = 1
         current_chars = 0
+        current_tokens = 0
 
         for row_number, row in enumerate(ws.iter_rows(values_only=True), start=1):
             if row_number == 1:
@@ -409,20 +435,26 @@ def extract_xlsx_document(path: Path) -> list[ChunkRecord]:
             if parts:
                 for line_part in _split_long_line(", ".join(parts)):
                     line_len = len(line_part) + 1
-                    if lines and (len(lines) >= rows_per_chunk or current_chars + line_len > STRUCTURED_CHUNK_MAX_CHARS):
+                    line_tokens = _estimate_embedding_tokens(line_part)
+                    would_exceed_chars = current_chars + line_len > STRUCTURED_CHUNK_MAX_CHARS
+                    would_exceed_tokens = current_tokens + line_tokens > STRUCTURED_CHUNK_MAX_ESTIMATED_TOKENS
+                    if lines and (len(lines) >= rows_per_chunk or would_exceed_chars or would_exceed_tokens):
                         chunks.append(_make_xlsx_chunk(path, ws.title, headers, row_start, row_end, lines))
                         lines = []
                         current_chars = 0
+                        current_tokens = 0
                     if not lines:
                         row_start = row_number
                     lines.append(line_part)
                     current_chars += line_len
+                    current_tokens += line_tokens
                     row_end = row_number
 
             if len(lines) >= rows_per_chunk:
                 chunks.append(_make_xlsx_chunk(path, ws.title, headers, row_start, row_end, lines))
                 lines = []
                 current_chars = 0
+                current_tokens = 0
 
         if lines:
             chunks.append(_make_xlsx_chunk(path, ws.title, headers, row_start, row_end, lines))
