@@ -107,6 +107,23 @@ class TestLoadPdf:
         with pytest.raises(ValueError, match="CSV contains no header row"):
             load_csv(str(csv_path))
 
+    def test_csv_splits_oversized_rows_for_embedding_limits(self, tmp_path):
+        from app.rag.ingestion.extractors import STRUCTURED_CHUNK_MAX_CHARS, extract_csv_document
+
+        csv_path = tmp_path / "long.csv"
+        csv_path.write_text(
+            "text,label\n"
+            f"{'A' * (STRUCTURED_CHUNK_MAX_CHARS + 1200)},risk\n",
+            encoding="utf-8",
+        )
+
+        chunks = extract_csv_document(csv_path)
+
+        assert len(chunks) >= 2
+        assert all(len(chunk.text) <= STRUCTURED_CHUNK_MAX_CHARS for chunk in chunks)
+        assert all(chunk.metadata["row_start"] == 2 for chunk in chunks)
+        assert all(chunk.metadata["row_end"] == 2 for chunk in chunks)
+
     def test_load_single_document_dispatches_docx(self, tmp_path):
         """load_single_document should handle .docx files."""
         from docx import Document
@@ -269,6 +286,24 @@ class TestLoadPdf:
         assert chunks[0].metadata["row_end"] == 3
         assert chunks[0].metadata["headers"] == ["Stage", "Owner"]
         assert "Stage: Discovery" in chunks[0].text
+
+    def test_xlsx_splits_large_table_chunks_for_embedding_limits(self, tmp_path):
+        from openpyxl import Workbook
+        from app.rag.ingestion.extractors import STRUCTURED_CHUNK_MAX_CHARS, extract_xlsx_document
+
+        wb = Workbook()
+        ws = wb.active
+        ws.append(["Narrative", "Owner"])
+        ws.append(["B" * (STRUCTURED_CHUNK_MAX_CHARS + 1000), "Finance"])
+        path = tmp_path / "long.xlsx"
+        wb.save(path)
+
+        chunks = extract_xlsx_document(path)
+
+        assert len(chunks) >= 2
+        assert all(len(chunk.text) <= STRUCTURED_CHUNK_MAX_CHARS for chunk in chunks)
+        assert all(chunk.metadata["row_start"] == 2 for chunk in chunks)
+        assert all(chunk.metadata["row_end"] == 2 for chunk in chunks)
 
     def test_pdf_extracts_page_metadata_for_blank_pdf(self, tmp_path):
         from pypdf import PdfWriter

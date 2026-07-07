@@ -12,6 +12,9 @@ from app.rag.ingestion.normalizer import normalize_text
 from app.utils.lang_detect import detect_language as _detect_text_language
 
 
+STRUCTURED_CHUNK_MAX_CHARS = 6000
+
+
 def _pick_csv_delimiter(sample: str, fallback: str) -> str:
     first_line = next((line for line in sample.splitlines() if line.strip()), "")
     if first_line.count(";") > first_line.count(","):
@@ -35,6 +38,15 @@ def _looks_like_csv_header(sample: str, dialect: csv.Dialect, delimiter: str) ->
     if any(cell.replace(".", "", 1).isdigit() for cell in first):
         return False
     return True
+
+
+def _split_long_line(line: str, max_chars: int = STRUCTURED_CHUNK_MAX_CHARS) -> list[str]:
+    if len(line) <= max_chars:
+        return [line]
+    parts = []
+    for start in range(0, len(line), max_chars):
+        parts.append(line[start:start + max_chars])
+    return parts
 
 
 def parse_frontmatter(content: str) -> tuple[dict[str, object], str]:
@@ -230,6 +242,8 @@ def extract_csv_document(path: Path) -> list[ChunkRecord]:
     rows_per_chunk = 50
     row_count = 0
     row_start = 2
+    row_end = 1
+    current_chars = 0
 
     for row in reader:
         row_count += 1
@@ -240,12 +254,21 @@ def extract_csv_document(path: Path) -> list[ChunkRecord]:
             if value not in (None, ""):
                 parts.append(f"{header}: {value}")
         if parts:
-            if not lines:
-                row_start = file_row_number
-            lines.append(", ".join(parts))
+            for line_part in _split_long_line(", ".join(parts)):
+                line_len = len(line_part) + 1
+                if lines and (len(lines) >= rows_per_chunk or current_chars + line_len > STRUCTURED_CHUNK_MAX_CHARS):
+                    chunks.append(_make_csv_chunk(path, headers, row_start, row_end, lines, delimiter))
+                    lines = []
+                    current_chars = 0
+                if not lines:
+                    row_start = file_row_number
+                lines.append(line_part)
+                current_chars += line_len
+                row_end = file_row_number
         if len(lines) >= rows_per_chunk:
-            chunks.append(_make_csv_chunk(path, headers, row_start, file_row_number, lines, delimiter))
+            chunks.append(_make_csv_chunk(path, headers, row_start, row_end, lines, delimiter))
             lines = []
+            current_chars = 0
 
     if lines:
         row_end = row_count + 1
@@ -363,6 +386,7 @@ def extract_xlsx_document(path: Path) -> list[ChunkRecord]:
         lines: list[str] = []
         row_start = 2
         row_end = 1
+        current_chars = 0
 
         for row_number, row in enumerate(ws.iter_rows(values_only=True), start=1):
             if row_number == 1:
@@ -374,14 +398,22 @@ def extract_xlsx_document(path: Path) -> list[ChunkRecord]:
                 if value is not None and str(value).strip():
                     parts.append(f"{header}: {value}")
             if parts:
-                if not lines:
-                    row_start = row_number
-                lines.append(", ".join(parts))
-                row_end = row_number
+                for line_part in _split_long_line(", ".join(parts)):
+                    line_len = len(line_part) + 1
+                    if lines and (len(lines) >= rows_per_chunk or current_chars + line_len > STRUCTURED_CHUNK_MAX_CHARS):
+                        chunks.append(_make_xlsx_chunk(path, ws.title, headers, row_start, row_end, lines))
+                        lines = []
+                        current_chars = 0
+                    if not lines:
+                        row_start = row_number
+                    lines.append(line_part)
+                    current_chars += line_len
+                    row_end = row_number
 
             if len(lines) >= rows_per_chunk:
                 chunks.append(_make_xlsx_chunk(path, ws.title, headers, row_start, row_end, lines))
                 lines = []
+                current_chars = 0
 
         if lines:
             chunks.append(_make_xlsx_chunk(path, ws.title, headers, row_start, row_end, lines))
