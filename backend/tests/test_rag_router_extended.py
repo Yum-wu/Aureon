@@ -89,7 +89,7 @@ async def test_upload_accepts_csv(tmp_path):
 async def test_large_upload_returns_job_without_sync_index(tmp_path):
     with patch("app.routers.rag.UPLOADS_DIR", str(tmp_path)), \
          patch("app.routers.rag._ASYNC_UPLOAD_MIN_BYTES", 10), \
-         patch("app.routers.rag.start_upload_job") as mock_start, \
+         patch("app.routers.rag.enqueue_upload_job") as mock_enqueue, \
          patch("app.routers.rag.run_incremental_index") as mock_index:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -104,7 +104,7 @@ async def test_large_upload_returns_job_without_sync_index(tmp_path):
     assert data["job_id"]
     assert data["queued"] is True
     mock_index.assert_not_called()
-    mock_start.assert_called_once()
+    mock_enqueue.assert_called_once()
 
 
 @pytest.mark.asyncio
