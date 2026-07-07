@@ -108,6 +108,23 @@ async def test_large_upload_returns_job_without_sync_index(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_structured_upload_above_threshold_returns_job(tmp_path):
+    with patch("app.routers.rag.UPLOADS_DIR", str(tmp_path)), \
+         patch("app.routers.rag._STRUCTURED_ASYNC_MIN_BYTES", 10), \
+         patch("app.routers.rag.enqueue_upload_job") as mock_enqueue, \
+         patch("app.routers.rag.run_incremental_index") as mock_index:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.post("/api/rag/upload", files={"file": ("sheet.xlsx", b"x" * 20)})
+
+    assert resp.status_code == 202
+    assert resp.json()["status"] == "queued"
+    assert resp.json()["filename"] == "sheet.xlsx"
+    mock_index.assert_not_called()
+    mock_enqueue.assert_called_once()
+
+
+@pytest.mark.asyncio
 async def test_upload_status_returns_job_for_viewer():
     with patch("app.routers.rag.get_upload_job", return_value={
         "job_id": "job-1",

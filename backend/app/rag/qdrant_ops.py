@@ -36,6 +36,7 @@ logger = structlog.get_logger()
 _EMBED_MAX_ITEMS_PER_BATCH = 10
 _EMBED_MAX_ESTIMATED_TOKENS_PER_BATCH = 8192
 _EMBED_PROVIDER_SAFE_CHARS = 900
+_EMBED_SINGLE_ITEM_MAX_WORKERS = 3
 
 
 def _estimate_embedding_tokens(text: str) -> int:
@@ -53,7 +54,18 @@ def _embed_texts_one_by_one(embed_fn: Any, texts: list[str]) -> np.ndarray:
     return np.array(embeddings, dtype=np.float32)
 
 
-def _embed_dense_sparse_one_by_one(embed_fn: Any, texts: list[str]) -> tuple[np.ndarray, list]:
+def _embed_dense_sparse_one_by_one(
+    embed_fn: Any,
+    texts: list[str],
+    *,
+    max_workers: int = _EMBED_SINGLE_ITEM_MAX_WORKERS,
+) -> tuple[np.ndarray, list]:
+    if max_workers > 1 and len(texts) > 1:
+        try:
+            return embed_fn(texts, batch_size=1, max_workers=max_workers)
+        except Exception as exc:
+            logger.warning("Parallel single-item dense&sparse embedding failed; retrying serially: %s", exc)
+
     dense_parts = []
     sparse_parts = []
     for text in texts:
@@ -1265,4 +1277,3 @@ def retrieve_qdrant(query: str, top_k: int = 3, collection_name: str = "aureon",
         items.append(item)
 
     return items
-
