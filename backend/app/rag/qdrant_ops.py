@@ -34,33 +34,39 @@ logger = structlog.get_logger()
 
 
 _EMBED_MAX_ITEMS_PER_BATCH = 10
-_EMBED_MAX_CHARS_PER_BATCH = 8000
+_EMBED_MAX_ESTIMATED_TOKENS_PER_BATCH = 7000
+
+
+def _estimate_embedding_tokens(text: str) -> int:
+    cjk_chars = sum(1 for ch in text if "\u4e00" <= ch <= "\u9fff")
+    other_chars = max(0, len(text) - cjk_chars)
+    return cjk_chars + (max(1, other_chars // 4) if other_chars else 0)
 
 
 def _iter_embedding_ranges(
     chunks: List[Dict],
     *,
     max_items: int = _EMBED_MAX_ITEMS_PER_BATCH,
-    max_chars: int = _EMBED_MAX_CHARS_PER_BATCH,
+    max_estimated_tokens: int = _EMBED_MAX_ESTIMATED_TOKENS_PER_BATCH,
 ) -> list[tuple[int, int]]:
     """Yield [start, end) ranges that respect provider batch safety limits."""
     ranges: list[tuple[int, int]] = []
     start = 0
     count = 0
-    chars = 0
+    estimated_tokens = 0
 
     for idx, chunk in enumerate(chunks):
-        text_len = len(str(chunk.get("text", "")))
+        text_tokens = _estimate_embedding_tokens(str(chunk.get("text", "")))
         would_exceed_items = count >= max_items
-        would_exceed_chars = count > 0 and chars + text_len > max_chars
-        if would_exceed_items or would_exceed_chars:
+        would_exceed_tokens = count > 0 and estimated_tokens + text_tokens > max_estimated_tokens
+        if would_exceed_items or would_exceed_tokens:
             ranges.append((start, idx))
             start = idx
             count = 0
-            chars = 0
+            estimated_tokens = 0
 
         count += 1
-        chars += text_len
+        estimated_tokens += text_tokens
 
     if count:
         ranges.append((start, len(chunks)))
