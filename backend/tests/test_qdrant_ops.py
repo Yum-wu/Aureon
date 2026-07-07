@@ -4,7 +4,30 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 from qdrant_client import models as qmodels
 
-from app.rag.qdrant_ops import hybrid_search_qdrant
+from app.rag.qdrant_ops import _iter_embedding_ranges, hybrid_search_qdrant
+
+
+def test_iter_embedding_ranges_respects_count_and_char_budget():
+    chunks = [
+        {"text": "a" * 3000},
+        {"text": "b" * 3000},
+        {"text": "c" * 3000},
+        {"text": "d"},
+    ]
+
+    assert _iter_embedding_ranges(chunks, max_items=10, max_chars=8000) == [
+        (0, 2),
+        (2, 4),
+    ]
+
+
+def test_iter_embedding_ranges_respects_item_limit():
+    chunks = [{"text": "x"} for _ in range(12)]
+
+    assert _iter_embedding_ranges(chunks, max_items=10, max_chars=8000) == [
+        (0, 10),
+        (10, 12),
+    ]
 
 
 def test_hybrid_search_qdrant_keeps_keyword_candidates_when_sparse_enabled():
