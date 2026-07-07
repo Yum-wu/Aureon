@@ -21,6 +21,7 @@ logger = structlog.get_logger()
 
 UploadJobStatus = Literal["queued", "processing", "ok", "error"]
 UPLOAD_JOB_TTL_SECONDS = 24 * 60 * 60
+UPLOAD_JOB_TIMEOUT_SECONDS = 30 * 60
 MAX_UPLOAD_JOBS = 200
 UPLOAD_JOB_REDIS_PREFIX = "aureon:rag:upload_job:"
 
@@ -68,6 +69,7 @@ def get_upload_job(job_id: str, *, tenant_id: str | None = None) -> dict[str, An
     if redis_job is not None:
         if tenant_id is not None and redis_job.tenant_id != tenant_id:
             return None
+        redis_job = _expire_stale_processing_job(redis_job)
         return _job_to_dict(redis_job)
 
     with _jobs_lock:
@@ -76,7 +78,20 @@ def get_upload_job(job_id: str, *, tenant_id: str | None = None) -> dict[str, An
             return None
         if tenant_id is not None and job.tenant_id != tenant_id:
             return None
-        return _job_to_dict(job)
+        snapshot = _copy_job(job)
+    snapshot = _expire_stale_processing_job(snapshot)
+    return _job_to_dict(snapshot)
+
+
+def enqueue_upload_job(job_id: str, filepath: str, metadata_overrides: dict[str, Any]) -> None:
+    """Start indexing in a daemon thread independent of request lifecycle."""
+    worker = threading.Thread(
+        target=start_upload_job,
+        args=(job_id, filepath, metadata_overrides),
+        name=f"rag-upload-{job_id[:8]}",
+        daemon=True,
+    )
+    worker.start()
 
 
 def start_upload_job(job_id: str, filepath: str, metadata_overrides: dict[str, Any]) -> None:
@@ -178,6 +193,24 @@ def _job_to_dict(job: UploadJob) -> dict[str, Any]:
         "warnings": list(job.warnings),
         "error": job.error,
     }
+
+
+def _expire_stale_processing_job(job: UploadJob) -> UploadJob:
+    if job.status != "processing":
+        return job
+    elapsed = time.time() - job.updated_at
+    if elapsed <= UPLOAD_JOB_TIMEOUT_SECONDS:
+        return job
+    expired = _copy_job(job)
+    expired.status = "error"
+    expired.error = "Upload indexing timed out"
+    expired.elapsed_seconds = max(expired.elapsed_seconds, elapsed)
+    expired.updated_at = time.time()
+    with _jobs_lock:
+        if expired.job_id in _jobs:
+            _jobs[expired.job_id] = expired
+    _persist_job(expired)
+    return expired
 
 
 def _job_to_redis_dict(job: UploadJob) -> dict[str, Any]:

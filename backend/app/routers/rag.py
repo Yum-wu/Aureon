@@ -17,7 +17,7 @@ import json
 import os
 import time
 
-from fastapi import APIRouter, Request, UploadFile, File, Form, Depends, BackgroundTasks, Response
+from fastapi import APIRouter, Request, UploadFile, File, Form, Depends, Response
 from fastapi.responses import StreamingResponse
 import structlog
 
@@ -50,7 +50,7 @@ from app.rag.evaluator import run_full_evaluation
 from app.rag.prompt_experiment import run_experiment
 from app.rag.test_data import TEST_QA_PAIRS
 from app.rag.vector_store import retrieve, get_bm25_stats
-from app.rag.upload_jobs import create_upload_job, get_upload_job, start_upload_job
+from app.rag.upload_jobs import create_upload_job, enqueue_upload_job, get_upload_job
 from app.audit.decorator import audit_action
 from app.multi_tenant.middleware import get_current_tenant_id
 from app.rate_limit import limiter
@@ -507,7 +507,6 @@ async def rag_index_status():
 @router.post("/upload", response_model=RAGUploadResponse)
 @audit_action("upload", "document")
 async def rag_upload_endpoint(
-    background_tasks: BackgroundTasks,
     response: Response,
     file: UploadFile = File(...),
     language: str = Form(None),
@@ -590,7 +589,7 @@ async def rag_upload_endpoint(
             tenant_id=tenant_id,
         )
         response.status_code = 202
-        background_tasks.add_task(start_upload_job, job.job_id, dest, metadata_overrides)
+        enqueue_upload_job(job.job_id, dest, metadata_overrides)
         return {
             "status": "queued",
             "filename": safe_filename,
