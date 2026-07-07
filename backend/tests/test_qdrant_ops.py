@@ -5,6 +5,7 @@ import numpy as np
 from qdrant_client import models as qmodels
 
 from app.rag.qdrant_ops import (
+    _embed_dense_sparse_one_by_one,
     _estimate_embedding_tokens,
     _iter_embedding_ranges,
     _provider_safe_embedding_text,
@@ -123,23 +124,45 @@ def test_save_index_qdrant_combined_embeds_each_text_individually():
         quantization_enabled=False,
         hnsw_ef_search=64,
     )
-    dense_vectors = [
-        np.array([[0.1, 0.2, 0.3]], dtype=np.float32),
-        np.array([[0.4, 0.5, 0.6]], dtype=np.float32),
-        np.array([[0.7, 0.8, 0.9]], dtype=np.float32),
-    ]
+    dense_vectors = np.array([
+        [0.1, 0.2, 0.3],
+        [0.4, 0.5, 0.6],
+        [0.7, 0.8, 0.9],
+    ], dtype=np.float32)
 
     with patch("app.rag.qdrant_ops.settings", settings), \
          patch("app.rag.qdrant_ops._get_qdrant", return_value=fake_client), \
          patch("app.rag.embedding._get_embedding_dim", return_value=3), \
          patch("app.rag.embedding._embed_dense_sparse_dashscope",
-               side_effect=[(dense, [{"sentinel": 1.0}]) for dense in dense_vectors]) as mock_embed, \
+               return_value=(dense_vectors, [{"sentinel": 1.0}] * 3)) as mock_embed, \
          patch("app.rag.embedding._to_sparse_vector",
                return_value=qmodels.SparseVector(indices=[1], values=[1.0])):
         save_index_qdrant([{"text": text, "metadata": {"slug": f"long-{i}"}} for i, text in enumerate(texts)])
 
-    assert [call.args[0] for call in mock_embed.call_args_list] == [[text[:900]] for text in texts]
+    assert mock_embed.call_args.args[0] == [text[:900] for text in texts]
+    assert mock_embed.call_args.kwargs == {"batch_size": 1, "max_workers": 3}
     assert len(fake_client.upsert.call_args.kwargs["points"]) == 3
+
+
+def test_embed_dense_sparse_one_by_one_falls_back_to_serial_when_parallel_fails():
+    calls = []
+
+    def fake_embed(texts, batch_size=10, max_workers=5):
+        calls.append((texts, batch_size, max_workers))
+        if len(texts) > 1:
+            raise RuntimeError("provider rejected parallel single-item calls")
+        index = len(calls)
+        return np.array([[index, index + 1, index + 2]], dtype=np.float32), [{"idx": index}]
+
+    dense, sparse = _embed_dense_sparse_one_by_one(fake_embed, ["a", "b"], max_workers=3)
+
+    assert calls == [
+        (["a", "b"], 1, 3),
+        (["a"], 1, 1),
+        (["b"], 1, 1),
+    ]
+    assert dense.shape == (2, 3)
+    assert sparse == [{"idx": 2}, {"idx": 3}]
 
 
 def test_save_index_qdrant_fallback_embeds_each_text_individually():

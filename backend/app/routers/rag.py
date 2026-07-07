@@ -60,10 +60,16 @@ logger = structlog.get_logger()
 router = APIRouter()
 
 _ASYNC_UPLOAD_MIN_BYTES = 1 * 1024 * 1024
+_STRUCTURED_ASYNC_MIN_BYTES = 32 * 1024
+_STRUCTURED_ASYNC_EXTENSIONS = {".csv", ".xlsx", ".pptx"}
 
 
-def _should_index_async(file_size: int) -> bool:
-    return file_size >= _ASYNC_UPLOAD_MIN_BYTES
+def _should_index_async(file_size: int, ext: str | None = None) -> bool:
+    if file_size >= _ASYNC_UPLOAD_MIN_BYTES:
+        return True
+    if ext and ext.lower() in _STRUCTURED_ASYNC_EXTENSIONS:
+        return file_size >= _STRUCTURED_ASYNC_MIN_BYTES
+    return False
 
 
 def _record_dashboard_metrics(
@@ -582,7 +588,7 @@ async def rag_upload_endpoint(
     if title:
         metadata_overrides["title"] = title
 
-    if _should_index_async(len(content)):
+    if _should_index_async(len(content), ext):
         job = create_upload_job(
             filename=safe_filename,
             filepath=dest,
