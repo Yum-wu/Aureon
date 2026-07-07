@@ -563,24 +563,28 @@ async def rag_upload_endpoint(
     except Exception as e:
         raise AureonException(status_code=500, detail=f"File save failed: {str(e)}")
 
-    # Incremental index (with optional Contextual Retrieval)
+    # Upload indexing must stay deterministic and fast. Contextual prefixes are
+    # reserved for full index rebuilds; failures here would leave saved files
+    # unindexed and visible to users.
     llm_call_fn = None
-    try:
-        from app.agent.llm import create_llm
-        llm = create_llm(temperature=0.0, streaming=False, max_tokens=150)
-        llm_call_fn = llm.invoke
-    except Exception:
-        logger.info("LLM not available, skipping Contextual Retrieval for incremental index")
     metadata_overrides = {"tenant_id": tenant_id}
     if language in ("zh", "en"):
         metadata_overrides["language"] = language
     if title:
         metadata_overrides["title"] = title
-    result = run_incremental_index(
-        dest,
-        llm_call_fn=llm_call_fn,
-        metadata_overrides=metadata_overrides,
-    )
+    try:
+        result = run_incremental_index(
+            dest,
+            llm_call_fn=llm_call_fn,
+            metadata_overrides=metadata_overrides,
+        )
+    except Exception as exc:
+        try:
+            if os.path.isfile(dest):
+                os.remove(dest)
+        except Exception as cleanup_exc:
+            logger.warning("upload_cleanup_failed", file=safe_filename, error=str(cleanup_exc))
+        raise AureonException(status_code=500, detail=f"Index failed: {str(exc)[:100]}")
 
     # Update metadata with provided language and title
     if language in ("zh", "en") and result.get("metadata"):
@@ -596,6 +600,11 @@ async def rag_upload_endpoint(
         result["metadata"] = {"tenant_id": tenant_id}
 
     if result["status"] == "error":
+        try:
+            if os.path.isfile(dest):
+                os.remove(dest)
+        except Exception as cleanup_exc:
+            logger.warning("upload_cleanup_failed", file=safe_filename, error=str(cleanup_exc))
         raise AureonException(
             status_code=500, detail=result.get("message", "Index failed")
         )

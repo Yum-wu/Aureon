@@ -11,7 +11,7 @@ from pathlib import Path
 
 from app.rag.vector_store import format_context
 from app.rag.query_rewriter import expand_queries_rules, hyde_retrieve
-from app.rag.models import RAGQueryResponse, SourceItem
+from app.rag.models import RAGQueryResponse, SourceItem, public_source_metadata
 from app.rag.classifier import (
     compress_context,
     _deduplicate_chunks,
@@ -501,6 +501,7 @@ def rag_query(
             score=c.get("score"),
             chunk_id=c.get("id", c["metadata"].get("chunk_id", "")),
             chunk_text_snippet=c["text"],  # 完整文本，供 benchmark 评估用
+            metadata=public_source_metadata(c.get("metadata")),
         )
         for c in chunks
     ]
@@ -677,6 +678,7 @@ async def rag_query_astream(
             "score": c.get("score") if c.get("score") is not None else 0.0,
             "chunk_id": c.get("id", c["metadata"].get("chunk_id", "")),
             "chunk_text_snippet": c["text"],
+            "metadata": public_source_metadata(c.get("metadata")),
         }
         for c in chunks
     ]
@@ -692,6 +694,7 @@ async def rag_query_astream(
                 "slug": c["metadata"].get("slug", ""),
                 "chunk": c["text"][:300] + "..." if len(c["text"]) > 300 else c["text"],
                 "score": c.get("score") if c.get("score") is not None else 0.0,
+                "metadata": public_source_metadata(c.get("metadata")),
             },
         }
 

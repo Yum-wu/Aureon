@@ -82,6 +82,31 @@ class TestLoadPdf:
         assert result["metadata"]["file_type"] == "csv"
         assert result["metadata"]["source"] == "sales.csv"
 
+    def test_csv_handles_bom_semicolon_and_blank_lines(self, tmp_path):
+        from app.rag.ingestion.extractors import extract_csv_document
+
+        csv_path = tmp_path / "pipeline.csv"
+        csv_path.write_text("\ufeffstage;owner\nDiscovery;Sales\n\nDelivery;CS\n", encoding="utf-8")
+
+        chunks = extract_csv_document(csv_path)
+
+        assert len(chunks) == 1
+        assert chunks[0].metadata["headers"] == ["stage", "owner"]
+        assert chunks[0].metadata["delimiter"] == ";"
+        assert chunks[0].metadata["row_start"] == 2
+        assert chunks[0].metadata["row_end"] == 3
+        assert "stage: Discovery" in chunks[0].text
+        assert "owner: CS" in chunks[0].text
+
+    def test_load_csv_without_header_raises_clear_error(self, tmp_path):
+        from app.rag.loader import load_csv
+
+        csv_path = tmp_path / "no-header.csv"
+        csv_path.write_text("APAC,1200\nEMEA,900\n", encoding="utf-8")
+
+        with pytest.raises(ValueError, match="CSV contains no header row"):
+            load_csv(str(csv_path))
+
     def test_load_single_document_dispatches_docx(self, tmp_path):
         """load_single_document should handle .docx files."""
         from docx import Document
@@ -168,6 +193,28 @@ class TestLoadPdf:
         assert "Discovery | Sales" in chunks[0].text
         assert "Speaker notes" in chunks[0].text
         assert "rollout risk" in chunks[0].text
+
+    def test_pptx_extracts_multiple_slides(self, tmp_path):
+        from pptx import Presentation
+        from app.rag.ingestion.extractors import extract_pptx_document
+
+        prs = Presentation()
+        first = prs.slides.add_slide(prs.slide_layouts[5])
+        first.shapes.title.text = "Executive Summary"
+        first.shapes.add_textbox(0, 0, 3000000, 1000000).text_frame.text = "North star metric improved."
+        second = prs.slides.add_slide(prs.slide_layouts[5])
+        second.shapes.title.text = "Risk Register"
+        second.shapes.add_textbox(0, 0, 3000000, 1000000).text_frame.text = "Renewal risk requires owner."
+        path = tmp_path / "multi-slide.pptx"
+        prs.save(path)
+
+        chunks = extract_pptx_document(path)
+
+        assert [chunk.metadata["slide_number"] for chunk in chunks] == [1, 2]
+        assert chunks[0].metadata["slide_title"] == "Executive Summary"
+        assert chunks[1].metadata["slide_title"] == "Risk Register"
+        assert "North star metric" in chunks[0].text
+        assert "Renewal risk" in chunks[1].text
 
     def test_empty_pptx_raises_value_error(self, tmp_path):
         from pptx import Presentation

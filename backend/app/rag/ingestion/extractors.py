@@ -12,6 +12,31 @@ from app.rag.ingestion.normalizer import normalize_text
 from app.utils.lang_detect import detect_language as _detect_text_language
 
 
+def _pick_csv_delimiter(sample: str, fallback: str) -> str:
+    first_line = next((line for line in sample.splitlines() if line.strip()), "")
+    if first_line.count(";") > first_line.count(","):
+        return ";"
+    return fallback
+
+
+def _looks_like_csv_header(sample: str, dialect: csv.Dialect, delimiter: str) -> bool:
+    try:
+        rows = list(csv.reader(StringIO(sample), dialect=dialect, delimiter=delimiter))
+    except csv.Error:
+        return False
+    rows = [row for row in rows if any(cell.strip() for cell in row)]
+    if len(rows) < 2:
+        return False
+    first = [cell.strip() for cell in rows[0]]
+    if not first or any(not cell for cell in first):
+        return False
+    if len(set(first)) != len(first):
+        return False
+    if any(cell.replace(".", "", 1).isdigit() for cell in first):
+        return False
+    return True
+
+
 def parse_frontmatter(content: str) -> tuple[dict[str, object], str]:
     match = re.match(r"^---\s*\n(.*?)\n---\s*\n(.*)", content, re.DOTALL)
     if not match:
@@ -183,13 +208,22 @@ def extract_csv_document(path: Path) -> list[ChunkRecord]:
     with path.open("r", encoding="utf-8-sig", newline="") as f:
         content = f.read()
 
-    sample = content[:4096]
+    sample = content.lstrip("\ufeff")[:4096]
     try:
         dialect = csv.Sniffer().sniff(sample) if sample else csv.excel
     except csv.Error:
         dialect = csv.excel
+    delimiter = _pick_csv_delimiter(sample, dialect.delimiter)
 
-    reader = csv.DictReader(StringIO(content), dialect=dialect)
+    try:
+        has_header = csv.Sniffer().has_header(sample) if sample else False
+    except csv.Error:
+        has_header = False
+    has_header = has_header or _looks_like_csv_header(sample, dialect, delimiter)
+    if not has_header:
+        return []
+
+    reader = csv.DictReader(StringIO(content), dialect=dialect, delimiter=delimiter)
     headers = [str(header) for header in (reader.fieldnames or []) if header is not None]
     chunks: list[ChunkRecord] = []
     lines = []
@@ -210,12 +244,12 @@ def extract_csv_document(path: Path) -> list[ChunkRecord]:
                 row_start = file_row_number
             lines.append(", ".join(parts))
         if len(lines) >= rows_per_chunk:
-            chunks.append(_make_csv_chunk(path, headers, row_start, file_row_number, lines, dialect.delimiter))
+            chunks.append(_make_csv_chunk(path, headers, row_start, file_row_number, lines, delimiter))
             lines = []
 
     if lines:
         row_end = row_count + 1
-        chunks.append(_make_csv_chunk(path, headers, row_start, row_end, lines, dialect.delimiter))
+        chunks.append(_make_csv_chunk(path, headers, row_start, row_end, lines, delimiter))
 
     return chunks
 

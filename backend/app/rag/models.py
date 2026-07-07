@@ -3,7 +3,7 @@ Pydantic models for RAG API.
 """
 
 from pydantic import BaseModel, Field, field_validator
-from typing import List, Optional
+from typing import Any, List, Optional
 
 
 class RAGQueryRequest(BaseModel):
@@ -35,6 +35,32 @@ class SourceItem(BaseModel):
     score: Optional[float] = None
     chunk_id: str = ""
     chunk_text_snippet: str = ""
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+PUBLIC_SOURCE_METADATA_KEYS = {
+    "file_type",
+    "page_count",
+    "page_number",
+    "sheet_name",
+    "row_start",
+    "row_end",
+    "slide_number",
+    "slide_title",
+    "table_index",
+    "heading_path",
+    "source",
+}
+
+
+def public_source_metadata(metadata: dict[str, Any] | None) -> dict[str, Any]:
+    if not metadata:
+        return {}
+    return {
+        key: value
+        for key, value in metadata.items()
+        if key in PUBLIC_SOURCE_METADATA_KEYS and value not in (None, "")
+    }
 
 
 class RAGQueryResponse(BaseModel):

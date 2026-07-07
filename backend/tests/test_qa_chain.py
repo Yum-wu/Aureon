@@ -66,13 +66,25 @@ class TestRagQuery:
     @patch("app.rag.retriever.hybrid_retrieve")
     def test_with_chunks(self, mock_hybrid, mock_classify):
         mock_hybrid.return_value = [
-            {"text": "RAG is retrieval augmented generation", "metadata": {"title": "RAG Guide", "slug": "rag"}, "score": 0.9}
+            {
+                "text": "RAG is retrieval augmented generation",
+                "metadata": {
+                    "title": "RAG Guide",
+                    "slug": "rag",
+                    "file_type": "pdf",
+                    "page_number": 3,
+                    "tenant_id": "secret-tenant",
+                    "filepath": "C:/private/doc.pdf",
+                },
+                "score": 0.9,
+            }
         ]
         llm_fn = MagicMock(return_value="RAG is a technique...")
         result = rag_query("What is RAG?", llm_fn, lang="en")
         assert result.answer == "RAG is a technique..."
         assert len(result.sources) == 1
         assert result.sources[0].title == "RAG Guide"
+        assert result.sources[0].metadata == {"file_type": "pdf", "page_number": 3}
 
     @patch("app.rag.query_classifier.route_retrieval", return_value="complex")
     @patch("app.rag.generator.hyde_retrieve")
@@ -183,7 +195,17 @@ class TestRagQueryAstream:
     @patch("app.rag.generator.hybrid_retrieve")
     async def test_with_chunks(self, mock_hybrid_retrieve, mock_classify, mock_route):
         mock_hybrid_retrieve.return_value = [
-            {"text": "RAG content", "metadata": {"title": "Guide", "slug": "g"}, "score": 0.9}
+            {
+                "text": "RAG content",
+                "metadata": {
+                    "title": "Guide",
+                    "slug": "g",
+                    "sheet_name": "Pipeline",
+                    "row_start": 2,
+                    "parent_text": "hidden",
+                },
+                "score": 0.9,
+            }
         ]
 
         chunk = MagicMock()
@@ -204,6 +226,8 @@ class TestRagQueryAstream:
         assert "sources" in types
         assert "citation" in types
         assert "text" in types
+        sources_event = next(e for e in events if e["type"] == "sources")
+        assert sources_event["sources"][0]["metadata"] == {"sheet_name": "Pipeline", "row_start": 2}
 
     @pytest.mark.asyncio
     @patch("app.rag.query_classifier.route_retrieval", return_value="medium")

@@ -87,7 +87,7 @@ const RAGQueryResponseContract = {
 /** RAG 来源项契约（对应后端 SourceItem） */
 const SourceItemContract = {
   requiredFields: ["title", "slug"] as const,
-  optionalFields: ["chunk", "score", "chunk_id", "chunk_text_snippet"] as const,
+  optionalFields: ["chunk", "score", "chunk_id", "chunk_text_snippet", "metadata"] as const,
 } as const;
 
 /** 错误响应契约（AureonException 格式） */
@@ -347,6 +347,7 @@ describe("RAG API 契约测试", () => {
         score: 0.88,
         chunk_id: "chunk-001",
         chunk_text_snippet: "摘要片段",
+        metadata: { file_type: "pdf", page_number: 3 },
       };
       // 验证所有必填字段
       expect(validateRequiredFields(fullSource, SourceItemContract.requiredFields)).toBe(true);
