@@ -35,7 +35,8 @@ logger = structlog.get_logger()
 
 _EMBED_MAX_ITEMS_PER_BATCH = 10
 _EMBED_MAX_ESTIMATED_TOKENS_PER_BATCH = 8192
-_EMBED_PROVIDER_SAFE_CHARS = 900
+_EMBED_PROVIDER_SAFE_CHARS = 6000
+_EMBED_PROVIDER_SAFE_ESTIMATED_TOKENS = 1536
 _EMBED_SINGLE_ITEM_MAX_WORKERS = 3
 
 
@@ -46,7 +47,17 @@ def _estimate_embedding_tokens(text: str) -> int:
 
 
 def _provider_safe_embedding_text(text: str) -> str:
-    return text[:_EMBED_PROVIDER_SAFE_CHARS] if len(text) > _EMBED_PROVIDER_SAFE_CHARS else text
+    if (
+        len(text) <= _EMBED_PROVIDER_SAFE_CHARS
+        and _estimate_embedding_tokens(text) <= _EMBED_PROVIDER_SAFE_ESTIMATED_TOKENS
+    ):
+        return text
+
+    end = min(len(text), _EMBED_PROVIDER_SAFE_CHARS)
+    while end > 1 and _estimate_embedding_tokens(text[:end]) > _EMBED_PROVIDER_SAFE_ESTIMATED_TOKENS:
+        span_tokens = _estimate_embedding_tokens(text[:end])
+        end = max(1, end * _EMBED_PROVIDER_SAFE_ESTIMATED_TOKENS // span_tokens)
+    return text[:end]
 
 
 def _embed_texts_one_by_one(embed_fn: Any, texts: list[str]) -> np.ndarray:

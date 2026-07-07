@@ -58,16 +58,17 @@ def test_iter_embedding_ranges_default_splits_oversized_structured_chunks():
 
 
 def test_provider_safe_embedding_text_truncates_long_payload_only_for_embedding():
-    text = "a" * 1200
+    text = "a" * 8000
 
     result = _provider_safe_embedding_text(text)
 
-    assert len(result) == 900
+    assert len(result) <= 6000
+    assert _estimate_embedding_tokens(result) <= 1536
     assert text.startswith(result)
 
 
 def test_save_index_qdrant_uses_safe_text_for_combined_embedding_only():
-    original_text = "x" * 1200
+    original_text = "x" * 8000
     fake_client = MagicMock()
     fake_client.get_collection.return_value = SimpleNamespace(
         config=SimpleNamespace(
@@ -98,13 +99,13 @@ def test_save_index_qdrant_uses_safe_text_for_combined_embedding_only():
         save_index_qdrant([{"text": original_text, "metadata": {"slug": "long-upload"}}])
 
     embedded_texts = mock_embed.call_args.args[0]
-    assert embedded_texts == [original_text[:900]]
+    assert embedded_texts == [_provider_safe_embedding_text(original_text)]
     point = fake_client.upsert.call_args.kwargs["points"][0]
     assert point.payload["text"] == original_text
 
 
 def test_save_index_qdrant_combined_embeds_each_text_individually():
-    texts = ["a" * 1200, "b" * 1200, "c" * 1200]
+    texts = ["a" * 8000, "b" * 8000, "c" * 8000]
     fake_client = MagicMock()
     fake_client.get_collection.return_value = SimpleNamespace(
         config=SimpleNamespace(
@@ -139,7 +140,7 @@ def test_save_index_qdrant_combined_embeds_each_text_individually():
                return_value=qmodels.SparseVector(indices=[1], values=[1.0])):
         save_index_qdrant([{"text": text, "metadata": {"slug": f"long-{i}"}} for i, text in enumerate(texts)])
 
-    assert mock_embed.call_args.args[0] == [text[:900] for text in texts]
+    assert mock_embed.call_args.args[0] == [_provider_safe_embedding_text(text) for text in texts]
     assert mock_embed.call_args.kwargs == {"batch_size": 1, "max_workers": 3}
     assert len(fake_client.upsert.call_args.kwargs["points"]) == 3
 
@@ -166,7 +167,7 @@ def test_embed_dense_sparse_one_by_one_falls_back_to_serial_when_parallel_fails(
 
 
 def test_save_index_qdrant_fallback_embeds_each_text_individually():
-    texts = ["a" * 1200, "b" * 1200, "c" * 1200]
+    texts = ["a" * 8000, "b" * 8000, "c" * 8000]
     fake_client = MagicMock()
     fake_client.get_collection.return_value = SimpleNamespace(
         config=SimpleNamespace(
@@ -205,7 +206,9 @@ def test_save_index_qdrant_fallback_embeds_each_text_individually():
                return_value=qmodels.SparseVector(indices=[1], values=[1.0])):
         save_index_qdrant([{"text": text, "metadata": {"slug": f"long-{i}"}} for i, text in enumerate(texts)])
 
-    assert [call.args[0] for call in mock_embed.call_args_list] == [[text[:900]] for text in texts]
+    assert [call.args[0] for call in mock_embed.call_args_list] == [
+        [_provider_safe_embedding_text(text)] for text in texts
+    ]
     assert len(fake_client.upsert.call_args.kwargs["points"]) == 3
 
 
