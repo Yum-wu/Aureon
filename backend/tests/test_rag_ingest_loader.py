@@ -4,6 +4,8 @@ import pytest
 
 from app.rag.ingestion.extractors import (
     STRUCTURED_CHUNK_MAX_CHARS,
+    STRUCTURED_CHUNK_MAX_ESTIMATED_TOKENS,
+    _estimate_embedding_tokens,
     extract_csv_document,
     extract_docx_document,
     extract_markdown_document,
@@ -141,11 +143,12 @@ class TestIngestionPrimitives:
 
         chunks = extract_csv_document(csv_file)
 
-        assert len(chunks) == 1
+        assert len(chunks) == 2
         assert chunks[0].metadata["row_start"] == 2
-        assert chunks[0].metadata["row_end"] == 121
+        assert chunks[-1].metadata["row_end"] == 121
         assert "Columns: region, customer, product, revenue" in chunks[0].text
-        assert "Central, 119, Paseo, 1119" in chunks[0].text
+        assert "Central, 119, Paseo, 1119" in chunks[-1].text
+        assert all(_estimate_embedding_tokens(chunk.text) <= 512 for chunk in chunks)
 
     def test_csv_extractor_keeps_large_business_csv_chunk_count_bounded(self, tmp_path):
         csv_file = tmp_path / "businesses.csv"
@@ -158,8 +161,10 @@ class TestIngestionPrimitives:
 
         chunks = extract_csv_document(csv_file)
 
-        assert len(chunks) <= 5
+        assert len(chunks) <= 50
         assert all(len(chunk.text) <= STRUCTURED_CHUNK_MAX_CHARS for chunk in chunks)
+        assert all(_estimate_embedding_tokens(chunk.text) <= 512 for chunk in chunks)
+        assert STRUCTURED_CHUNK_MAX_ESTIMATED_TOKENS <= 512
         assert sum(len(chunk.text) for chunk in chunks) < 120000
 
     def test_build_chunks_does_not_index_csv_without_header(self, tmp_path):
