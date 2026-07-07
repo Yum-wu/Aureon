@@ -52,7 +52,7 @@ const mockSend = vi.fn();
 const mockUseWebSocket = vi.fn();
 
 vi.mock("../../hooks/useWebSocket", () => ({
-  useWebSocket: () => mockUseWebSocket(),
+  useWebSocket: (path: string, options: unknown) => mockUseWebSocket(path, options),
 }));
 
 vi.mock("../../support/quickReplyRoutes", () => ({
@@ -71,6 +71,7 @@ describe("SupportWidget", () => {
       disconnect: vi.fn(),
       connectionState: "connected",
     });
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
   });
 
   it("renders FAB button when closed", () => {
@@ -107,6 +108,18 @@ describe("SupportWidget", () => {
 
     const status = screen.getByTestId("support-status");
     expect(status).toHaveTextContent("Online");
+  });
+
+  it("does not connect support WebSocket until the panel is opened", () => {
+    vi.useFakeTimers();
+
+    render(<SupportWidget />);
+
+    act(() => { vi.advanceTimersByTime(3000); });
+
+    expect(mockUseWebSocket.mock.calls.some(([path]) => String(path).startsWith("/ws/chat/"))).toBe(false);
+
+    vi.useRealTimers();
   });
 
   it("shows offline status when disconnected", () => {
@@ -226,6 +239,7 @@ describe("SupportWidget - new features", () => {
       disconnect: vi.fn(),
       connectionState: "connected",
     });
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
   });
 
   it("shows offline form when disconnected and user types", () => {

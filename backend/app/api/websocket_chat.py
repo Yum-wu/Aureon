@@ -13,12 +13,8 @@ router = APIRouter()
 def _try_verify_jwt(token: str) -> bool:
     """Try to verify a JWT token. Returns False on any failure (no exception)."""
     try:
-        import os
-        jwt_secret = os.environ.get("JWT_SECRET")
-        if not jwt_secret:
-            return False
-        import jwt as pyjwt
-        pyjwt.decode(token, jwt_secret, algorithms=["HS256"])
+        from app.security.rbac import verify_token
+        verify_token(token)
         return True
     except Exception:
         return False

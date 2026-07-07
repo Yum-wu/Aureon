@@ -47,6 +47,7 @@ async def logging_middleware(request: Request, call_next):
             "/api/v1/security/sso/login",
             "/api/security/demo-token",
             "/api/v1/security/demo-token",
+            "/api/v1/support/session",
             "/api/rag/benchmark",
             "/api/v1/rag/benchmark",
         }

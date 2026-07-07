@@ -47,6 +47,7 @@ export function SupportWidget() {
   const [wsError, setWsError] = useState<string | null>(null);
   const [offlineMode, setOfflineMode] = useState(false);
   const [offlineStatus, setOfflineStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+  const [supportToken, setSupportToken] = useState('');
   const offlineNameRef = useRef<HTMLInputElement>(null);
   const [streamingSources, setStreamingSources] = useState<Source[]>([]);
   const streamingSourcesRef = useRef(streamingSources);
@@ -57,14 +58,37 @@ export function SupportWidget() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Deferred mount: delay WebSocket connection by 3s to reduce initial load pressure
-  const [mounted, setMounted] = useState(false);
+  // Visitor support uses a short-lived scoped token and connects only after open.
   useEffect(() => {
-    const timer = setTimeout(() => setMounted(true), 3000);
-    return () => clearTimeout(timer);
-  }, []);
+    if (!isOpen || supportToken) return;
 
-  const wsPath = mounted ? `/ws/chat/${SUPPORT_CLIENT_ID}` : '';
+    let cancelled = false;
+    fetch('/api/v1/support/session', { method: 'POST' })
+      .then(async (res) => {
+        if (!res.ok) throw new Error('support session failed');
+        return res.json() as Promise<{ access_token?: string }>;
+      })
+      .then((data) => {
+        if (!cancelled && data.access_token) {
+          setSupportToken(data.access_token);
+          setWsError(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setWsError('连接失败，请稍后重试');
+          setOfflineMode(true);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, supportToken]);
+
+  const wsPath = isOpen && supportToken
+    ? `/ws/chat/${SUPPORT_CLIENT_ID}?token=${encodeURIComponent(supportToken)}`
+    : '';
 
   const {
     isConnected,

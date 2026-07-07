@@ -17,6 +17,24 @@ class OfflineMessage(BaseModel):
     page_url: str | None = None
 
 
+@router.post("/session")
+@limiter.limit("10/minute")
+async def create_support_session(request: Request):
+    """Issue a short-lived scoped token for visitor support WebSocket."""
+    from app.security.rbac import create_access_token
+
+    now = datetime.now(timezone.utc)
+    expires_in = 900
+    token = create_access_token({
+        "sub": "support-visitor",
+        "role": "VIEWER",
+        "scope": "support_ws",
+        "iat": int(now.timestamp()),
+        "exp": int(now.timestamp()) + expires_in,
+    })
+    return {"access_token": token, "token_type": "bearer", "expires_in": expires_in}
+
+
 @router.post("/offline-message")
 @limiter.limit("5/minute")
 async def submit_offline_message(msg: OfflineMessage, request: Request):

@@ -94,12 +94,6 @@ def _add_to_index_qdrant(chunks: List[Dict[str, Any]]):
 
 
 
-    # Embed texts �� ����ʹ�� DashScope combined API��dense+sparse һ�ε��ã�
-
-    texts = [c["text"] for c in chunks]
-
-
-
     use_combined = (
 
         settings.sparse_enabled
@@ -112,42 +106,35 @@ def _add_to_index_qdrant(chunks: List[Dict[str, Any]]):
 
 
 
-    if use_combined:
-
-        dense_emb, sparse_vecs = _embed_dense_sparse_dashscope(texts)
-
-    else:
-        dense_emb = embed_texts_llm(texts)
+    if not use_combined:
         from app.rag.sparse_embed import embed_sparse
-        sparse_vecs = embed_sparse(texts) if settings.sparse_enabled else [None] * len(texts)
 
+    from app.rag.qdrant_ops import _iter_embedding_ranges
 
+    upsert_batch_size = 100
+    pending_points = []
 
-    # Upsert in batches
+    for start, end in _iter_embedding_ranges(chunks):
+        batch_texts = [c["text"] for c in chunks[start:end]]
+        if use_combined:
+            dense_emb, sparse_vecs = _embed_dense_sparse_dashscope(batch_texts)
+        else:
+            dense_emb = embed_texts_llm(batch_texts)
+            sparse_vecs = embed_sparse(batch_texts) if settings.sparse_enabled else [None] * len(batch_texts)
 
-    batch_size = 100
+        for i, idx in enumerate(range(start, end)):
 
-    for start in range(0, len(chunks), batch_size):
+            if settings.sparse_enabled and sparse_vecs[i] is not None:
 
-        end = min(start + batch_size, len(chunks))
+                sv = _to_sparse_vector(sparse_vecs[i])
 
-        points = []
-
-        for i in range(end - start):
-
-            idx = start + i
-
-            if settings.sparse_enabled and sparse_vecs[idx] is not None:
-
-                sv = _to_sparse_vector(sparse_vecs[idx])
-
-                vector_data = {"dense": dense_emb[idx].tolist(), "sparse": sv}
+                vector_data = {"dense": dense_emb[i].tolist(), "sparse": sv}
 
             else:
 
-                vector_data = dense_emb[idx].tolist()
+                vector_data = dense_emb[i].tolist()
 
-            points.append(PointStruct(
+            pending_points.append(PointStruct(
 
                 id=uuid.uuid4().hex,
 
@@ -157,7 +144,9 @@ def _add_to_index_qdrant(chunks: List[Dict[str, Any]]):
 
             ))
 
-        client.upsert(collection_name=collection_name, points=points)
+        if len(pending_points) >= upsert_batch_size or end == len(chunks):
+            client.upsert(collection_name=collection_name, points=pending_points)
+            pending_points = []
 
 
 
