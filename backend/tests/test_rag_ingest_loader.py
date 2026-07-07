@@ -143,12 +143,12 @@ class TestIngestionPrimitives:
 
         chunks = extract_csv_document(csv_file)
 
-        assert len(chunks) == 2
+        assert len(chunks) <= 4
         assert chunks[0].metadata["row_start"] == 2
         assert chunks[-1].metadata["row_end"] == 121
         assert "Columns: region, customer, product, revenue" in chunks[0].text
         assert "Central, 119, Paseo, 1119" in chunks[-1].text
-        assert all(_estimate_embedding_tokens(chunk.text) <= 512 for chunk in chunks)
+        assert all(_estimate_embedding_tokens(chunk.text) <= STRUCTURED_CHUNK_MAX_ESTIMATED_TOKENS for chunk in chunks)
 
     def test_csv_extractor_keeps_large_business_csv_chunk_count_bounded(self, tmp_path):
         csv_file = tmp_path / "businesses.csv"
@@ -161,11 +161,27 @@ class TestIngestionPrimitives:
 
         chunks = extract_csv_document(csv_file)
 
-        assert len(chunks) <= 50
+        assert len(chunks) <= 100
         assert all(len(chunk.text) <= STRUCTURED_CHUNK_MAX_CHARS for chunk in chunks)
-        assert all(_estimate_embedding_tokens(chunk.text) <= 512 for chunk in chunks)
-        assert STRUCTURED_CHUNK_MAX_ESTIMATED_TOKENS <= 512
+        assert all(_estimate_embedding_tokens(chunk.text) <= STRUCTURED_CHUNK_MAX_ESTIMATED_TOKENS for chunk in chunks)
+        assert STRUCTURED_CHUNK_MAX_ESTIMATED_TOKENS <= 240
         assert sum(len(chunk.text) for chunk in chunks) < 120000
+
+    def test_csv_extractor_does_not_merge_provider_sensitive_long_rows(self, tmp_path):
+        csv_file = tmp_path / "provider-sensitive.csv"
+        row = (
+            "Define security requirements for organization-developed software "
+            "and maintain these requirements across the SDLC. "
+        ) * 7
+        csv_file.write_text(
+            "id,content\n" + "\n".join(f"{index},{row}" for index in range(5)),
+            encoding="utf-8",
+        )
+
+        chunks = extract_csv_document(csv_file)
+
+        assert len(chunks) == 5
+        assert all(_estimate_embedding_tokens(chunk.text) <= STRUCTURED_CHUNK_MAX_ESTIMATED_TOKENS for chunk in chunks)
 
     def test_build_chunks_does_not_index_csv_without_header(self, tmp_path):
         csv_file = tmp_path / "no-header.csv"

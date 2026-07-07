@@ -53,6 +53,16 @@ def _embed_texts_one_by_one(embed_fn: Any, texts: list[str]) -> np.ndarray:
     return np.array(embeddings, dtype=np.float32)
 
 
+def _embed_dense_sparse_one_by_one(embed_fn: Any, texts: list[str]) -> tuple[np.ndarray, list]:
+    dense_parts = []
+    sparse_parts = []
+    for text in texts:
+        dense, sparse = embed_fn([text], batch_size=1, max_workers=1)
+        dense_parts.append(dense[0])
+        sparse_parts.append(sparse[0] if sparse else None)
+    return np.array(dense_parts, dtype=np.float32), sparse_parts
+
+
 def _iter_embedding_ranges(
     chunks: List[Dict],
     *,
@@ -549,10 +559,6 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
     # DashScope v4 has both item-count and request-size limits. Enterprise
     # uploads often have long chunks, so we keep each provider request small.
 
-    embed_batch_size = _EMBED_MAX_ITEMS_PER_BATCH
-
-    embed_max_workers = 1
-
     upsert_batch_size = 100  # ÿ�� upsert �� point ��
 
     pending_points: list = []
@@ -596,10 +602,9 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
 
             try:
 
-                batch_embeddings, batch_sparse = _embed_dense_sparse_dashscope(
-
-                    embedding_texts, batch_size=embed_batch_size, max_workers=embed_max_workers
-
+                batch_embeddings, batch_sparse = _embed_dense_sparse_one_by_one(
+                    _embed_dense_sparse_dashscope,
+                    embedding_texts,
                 )
 
             except Exception as e:
