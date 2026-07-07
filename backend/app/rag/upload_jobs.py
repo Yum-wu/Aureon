@@ -6,6 +6,7 @@ HTTP request short and runs the existing incremental indexer after the response.
 
 from __future__ import annotations
 
+import json
 import threading
 import time
 from dataclasses import dataclass, field
@@ -14,11 +15,14 @@ from uuid import uuid4
 
 import structlog
 
+from app.cache.redis_client import get_sync_redis
+
 logger = structlog.get_logger()
 
 UploadJobStatus = Literal["queued", "processing", "ok", "error"]
 UPLOAD_JOB_TTL_SECONDS = 24 * 60 * 60
 MAX_UPLOAD_JOBS = 200
+UPLOAD_JOB_REDIS_PREFIX = "aureon:rag:upload_job:"
 
 
 @dataclass
@@ -55,10 +59,17 @@ def create_upload_job(*, filename: str, filepath: str, tenant_id: str | None) ->
     with _jobs_lock:
         _prune_jobs_locked(now)
         _jobs[job.job_id] = job
+    _persist_job(job)
     return job
 
 
 def get_upload_job(job_id: str, *, tenant_id: str | None = None) -> dict[str, Any] | None:
+    redis_job = _load_job_from_redis(job_id)
+    if redis_job is not None:
+        if tenant_id is not None and redis_job.tenant_id != tenant_id:
+            return None
+        return _job_to_dict(redis_job)
+
     with _jobs_lock:
         job = _jobs.get(job_id)
         if job is None:
@@ -97,6 +108,8 @@ def _mark_processing(job_id: str) -> None:
             return
         job.status = "processing"
         job.updated_at = time.time()
+        snapshot = _copy_job(job)
+    _persist_job(snapshot)
 
 
 def _mark_ok(job_id: str, result: dict[str, Any], elapsed_seconds: float) -> None:
@@ -111,6 +124,8 @@ def _mark_ok(job_id: str, result: dict[str, Any], elapsed_seconds: float) -> Non
         job.warnings = list(result.get("warnings") or [])
         job.error = None
         job.updated_at = time.time()
+        snapshot = _copy_job(job)
+    _persist_job(snapshot)
     logger.info("upload_job_completed", job_id=job_id, chunks=job.chunks_created)
 
 
@@ -131,6 +146,8 @@ def _mark_error(
         job.warnings = list((result or {}).get("warnings") or [])
         job.error = error
         job.updated_at = time.time()
+        snapshot = _copy_job(job)
+    _persist_job(snapshot)
     logger.warning("upload_job_failed", job_id=job_id, error=error)
 
 
@@ -161,3 +178,82 @@ def _job_to_dict(job: UploadJob) -> dict[str, Any]:
         "warnings": list(job.warnings),
         "error": job.error,
     }
+
+
+def _job_to_redis_dict(job: UploadJob) -> dict[str, Any]:
+    data = _job_to_dict(job)
+    data.update({
+        "filepath": job.filepath,
+        "tenant_id": job.tenant_id,
+        "created_at": job.created_at,
+        "updated_at": job.updated_at,
+    })
+    return data
+
+
+def _job_from_redis_dict(data: dict[str, Any]) -> UploadJob:
+    return UploadJob(
+        job_id=str(data["job_id"]),
+        filename=str(data["filename"]),
+        filepath=str(data.get("filepath") or ""),
+        tenant_id=data.get("tenant_id"),
+        status=data.get("status", "queued"),
+        created_at=float(data.get("created_at") or time.time()),
+        updated_at=float(data.get("updated_at") or time.time()),
+        documents_indexed=int(data.get("documents_indexed") or 0),
+        chunks_created=int(data.get("chunks_created") or 0),
+        elapsed_seconds=float(data.get("elapsed_seconds") or 0.0),
+        warnings=list(data.get("warnings") or []),
+        error=data.get("error"),
+    )
+
+
+def _redis_key(job_id: str) -> str:
+    return f"{UPLOAD_JOB_REDIS_PREFIX}{job_id}"
+
+
+def _persist_job(job: UploadJob) -> None:
+    try:
+        redis = get_sync_redis()
+        if not redis:
+            return
+        redis.setex(
+            _redis_key(job.job_id),
+            UPLOAD_JOB_TTL_SECONDS,
+            json.dumps(_job_to_redis_dict(job), ensure_ascii=False),
+        )
+    except Exception as exc:
+        logger.debug("upload_job_redis_persist_failed", job_id=job.job_id, error=str(exc))
+
+
+def _load_job_from_redis(job_id: str) -> UploadJob | None:
+    try:
+        redis = get_sync_redis()
+        if not redis:
+            return None
+        raw = redis.get(_redis_key(job_id))
+        if raw is None:
+            return None
+        if isinstance(raw, bytes):
+            raw = raw.decode("utf-8")
+        return _job_from_redis_dict(json.loads(raw))
+    except Exception as exc:
+        logger.debug("upload_job_redis_load_failed", job_id=job_id, error=str(exc))
+        return None
+
+
+def _copy_job(job: UploadJob) -> UploadJob:
+    return UploadJob(
+        job_id=job.job_id,
+        filename=job.filename,
+        filepath=job.filepath,
+        tenant_id=job.tenant_id,
+        status=job.status,
+        created_at=job.created_at,
+        updated_at=job.updated_at,
+        documents_indexed=job.documents_indexed,
+        chunks_created=job.chunks_created,
+        elapsed_seconds=job.elapsed_seconds,
+        warnings=list(job.warnings),
+        error=job.error,
+    )
