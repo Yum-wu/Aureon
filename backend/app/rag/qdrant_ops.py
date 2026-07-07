@@ -33,6 +33,40 @@ from app.multi_tenant.middleware import get_current_tenant_id
 logger = structlog.get_logger()
 
 
+_EMBED_MAX_ITEMS_PER_BATCH = 10
+_EMBED_MAX_CHARS_PER_BATCH = 8000
+
+
+def _iter_embedding_ranges(
+    chunks: List[Dict],
+    *,
+    max_items: int = _EMBED_MAX_ITEMS_PER_BATCH,
+    max_chars: int = _EMBED_MAX_CHARS_PER_BATCH,
+) -> list[tuple[int, int]]:
+    """Yield [start, end) ranges that respect provider batch safety limits."""
+    ranges: list[tuple[int, int]] = []
+    start = 0
+    count = 0
+    chars = 0
+
+    for idx, chunk in enumerate(chunks):
+        text_len = len(str(chunk.get("text", "")))
+        would_exceed_items = count >= max_items
+        would_exceed_chars = count > 0 and chars + text_len > max_chars
+        if would_exceed_items or would_exceed_chars:
+            ranges.append((start, idx))
+            start = idx
+            count = 0
+            chars = 0
+
+        count += 1
+        chars += text_len
+
+    if count:
+        ranges.append((start, len(chunks)))
+    return ranges
+
+
 # ── tenant_id 检查缓存（避免每次查询都 scroll） ──
 _tenant_id_cache: dict = {"value": None, "updated_at": 0.0}
 _TENANT_ID_CACHE_TTL = 300  # 5 分钟
@@ -496,11 +530,12 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
 
     # ��Ƕ��� upsert������ʹ�� DashScope dense&sparse �ϲ��ӿڣ�һ�� API ����ͬʱ��ȡ��
 
-    # �������������˵��ֿ��� dense + sparse embed
+    # DashScope v4 has both item-count and request-size limits. Enterprise
+    # uploads often have long chunks, so we keep each provider request small.
 
-    embed_batch_size = 10  # ÿ�� embed ���ı�����DashScope v4 Ӳ���� 10 ��/����
+    embed_batch_size = _EMBED_MAX_ITEMS_PER_BATCH
 
-    embed_max_workers = 5  # ���� embed ������
+    embed_max_workers = 1
 
     upsert_batch_size = 100  # ÿ�� upsert �� point ��
 
@@ -524,32 +559,6 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
 
 
 
-    if use_combined:
-
-        # ·�� A��DashScope dense&sparse �ϲ��ӿ� + ����
-
-        logger.info("Using DashScope dense&sparse combined API (max_workers=%d)", embed_max_workers)
-
-        all_texts = [c["text"] for c in chunks]
-
-
-
-        try:
-
-            all_embeddings, all_sparse = _embed_dense_sparse_dashscope(
-
-                all_texts, batch_size=embed_batch_size, max_workers=embed_max_workers
-
-            )
-
-        except Exception as e:
-
-            logger.warning("DashScope dense&sparse failed: %s, falling back to separate embed", e)
-
-            use_combined = False
-
-
-
     if not use_combined:
 
         # ·�� B���ֿ��� dense + sparse embed��������ʽ��
@@ -558,25 +567,49 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
 
 
 
-    for batch_start in range(0, len(chunks), embed_batch_size):
+    for batch_start, batch_end in _iter_embedding_ranges(chunks):
 
-        batch_end = min(batch_start + embed_batch_size, len(chunks))
+        batch_texts = [c["text"] for c in chunks[batch_start:batch_end]]
 
 
 
         if use_combined:
 
-            # ·�� A��ֱ�Ӵ��� embed �Ľ����ȡ
+            # ·�� A��DashScope dense&sparse �ϲ��ӿ�逐批调用
 
-            batch_embeddings = all_embeddings[batch_start:batch_end]
+            try:
 
-            batch_sparse = all_sparse[batch_start:batch_end]
+                batch_embeddings, batch_sparse = _embed_dense_sparse_dashscope(
+
+                    batch_texts, batch_size=embed_batch_size, max_workers=embed_max_workers
+
+                )
+
+            except Exception as e:
+
+                logger.warning(
+
+                    "DashScope dense&sparse batch %d-%d/%d failed: %s; falling back to separate embed",
+
+                    batch_start,
+
+                    batch_end,
+
+                    len(chunks),
+
+                    e,
+
+                )
+
+                from app.rag.sparse_embed import embed_sparse
+
+                batch_embeddings = embed_texts_llm(batch_texts)
+
+                batch_sparse = embed_sparse(batch_texts) if settings.sparse_enabled else [{}] * len(batch_texts)
 
         else:
 
             # ·�� B������ embed
-
-            batch_texts = [c["text"] for c in chunks[batch_start:batch_end]]
 
             logger.info("Embedding batch %d-%d/%d ...", batch_start, batch_end, len(chunks))
 

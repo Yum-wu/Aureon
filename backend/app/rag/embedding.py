@@ -434,6 +434,7 @@ def embed_texts_llm(texts: List[str], batch_size: int = 10,
 
     embeddings = None
     last_error = None
+    provider_errors = []
     for p in providers:
         try:
             embeddings = _embed_api(uncached_texts, p, batch_size, client=client)
@@ -441,9 +442,11 @@ def embed_texts_llm(texts: List[str], batch_size: int = 10,
         except Exception as e:
             logger.warning("Embedding provider %s failed: %s", p, e)
             last_error = e
+            provider_errors.append(f"{p}: {type(e).__name__}: {str(e)[:200]}")
 
     if embeddings is None:
-        raise RuntimeError(f"All embedding providers failed. Last error: {last_error}")
+        error_summary = "; ".join(provider_errors)
+        raise RuntimeError(f"All embedding providers failed. {error_summary}. Last error: {last_error}")
 
     # 4. Fill results + update cache
     with _embed_cache_lock:
