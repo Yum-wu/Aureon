@@ -200,6 +200,8 @@ backend/tests/eval_report.md
 backend/data/deepeval_*.txt
 backend/data/phase*_*.txt
 backend/data/benchmark_railway_*.md
+backend/data/*upload_regression*.json
+backend/data/public-samples-*/
 
 # Playwright snapshots
 *.md.yml

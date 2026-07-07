@@ -308,7 +308,7 @@ Key fields:
 ## Deployment Model
 
 - **Source**: GitHub
-- **CI/CD**: GitHub Actions — pip-audit + Trivy + hadolint + mypy (continue-on-error) + ruff lint + pytest (958 tests pass)
+- **CI/CD**: GitHub Actions — pip-audit + Trivy + hadolint + mypy (continue-on-error) + ruff lint + pytest (1011 tests pass)
 - **Platform**: Railway, Southeast Asia region, auto-deploy
 - **Container**: Docker `python:3.12-slim`, non-root user
 - **Production URL**: `https://aureon-production-659a.up.railway.app`

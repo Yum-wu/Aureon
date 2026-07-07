@@ -3,6 +3,7 @@
 import pytest
 
 from app.rag.ingestion.extractors import (
+    STRUCTURED_CHUNK_MAX_CHARS,
     extract_csv_document,
     extract_docx_document,
     extract_markdown_document,
@@ -129,7 +130,7 @@ class TestIngestionPrimitives:
         assert chunks
         assert "Voice of the Customer" in chunks[0].text
 
-    def test_csv_extractor_batches_rows_into_indexable_chunks(self, tmp_path):
+    def test_csv_extractor_batches_short_rows_by_size_not_fixed_row_count(self, tmp_path):
         csv_file = tmp_path / "sales.csv"
         rows = ["region,customer,product,revenue"]
         rows.extend(
@@ -140,11 +141,25 @@ class TestIngestionPrimitives:
 
         chunks = extract_csv_document(csv_file)
 
-        assert len(chunks) == 3
+        assert len(chunks) == 1
         assert chunks[0].metadata["row_start"] == 2
-        assert chunks[0].metadata["row_end"] == 51
-        assert chunks[-1].metadata["row_start"] == 102
-        assert chunks[-1].metadata["row_end"] == 121
+        assert chunks[0].metadata["row_end"] == 121
+        assert "Central,119" not in chunks[0].text
+        assert "customer: 119" in chunks[0].text
+
+    def test_csv_extractor_keeps_large_business_csv_chunk_count_bounded(self, tmp_path):
+        csv_file = tmp_path / "businesses.csv"
+        rows = ["Business Name,Community Board,Council District,BIN,BBL,Latitude,Longitude"]
+        rows.extend(
+            f"GEM FINANCIAL SERVICES {index},105,03,1014495,1007890005,40.75561,-73.990962"
+            for index in range(1000)
+        )
+        csv_file.write_text("\n".join(rows), encoding="utf-8")
+
+        chunks = extract_csv_document(csv_file)
+
+        assert len(chunks) <= 5
+        assert all(len(chunk.text) <= STRUCTURED_CHUNK_MAX_CHARS for chunk in chunks)
 
     def test_build_chunks_does_not_index_csv_without_header(self, tmp_path):
         csv_file = tmp_path / "no-header.csv"

@@ -8,7 +8,7 @@ Production-ready enterprise AI knowledge base platform. Upload documents, search
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
 [![Qdrant](https://img.shields.io/badge/Qdrant-Cloud-DC2DFF?logo=qdrant&logoColor=white)](https://qdrant.tech/)
-[![Tests](https://img.shields.io/badge/Tests-958%20passed-brightgreen)](https://github.com/Yum-wu/Aureon/actions)
+[![Tests](https://img.shields.io/badge/Tests-1011%20passed-brightgreen)](https://github.com/Yum-wu/Aureon/actions)
 
 **Other languages**: [中文](README.zh-CN.md)
 **Live demo**: [aureon-production-659a.up.railway.app](https://aureon-production-659a.up.railway.app)
@@ -21,7 +21,7 @@ Production-ready enterprise AI knowledge base platform. Upload documents, search
 - Hybrid retrieval with sparse + dense search
 - Role-based access, audit logging, PII masking, and guardrails
 - Real UI, real demo flow, real deployment
-- Verified by `958` backend tests and live production deployment
+- Verified by `1011` backend tests and live production deployment
 
 ## Why It Is Credible
 

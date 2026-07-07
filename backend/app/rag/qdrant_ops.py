@@ -34,7 +34,7 @@ logger = structlog.get_logger()
 
 
 _EMBED_MAX_ITEMS_PER_BATCH = 10
-_EMBED_MAX_ESTIMATED_TOKENS_PER_BATCH = 7000
+_EMBED_MAX_ESTIMATED_TOKENS_PER_BATCH = 8192 * _EMBED_MAX_ITEMS_PER_BATCH
 
 
 def _estimate_embedding_tokens(text: str) -> int:
