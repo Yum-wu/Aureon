@@ -4,7 +4,12 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 from qdrant_client import models as qmodels
 
-from app.rag.qdrant_ops import _estimate_embedding_tokens, _iter_embedding_ranges, hybrid_search_qdrant
+from app.rag.qdrant_ops import (
+    _estimate_embedding_tokens,
+    _iter_embedding_ranges,
+    _provider_safe_embedding_text,
+    hybrid_search_qdrant,
+)
 
 
 def test_estimate_embedding_tokens_weights_cjk_more_than_ascii():
@@ -48,6 +53,15 @@ def test_iter_embedding_ranges_default_splits_oversized_structured_chunks():
     chunks = [{"text": "a" * 24000} for _ in range(25)]
 
     assert _iter_embedding_ranges(chunks) == [(i, i + 1) for i in range(25)]
+
+
+def test_provider_safe_embedding_text_truncates_long_payload_only_for_embedding():
+    text = "a" * 1200
+
+    result = _provider_safe_embedding_text(text)
+
+    assert len(result) == 900
+    assert text.startswith(result)
 
 
 def test_hybrid_search_qdrant_keeps_keyword_candidates_when_sparse_enabled():

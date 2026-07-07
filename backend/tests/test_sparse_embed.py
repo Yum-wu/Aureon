@@ -106,3 +106,23 @@ class TestEmbedSparse:
             result = embed_sparse(texts)
             assert len(result) == 3
             assert mock_post.call_count == 3
+
+    @patch("httpx.post")
+    def test_long_inputs_are_truncated_before_provider_call(self, mock_post):
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {"data": [{"sparse": {1: 0.5}}]}
+        mock_post.return_value = mock_response
+
+        with patch("app.rag.sparse_embed.settings") as mock_settings:
+            mock_settings.sparse_enabled = True
+            mock_settings.sparse_provider = "siliconflow"
+            mock_settings.siliconflow_base_url = "https://api.siliconflow.cn/v1"
+            mock_settings.siliconflow_api_key = "test-key"
+            mock_settings.sparse_model = "BAAI/bge-m3"
+
+            result = embed_sparse(["x" * 1200])
+
+        assert result == [{1: 0.5}]
+        assert len(mock_post.call_args.kwargs["json"]["input"][0]) == 900

@@ -35,12 +35,17 @@ logger = structlog.get_logger()
 
 _EMBED_MAX_ITEMS_PER_BATCH = 10
 _EMBED_MAX_ESTIMATED_TOKENS_PER_BATCH = 8192
+_EMBED_PROVIDER_SAFE_CHARS = 900
 
 
 def _estimate_embedding_tokens(text: str) -> int:
     cjk_chars = sum(1 for ch in text if "\u4e00" <= ch <= "\u9fff")
     other_chars = max(0, len(text) - cjk_chars)
     return cjk_chars + (max(1, other_chars // 4) if other_chars else 0)
+
+
+def _provider_safe_embedding_text(text: str) -> str:
+    return text[:_EMBED_PROVIDER_SAFE_CHARS] if len(text) > _EMBED_PROVIDER_SAFE_CHARS else text
 
 
 def _iter_embedding_ranges(
@@ -576,6 +581,7 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
     for batch_start, batch_end in _iter_embedding_ranges(chunks):
 
         batch_texts = [c["text"] for c in chunks[batch_start:batch_end]]
+        embedding_texts = [_provider_safe_embedding_text(str(text)) for text in batch_texts]
 
 
 
@@ -609,9 +615,9 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
 
                 from app.rag.sparse_embed import embed_sparse
 
-                batch_embeddings = embed_texts_llm(batch_texts, batch_size=1)
+                batch_embeddings = embed_texts_llm(embedding_texts, batch_size=1)
 
-                batch_sparse = embed_sparse(batch_texts) if settings.sparse_enabled else [{}] * len(batch_texts)
+                batch_sparse = embed_sparse(embedding_texts) if settings.sparse_enabled else [{}] * len(batch_texts)
 
         else:
 
@@ -621,11 +627,11 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
 
 
 
-            batch_embeddings = embed_texts_llm(batch_texts)
+            batch_embeddings = embed_texts_llm(embedding_texts, batch_size=1)
 
 
 
-            batch_sparse = embed_sparse(batch_texts) if settings.sparse_enabled else [{}] * len(batch_texts)
+            batch_sparse = embed_sparse(embedding_texts) if settings.sparse_enabled else [{}] * len(batch_texts)
 
 
 
