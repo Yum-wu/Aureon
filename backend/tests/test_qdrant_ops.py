@@ -4,27 +4,41 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 from qdrant_client import models as qmodels
 
-from app.rag.qdrant_ops import _iter_embedding_ranges, hybrid_search_qdrant
+from app.rag.qdrant_ops import _estimate_embedding_tokens, _iter_embedding_ranges, hybrid_search_qdrant
 
 
-def test_iter_embedding_ranges_respects_count_and_char_budget():
+def test_estimate_embedding_tokens_weights_cjk_more_than_ascii():
+    assert _estimate_embedding_tokens("a" * 4000) == 1000
+    assert _estimate_embedding_tokens("法" * 4000) == 4000
+
+
+def test_iter_embedding_ranges_respects_count_and_token_budget():
     chunks = [
-        {"text": "a" * 3000},
-        {"text": "b" * 3000},
-        {"text": "c" * 3000},
+        {"text": "法" * 3000},
+        {"text": "务" * 3000},
+        {"text": "风" * 3000},
         {"text": "d"},
     ]
 
-    assert _iter_embedding_ranges(chunks, max_items=10, max_chars=8000) == [
+    assert _iter_embedding_ranges(chunks, max_items=10, max_estimated_tokens=7000) == [
         (0, 2),
         (2, 4),
+    ]
+
+
+def test_iter_embedding_ranges_batches_long_ascii_chunks_by_estimated_tokens():
+    chunks = [{"text": "a" * 6000} for _ in range(6)]
+
+    assert _iter_embedding_ranges(chunks, max_items=10, max_estimated_tokens=7000) == [
+        (0, 4),
+        (4, 6),
     ]
 
 
 def test_iter_embedding_ranges_respects_item_limit():
     chunks = [{"text": "x"} for _ in range(12)]
 
-    assert _iter_embedding_ranges(chunks, max_items=10, max_chars=8000) == [
+    assert _iter_embedding_ranges(chunks, max_items=10, max_estimated_tokens=7000) == [
         (0, 10),
         (10, 12),
     ]
