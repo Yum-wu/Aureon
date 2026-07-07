@@ -121,6 +121,17 @@ def _cache_key(text: str) -> str:
     return hashlib.md5(text.encode()).hexdigest()
 
 
+def _dashscope_compatible_embeddings_url(base_url: str) -> str:
+    base = base_url.rstrip("/")
+    if "compatible-" in base:
+        return f"{base}/embeddings"
+    if "://" not in base:
+        return f"https://{base}/compatible-mode/v1/embeddings"
+    scheme, rest = base.split("://", 1)
+    host = rest.split("/", 1)[0]
+    return f"{scheme}://{host}/compatible-mode/v1/embeddings"
+
+
 def _embed_api(texts: List[str], provider: str, batch_size: int = 10,
                client: Optional[object] = None) -> np.ndarray:
     """Call a single embedding API provider. Returns (N, dim) array.
@@ -137,7 +148,7 @@ def _embed_api(texts: List[str], provider: str, batch_size: int = 10,
     from app.config import settings
 
     if provider == "dashscope":
-        url = f"{settings.dashscope_base_url.rstrip('/')}/embeddings"
+        url = _dashscope_compatible_embeddings_url(settings.dashscope_base_url)
         api_key = settings.dashscope_api_key
         model = settings.dashscope_model
         dim = settings.dashscope_dimensions

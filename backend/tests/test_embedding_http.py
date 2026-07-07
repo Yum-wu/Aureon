@@ -27,7 +27,7 @@ os.environ.setdefault("DASHSCOPE_BASE_URL", "https://dashscope-intl.aliyuncs.com
 os.environ.setdefault("DASHSCOPE_MODEL", "text-embedding-v3")
 os.environ.setdefault("DASHSCOPE_DIMENSIONS", "1024")
 
-from app.rag.embedding import _embed_api, _get_http_client
+from app.rag.embedding import _dashscope_compatible_embeddings_url, _embed_api, _get_http_client
 
 
 @pytest.fixture(autouse=True)
@@ -121,6 +121,16 @@ def _reset_http_client():
 
 class TestEmbedApiCalls:
     """_embed_api correctly uses the shared httpx.Client."""
+
+    def test_dashscope_native_base_url_uses_compatible_embeddings_path(self):
+        assert _dashscope_compatible_embeddings_url("https://dashscope.aliyuncs.com/api/v1") == (
+            "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings"
+        )
+
+    def test_dashscope_compatible_base_url_appends_embeddings(self):
+        assert _dashscope_compatible_embeddings_url("https://dashscope.aliyuncs.com/compatible-mode/v1") == (
+            "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings"
+        )
 
     def test_success_path(self):
         """Successful API call returns a (N, dim) numpy array."""
