@@ -12,7 +12,7 @@ from app.rag.ingestion.normalizer import normalize_text
 from app.utils.lang_detect import detect_language as _detect_text_language
 
 
-STRUCTURED_CHUNK_MAX_CHARS = 6000
+STRUCTURED_CHUNK_MAX_CHARS = 32000
 
 
 def _pick_csv_delimiter(sample: str, fallback: str) -> str:
@@ -239,7 +239,6 @@ def extract_csv_document(path: Path) -> list[ChunkRecord]:
     headers = [str(header) for header in (reader.fieldnames or []) if header is not None]
     chunks: list[ChunkRecord] = []
     lines = []
-    rows_per_chunk = 50
     row_count = 0
     row_start = 2
     row_end = 1
@@ -256,7 +255,7 @@ def extract_csv_document(path: Path) -> list[ChunkRecord]:
         if parts:
             for line_part in _split_long_line(", ".join(parts)):
                 line_len = len(line_part) + 1
-                if lines and (len(lines) >= rows_per_chunk or current_chars + line_len > STRUCTURED_CHUNK_MAX_CHARS):
+                if lines and current_chars + line_len > STRUCTURED_CHUNK_MAX_CHARS:
                     chunks.append(_make_csv_chunk(path, headers, row_start, row_end, lines, delimiter))
                     lines = []
                     current_chars = 0
@@ -265,10 +264,6 @@ def extract_csv_document(path: Path) -> list[ChunkRecord]:
                 lines.append(line_part)
                 current_chars += line_len
                 row_end = file_row_number
-        if len(lines) >= rows_per_chunk:
-            chunks.append(_make_csv_chunk(path, headers, row_start, row_end, lines, delimiter))
-            lines = []
-            current_chars = 0
 
     if lines:
         row_end = row_count + 1

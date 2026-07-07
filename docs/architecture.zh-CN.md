@@ -306,7 +306,7 @@ Sparse Vector ────────────→│  稀疏向量关键词�
 ## 部署模型
 
 - **源码托管**：GitHub
-- **CI/CD**：GitHub Actions — pip-audit + Trivy + hadolint + mypy (非阻断) + ruff lint + pytest (958 tests 全部通过)
+- **CI/CD**：GitHub Actions — pip-audit + Trivy + hadolint + mypy (非阻断) + ruff lint + pytest (1011 tests 全部通过)
 - **部署平台**：Railway，新加坡区域，自动部署
 - **容器**：Docker `python:3.12-slim`，非 root 运行
 - **生产地址**：`https://aureon-production-659a.up.railway.app`

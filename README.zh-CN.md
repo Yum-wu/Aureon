@@ -8,7 +8,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
 [![Qdrant](https://img.shields.io/badge/Qdrant-Cloud-DC2DFF?logo=qdrant&logoColor=white)](https://qdrant.tech/)
-[![Tests](https://img.shields.io/badge/Tests-958%20passed-brightgreen)](https://github.com/Yum-wu/Aureon/actions)
+[![Tests](https://img.shields.io/badge/Tests-1011%20passed-brightgreen)](https://github.com/Yum-wu/Aureon/actions)
 
 **其他语言**: [English](README.md)
 **在线演示**: [aureon-production-659a.up.railway.app](https://aureon-production-659a.up.railway.app)
@@ -21,7 +21,7 @@
 - 稀疏 + 稠密混合检索
 - RBAC、审计日志、PII 脱敏、Guardrails
 - 真实 UI、真实演示、真实部署
-- `958` 个后端测试验证
+- `1011` 个后端测试验证
 
 ## 为什么可信
 
