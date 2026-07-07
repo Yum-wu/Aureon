@@ -593,7 +593,7 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
 
                 batch_embeddings, batch_sparse = _embed_dense_sparse_dashscope(
 
-                    batch_texts, batch_size=embed_batch_size, max_workers=embed_max_workers
+                    embedding_texts, batch_size=embed_batch_size, max_workers=embed_max_workers
 
                 )
 

@@ -9,6 +9,7 @@ from app.rag.qdrant_ops import (
     _iter_embedding_ranges,
     _provider_safe_embedding_text,
     hybrid_search_qdrant,
+    save_index_qdrant,
 )
 
 
@@ -62,6 +63,43 @@ def test_provider_safe_embedding_text_truncates_long_payload_only_for_embedding(
 
     assert len(result) == 900
     assert text.startswith(result)
+
+
+def test_save_index_qdrant_uses_safe_text_for_combined_embedding_only():
+    original_text = "x" * 1200
+    fake_client = MagicMock()
+    fake_client.get_collection.return_value = SimpleNamespace(
+        config=SimpleNamespace(
+            params=SimpleNamespace(
+                vectors={"dense": SimpleNamespace(size=3, distance=qmodels.Distance.COSINE)},
+                sparse_vectors={"sparse": object()},
+            )
+        )
+    )
+    settings = SimpleNamespace(
+        sparse_enabled=True,
+        dashscope_api_key="test-key",
+        dashscope_model="text-embedding-v4",
+        vectors_on_disk=False,
+        hnsw_m=16,
+        hnsw_ef_construct=100,
+        quantization_enabled=False,
+        hnsw_ef_search=64,
+    )
+
+    with patch("app.rag.qdrant_ops.settings", settings), \
+         patch("app.rag.qdrant_ops._get_qdrant", return_value=fake_client), \
+         patch("app.rag.embedding._get_embedding_dim", return_value=3), \
+         patch("app.rag.embedding._embed_dense_sparse_dashscope",
+               return_value=(np.array([[0.1, 0.2, 0.3]], dtype=np.float32), [{"sentinel": 1.0}])) as mock_embed, \
+         patch("app.rag.embedding._to_sparse_vector",
+               return_value=qmodels.SparseVector(indices=[1], values=[1.0])):
+        save_index_qdrant([{"text": original_text, "metadata": {"slug": "long-upload"}}])
+
+    embedded_texts = mock_embed.call_args.args[0]
+    assert embedded_texts == [original_text[:900]]
+    point = fake_client.upsert.call_args.kwargs["points"][0]
+    assert point.payload["text"] == original_text
 
 
 def test_hybrid_search_qdrant_keeps_keyword_candidates_when_sparse_enabled():
