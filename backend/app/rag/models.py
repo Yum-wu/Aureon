@@ -82,3 +82,17 @@ class RAGUploadResponse(BaseModel):
     chunks_created: int
     elapsed_seconds: float
     warnings: list[str] = []
+    job_id: Optional[str] = None
+    queued: bool = False
+    message: str = ""
+
+
+class RAGUploadJobStatusResponse(BaseModel):
+    job_id: str
+    status: str
+    filename: str
+    documents_indexed: int = 0
+    chunks_created: int = 0
+    elapsed_seconds: float = 0.0
+    warnings: list[str] = []
+    error: Optional[str] = None

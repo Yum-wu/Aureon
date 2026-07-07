@@ -1,9 +1,16 @@
 import { useState, useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { authFetch } from "../../services/authFetch";
+import { uploadRagFile } from "../../services/ragUpload";
 
-const RAG_UPLOAD_URL =
-  (import.meta.env.VITE_API_RAG_URL as string)?.replace(/\/query$/, "") || "/api/rag/upload";
+const RAG_BASE_URL =
+  (import.meta.env.VITE_API_RAG_URL as string)?.replace(/\/query$/, "") || "/api/rag";
+const RAG_UPLOAD_URL = RAG_BASE_URL.endsWith("/upload")
+  ? RAG_BASE_URL
+  : `${RAG_BASE_URL}/upload`;
+const RAG_UPLOADS_URL = RAG_BASE_URL.endsWith("/upload")
+  ? RAG_BASE_URL.replace(/\/upload$/, "/uploads")
+  : `${RAG_BASE_URL}/uploads`;
 const SUPPORTED_UPLOAD_EXTENSIONS = ["md", "txt", "pdf", "docx", "xlsx", "csv", "pptx"];
 const SUPPORTED_UPLOAD_ACCEPT = SUPPORTED_UPLOAD_EXTENSIONS.map((ext) => `.${ext}`).join(",");
 
@@ -23,7 +30,7 @@ export function RagUploadPanel({ open }: RagUploadPanelProps) {
 
   const fetchUploadedFiles = useCallback(async () => {
     try {
-      const res = await authFetch(RAG_UPLOAD_URL.replace("/upload", "/uploads"));
+      const res = await authFetch(RAG_UPLOADS_URL);
       if (!res.ok) return;
       const data = await res.json();
       setUploadedFiles(
@@ -73,20 +80,7 @@ export function RagUploadPanel({ open }: RagUploadPanelProps) {
       setUploadMessage(null);
 
       try {
-        const formData = new FormData();
-        formData.append("file", file);
-
-        const res = await authFetch(RAG_UPLOAD_URL, {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!res.ok) {
-          const body = await res.text().catch(() => "");
-          throw new Error(body || `HTTP ${res.status}`);
-        }
-
-        const data = await res.json();
+        const data = await uploadRagFile(file, { uploadUrl: RAG_UPLOAD_URL });
         const warnings = Array.isArray(data.warnings)
           ? data.warnings.filter((warning: unknown) => typeof warning === "string")
           : [];

@@ -33,6 +33,7 @@ describe("RagUploadPanel", () => {
 
     const input = document.querySelector("#rag-upload-input");
 
+    expect(mockAuthFetch).toHaveBeenCalledWith("/api/rag/uploads");
     expect(input).toHaveAttribute("accept", ".md,.txt,.pdf,.docx,.xlsx,.csv,.pptx");
   });
 
@@ -54,6 +55,11 @@ describe("RagUploadPanel", () => {
     const input = document.querySelector("#rag-upload-input") as HTMLInputElement;
     fireEvent.change(input, { target: { files: [new File(["a,b\n1,2"], "data.csv")] } });
     await waitFor(() => expect(screen.getByText(/uploaded data\.csv 2/)).toBeInTheDocument());
+    expect(mockAuthFetch).toHaveBeenNthCalledWith(
+      2,
+      "/api/rag/upload",
+      expect.objectContaining({ method: "POST" }),
+    );
 
     fireEvent.change(input, { target: { files: [new File(["pptx"], "deck.pptx")] } });
     await waitFor(() => expect(screen.getByText(/uploaded deck\.pptx 3/)).toBeInTheDocument());
