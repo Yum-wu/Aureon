@@ -13,7 +13,8 @@ from app.utils.lang_detect import detect_language as _detect_text_language
 
 
 STRUCTURED_CHUNK_MAX_CHARS = 6000
-STRUCTURED_CHUNK_MAX_ESTIMATED_TOKENS = 480
+STRUCTURED_CHUNK_MAX_ESTIMATED_TOKENS = 240
+STRUCTURED_CHUNK_TARGET_ESTIMATED_TOKENS = 216
 
 
 def _estimate_embedding_tokens(text: str) -> int:
@@ -264,7 +265,7 @@ def extract_csv_document(path: Path) -> list[ChunkRecord]:
     header_line = _format_csv_header(headers, delimiter)
     header_tokens = _estimate_embedding_tokens(header_line)
     max_row_chars = max(1, STRUCTURED_CHUNK_MAX_CHARS - len(header_line) - 1)
-    max_row_tokens = max(1, STRUCTURED_CHUNK_MAX_ESTIMATED_TOKENS - header_tokens)
+    max_row_tokens = max(1, STRUCTURED_CHUNK_TARGET_ESTIMATED_TOKENS - header_tokens)
 
     for row in reader:
         row_count += 1
@@ -281,7 +282,7 @@ def extract_csv_document(path: Path) -> list[ChunkRecord]:
                 line_len = len(line_part) + 1
                 line_tokens = _estimate_embedding_tokens(line_part)
                 would_exceed_chars = len(header_line) + 1 + current_chars + line_len > STRUCTURED_CHUNK_MAX_CHARS
-                would_exceed_tokens = header_tokens + current_tokens + line_tokens > STRUCTURED_CHUNK_MAX_ESTIMATED_TOKENS
+                would_exceed_tokens = header_tokens + current_tokens + line_tokens > STRUCTURED_CHUNK_TARGET_ESTIMATED_TOKENS
                 if lines and (would_exceed_chars or would_exceed_tokens):
                     chunks.append(_make_csv_chunk(path, headers, row_start, row_end, lines, delimiter))
                     lines = []
@@ -437,7 +438,7 @@ def extract_xlsx_document(path: Path) -> list[ChunkRecord]:
                     line_len = len(line_part) + 1
                     line_tokens = _estimate_embedding_tokens(line_part)
                     would_exceed_chars = current_chars + line_len > STRUCTURED_CHUNK_MAX_CHARS
-                    would_exceed_tokens = current_tokens + line_tokens > STRUCTURED_CHUNK_MAX_ESTIMATED_TOKENS
+                    would_exceed_tokens = current_tokens + line_tokens > STRUCTURED_CHUNK_TARGET_ESTIMATED_TOKENS
                     if lines and (len(lines) >= rows_per_chunk or would_exceed_chars or would_exceed_tokens):
                         chunks.append(_make_xlsx_chunk(path, ws.title, headers, row_start, row_end, lines))
                         lines = []

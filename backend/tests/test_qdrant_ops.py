@@ -102,6 +102,46 @@ def test_save_index_qdrant_uses_safe_text_for_combined_embedding_only():
     assert point.payload["text"] == original_text
 
 
+def test_save_index_qdrant_combined_embeds_each_text_individually():
+    texts = ["a" * 1200, "b" * 1200, "c" * 1200]
+    fake_client = MagicMock()
+    fake_client.get_collection.return_value = SimpleNamespace(
+        config=SimpleNamespace(
+            params=SimpleNamespace(
+                vectors={"dense": SimpleNamespace(size=3, distance=qmodels.Distance.COSINE)},
+                sparse_vectors={"sparse": object()},
+            )
+        )
+    )
+    settings = SimpleNamespace(
+        sparse_enabled=True,
+        dashscope_api_key="test-key",
+        dashscope_model="text-embedding-v4",
+        vectors_on_disk=False,
+        hnsw_m=16,
+        hnsw_ef_construct=100,
+        quantization_enabled=False,
+        hnsw_ef_search=64,
+    )
+    dense_vectors = [
+        np.array([[0.1, 0.2, 0.3]], dtype=np.float32),
+        np.array([[0.4, 0.5, 0.6]], dtype=np.float32),
+        np.array([[0.7, 0.8, 0.9]], dtype=np.float32),
+    ]
+
+    with patch("app.rag.qdrant_ops.settings", settings), \
+         patch("app.rag.qdrant_ops._get_qdrant", return_value=fake_client), \
+         patch("app.rag.embedding._get_embedding_dim", return_value=3), \
+         patch("app.rag.embedding._embed_dense_sparse_dashscope",
+               side_effect=[(dense, [{"sentinel": 1.0}]) for dense in dense_vectors]) as mock_embed, \
+         patch("app.rag.embedding._to_sparse_vector",
+               return_value=qmodels.SparseVector(indices=[1], values=[1.0])):
+        save_index_qdrant([{"text": text, "metadata": {"slug": f"long-{i}"}} for i, text in enumerate(texts)])
+
+    assert [call.args[0] for call in mock_embed.call_args_list] == [[text[:900]] for text in texts]
+    assert len(fake_client.upsert.call_args.kwargs["points"]) == 3
+
+
 def test_save_index_qdrant_fallback_embeds_each_text_individually():
     texts = ["a" * 1200, "b" * 1200, "c" * 1200]
     fake_client = MagicMock()
