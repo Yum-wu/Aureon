@@ -33,7 +33,7 @@ def _embed_sparse_siliconflow(texts: List[str]) -> List[Dict[int, float]]:
     }
 
     sparse_vectors = []
-    batch_size = 10
+    batch_size = 1
     for i in range(0, len(texts), batch_size):
         batch = texts[i:i + batch_size]
         payload = {

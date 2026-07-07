@@ -609,7 +609,7 @@ def save_index_qdrant(chunks: List[Dict], collection_name: str = "aureon"):
 
                 from app.rag.sparse_embed import embed_sparse
 
-                batch_embeddings = embed_texts_llm(batch_texts)
+                batch_embeddings = embed_texts_llm(batch_texts, batch_size=1)
 
                 batch_sparse = embed_sparse(batch_texts) if settings.sparse_enabled else [{}] * len(batch_texts)
 
