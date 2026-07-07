@@ -144,8 +144,8 @@ class TestIngestionPrimitives:
         assert len(chunks) == 1
         assert chunks[0].metadata["row_start"] == 2
         assert chunks[0].metadata["row_end"] == 121
-        assert "Central,119" not in chunks[0].text
-        assert "customer: 119" in chunks[0].text
+        assert "Columns: region, customer, product, revenue" in chunks[0].text
+        assert "Central, 119, Paseo, 1119" in chunks[0].text
 
     def test_csv_extractor_keeps_large_business_csv_chunk_count_bounded(self, tmp_path):
         csv_file = tmp_path / "businesses.csv"
@@ -160,6 +160,7 @@ class TestIngestionPrimitives:
 
         assert len(chunks) <= 5
         assert all(len(chunk.text) <= STRUCTURED_CHUNK_MAX_CHARS for chunk in chunks)
+        assert sum(len(chunk.text) for chunk in chunks) < 120000
 
     def test_build_chunks_does_not_index_csv_without_header(self, tmp_path):
         csv_file = tmp_path / "no-header.csv"

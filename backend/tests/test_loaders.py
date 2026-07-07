@@ -77,8 +77,8 @@ class TestLoadPdf:
 
         result = load_csv(str(csv_path))
 
-        assert "region: APAC" in result["content"]
-        assert "revenue: 1200" in result["content"]
+        assert "Columns: region, revenue" in result["content"]
+        assert "APAC, 1200" in result["content"]
         assert result["metadata"]["file_type"] == "csv"
         assert result["metadata"]["source"] == "sales.csv"
 
@@ -95,8 +95,9 @@ class TestLoadPdf:
         assert chunks[0].metadata["delimiter"] == ";"
         assert chunks[0].metadata["row_start"] == 2
         assert chunks[0].metadata["row_end"] == 3
-        assert "stage: Discovery" in chunks[0].text
-        assert "owner: CS" in chunks[0].text
+        assert "Columns: stage; owner" in chunks[0].text
+        assert "Discovery; Sales" in chunks[0].text
+        assert "Delivery; CS" in chunks[0].text
 
     def test_load_csv_without_header_raises_clear_error(self, tmp_path):
         from app.rag.loader import load_csv
