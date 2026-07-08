@@ -216,7 +216,9 @@ class TestEmbedApiCalls:
         _embed_api(texts=["a" * 8000], provider="siliconflow")
 
         sent_text = captured["payload"]["input"][0]
+        assert len(sent_text) <= 900
         assert _estimate_embedding_tokens(sent_text) <= 512
+        assert captured["payload"]["encoding_format"] == "float"
 
     def test_dashscope_payload_is_not_trimmed_by_siliconflow_limit(self, monkeypatch):
         captured = {}
