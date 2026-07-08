@@ -21,6 +21,7 @@ logger = structlog.get_logger()
 
 
 VECTOR_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "vectors")
+_SILICONFLOW_SAFE_CHARS = 900
 _SILICONFLOW_SAFE_ESTIMATED_TOKENS = 512
 
 
@@ -141,7 +142,10 @@ def _limit_by_estimated_tokens(text: str, max_estimated_tokens: int) -> str:
 
 def _provider_safe_api_text(provider: str, text: str) -> str:
     if provider == "siliconflow":
-        return _limit_by_estimated_tokens(text, _SILICONFLOW_SAFE_ESTIMATED_TOKENS)
+        return _limit_by_estimated_tokens(
+            text[:_SILICONFLOW_SAFE_CHARS],
+            _SILICONFLOW_SAFE_ESTIMATED_TOKENS,
+        )
     return text
 
 
@@ -198,6 +202,8 @@ def _embed_api(texts: List[str], provider: str, batch_size: int = 10,
     for start in range(0, len(texts), batch_size):
         batch = [_provider_safe_api_text(provider, text) for text in texts[start:start + batch_size]]
         payload = {"model": model, "input": batch}
+        if provider == "siliconflow":
+            payload["encoding_format"] = "float"
         if dim and dim != 1024:
             payload["dimensions"] = dim
             payload["encoding_format"] = "float"  # DashScope needs this for non-default dimensions
