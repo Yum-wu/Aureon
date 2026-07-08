@@ -27,7 +27,12 @@ os.environ.setdefault("DASHSCOPE_BASE_URL", "https://dashscope-intl.aliyuncs.com
 os.environ.setdefault("DASHSCOPE_MODEL", "text-embedding-v3")
 os.environ.setdefault("DASHSCOPE_DIMENSIONS", "1024")
 
-from app.rag.embedding import _dashscope_compatible_embeddings_url, _embed_api, _get_http_client
+from app.rag.embedding import (
+    _dashscope_compatible_embeddings_url,
+    _embed_api,
+    _estimate_embedding_tokens,
+    _get_http_client,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -192,3 +197,35 @@ class TestEmbedApiCalls:
         # 2 batches × 2 mock entries per batch = 4 total
         assert result.shape[0] == 4
         assert result.shape[1] == 1024
+
+    def test_siliconflow_payload_is_trimmed_to_provider_limit(self, monkeypatch):
+        """SiliconFlow bge-large accepts shorter inputs than DashScope."""
+        import app.config as _cfg
+
+        settings = _cfg.settings
+        monkeypatch.setattr(settings.embedding, "siliconflow_api_key", "test-key")
+        monkeypatch.setattr(settings.embedding, "siliconflow_base_url", "https://api.siliconflow.cn/v1")
+        monkeypatch.setattr(settings.embedding, "siliconflow_model", "BAAI/bge-large-zh-v1.5")
+        captured = {}
+
+        def _capture_payload(url, **kw):
+            captured["payload"] = kw["json"]
+            return MockSuccessResponse()
+
+        monkeypatch.setattr(_get_http_client(), "post", _capture_payload)
+        _embed_api(texts=["a" * 8000], provider="siliconflow")
+
+        sent_text = captured["payload"]["input"][0]
+        assert _estimate_embedding_tokens(sent_text) <= 512
+
+    def test_dashscope_payload_is_not_trimmed_by_siliconflow_limit(self, monkeypatch):
+        captured = {}
+
+        def _capture_payload(url, **kw):
+            captured["payload"] = kw["json"]
+            return MockSuccessResponse()
+
+        monkeypatch.setattr(_get_http_client(), "post", _capture_payload)
+        _embed_api(texts=["a" * 3000], provider="dashscope")
+
+        assert captured["payload"]["input"][0] == "a" * 3000

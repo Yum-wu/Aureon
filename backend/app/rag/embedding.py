@@ -21,6 +21,7 @@ logger = structlog.get_logger()
 
 
 VECTOR_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "vectors")
+_SILICONFLOW_SAFE_ESTIMATED_TOKENS = 512
 
 
 # ── Embedding cache (LRU eviction, keyed by text hash) ──
@@ -121,6 +122,29 @@ def _cache_key(text: str) -> str:
     return hashlib.md5(text.encode()).hexdigest()
 
 
+def _estimate_embedding_tokens(text: str) -> int:
+    cjk_chars = sum(1 for ch in text if "\u4e00" <= ch <= "\u9fff")
+    other_chars = max(0, len(text) - cjk_chars)
+    return cjk_chars + (max(1, other_chars // 4) if other_chars else 0)
+
+
+def _limit_by_estimated_tokens(text: str, max_estimated_tokens: int) -> str:
+    if _estimate_embedding_tokens(text) <= max_estimated_tokens:
+        return text
+
+    end = len(text)
+    while end > 1 and _estimate_embedding_tokens(text[:end]) > max_estimated_tokens:
+        span_tokens = _estimate_embedding_tokens(text[:end])
+        end = max(1, end * max_estimated_tokens // span_tokens)
+    return text[:end]
+
+
+def _provider_safe_api_text(provider: str, text: str) -> str:
+    if provider == "siliconflow":
+        return _limit_by_estimated_tokens(text, _SILICONFLOW_SAFE_ESTIMATED_TOKENS)
+    return text
+
+
 def _dashscope_compatible_embeddings_url(base_url: str) -> str:
     base = base_url.rstrip("/")
     if "compatible-" in base:
@@ -172,7 +196,7 @@ def _embed_api(texts: List[str], provider: str, batch_size: int = 10,
     all_embeddings = []
 
     for start in range(0, len(texts), batch_size):
-        batch = texts[start:start + batch_size]
+        batch = [_provider_safe_api_text(provider, text) for text in texts[start:start + batch_size]]
         payload = {"model": model, "input": batch}
         if dim and dim != 1024:
             payload["dimensions"] = dim
