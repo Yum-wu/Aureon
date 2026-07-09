@@ -31,7 +31,7 @@ export function Documents() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
-  const documents = data?.documents ?? [];
+  const documents = useMemo(() => data?.documents ?? [], [data]);
   const totalDocs = data?.totalDocs ?? 0;
   const totalChunks = data?.totalChunks ?? 0;
 

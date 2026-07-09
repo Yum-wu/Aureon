@@ -89,7 +89,7 @@ export function Dashboard() {
         alert_count: metrics.alert_count ?? 0,
       });
     }
-  }, [metrics]);
+  }, [metrics, setCachedMetrics]);
 
   // Map hook alerts to AlertMessage format
   const alerts: AlertMessage[] = rtAlerts.map((a) => ({
@@ -112,7 +112,7 @@ export function Dashboard() {
     if (hasPipelineData) {
       setCachedPipeline(rtMetrics.pipeline as Record<string, number>);
     }
-  }, [hasPipelineData, rtMetrics.pipeline]);
+  }, [hasPipelineData, rtMetrics.pipeline, setCachedPipeline]);
   const pipelineData = hasPipelineData ? rtMetrics.pipeline : cachedPipeline;
   const pipelineStages = pipelineData
     ? [
@@ -131,7 +131,7 @@ export function Dashboard() {
     if (queryVolume && queryVolume.length > 0) {
       setCachedVolume(queryVolume);
     }
-  }, [queryVolume]);
+  }, [queryVolume, setCachedVolume]);
   const effectiveQueryVolume = (queryVolume && queryVolume.length > 0) ? queryVolume : (cachedVolume ?? []);
 
   const queryVolumeChartData = (() => {
