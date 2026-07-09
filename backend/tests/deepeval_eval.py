@@ -277,8 +277,38 @@ def run_deepeval_metrics(
         FaithfulnessMetric,
     )
 
-    # Use custom model if no OpenAI key
-    if not os.getenv("OPENAI_API_KEY") and not model:
+    # 绕过 omni 系统级 HTTP 代理(:8080)对 localhost 的拦截：
+    # Python httpx（DeepEval 底层）默认 trust_env=True 会走系统代理 → 502；
+    # 强制 openai SDK 的 httpx client 不走系统代理，直连 localhost omni。
+    import httpx
+    from openai import DefaultHttpxClient, DefaultAsyncHttpxClient
+
+    def _patch_trust_env(cls):
+        _orig = cls.__init__
+
+        def _patched(self, *args, **kwargs):
+            kwargs.setdefault("trust_env", False)
+            _orig(self, *args, **kwargs)
+
+        cls.__init__ = _patched
+
+    _patch_trust_env(DefaultHttpxClient)
+    _patch_trust_env(DefaultAsyncHttpxClient)
+
+    # Judge 解析顺序：显式 model 参数 > JUDGE_MODEL(env) > 本地 omni 默认(免费)
+    #   > 主 LLM（settings.llm_*，仅当无任何 judge 配置时回落，相当于打生产）
+    # 注意：只要配了 JUDGE_BASE_URL（本地 omni），就锁定 omni 为 judge 并设好 key/base，
+    # 避免 DeepEval 构造 metric 时读不到 OPENAI_API_KEY。
+    if model is None:
+        model = os.getenv("JUDGE_MODEL")
+    judge_base = os.getenv("JUDGE_BASE_URL")
+    if judge_base:
+        # 已配置本地 omni（免费），锁定为 judge，不回落生产 LLM
+        os.environ["OPENAI_API_KEY"] = os.getenv("JUDGE_API_KEY", "sk-d44df18f12f4e021-c3aab9-86137778")
+        os.environ["OPENAI_API_BASE"] = judge_base.rstrip("/")
+        os.environ["OPENAI_BASE_URL"] = judge_base.rstrip("/")
+        model = model or os.getenv("JUDGE_MODEL", "openrouter/tencent/hy3:free")
+    elif not os.getenv("OPENAI_API_KEY") and not model:
         from app.config import settings
         if settings.llm_api_key:
             os.environ["OPENAI_API_KEY"] = settings.llm_api_key
@@ -485,8 +515,10 @@ if __name__ == "__main__":
     test_cases, used_qa_indices = build_test_cases(qa_pairs, rag_query_fn, article_texts, max_concurrent=10)
     print(f"Built {len(test_cases)} test cases (concurrent data preparation)")
 
-    # Judge 模型：优先用硅基流动 DeepSeek-V4-Flash
-    judge_model = os.getenv("JUDGE_MODEL", "deepseek-ai/DeepSeek-V4-Flash")
+    # Judge 模型：默认本地 omni（OpenAI 兼容，免费，长期固定）
+    #   model: openrouter/tencent/hy3:free（优先）/ oc/deepseek-v4-flash-free（fallback）
+    #   base/key: JUDGE_BASE_URL / JUDGE_API_KEY（默认 http://localhost:20128/v1）
+    judge_model = os.getenv("JUDGE_MODEL", "openrouter/tencent/hy3:free")
     print(f"Judge model: {judge_model}")
 
     scores = run_deepeval_metrics(test_cases, qa_pairs=qa_pairs, used_qa_indices=used_qa_indices, model=judge_model)

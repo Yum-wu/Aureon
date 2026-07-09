@@ -44,22 +44,27 @@ from dotenv import load_dotenv  # noqa: E402
 load_dotenv(BACKEND_DIR / ".env", override=True)
 
 # -- 配置 DeepEval Judge 模型 --
-# Provider: SiliconFlow（快、便宜）
-#   模型: Qwen/Qwen3.5-4B（thinking 关闭，通过 extra_body 控制）
-# DashScope 仅用于 embedding / reranker
-# 可通过环境变量覆盖:
-#   JUDGE_MODEL       — 模型名（默认 Qwen/Qwen3.5-4B）
-#   JUDGE_BASE_URL    — API base URL
-#   JUDGE_API_KEY     — API key
-JUDGE_MODEL = os.getenv("JUDGE_MODEL", "deepseek-ai/DeepSeek-V4-Flash")
+# 默认 Judge: 本地 omni（OpenAI 兼容，免费）— 长期固定
+#   base:  http://localhost:20128/v1
+#   key:   sk-d44df18f12f4e021-c3aab9-86137778  （仅本地有效，勿写进 git 跟踪文件）
+#   model: openrouter/tencent/hy3:free（优先）/ oc/deepseek-v4-flash-free（fallback）
+# 可通过环境变量覆盖（临时切换 / CI）:
+#   JUDGE_MODEL           — 模型名
+#   JUDGE_BASE_URL        — API base URL
+#   JUDGE_API_KEY         — API key
+#   JUDGE_ENABLE_THINKING — 设为 1 下发 enable_thinking（仅 Qwen 系需要，omni 默认关闭）
+JUDGE_MODEL = os.getenv("JUDGE_MODEL", "openrouter/tencent/hy3:free")
 
-_sf_key = os.getenv("SILICONFLOW_API_KEY", "") or os.getenv("siliconflow_api_key", "")
-_sf_url = "https://api.siliconflow.cn/v1"
+# Judge 默认走本地 omni（免费）
+_omni_url = "http://localhost:20128/v1"
+_omni_key = "sk-d44df18f12f4e021-c3aab9-86137778"
+_llm_api_key = os.getenv("JUDGE_API_KEY", _omni_key)
+_llm_base_url = os.getenv("JUDGE_BASE_URL", _omni_url)
+_judge_provider = "omni-local"
 
-# Judge 走 SiliconFlow
-_llm_api_key = os.getenv("JUDGE_API_KEY", _sf_key)
-_llm_base_url = os.getenv("JUDGE_BASE_URL", _sf_url)
-_judge_provider = "siliconflow"
+# omni 是 OpenAI 兼容接口（非 Qwen），默认不下发 enable_thinking；
+# 仅 Qwen 系模型才需要，可用 JUDGE_ENABLE_THINKING=1 开启。
+_ENABLE_THINKING = os.getenv("JUDGE_ENABLE_THINKING", "") == "1"
 
 os.environ["OPENAI_API_KEY"] = _llm_api_key
 os.environ["OPENAI_API_BASE"] = _llm_base_url
@@ -78,9 +83,14 @@ class _QwenDashScopeJudge:
     """
 
     def __init__(self):
+        import httpx
         from openai import OpenAI, AsyncOpenAI
-        self._client = OpenAI(api_key=_llm_api_key, base_url=_llm_base_url)
-        self._async_client = AsyncOpenAI(api_key=_llm_api_key, base_url=_llm_base_url)
+        # trust_env=False: 绕过 omni 系统级 HTTP 代理(:8080)对 localhost 的拦截
+        # （否则 httpx 默认走系统代理 → 502；curl/requests 对 localhost 自动绕过）
+        _http = httpx.Client(trust_env=False)
+        _async_http = httpx.AsyncClient(trust_env=False)
+        self._client = OpenAI(api_key=_llm_api_key, base_url=_llm_base_url, http_client=_http)
+        self._async_client = AsyncOpenAI(api_key=_llm_api_key, base_url=_llm_base_url, http_client=_async_http)
 
     def _clean_response(self, raw: str) -> str:
         """剥离 thinking 标签 + markdown 代码块 + 提取 JSON 对象（递归匹配花括号）。"""
@@ -127,15 +137,21 @@ class _QwenDashScopeJudge:
         return text
 
     def _call_with_retry(self, prompt: str, retries: int = 5) -> str:
-        """同步调用 + 重试（429 指数退避）"""
+        """同步调用 + 重试（429 指数退避；模型不可用时自动 fallback flash）"""
+        # 主模型优先，fallback 到 oc/deepseek-v4-flash-free（7/22 前临时策略）
+        models = [JUDGE_MODEL, "oc/deepseek-v4-flash-free"]
+        last_err: Exception = None
         for attempt in range(retries):
+            # 每次尝试轮流用主/fallback 模型（首个失败即切 fallback）
+            model = models[min(attempt, len(models) - 1)]
             try:
                 resp = self._client.chat.completions.create(
-                    model=JUDGE_MODEL,
+                    model=model,
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.0,
                     max_tokens=4096,
-                    extra_body={"chat_template_kwargs": {"enable_thinking": False}},
+                    **({"extra_body": {"chat_template_kwargs": {"enable_thinking": False}}}
+                       if _ENABLE_THINKING else {}),
                 )
                 raw = resp.choices[0].message.content or ""
                 # 如果 content 为空但 reasoning_content 有内容，从 reasoning 提取
@@ -152,27 +168,36 @@ class _QwenDashScopeJudge:
                     continue
                 raise
             except Exception as e:
+                last_err = e
                 err_str = str(e)
-                # 429 限流：指数退避
+                # 429 限流：指数退避（换模型无用，保持主模型重试）
                 if "429" in err_str:
                     wait = min(2 ** (attempt + 2), 30)  # 4s, 8s, 16s, 30s
                     time.sleep(wait)
                     continue
+                # 其他模型错误（如 502/模型不存在）：下一轮 attempt 自动切 fallback 模型
                 if attempt < retries - 1:
                     time.sleep(2)
                     continue
                 raise
+        if last_err:
+            raise last_err
+        raise RuntimeError("judge call failed without error")
 
     async def _acall_with_retry(self, prompt: str, retries: int = 5) -> str:
-        """异步调用 + 重试（429 指数退避）"""
+        """异步调用 + 重试（429 指数退避；模型不可用时自动 fallback flash）"""
+        models = [JUDGE_MODEL, "oc/deepseek-v4-flash-free"]
+        last_err: Exception = None
         for attempt in range(retries):
+            model = models[min(attempt, len(models) - 1)]
             try:
                 resp = await self._async_client.chat.completions.create(
-                    model=JUDGE_MODEL,
+                    model=model,
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.0,
                     max_tokens=4096,
-                    extra_body={"chat_template_kwargs": {"enable_thinking": False}},
+                    **({"extra_body": {"chat_template_kwargs": {"enable_thinking": False}}}
+                       if _ENABLE_THINKING else {}),
                 )
                 raw = resp.choices[0].message.content or ""
                 if not raw.strip():
@@ -188,6 +213,7 @@ class _QwenDashScopeJudge:
                     continue
                 raise
             except Exception as e:
+                last_err = e
                 err_str = str(e)
                 if "429" in err_str:
                     wait = min(2 ** (attempt + 2), 30)
@@ -197,6 +223,9 @@ class _QwenDashScopeJudge:
                     await asyncio.sleep(2)
                     continue
                 raise
+        if last_err:
+            raise last_err
+        raise RuntimeError("judge call failed without error")
 
 
 # 全局单例
