@@ -190,6 +190,11 @@ def _embed_api(texts: List[str], provider: str, batch_size: int = 10,
         api_key = settings.embedding_api_key or settings.llm_api_key
         model = settings.embedding_model or "embedding-2"
         dim = None
+    elif provider == "openrouter":
+        url = f"{settings.openrouter_base_url.rstrip('/')}/embeddings"
+        api_key = settings.openrouter_api_key
+        model = settings.openrouter_embedding_model
+        dim = settings.embedding_dim  # use active dim for validation
     else:
         raise ValueError(f"Unknown provider: {provider}")
 
@@ -466,6 +471,16 @@ def embed_texts_llm(texts: List[str], batch_size: int = 10,
         providers.append("siliconflow")
     if settings.embedding_api_key or settings.llm_api_key:
         providers.append("zhipu")
+    # OpenRouter NVIDIA embedding: 2048d — only include if active dim matches
+    if settings.openrouter_api_key:
+        active_dim = _get_embedding_dim()
+        if active_dim == settings.openrouter_embedding_dim:
+            providers.append("openrouter")
+        else:
+            logger.info(
+                "Skipping openrouter embedding: active dim %d != model dim %d",
+                active_dim, settings.openrouter_embedding_dim,
+            )
 
     if not providers:
         raise RuntimeError(

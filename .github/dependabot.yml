@@ -14,6 +14,11 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 5
     labels: ["dependencies", "frontend"]
+    # i18next@26 peers only TS ^5||^6; block dependabot from auto-bumping to TS 7
+    # (ERESOLVE conflict in CI). Revisit once i18next/react-i18next support TS 7.
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"

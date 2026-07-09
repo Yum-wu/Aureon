@@ -36,6 +36,10 @@ class EmbeddingSettings(BaseModel):
     sparse_enabled: bool = True
     sparse_provider: str = "siliconflow"
     sparse_model: str = "BAAI/bge-m3"
+    openrouter_api_key: str = ""
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    openrouter_embedding_model: str = "nvidia/llama-nemotron-embed-vl-1b-v2:free"
+    openrouter_embedding_dim: int = 2048  # NVIDIA model fixed at 2048d
 
 
 class VectorStoreSettings(BaseModel):
@@ -88,6 +92,9 @@ class RerankSettings(BaseModel):
     dashscope_rerank_url: str = "https://dashscope.aliyuncs.com/compatible-api/v1"
     dashscope_rerank_model: str = "qwen3-rerank"
     rerank_semaphore: int = 40
+    openrouter_api_key: str = ""
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    openrouter_rerank_model: str = "nvidia/llama-nemotron-rerank-vl-1b-v2:free"
 
 
 class AuthSettings(BaseModel):

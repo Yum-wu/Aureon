@@ -1,0 +1,74 @@
+{
+  "label": "dashscope",
+  "timestamp": "2026-07-09 00:55:40",
+  "total": 10,
+  "success": 0,
+  "fail": 10,
+  "avg_s": 0,
+  "p50_s": 0,
+  "p95_s": 0,
+  "min_s": 0,
+  "max_s": 0,
+  "queries": [
+    {
+      "idx": 0,
+      "query": "如何使用Python实现多线程爬虫？",
+      "elapsed": 17.015,
+      "success": false
+    },
+    {
+      "idx": 1,
+      "query": "AI如何提升机器人智能？",
+      "elapsed": 17.297,
+      "success": false
+    },
+    {
+      "idx": 2,
+      "query": "Transformer模型self-attention机制的原理是什么？",
+      "elapsed": 3.833,
+      "success": false
+    },
+    {
+      "idx": 3,
+      "query": "What is the difference between REST and ",
+      "elapsed": 14.967,
+      "success": false
+    },
+    {
+      "idx": 4,
+      "query": "Docker和Kubernetes的区别是什么？",
+      "elapsed": 2.559,
+      "success": false
+    },
+    {
+      "idx": 5,
+      "query": "How does vector database indexing work?",
+      "elapsed": 14.613,
+      "success": false
+    },
+    {
+      "idx": 6,
+      "query": "机器学习中过拟合的解决方法",
+      "elapsed": 17.131,
+      "success": false
+    },
+    {
+      "idx": 7,
+      "query": "Explain the CAP theorem in distributed s",
+      "elapsed": 2.572,
+      "success": false
+    },
+    {
+      "idx": 8,
+      "query": "什么是边缘计算？",
+      "elapsed": 17.001,
+      "success": false
+    },
+    {
+      "idx": 9,
+      "query": "RAG系统中embedding模型的作用是什么？",
+      "elapsed": 14.769,
+      "success": false
+    }
+  ]
+}

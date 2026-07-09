@@ -217,6 +217,8 @@ def _rerank_via_api(query: str, chunks: List[Dict[str, Any]], top_k: int = 3,
 
     jina_key = getattr(settings, "jina_api_key", None)
 
+    or_key = settings.openrouter_api_key
+
 
 
     providers = []
@@ -242,6 +244,12 @@ def _rerank_via_api(query: str, chunks: List[Dict[str, Any]], top_k: int = 3,
     if preferred != "dashscope" and ds_key:
 
         providers.append(("dashscope", ds_key, settings.dashscope_rerank_model, settings.dashscope_rerank_url))
+
+    # OpenRouter NVIDIA reranker — last resort fallback (free, no dim concerns)
+
+    if or_key:
+
+        providers.append(("openrouter", or_key, settings.openrouter_rerank_model, settings.openrouter_base_url))
 
 
 
@@ -278,6 +286,7 @@ def _get_rerank_provider_info() -> Optional[tuple]:
     sf_key = settings.siliconflow_api_key
     cohere_key = getattr(settings, "cohere_api_key", None)
     jina_key = getattr(settings, "jina_api_key", None)
+    or_key = settings.openrouter_api_key
 
     providers = []
     if preferred == "dashscope" and ds_key:
@@ -290,6 +299,8 @@ def _get_rerank_provider_info() -> Optional[tuple]:
         providers.append(("jina", jina_key, "jina-reranker-v2-base-multilingual", "https://api.jina.ai/v1"))
     if preferred != "dashscope" and ds_key:
         providers.append(("dashscope", ds_key, settings.dashscope_rerank_model, settings.dashscope_rerank_url))
+    if or_key:
+        providers.append(("openrouter", or_key, settings.openrouter_rerank_model, settings.openrouter_base_url))
 
     for name, key, model, base_url in providers:
         suffix = "reranks" if name == "dashscope" else "rerank"
